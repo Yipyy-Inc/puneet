@@ -1,27 +1,52 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { revenueData, revenueTrends } from "@/data/revenue";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export function RevenueOverview() {
   // Calculate totals
   const currentMonth = revenueData.reduce((sum, facility) => {
-    return sum + facility.subscriptionRevenue + facility.transactionRevenue + facility.moduleRevenue;
+    return (
+      sum +
+      facility.subscriptionRevenue +
+      facility.transactionRevenue +
+      facility.moduleRevenue
+    );
   }, 0);
 
-  const previousMonth = revenueTrends[revenueTrends.length - 2]?.totalRevenue || 0;
-  const monthOverMonthChange = ((currentMonth - previousMonth) / previousMonth) * 100;
+  const previousMonth =
+    revenueTrends[revenueTrends.length - 2]?.totalRevenue || 0;
+  const monthOverMonthChange =
+    ((currentMonth - previousMonth) / previousMonth) * 100;
 
-  const totalMRR = revenueData.reduce((sum, facility) => sum + facility.subscriptionRevenue, 0);
+  const totalMRR = revenueData.reduce(
+    (sum, facility) => sum + facility.subscriptionRevenue,
+    0,
+  );
   const totalARR = totalMRR * 12;
 
   const averageRevenuePerFacility = currentMonth / revenueData.length;
 
   // Prepare chart data
   const chartData = revenueTrends.map((trend) => ({
-    month: new Date(trend.month).toLocaleDateString("en-US", { month: "short" }),
+    month: new Date(trend.month).toLocaleDateString("en-US", {
+      month: "short",
+    }),
     revenue: trend.totalRevenue,
   }));
 
@@ -35,12 +60,14 @@ export function RevenueOverview() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${currentMonth.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${currentMonth.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               {monthOverMonthChange > 0 ? (
                 <span className="flex items-center text-green-600">
-                  <TrendingUp className="mr-1 h-3 w-3" />
-                  +{monthOverMonthChange.toFixed(1)}% from last month
+                  <TrendingUp className="mr-1 h-3 w-3" />+
+                  {monthOverMonthChange.toFixed(1)}% from last month
                 </span>
               ) : (
                 <span className="flex items-center text-red-600">
@@ -54,11 +81,15 @@ export function RevenueOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Recurring Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Monthly Recurring Revenue
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalMRR.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalMRR.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               ARR: ${totalARR.toLocaleString()}
             </p>
@@ -67,11 +98,15 @@ export function RevenueOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Revenue/Facility</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Revenue/Facility
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${averageRevenuePerFacility.toFixed(0)}</div>
+            <div className="text-2xl font-bold">
+              ${averageRevenuePerFacility.toFixed(0)}
+            </div>
             <p className="text-xs text-muted-foreground">
               Across {revenueData.length} facilities
             </p>
@@ -80,7 +115,9 @@ export function RevenueOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Facilities</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Facilities
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -96,7 +133,9 @@ export function RevenueOverview() {
       <Card>
         <CardHeader>
           <CardTitle>Revenue Trend</CardTitle>
-          <CardDescription>Monthly revenue over the past 12 months</CardDescription>
+          <CardDescription>
+            Monthly revenue over the past 12 months
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -116,7 +155,10 @@ export function RevenueOverview() {
                 tickFormatter={(value) => `$${value / 1000}k`}
               />
               <Tooltip
-                formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                formatter={(value: number) => [
+                  `$${value.toLocaleString()}`,
+                  "Revenue",
+                ]}
               />
               <Line
                 type="monotone"
@@ -141,12 +183,18 @@ export function RevenueOverview() {
             {[
               {
                 label: "Subscription Revenue",
-                value: revenueData.reduce((sum, f) => sum + f.subscriptionRevenue, 0),
+                value: revenueData.reduce(
+                  (sum, f) => sum + f.subscriptionRevenue,
+                  0,
+                ),
                 color: "bg-blue-500",
               },
               {
                 label: "Transaction Revenue",
-                value: revenueData.reduce((sum, f) => sum + f.transactionRevenue, 0),
+                value: revenueData.reduce(
+                  (sum, f) => sum + f.transactionRevenue,
+                  0,
+                ),
                 color: "bg-green-500",
               },
               {

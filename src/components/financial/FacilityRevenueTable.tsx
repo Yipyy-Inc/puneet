@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DataTable, ColumnDef } from "@/components/DataTable";
 import { revenueData, RevenueData } from "@/data/revenue";
 import { Badge } from "@/components/ui/badge";
@@ -28,23 +34,35 @@ export function FacilityRevenueTable() {
     {
       key: "subscriptionRevenue",
       label: "Subscription",
-      render: (item) => <div className="text-right">${item.subscriptionRevenue.toLocaleString()}</div>,
+      render: (item) => (
+        <div className="text-right">
+          ${item.subscriptionRevenue.toLocaleString()}
+        </div>
+      ),
     },
     {
       key: "transactionRevenue",
       label: "Transactions",
-      render: (item) => <div className="text-right">${item.transactionRevenue.toLocaleString()}</div>,
+      render: (item) => (
+        <div className="text-right">
+          ${item.transactionRevenue.toLocaleString()}
+        </div>
+      ),
     },
     {
       key: "moduleRevenue",
       label: "Modules",
-      render: (item) => <div className="text-right">${item.moduleRevenue.toLocaleString()}</div>,
+      render: (item) => (
+        <div className="text-right">${item.moduleRevenue.toLocaleString()}</div>
+      ),
     },
     {
       key: "totalRevenue",
       label: "Total Revenue",
       render: (item) => (
-        <div className="text-right font-bold">${item.totalRevenue.toLocaleString()}</div>
+        <div className="text-right font-bold">
+          ${item.totalRevenue.toLocaleString()}
+        </div>
       ),
     },
     {
@@ -94,15 +112,16 @@ export function FacilityRevenueTable() {
 
   // Calculate summary statistics
   const totalRevenue = data.reduce(
-    (sum, f) => sum + f.subscriptionRevenue + f.transactionRevenue + f.moduleRevenue,
-    0
+    (sum, f) =>
+      sum + f.subscriptionRevenue + f.transactionRevenue + f.moduleRevenue,
+    0,
   );
   const topPerformer = [...data].sort(
     (a, b) =>
       b.subscriptionRevenue +
       b.transactionRevenue +
       b.moduleRevenue -
-      (a.subscriptionRevenue + a.transactionRevenue + a.moduleRevenue)
+      (a.subscriptionRevenue + a.transactionRevenue + a.moduleRevenue),
   )[0];
 
   return (
@@ -114,8 +133,12 @@ export function FacilityRevenueTable() {
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all facilities</p>
+            <div className="text-2xl font-bold">
+              ${totalRevenue.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Across all facilities
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -123,7 +146,9 @@ export function FacilityRevenueTable() {
             <CardTitle className="text-sm font-medium">Top Performer</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold">{topPerformer?.facilityName}</div>
+            <div className="text-lg font-bold">
+              {topPerformer?.facilityName}
+            </div>
             <p className="text-xs text-muted-foreground">
               $
               {(
@@ -137,7 +162,9 @@ export function FacilityRevenueTable() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Average Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Revenue
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -152,13 +179,19 @@ export function FacilityRevenueTable() {
       <Card>
         <CardHeader>
           <CardTitle>Facility Revenue</CardTitle>
-          <CardDescription>Revenue breakdown by facility for current period</CardDescription>
+          <CardDescription>
+            Revenue breakdown by facility for current period
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
             data={data as unknown as Record<string, unknown>[]}
-            actions={renderActions as unknown as (item: Record<string, unknown>) => React.ReactNode}
+            actions={
+              renderActions as unknown as (
+                item: Record<string, unknown>,
+              ) => React.ReactNode
+            }
           />
         </CardContent>
       </Card>

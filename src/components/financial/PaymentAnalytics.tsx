@@ -1,9 +1,25 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { paymentAnalytics } from "@/data/transactions";
 import { DollarSign, TrendingUp, CreditCard, Activity } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Pie, PieChart, Cell } from "recharts";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Pie,
+  PieChart,
+  Cell,
+} from "recharts";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -33,7 +49,9 @@ export function PaymentAnalytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${analytics.totalVolume.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${analytics.totalVolume.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               Avg: ${analytics.averageTransactionValue.toFixed(2)}
             </p>
@@ -46,7 +64,9 @@ export function PaymentAnalytics() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{analytics.successRate}%</div>
+            <div className="text-2xl font-bold text-green-600">
+              {analytics.successRate}%
+            </div>
             <p className="text-xs text-muted-foreground">
               {analytics.successfulTransactions} / {analytics.totalTransactions}
             </p>
@@ -55,13 +75,21 @@ export function PaymentAnalytics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Failed Transactions
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{analytics.failedTransactions}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {analytics.failedTransactions}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {((analytics.failedTransactions / analytics.totalTransactions) * 100).toFixed(1)}% failure rate
+              {(
+                (analytics.failedTransactions / analytics.totalTransactions) *
+                100
+              ).toFixed(1)}
+              % failure rate
             </p>
           </CardContent>
         </Card>
@@ -72,10 +100,10 @@ export function PaymentAnalytics() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.pendingTransactions}</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting processing
-            </p>
+            <div className="text-2xl font-bold">
+              {analytics.pendingTransactions}
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting processing</p>
           </CardContent>
         </Card>
       </div>
@@ -86,7 +114,9 @@ export function PaymentAnalytics() {
         <Card>
           <CardHeader>
             <CardTitle>Payment Methods</CardTitle>
-            <CardDescription>Transaction distribution by payment method</CardDescription>
+            <CardDescription>
+              Transaction distribution by payment method
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -101,7 +131,10 @@ export function PaymentAnalytics() {
                   label={(entry) => `${entry.name}: ${entry.value}`}
                 >
                   {methodChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -134,9 +167,16 @@ export function PaymentAnalytics() {
                   tickFormatter={(value) => `$${value / 1000}k`}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, "Volume"]}
+                  formatter={(value: number) => [
+                    `$${value.toLocaleString()}`,
+                    "Volume",
+                  ]}
                 />
-                <Bar dataKey="volume" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                <Bar
+                  dataKey="volume"
+                  fill="hsl(var(--primary))"
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -148,12 +188,15 @@ export function PaymentAnalytics() {
         <Card>
           <CardHeader>
             <CardTitle>Payment Method Details</CardTitle>
-            <CardDescription>Volume and count by payment method</CardDescription>
+            <CardDescription>
+              Volume and count by payment method
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {analytics.paymentMethodBreakdown.map((method) => {
-                const percentage = (method.count / analytics.totalTransactions) * 100;
+                const percentage =
+                  (method.count / analytics.totalTransactions) * 100;
                 return (
                   <div key={method.method}>
                     <div className="flex items-center justify-between mb-2">
@@ -192,17 +235,25 @@ export function PaymentAnalytics() {
               {analytics.providerBreakdown.map((provider) => (
                 <div key={provider.provider} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{provider.provider}</span>
-                    <span className="text-sm text-green-600">{provider.successRate}% success</span>
+                    <span className="text-sm font-medium">
+                      {provider.provider}
+                    </span>
+                    <span className="text-sm text-green-600">
+                      {provider.successRate}% success
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Transactions: </span>
+                      <span className="text-muted-foreground">
+                        Transactions:{" "}
+                      </span>
                       <span className="font-semibold">{provider.count}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Volume: </span>
-                      <span className="font-semibold">${provider.volume.toLocaleString()}</span>
+                      <span className="font-semibold">
+                        ${provider.volume.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DataTable, ColumnDef } from "@/components/DataTable";
 import { transactions, Transaction } from "@/data/transactions";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +63,9 @@ export function TransactionsTable() {
     {
       key: "description",
       label: "Description",
-      render: (item) => <div className="max-w-xs truncate">{item.description}</div>,
+      render: (item) => (
+        <div className="max-w-xs truncate">{item.description}</div>
+      ),
     },
     {
       key: "amount",
@@ -138,13 +146,19 @@ export function TransactionsTable() {
             <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalVolume.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Successful transactions</p>
+            <div className="text-2xl font-bold">
+              ${totalVolume.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Successful transactions
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.length}</div>
@@ -156,7 +170,9 @@ export function TransactionsTable() {
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{successRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-green-600">
+              {successRate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground">
               {successfulCount} / {data.length}
             </p>
@@ -177,13 +193,19 @@ export function TransactionsTable() {
       <Card>
         <CardHeader>
           <CardTitle>Transactions</CardTitle>
-          <CardDescription>All payment transactions across facilities</CardDescription>
+          <CardDescription>
+            All payment transactions across facilities
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
             data={data as unknown as Record<string, unknown>[]}
-            actions={renderActions as unknown as (item: Record<string, unknown>) => React.ReactNode}
+            actions={
+              renderActions as unknown as (
+                item: Record<string, unknown>,
+              ) => React.ReactNode
+            }
           />
         </CardContent>
       </Card>

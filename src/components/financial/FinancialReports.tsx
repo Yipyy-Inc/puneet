@@ -1,16 +1,33 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { revenueData, revenueTrends } from "@/data/revenue";
 import { transactions } from "@/data/transactions";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Bar, BarChart } from "recharts";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Bar,
+  BarChart,
+} from "recharts";
 import { TrendingUp, DollarSign, Users, CreditCard } from "lucide-react";
 
 export function FinancialReports() {
   // Prepare revenue trend chart data
   const revenueTrendData = revenueTrends.map((trend) => ({
-    month: new Date(trend.month).toLocaleDateString("en-US", { month: "short" }),
+    month: new Date(trend.month).toLocaleDateString("en-US", {
+      month: "short",
+    }),
     total: trend.totalRevenue,
     subscription: trend.subscriptionRevenue,
     transaction: trend.transactionRevenue,
@@ -21,7 +38,9 @@ export function FinancialReports() {
   const currentMonth = revenueTrends[revenueTrends.length - 1];
   const previousMonth = revenueTrends[revenueTrends.length - 2];
   const monthOverMonthGrowth =
-    ((currentMonth.totalRevenue - previousMonth.totalRevenue) / previousMonth.totalRevenue) * 100;
+    ((currentMonth.totalRevenue - previousMonth.totalRevenue) /
+      previousMonth.totalRevenue) *
+    100;
 
   // Facility performance data
   const facilityPerformance = revenueData
@@ -33,9 +52,15 @@ export function FinancialReports() {
     .sort((a, b) => b.revenue - a.revenue);
 
   // Transaction statistics
-  const successfulTransactions = transactions.filter((t) => t.status === "success");
-  const totalTransactionRevenue = successfulTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const averageTransactionValue = totalTransactionRevenue / successfulTransactions.length;
+  const successfulTransactions = transactions.filter(
+    (t) => t.status === "success",
+  );
+  const totalTransactionRevenue = successfulTransactions.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+  const averageTransactionValue =
+    totalTransactionRevenue / successfulTransactions.length;
 
   return (
     <div className="space-y-6">
@@ -51,7 +76,11 @@ export function FinancialReports() {
               ${currentMonth.totalRevenue.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              <span className={monthOverMonthGrowth > 0 ? "text-green-600" : "text-red-600"}>
+              <span
+                className={
+                  monthOverMonthGrowth > 0 ? "text-green-600" : "text-red-600"
+                }
+              >
                 {monthOverMonthGrowth > 0 ? "+" : ""}
                 {monthOverMonthGrowth.toFixed(1)}%
               </span>{" "}
@@ -62,25 +91,33 @@ export function FinancialReports() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Facilities</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Facilities
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentMonth.activeFacilities}</div>
+            <div className="text-2xl font-bold">
+              {currentMonth.activeFacilities}
+            </div>
             <p className="text-xs text-muted-foreground">Revenue-generating</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Transaction</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Transaction
+            </CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${averageTransactionValue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">Per successful transaction</p>
+            <p className="text-xs text-muted-foreground">
+              Per successful transaction
+            </p>
           </CardContent>
         </Card>
 
@@ -133,7 +170,10 @@ export function FinancialReports() {
                     tickFormatter={(value) => `$${value / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, ""]}
+                    formatter={(value: number) => [
+                      `$${value.toLocaleString()}`,
+                      "",
+                    ]}
                   />
                   <Line
                     type="monotone"
@@ -178,9 +218,11 @@ export function FinancialReports() {
                   ${currentMonth.subscriptionRevenue.toLocaleString()}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {((currentMonth.subscriptionRevenue / currentMonth.totalRevenue) * 100).toFixed(
-                    1
-                  )}
+                  {(
+                    (currentMonth.subscriptionRevenue /
+                      currentMonth.totalRevenue) *
+                    100
+                  ).toFixed(1)}
                   % of total revenue
                 </p>
               </CardContent>
@@ -194,9 +236,11 @@ export function FinancialReports() {
                   ${currentMonth.transactionRevenue.toLocaleString()}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {((currentMonth.transactionRevenue / currentMonth.totalRevenue) * 100).toFixed(
-                    1
-                  )}
+                  {(
+                    (currentMonth.transactionRevenue /
+                      currentMonth.totalRevenue) *
+                    100
+                  ).toFixed(1)}
                   % of total revenue
                 </p>
               </CardContent>
@@ -210,8 +254,11 @@ export function FinancialReports() {
                   ${currentMonth.moduleRevenue.toLocaleString()}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {((currentMonth.moduleRevenue / currentMonth.totalRevenue) * 100).toFixed(1)}% of
-                  total revenue
+                  {(
+                    (currentMonth.moduleRevenue / currentMonth.totalRevenue) *
+                    100
+                  ).toFixed(1)}
+                  % of total revenue
                 </p>
               </CardContent>
             </Card>
@@ -245,9 +292,16 @@ export function FinancialReports() {
                     tickFormatter={(value) => `$${value / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                    formatter={(value: number) => [
+                      `$${value.toLocaleString()}`,
+                      "Revenue",
+                    ]}
                   />
-                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                  <Bar
+                    dataKey="revenue"
+                    fill="hsl(var(--primary))"
+                    radius={[8, 8, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -256,17 +310,23 @@ export function FinancialReports() {
           <Card>
             <CardHeader>
               <CardTitle>Facility Growth Rates</CardTitle>
-              <CardDescription>Month-over-month growth by facility</CardDescription>
+              <CardDescription>
+                Month-over-month growth by facility
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {facilityPerformance.map((facility) => (
                   <div key={facility.name}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{facility.name}</span>
+                      <span className="text-sm font-medium">
+                        {facility.name}
+                      </span>
                       <span
                         className={`text-sm font-semibold ${
-                          facility.growth > 0 ? "text-green-600" : "text-red-600"
+                          facility.growth > 0
+                            ? "text-green-600"
+                            : "text-red-600"
                         }`}
                       >
                         {facility.growth > 0 ? "+" : ""}
@@ -319,13 +379,17 @@ export function FinancialReports() {
                       color: "bg-purple-500",
                     },
                   ].map((item) => {
-                    const percentage = (item.value / currentMonth.totalRevenue) * 100;
+                    const percentage =
+                      (item.value / currentMonth.totalRevenue) * 100;
                     return (
                       <div key={item.label}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">{item.label}</span>
+                          <span className="text-sm font-medium">
+                            {item.label}
+                          </span>
                           <span className="text-sm text-muted-foreground">
-                            ${item.value.toLocaleString()} ({percentage.toFixed(1)}%)
+                            ${item.value.toLocaleString()} (
+                            {percentage.toFixed(1)}%)
                           </span>
                         </div>
                         <div className="h-3 bg-muted rounded-full overflow-hidden">
@@ -350,7 +414,9 @@ export function FinancialReports() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <p className="text-sm font-medium">Total Revenue (Current)</p>
+                      <p className="text-sm font-medium">
+                        Total Revenue (Current)
+                      </p>
                       <p className="text-2xl font-bold">
                         ${currentMonth.totalRevenue.toLocaleString()}
                       </p>
@@ -368,7 +434,9 @@ export function FinancialReports() {
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Active Facilities</p>
-                      <p className="text-2xl font-bold">{currentMonth.activeFacilities}</p>
+                      <p className="text-2xl font-bold">
+                        {currentMonth.activeFacilities}
+                      </p>
                     </div>
                   </div>
                 </div>

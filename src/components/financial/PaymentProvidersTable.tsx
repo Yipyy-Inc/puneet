@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DataTable, ColumnDef } from "@/components/DataTable";
 import { paymentProviders, PaymentProvider } from "@/data/transactions";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +68,9 @@ export function PaymentProvidersTable() {
       key: "totalTransactions",
       label: "Transactions",
       render: (item) => (
-        <div className="text-right">{item.statistics.totalTransactions.toLocaleString()}</div>
+        <div className="text-right">
+          {item.statistics.totalTransactions.toLocaleString()}
+        </div>
       ),
     },
     {
@@ -70,10 +78,14 @@ export function PaymentProvidersTable() {
       label: "Success Rate",
       render: (item) => {
         const rate =
-          (item.statistics.successfulTransactions / item.statistics.totalTransactions) * 100;
+          (item.statistics.successfulTransactions /
+            item.statistics.totalTransactions) *
+          100;
         return (
           <div className="flex items-center justify-end gap-1">
-            <span className={rate > 90 ? "text-green-600 font-medium" : ""}>{rate.toFixed(1)}%</span>
+            <span className={rate > 90 ? "text-green-600 font-medium" : ""}>
+              {rate.toFixed(1)}%
+            </span>
             {rate > 90 && <TrendingUp className="h-4 w-4 text-green-600" />}
           </div>
         );
@@ -108,7 +120,9 @@ export function PaymentProvidersTable() {
         <DropdownMenuItem>Manage Facilities</DropdownMenuItem>
         <DropdownMenuSeparator />
         {item.isActive ? (
-          <DropdownMenuItem className="text-red-600">Deactivate</DropdownMenuItem>
+          <DropdownMenuItem className="text-red-600">
+            Deactivate
+          </DropdownMenuItem>
         ) : (
           <DropdownMenuItem>Activate</DropdownMenuItem>
         )}
@@ -117,8 +131,14 @@ export function PaymentProvidersTable() {
   );
 
   // Calculate summary
-  const totalTransactions = data.reduce((sum, p) => sum + p.statistics.totalTransactions, 0);
-  const totalVolume = data.reduce((sum, p) => sum + p.statistics.totalVolume, 0);
+  const totalTransactions = data.reduce(
+    (sum, p) => sum + p.statistics.totalTransactions,
+    0,
+  );
+  const totalVolume = data.reduce(
+    (sum, p) => sum + p.statistics.totalVolume,
+    0,
+  );
   const activeProviders = data.filter((p) => p.isActive).length;
 
   return (
@@ -127,20 +147,30 @@ export function PaymentProvidersTable() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Active Providers</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Providers
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeProviders}</div>
-            <p className="text-xs text-muted-foreground">Out of {data.length} total</p>
+            <p className="text-xs text-muted-foreground">
+              Out of {data.length} total
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalTransactions.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all providers</p>
+            <div className="text-2xl font-bold">
+              {totalTransactions.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Across all providers
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -148,7 +178,9 @@ export function PaymentProvidersTable() {
             <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalVolume.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalVolume.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">Payment processing</p>
           </CardContent>
         </Card>
@@ -158,13 +190,19 @@ export function PaymentProvidersTable() {
       <Card>
         <CardHeader>
           <CardTitle>Payment Providers</CardTitle>
-          <CardDescription>Configure and manage payment integration providers</CardDescription>
+          <CardDescription>
+            Configure and manage payment integration providers
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
             data={data as unknown as Record<string, unknown>[]}
-            actions={renderActions as unknown as (item: Record<string, unknown>) => React.ReactNode}
+            actions={
+              renderActions as unknown as (
+                item: Record<string, unknown>,
+              ) => React.ReactNode
+            }
           />
         </CardContent>
       </Card>

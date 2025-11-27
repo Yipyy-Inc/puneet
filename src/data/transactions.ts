@@ -1,7 +1,13 @@
 // Payment and Transaction Data Models
 
 export type PaymentStatus = "success" | "failed" | "pending" | "refunded";
-export type PaymentMethod = "credit_card" | "debit_card" | "bank_transfer" | "paypal" | "stripe" | "other";
+export type PaymentMethod =
+  | "credit_card"
+  | "debit_card"
+  | "bank_transfer"
+  | "paypal"
+  | "stripe"
+  | "other";
 
 export interface Transaction {
   id: string;
@@ -383,7 +389,9 @@ export function calculateTotalVolume(): number {
 }
 
 export function calculateSuccessRate(): number {
-  const successful = transactions.filter((txn) => txn.status === "success").length;
+  const successful = transactions.filter(
+    (txn) => txn.status === "success",
+  ).length;
   return (successful / transactions.length) * 100;
 }
 

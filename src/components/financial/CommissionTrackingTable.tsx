@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { DataTable, ColumnDef } from "@/components/DataTable";
 import { commissionTracking, CommissionTracking } from "@/data/revenue";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +39,9 @@ export function CommissionTrackingTable() {
     {
       key: "totalRevenue",
       label: "Total Revenue",
-      render: (item) => <div className="text-right">${item.totalRevenue.toLocaleString()}</div>,
+      render: (item) => (
+        <div className="text-right">${item.totalRevenue.toLocaleString()}</div>
+      ),
     },
     {
       key: "commissionRate",
@@ -46,7 +54,9 @@ export function CommissionTrackingTable() {
       render: (item) => (
         <div className="flex items-center justify-end gap-1">
           <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="font-semibold">{item.commissionAmount.toLocaleString()}</span>
+          <span className="font-semibold">
+            {item.commissionAmount.toLocaleString()}
+          </span>
         </div>
       ),
     },
@@ -58,8 +68,8 @@ export function CommissionTrackingTable() {
           item.status === "paid"
             ? "default"
             : item.status === "pending"
-            ? "secondary"
-            : "destructive";
+              ? "secondary"
+              : "destructive";
         return (
           <Badge variant={variant}>
             {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
@@ -74,7 +84,9 @@ export function CommissionTrackingTable() {
         const date = new Date(item.dueDate);
         const isOverdue = date < new Date() && item.status !== "paid";
         return (
-          <div className={`flex items-center gap-1 ${isOverdue ? "text-red-600" : ""}`}>
+          <div
+            className={`flex items-center gap-1 ${isOverdue ? "text-red-600" : ""}`}
+          >
             {isOverdue && <AlertCircle className="h-4 w-4" />}
             {date.toLocaleDateString()}
           </div>
@@ -104,7 +116,9 @@ export function CommissionTrackingTable() {
         {item.status === "overdue" && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">Send Reminder</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              Send Reminder
+            </DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>
@@ -127,7 +141,9 @@ export function CommissionTrackingTable() {
             <CardTitle className="text-sm font-medium">Total Due</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCommissionDue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalCommissionDue.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               Pending and overdue commissions
             </p>
@@ -155,7 +171,9 @@ export function CommissionTrackingTable() {
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingCommissions.length}</div>
+            <div className="text-2xl font-bold">
+              {pendingCommissions.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               $
               {pendingCommissions
@@ -179,7 +197,11 @@ export function CommissionTrackingTable() {
           <DataTable
             columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
             data={data as unknown as Record<string, unknown>[]}
-            actions={renderActions as unknown as (item: Record<string, unknown>) => React.ReactNode}
+            actions={
+              renderActions as unknown as (
+                item: Record<string, unknown>,
+              ) => React.ReactNode
+            }
           />
         </CardContent>
       </Card>
