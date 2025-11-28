@@ -118,7 +118,11 @@
     "adminUsers": "Admin Users",
     "rolesPermissions": "Roles & Permissions",
     "createUser": "Create User",
-    "activityTracking": "Activity Tracking"
+    "activityTracking": "Activity Tracking",
+    "systemAdministration": "System Administration",
+    "auditLogs": "Audit & Logging",
+    "dataManagement": "Data Management",
+    "systemConfiguration": "System Configuration"
   },
   "dashboard": {
     "title": "Dashboard",

@@ -25,6 +25,9 @@ import {
   Calendar,
   PieChart,
   BarChart2,
+  Database,
+  Settings,
+  Plug,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -209,6 +212,29 @@ export function AppSidebar() {
           url: "/dashboard/ai",
           icon: Bot,
           disabled: true,
+        },
+      ],
+    },
+    {
+      label: t("systemAdministration"),
+      items: [
+        {
+          title: t("auditLogs"),
+          url: "/dashboard/system-admin/audit-logs",
+          icon: Shield,
+          disabled: false,
+        },
+        {
+          title: t("dataManagement"),
+          url: "/dashboard/system-admin/data-management",
+          icon: Database,
+          disabled: false,
+        },
+        {
+          title: t("systemConfiguration"),
+          url: "/dashboard/system-admin/system-config",
+          icon: Settings,
+          disabled: false,
         },
       ],
     },

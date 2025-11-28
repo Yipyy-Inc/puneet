@@ -116,7 +116,11 @@
     "adminUsers": "Utilisateurs admin",
     "rolesPermissions": "Rôles et permissions",
     "createUser": "Créer un utilisateur",
-    "activityTracking": "Suivi d'activité"
+    "activityTracking": "Suivi d'activité",
+    "systemAdministration": "Administration système",
+    "auditLogs": "Audit et journalisation",
+    "dataManagement": "Gestion des données",
+    "systemConfiguration": "Configuration système"
   },
   "dashboard": {
     "title": "Tableau de bord",
