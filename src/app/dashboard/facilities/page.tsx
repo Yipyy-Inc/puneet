@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 
 import { FacilityModal } from "@/components/modals/FacilityModal";
-import { CreateFacilityModal } from "@/components/modals/CreateFacilityModal";
 import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
 import {
   Plus,
@@ -151,7 +150,6 @@ export default function FacilitiesPage() {
     (typeof initialFacilities)[0] | null
   >(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const pendingRequestsCount = facilityRequests.filter(
     (r) => r.status === "pending",
@@ -302,10 +300,6 @@ export default function FacilitiesPage() {
     },
   ];
 
-  const handleCreateFacility = (newFacility: (typeof initialFacilities)[0]) => {
-    setFacilitiesState((prev) => [...prev, newFacility]);
-  };
-
   return (
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
@@ -328,7 +322,7 @@ export default function FacilitiesPage() {
             <Mail className="mr-2 h-4 w-4" />
             {t("notifyAll")}
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button onClick={() => router.push("/dashboard/facilities/new")}>
             <Plus className="mr-2 h-4 w-4" />
             {t("addFacility")}
           </Button>
@@ -464,13 +458,6 @@ export default function FacilitiesPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Create/Edit Facility Modal */}
-      <CreateFacilityModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreate={handleCreateFacility}
-      />
     </div>
   );
 }

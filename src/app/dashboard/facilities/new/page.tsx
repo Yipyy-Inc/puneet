@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { type Step } from "@/components/ui/stepper";
 import { plans } from "@/data/plans";
+import { availableModules } from "@/data/facilities";
 import {
   Building,
   Building2,
@@ -35,6 +36,13 @@ import {
   Dog,
   Home,
   GraduationCap,
+  Plus,
+  Trash2,
+  Shield,
+  Calendar,
+  MessageSquare,
+  Package,
+  Layers,
 } from "lucide-react";
 
 const steps: Step[] = [
@@ -59,6 +67,16 @@ const steps: Step[] = [
     description: "Admin account",
   },
   {
+    id: "staff",
+    title: "Staff Members",
+    description: "Team setup",
+  },
+  {
+    id: "modules",
+    title: "Modules",
+    description: "Features & tools",
+  },
+  {
     id: "plan",
     title: "Subscription",
     description: "Choose plan",
@@ -69,6 +87,92 @@ const steps: Step[] = [
     description: "Confirm details",
   },
 ];
+
+const staffRoles = [
+  {
+    id: "manager",
+    label: "Manager",
+    description: "Full access to facility operations",
+    permissions: [
+      "manage_bookings",
+      "manage_clients",
+      "manage_staff",
+      "view_reports",
+      "manage_inventory",
+    ],
+  },
+  {
+    id: "receptionist",
+    label: "Receptionist",
+    description: "Handle bookings and client interactions",
+    permissions: ["manage_bookings", "view_clients", "check_in_out"],
+  },
+  {
+    id: "groomer",
+    label: "Groomer",
+    description: "Grooming services and appointments",
+    permissions: ["view_bookings", "manage_grooming", "view_clients"],
+  },
+  {
+    id: "trainer",
+    label: "Trainer",
+    description: "Training sessions and programs",
+    permissions: ["view_bookings", "manage_training", "view_clients"],
+  },
+  {
+    id: "caretaker",
+    label: "Caretaker",
+    description: "Pet care and daily operations",
+    permissions: ["view_bookings", "check_in_out", "daily_logs"],
+  },
+];
+
+const allPermissions = [
+  { id: "manage_bookings", label: "Manage Bookings", category: "Bookings" },
+  { id: "view_bookings", label: "View Bookings", category: "Bookings" },
+  { id: "manage_clients", label: "Manage Clients", category: "Clients" },
+  { id: "view_clients", label: "View Clients", category: "Clients" },
+  { id: "check_in_out", label: "Check In/Out", category: "Operations" },
+  { id: "daily_logs", label: "Daily Logs", category: "Operations" },
+  { id: "manage_staff", label: "Manage Staff", category: "Staff" },
+  { id: "view_reports", label: "View Reports", category: "Reports" },
+  { id: "manage_inventory", label: "Manage Inventory", category: "Inventory" },
+  { id: "manage_grooming", label: "Manage Grooming", category: "Services" },
+  { id: "manage_training", label: "Manage Training", category: "Services" },
+];
+
+interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  permissions: string[];
+  autoGeneratePassword: boolean;
+}
+
+const getModuleIcon = (iconName: string) => {
+  switch (iconName) {
+    case "Calendar":
+      return Calendar;
+    case "Users":
+      return Users;
+    case "UserCheck":
+      return UserCheck;
+    case "CreditCard":
+      return CreditCard;
+    case "MessageSquare":
+      return MessageSquare;
+    case "GraduationCap":
+      return GraduationCap;
+    case "Scissors":
+      return Scissors;
+    case "Package":
+      return Package;
+    default:
+      return Layers;
+  }
+};
 
 const businessTypes = [
   {
@@ -119,9 +223,10 @@ export default function NewFacilityPage() {
     // Business Type
     businessTypes: [] as string[],
     services: [] as string[],
-    capacityDogs: "",
-    capacityCats: "",
-    capacityOther: "",
+    limitLocations: "",
+    limitStaff: "",
+    limitClients: "",
+    limitPets: "",
 
     // Location & Contact
     address: "",
@@ -146,6 +251,12 @@ export default function NewFacilityPage() {
     adminPassword: "",
     adminConfirmPassword: "",
     autoGeneratePassword: true,
+
+    // Staff Members
+    staffMembers: [] as StaffMember[],
+
+    // Modules
+    enabledModules: ["booking", "customers"] as string[],
 
     // Plan Selection
     selectedPlan: "",
@@ -180,6 +291,23 @@ export default function NewFacilityPage() {
         }
       }
     } else if (step === 4) {
+      // Staff validation - optional, just validate if any are added
+      formData.staffMembers.forEach((staff, index) => {
+        if (!staff.name.trim()) {
+          newErrors[`staff_${index}_name`] = "Staff name is required";
+        }
+        if (!staff.email.trim()) {
+          newErrors[`staff_${index}_email`] = "Staff email is required";
+        }
+        if (!staff.role) {
+          newErrors[`staff_${index}_role`] = "Role is required";
+        }
+      });
+    } else if (step === 5) {
+      if (formData.enabledModules.length === 0) {
+        newErrors.modules = "Select at least one module";
+      }
+    } else if (step === 6) {
       if (!formData.selectedPlan)
         newErrors.selectedPlan = "Please select a plan";
     }
@@ -242,6 +370,79 @@ export default function NewFacilityPage() {
           [field]: value,
         },
       },
+    }));
+  };
+
+  const addStaffMember = () => {
+    const newStaff: StaffMember = {
+      id: `staff-${Date.now()}`,
+      name: "",
+      email: "",
+      phone: "",
+      role: "",
+      permissions: [],
+      autoGeneratePassword: true,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      staffMembers: [...prev.staffMembers, newStaff],
+    }));
+  };
+
+  const removeStaffMember = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffMembers: prev.staffMembers.filter((s) => s.id !== id),
+    }));
+  };
+
+  const updateStaffMember = (
+    id: string,
+    field: keyof StaffMember,
+    value: string | string[] | boolean,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffMembers: prev.staffMembers.map((s) =>
+        s.id === id ? { ...s, [field]: value } : s,
+      ),
+    }));
+  };
+
+  const handleRoleChange = (staffId: string, roleId: string) => {
+    const role = staffRoles.find((r) => r.id === roleId);
+    setFormData((prev) => ({
+      ...prev,
+      staffMembers: prev.staffMembers.map((s) =>
+        s.id === staffId
+          ? { ...s, role: roleId, permissions: role?.permissions || [] }
+          : s,
+      ),
+    }));
+  };
+
+  const toggleStaffPermission = (staffId: string, permissionId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      staffMembers: prev.staffMembers.map((s) =>
+        s.id === staffId
+          ? {
+              ...s,
+              permissions: s.permissions.includes(permissionId)
+                ? s.permissions.filter((p) => p !== permissionId)
+                : [...s.permissions, permissionId],
+            }
+          : s,
+      ),
+    }));
+  };
+
+  const toggleModule = (moduleId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      enabledModules: prev.enabledModules.includes(moduleId)
+        ? prev.enabledModules.filter((m) => m !== moduleId)
+        : [...prev.enabledModules, moduleId],
     }));
   };
 
@@ -379,55 +580,87 @@ export default function NewFacilityPage() {
             <div className="space-y-4">
               <Label>Capacity Limits</Label>
               <p className="text-sm text-muted-foreground">
-                Set maximum capacity for each pet type
+                Set maximum limits for facility resources (leave empty for plan
+                defaults)
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="capacityDogs" className="text-sm">
-                    Dogs
+                  <Label
+                    htmlFor="limitLocations"
+                    className="text-sm flex items-center gap-2"
+                  >
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    Locations
                   </Label>
                   <Input
-                    id="capacityDogs"
+                    id="limitLocations"
                     type="number"
-                    min="0"
-                    value={formData.capacityDogs}
-                    onChange={(e) =>
-                      setFormData({ ...formData, capacityDogs: e.target.value })
-                    }
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="capacityCats" className="text-sm">
-                    Cats
-                  </Label>
-                  <Input
-                    id="capacityCats"
-                    type="number"
-                    min="0"
-                    value={formData.capacityCats}
-                    onChange={(e) =>
-                      setFormData({ ...formData, capacityCats: e.target.value })
-                    }
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="capacityOther" className="text-sm">
-                    Other Pets
-                  </Label>
-                  <Input
-                    id="capacityOther"
-                    type="number"
-                    min="0"
-                    value={formData.capacityOther}
+                    min="1"
+                    value={formData.limitLocations}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        capacityOther: e.target.value,
+                        limitLocations: e.target.value,
                       })
                     }
-                    placeholder="0"
+                    placeholder="Plan default"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="limitStaff"
+                    className="text-sm flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Staff Members
+                  </Label>
+                  <Input
+                    id="limitStaff"
+                    type="number"
+                    min="1"
+                    value={formData.limitStaff}
+                    onChange={(e) =>
+                      setFormData({ ...formData, limitStaff: e.target.value })
+                    }
+                    placeholder="Plan default"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="limitClients"
+                    className="text-sm flex items-center gap-2"
+                  >
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    Clients
+                  </Label>
+                  <Input
+                    id="limitClients"
+                    type="number"
+                    min="1"
+                    value={formData.limitClients}
+                    onChange={(e) =>
+                      setFormData({ ...formData, limitClients: e.target.value })
+                    }
+                    placeholder="Plan default"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="limitPets"
+                    className="text-sm flex items-center gap-2"
+                  >
+                    <PawPrint className="h-4 w-4 text-muted-foreground" />
+                    Pets
+                  </Label>
+                  <Input
+                    id="limitPets"
+                    type="number"
+                    min="1"
+                    value={formData.limitPets}
+                    onChange={(e) =>
+                      setFormData({ ...formData, limitPets: e.target.value })
+                    }
+                    placeholder="Plan default"
                   />
                 </div>
               </div>
@@ -726,6 +959,311 @@ export default function NewFacilityPage() {
 
       case 4:
         return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Staff Members</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add team members who will use the system
+                </p>
+              </div>
+              <Button onClick={addStaffMember} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Staff
+              </Button>
+            </div>
+
+            {formData.staffMembers.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium mb-1">No staff members added</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You can add staff members now or later from the facility
+                    settings
+                  </p>
+                  <Button onClick={addStaffMember} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First Staff Member
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {formData.staffMembers.map((staff, index) => (
+                  <Card key={staff.id} className="overflow-hidden">
+                    <CardHeader className="pb-3 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Staff Member {index + 1}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeStaffMember(staff.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>
+                            Name <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            value={staff.name}
+                            onChange={(e) =>
+                              updateStaffMember(
+                                staff.id,
+                                "name",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Staff name"
+                            className={
+                              errors[`staff_${index}_name`]
+                                ? "border-destructive"
+                                : ""
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>
+                            Email <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            type="email"
+                            value={staff.email}
+                            onChange={(e) =>
+                              updateStaffMember(
+                                staff.id,
+                                "email",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="staff@facility.com"
+                            className={
+                              errors[`staff_${index}_email`]
+                                ? "border-destructive"
+                                : ""
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Phone</Label>
+                          <Input
+                            value={staff.phone}
+                            onChange={(e) =>
+                              updateStaffMember(
+                                staff.id,
+                                "phone",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="(555) 123-4567"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>
+                            Role <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={staff.role}
+                            onValueChange={(value) =>
+                              handleRoleChange(staff.id, value)
+                            }
+                          >
+                            <SelectTrigger
+                              className={
+                                errors[`staff_${index}_role`]
+                                  ? "border-destructive"
+                                  : ""
+                              }
+                            >
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {staffRoles.map((role) => (
+                                <SelectItem key={role.id} value={role.id}>
+                                  <div className="flex flex-col">
+                                    <span>{role.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {staff.role && (
+                        <div className="space-y-3 pt-3 border-t">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm">Permissions</Label>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {allPermissions.map((permission) => (
+                              <div
+                                key={permission.id}
+                                className="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  id={`${staff.id}-${permission.id}`}
+                                  checked={staff.permissions.includes(
+                                    permission.id,
+                                  )}
+                                  onCheckedChange={() =>
+                                    toggleStaffPermission(
+                                      staff.id,
+                                      permission.id,
+                                    )
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`${staff.id}-${permission.id}`}
+                                  className="text-xs cursor-pointer"
+                                >
+                                  {permission.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <Checkbox
+                          id={`${staff.id}-auto-password`}
+                          checked={staff.autoGeneratePassword}
+                          onCheckedChange={(checked) =>
+                            updateStaffMember(
+                              staff.id,
+                              "autoGeneratePassword",
+                              !!checked,
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={`${staff.id}-auto-password`}
+                          className="text-sm cursor-pointer"
+                        >
+                          Auto-generate password and send via email
+                        </Label>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label className="text-base">
+                Enable Modules <span className="text-destructive">*</span>
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Select the features and tools this facility will have access to
+              </p>
+            </div>
+
+            {errors.modules && (
+              <p className="text-sm text-destructive">{errors.modules}</p>
+            )}
+
+            <div className="grid gap-3">
+              {availableModules.map((module) => {
+                const Icon = getModuleIcon(module.icon);
+                const isEnabled = formData.enabledModules.includes(module.id);
+
+                return (
+                  <Card
+                    key={module.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      isEnabled ? "ring-2 ring-primary border-primary" : ""
+                    }`}
+                    onClick={() => toggleModule(module.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`p-2 rounded-lg ${
+                              isEnabled
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{module.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {module.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">
+                            ${module.basePrice}/mo
+                          </span>
+                          <Checkbox
+                            checked={isEnabled}
+                            onCheckedChange={() => toggleModule(module.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Selected Modules</span>
+                  <div className="text-right">
+                    <span className="text-lg font-bold">
+                      $
+                      {formData.enabledModules
+                        .reduce((sum, id) => {
+                          const mod = availableModules.find((m) => m.id === id);
+                          return sum + (mod?.basePrice || 0);
+                        }, 0)
+                        .toFixed(2)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/mo</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {formData.enabledModules.map((id) => {
+                    const mod = availableModules.find((m) => m.id === id);
+                    return (
+                      <Badge key={id} variant="secondary">
+                        {mod?.name}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 6:
+        return (
           <div className="space-y-4">
             <Label>
               Select a Plan <span className="text-destructive">*</span>
@@ -812,7 +1350,7 @@ export default function NewFacilityPage() {
           </div>
         );
 
-      case 5:
+      case 7:
         return (
           <div className="space-y-6">
             <div className="rounded-lg bg-success/10 border border-success/20 p-4">
@@ -853,10 +1391,12 @@ export default function NewFacilityPage() {
                   </div>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-muted-foreground">Capacity</span>
-                  <span className="font-medium">
-                    {formData.capacityDogs || 0} dogs,{" "}
-                    {formData.capacityCats || 0} cats
+                  <span className="text-muted-foreground">Limits</span>
+                  <span className="font-medium text-right text-xs">
+                    {formData.limitLocations || "Default"} locations,{" "}
+                    {formData.limitStaff || "Default"} staff,{" "}
+                    {formData.limitClients || "Default"} clients,{" "}
+                    {formData.limitPets || "Default"} pets
                   </span>
                 </div>
               </CardContent>
@@ -922,6 +1462,80 @@ export default function NewFacilityPage() {
             <Card className="border-0 shadow-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Staff Members
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-muted-foreground">Total Staff</span>
+                  <span className="font-medium">
+                    {formData.staffMembers.length} member
+                    {formData.staffMembers.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                {formData.staffMembers.length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    {formData.staffMembers.map((staff) => (
+                      <div
+                        key={staff.id}
+                        className="flex justify-between text-xs py-1"
+                      >
+                        <span>{staff.name || "Unnamed"}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {staffRoles.find((r) => r.id === staff.role)?.label ||
+                            "No role"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Enabled Modules
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-muted-foreground">Modules</span>
+                  <span className="font-medium">
+                    {formData.enabledModules.length} enabled
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {formData.enabledModules.map((id) => {
+                    const mod = availableModules.find((m) => m.id === id);
+                    return (
+                      <Badge key={id} variant="secondary">
+                        {mod?.name}
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between py-1 pt-2 border-t">
+                  <span className="text-muted-foreground">Module Cost</span>
+                  <span className="font-medium">
+                    $
+                    {formData.enabledModules
+                      .reduce((sum, id) => {
+                        const mod = availableModules.find((m) => m.id === id);
+                        return sum + (mod?.basePrice || 0);
+                      }, 0)
+                      .toFixed(2)}
+                    /mo
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   Subscription
                 </CardTitle>
@@ -954,6 +1568,10 @@ export default function NewFacilityPage() {
         return MapPin;
       case "owner":
         return User;
+      case "staff":
+        return Users;
+      case "modules":
+        return Layers;
       case "plan":
         return CreditCard;
       case "review":
