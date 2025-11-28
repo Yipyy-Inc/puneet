@@ -10,6 +10,7 @@ import {
 } from "@/data/facilities";
 import { plans } from "@/data/plans";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FacilityReports } from "@/components/facility/FacilityReports";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -518,6 +519,9 @@ export default function FacilityDetailPage() {
           }}
         />
       </div>
+
+      {/* Facility Reports Section */}
+      <FacilityReports facilityId={facility.id} facilityName={facility.name} />
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
