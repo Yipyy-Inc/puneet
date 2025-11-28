@@ -19,6 +19,12 @@ import {
   Megaphone,
   Headphones,
   DollarSign,
+  TrendingUp,
+  FileText,
+  Users,
+  Calendar,
+  PieChart,
+  BarChart2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -60,10 +66,33 @@ export function AppSidebar() {
           icon: Home,
           disabled: false,
         },
+      ],
+    },
+    {
+      label: t("analyticsReporting"),
+      items: [
         {
-          title: t("analyticsReporting"),
+          title: t("overview"),
           url: "/dashboard/analytics",
-          icon: BarChart3,
+          icon: BarChart2,
+          disabled: false,
+        },
+        {
+          title: t("businessIntelligence"),
+          url: "/dashboard/analytics/business-intelligence",
+          icon: TrendingUp,
+          disabled: false,
+        },
+        {
+          title: t("performanceMetrics"),
+          url: "/dashboard/analytics/performance",
+          icon: Activity,
+          disabled: false,
+        },
+        {
+          title: t("customReports"),
+          url: "/dashboard/analytics/reports",
+          icon: FileText,
           disabled: false,
         },
       ],
