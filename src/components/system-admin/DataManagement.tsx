@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,10 @@ import { Progress } from "@/components/ui/progress";
 
 export function DataManagement() {
   const getBackupStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any; icon: any; className: string }> = {
+    const variants: Record<
+      string,
+      { variant: any; icon: any; className: string }
+    > = {
       Completed: {
         variant: "default",
         icon: CheckCircle2,
@@ -53,7 +57,10 @@ export function DataManagement() {
     const config = variants[status] || variants.Scheduled;
     const Icon = config.icon;
     return (
-      <Badge variant={config.variant} className={`text-xs ${config.className} gap-1`}>
+      <Badge
+        variant={config.variant}
+        className={`text-xs ${config.className} gap-1`}
+      >
         <Icon className="h-3 w-3" />
         {status}
       </Badge>
@@ -62,10 +69,19 @@ export function DataManagement() {
 
   const getVerificationBadge = (status: string) => {
     const variants: Record<string, { variant: any; className: string }> = {
-      Verified: { variant: "default", className: "bg-green-100 text-green-700" },
+      Verified: {
+        variant: "default",
+        className: "bg-green-100 text-green-700",
+      },
       Failed: { variant: "destructive", className: "bg-red-100 text-red-700" },
-      Pending: { variant: "secondary", className: "bg-yellow-100 text-yellow-700" },
-      "Not Verified": { variant: "outline", className: "bg-gray-100 text-gray-700" },
+      Pending: {
+        variant: "secondary",
+        className: "bg-yellow-100 text-yellow-700",
+      },
+      "Not Verified": {
+        variant: "outline",
+        className: "bg-gray-100 text-gray-700",
+      },
     };
     const config = variants[status] || variants["Not Verified"];
     return (
@@ -77,10 +93,19 @@ export function DataManagement() {
 
   const getRecoveryStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; className: string }> = {
-      Completed: { variant: "default", className: "bg-green-100 text-green-700" },
-      "In Progress": { variant: "secondary", className: "bg-blue-100 text-blue-700" },
+      Completed: {
+        variant: "default",
+        className: "bg-green-100 text-green-700",
+      },
+      "In Progress": {
+        variant: "secondary",
+        className: "bg-blue-100 text-blue-700",
+      },
       Failed: { variant: "destructive", className: "bg-red-100 text-red-700" },
-      Requested: { variant: "outline", className: "bg-yellow-100 text-yellow-700" },
+      Requested: {
+        variant: "outline",
+        className: "bg-yellow-100 text-yellow-700",
+      },
     };
     const config = variants[status] || variants.Requested;
     return (
@@ -111,7 +136,9 @@ export function DataManagement() {
       render: (item: any) => (
         <div>
           <div className="font-medium">{item.backupName}</div>
-          <div className="text-xs text-muted-foreground">{item.backupType} - {item.scope}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.backupType} - {item.scope}
+          </div>
         </div>
       ),
     },
@@ -144,7 +171,9 @@ export function DataManagement() {
       label: "Size",
       render: (item: any) => (
         <span className="font-mono text-sm">
-          {item.size >= 1024 ? `${(item.size / 1024).toFixed(2)} GB` : `${item.size} MB`}
+          {item.size >= 1024
+            ? `${(item.size / 1024).toFixed(2)} GB`
+            : `${item.size} MB`}
         </span>
       ),
     },
@@ -164,7 +193,7 @@ export function DataManagement() {
     },
   ];
 
-  const backupActions = (item: any) => (
+  const backupActions = () => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-2">
         <RefreshCw className="h-4 w-4" />
@@ -185,7 +214,9 @@ export function DataManagement() {
       render: (item: any) => (
         <div>
           <div className="font-medium">{item.recoveryName}</div>
-          <div className="text-xs text-muted-foreground">{item.recoveryType}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.recoveryType}
+          </div>
         </div>
       ),
     },
@@ -240,7 +271,8 @@ export function DataManagement() {
       label: "Retention Period",
       render: (item: any) => (
         <span className="font-medium">
-          {item.retentionPeriod} days ({Math.floor(item.retentionPeriod / 365)} years)
+          {item.retentionPeriod} days ({Math.floor(item.retentionPeriod / 365)}{" "}
+          years)
         </span>
       ),
     },
@@ -254,7 +286,10 @@ export function DataManagement() {
           Anonymize: "bg-purple-100 text-purple-700",
         };
         return (
-          <Badge variant="secondary" className={`text-xs ${colors[item.action]}`}>
+          <Badge
+            variant="secondary"
+            className={`text-xs ${colors[item.action]}`}
+          >
             {item.action}
           </Badge>
         );
@@ -269,19 +304,23 @@ export function DataManagement() {
       key: "itemsProcessed",
       label: "Items Processed",
       render: (item: any) => (
-        <span className="font-semibold">{item.itemsProcessed.toLocaleString()}</span>
+        <span className="font-semibold">
+          {item.itemsProcessed.toLocaleString()}
+        </span>
       ),
     },
     {
       key: "nextExecution",
       label: "Next Execution",
       render: (item: any) => (
-        <span className="text-sm">{new Date(item.nextExecution).toLocaleDateString()}</span>
+        <span className="text-sm">
+          {new Date(item.nextExecution).toLocaleDateString()}
+        </span>
       ),
     },
   ];
 
-  const policyActions = (item: any) => (
+  const policyActions = () => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-2">
         <Play className="h-4 w-4" />
@@ -295,12 +334,18 @@ export function DataManagement() {
   );
 
   // Calculate statistics
-  const completedBackups = dataBackups.filter((b) => b.status === "Completed").length;
+  const completedBackups = dataBackups.filter(
+    (b) => b.status === "Completed",
+  ).length;
   const totalBackupSize = dataBackups
     .filter((b) => b.status === "Completed")
     .reduce((sum, b) => sum + b.size, 0);
-  const verifiedBackups = dataBackups.filter((b) => b.verificationStatus === "Verified").length;
-  const activeRecoveries = dataRecoveries.filter((r) => r.status === "In Progress").length;
+  const verifiedBackups = dataBackups.filter(
+    (b) => b.verificationStatus === "Verified",
+  ).length;
+  const activeRecoveries = dataRecoveries.filter(
+    (r) => r.status === "In Progress",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -327,7 +372,9 @@ export function DataManagement() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Total Backups
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{dataBackups.length}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {dataBackups.length}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {completedBackups} completed
                 </p>
@@ -335,7 +382,8 @@ export function DataManagement() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Database className="h-5 w-5 text-white" />
@@ -361,7 +409,8 @@ export function DataManagement() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <HardDrive className="h-5 w-5 text-white" />
@@ -377,15 +426,19 @@ export function DataManagement() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Verified Backups
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{verifiedBackups}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {verifiedBackups}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {((verifiedBackups / dataBackups.length) * 100).toFixed(0)}% verification rate
+                  {((verifiedBackups / dataBackups.length) * 100).toFixed(0)}%
+                  verification rate
                 </p>
               </div>
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <ShieldCheck className="h-5 w-5 text-white" />
@@ -401,7 +454,9 @@ export function DataManagement() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Active Recoveries
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{activeRecoveries}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {activeRecoveries}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   In progress
                 </p>
@@ -409,7 +464,8 @@ export function DataManagement() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <RefreshCw className="h-5 w-5 text-white" />
@@ -431,7 +487,9 @@ export function DataManagement() {
         <TabsContent value="backups" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Backup History</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Backup History
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 All system and facility backups with verification status
               </p>
@@ -452,7 +510,9 @@ export function DataManagement() {
         <TabsContent value="recovery" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Recovery Operations</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Recovery Operations
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Track data recovery and restoration processes
               </p>
@@ -530,7 +590,9 @@ export function DataManagement() {
         <TabsContent value="retention" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Retention Policies</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Retention Policies
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Automated data retention and compliance management
               </p>
@@ -557,7 +619,8 @@ export function DataManagement() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Data is archived to cold storage and remains accessible for compliance audits
+                  Data is archived to cold storage and remains accessible for
+                  compliance audits
                 </p>
               </CardContent>
             </Card>

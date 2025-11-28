@@ -434,7 +434,7 @@ export default function FacilitySchedulingPage() {
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+  const [currentWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday

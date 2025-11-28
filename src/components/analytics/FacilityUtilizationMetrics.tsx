@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { facilityUtilization, utilizationComparison } from "@/data/analytics";
-import { Building2, TrendingUp, TrendingDown, BarChart3, Award } from "lucide-react";
+import { Building2, TrendingUp, BarChart3, Award } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -34,9 +34,6 @@ export function FacilityUtilizationMetrics() {
     efficiency: facility.efficiency,
   }));
 
-  // Calculate trend data
-  const trendData = facilityUtilization[0]?.utilizationTrend || [];
-
   return (
     <div className="space-y-6">
       {/* Key Metrics Cards */}
@@ -60,7 +57,8 @@ export function FacilityUtilizationMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <BarChart3 className="h-5 w-5 text-white" />
@@ -88,7 +86,8 @@ export function FacilityUtilizationMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <Award className="h-5 w-5 text-white" />
@@ -116,7 +115,8 @@ export function FacilityUtilizationMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Building2 className="h-5 w-5 text-white" />
@@ -135,8 +135,10 @@ export function FacilityUtilizationMetrics() {
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {(
-                      comparison.facilities.reduce((sum, f) => sum + f.efficiency, 0) /
-                      comparison.facilities.length
+                      comparison.facilities.reduce(
+                        (sum, f) => sum + f.efficiency,
+                        0,
+                      ) / comparison.facilities.length
                     ).toFixed(1)}
                     %
                   </h3>
@@ -148,7 +150,8 @@ export function FacilityUtilizationMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <TrendingUp className="h-5 w-5 text-white" />
@@ -174,7 +177,11 @@ export function FacilityUtilizationMetrics() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparison.facilities} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    horizontal={false}
+                  />
                   <XAxis
                     type="number"
                     axisLine={false}
@@ -284,41 +291,54 @@ export function FacilityUtilizationMetrics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {facilityUtilization.map((facility, index) => (
+            {facilityUtilization.map((facility) => (
               <div
                 key={facility.id}
                 className="p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h4 className="font-semibold text-lg">{facility.facilityName}</h4>
+                    <h4 className="font-semibold text-lg">
+                      {facility.facilityName}
+                    </h4>
                     <p className="text-sm text-muted-foreground">
                       Capacity: {facility.totalCapacity} units
                     </p>
                   </div>
                   <Badge
-                    variant={facility.utilizationRate >= 80 ? "default" : "secondary"}
+                    variant={
+                      facility.utilizationRate >= 80 ? "default" : "secondary"
+                    }
                     className="text-xs"
                   >
-                    {facility.utilizationRate >= 80 ? "High" : "Moderate"} Utilization
+                    {facility.utilizationRate >= 80 ? "High" : "Moderate"}{" "}
+                    Utilization
                   </Badge>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Utilization</p>
-                    <p className="text-xl font-bold">{facility.utilizationRate}%</p>
+                    <p className="text-xl font-bold">
+                      {facility.utilizationRate}%
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Occupancy</p>
-                    <p className="text-xl font-bold">{facility.occupancyRate}%</p>
+                    <p className="text-xl font-bold">
+                      {facility.occupancyRate}%
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Efficiency</p>
-                    <p className="text-xl font-bold">{facility.resourceEfficiency}%</p>
+                    <p className="text-xl font-bold">
+                      {facility.resourceEfficiency}%
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Avg Occupancy</p>
+                    <p className="text-xs text-muted-foreground">
+                      Avg Occupancy
+                    </p>
                     <p className="text-xl font-bold">
                       {facility.averageOccupancy}/{facility.totalCapacity}
                     </p>
@@ -328,7 +348,9 @@ export function FacilityUtilizationMetrics() {
                 {/* Utilization Bar */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Hours Utilization</span>
+                    <span className="text-muted-foreground">
+                      Hours Utilization
+                    </span>
                     <span className="font-medium">
                       {facility.bookedHours} / {facility.availableHours} hours
                     </span>
@@ -349,7 +371,9 @@ export function FacilityUtilizationMetrics() {
 
                 {/* Weekly Trend Mini Chart */}
                 <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-2">Weekly Trend</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Weekly Trend
+                  </p>
                   <div className="h-16">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={facility.utilizationTrend}>
@@ -390,7 +414,10 @@ export function FacilityUtilizationMetrics() {
           <CardContent>
             <div className="text-center">
               <p className="text-4xl font-bold">
-                {facilityUtilization.reduce((sum, f) => sum + f.totalCapacity, 0)}
+                {facilityUtilization.reduce(
+                  (sum, f) => sum + f.totalCapacity,
+                  0,
+                )}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Total system capacity (units)
@@ -401,9 +428,7 @@ export function FacilityUtilizationMetrics() {
 
         <Card className="border-0 shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Total Hours
-            </CardTitle>
+            <CardTitle className="text-lg font-semibold">Total Hours</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center">

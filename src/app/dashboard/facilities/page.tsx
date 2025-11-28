@@ -145,7 +145,7 @@ export default function FacilitiesPage() {
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("status");
   const tPlans = useTranslations("plans");
-  const [facilitiesState, setFacilitiesState] = useState(initialFacilities);
+  const [facilitiesState] = useState(initialFacilities);
   const [selectedFacility, setSelectedFacility] = useState<
     (typeof initialFacilities)[0] | null
   >(null);

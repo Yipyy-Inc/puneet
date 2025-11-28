@@ -5,11 +5,9 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  BarChart3,
   Activity,
   FileText,
   ArrowRight,
-  DollarSign,
   Building2,
   CheckCircle2,
 } from "lucide-react";

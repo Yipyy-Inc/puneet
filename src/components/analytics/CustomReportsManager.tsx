@@ -3,17 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/DataTable";
-import { customReports } from "@/data/analytics";
+import { DataTable, ColumnDef } from "@/components/DataTable";
+import { customReports, CustomReport } from "@/data/analytics";
+import { LucideIcon } from "lucide-react";
 import {
   FileText,
   Download,
   Calendar,
   Clock,
   MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
   PlayCircle,
   FileSpreadsheet,
   FileJson,
@@ -21,11 +19,11 @@ import {
 
 export function CustomReportsManager() {
   // Table columns
-  const columns = [
+  const columns: ColumnDef<CustomReport & Record<string, unknown>>[] = [
     {
       key: "name",
       label: "Report Name",
-      render: (item: any) => (
+      render: (item) => (
         <div>
           <div className="font-medium">{item.name}</div>
           <div className="text-xs text-muted-foreground line-clamp-1">
@@ -37,7 +35,7 @@ export function CustomReportsManager() {
     {
       key: "category",
       label: "Category",
-      render: (item: any) => {
+      render: (item) => {
         const colors: Record<string, string> = {
           Financial: "bg-blue-100 text-blue-700",
           Operations: "bg-green-100 text-green-700",
@@ -58,7 +56,7 @@ export function CustomReportsManager() {
     {
       key: "status",
       label: "Status",
-      render: (item: any) => {
+      render: (item) => {
         const variants: Record<
           string,
           "default" | "secondary" | "outline" | "destructive"
@@ -81,7 +79,7 @@ export function CustomReportsManager() {
     {
       key: "schedule",
       label: "Schedule",
-      render: (item: any) => {
+      render: (item) => {
         if (!item.schedule)
           return <span className="text-xs text-muted-foreground">Manual</span>;
         return (
@@ -97,17 +95,17 @@ export function CustomReportsManager() {
     {
       key: "lastRun",
       label: "Last Run",
-      render: (item: any) => (
+      render: (item) => (
         <div className="text-xs text-muted-foreground">{item.lastRun}</div>
       ),
     },
     {
       key: "exportFormats",
       label: "Export",
-      render: (item: any) => (
+      render: (item) => (
         <div className="flex gap-1">
-          {item.exportFormats?.map((format: string) => {
-            const icons: Record<string, any> = {
+          {item.exportFormats?.map((format) => {
+            const icons: Record<string, LucideIcon> = {
               PDF: FileText,
               Excel: FileSpreadsheet,
               CSV: FileSpreadsheet,
@@ -159,7 +157,8 @@ export function CustomReportsManager() {
               <div
                 className="flex items-center justify-center w-10 h-10 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <FileText className="h-5 w-5 text-white" />
@@ -178,7 +177,8 @@ export function CustomReportsManager() {
               <div
                 className="flex items-center justify-center w-10 h-10 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <PlayCircle className="h-5 w-5 text-white" />
@@ -199,7 +199,8 @@ export function CustomReportsManager() {
               <div
                 className="flex items-center justify-center w-10 h-10 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Calendar className="h-5 w-5 text-white" />
@@ -220,7 +221,8 @@ export function CustomReportsManager() {
               <div
                 className="flex items-center justify-center w-10 h-10 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <Download className="h-5 w-5 text-white" />
@@ -241,8 +243,8 @@ export function CustomReportsManager() {
         </CardHeader>
         <CardContent>
           <DataTable
-            columns={columns as any}
-            data={customReports as any}
+            columns={columns}
+            data={customReports as (CustomReport & Record<string, unknown>)[]}
             actions={renderActions}
           />
         </CardContent>
@@ -253,40 +255,47 @@ export function CustomReportsManager() {
         {customReports.map((report) => (
           <Card key={report.id} className="border-0 shadow-card">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-lg font-semibold">{report.name}</h4>
-                    <Badge
-                      variant={report.status === "Active" ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {report.status}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {report.category}
-                    </Badge>
+              <div
+                key={report.id}
+                className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="text-lg font-semibold">{report.name}</h4>
+                      <Badge
+                        variant={
+                          report.status === "Active" ? "default" : "secondary"
+                        }
+                        className="text-xs"
+                      >
+                        {report.status}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {report.category}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {report.description}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{report.description}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <PlayCircle className="h-4 w-4" />
-                    Run Now
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <PlayCircle className="h-4 w-4" />
+                      Run
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created By</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Created By
+                  </p>
                   <p className="text-sm font-medium">{report.createdBy}</p>
                 </div>
                 <div>
@@ -298,7 +307,9 @@ export function CustomReportsManager() {
                   <p className="text-sm font-medium">{report.lastRun}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Frequency</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Frequency
+                  </p>
                   <p className="text-sm font-medium">
                     {report.schedule?.frequency || "Manual"}
                   </p>
@@ -306,51 +317,56 @@ export function CustomReportsManager() {
               </div>
 
               {report.schedule && (
-                <div className="p-3 rounded-lg bg-muted/50 mb-4">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        <span className="text-muted-foreground">Next run:</span>{" "}
-                        <span className="font-medium">{report.schedule.nextRun}</span>
+                <div className="flex gap-4 text-sm mb-4 p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <span className="text-muted-foreground">Next run:</span>{" "}
+                      <span className="font-medium">
+                        {report.schedule.nextRun}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        <span className="text-muted-foreground">Recipients:</span>{" "}
-                        <span className="font-medium">
-                          {report.schedule.recipients.length}
-                        </span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <span className="text-muted-foreground">Recipients:</span>{" "}
+                      <span className="font-medium">
+                        {report.schedule.recipients.length}
                       </span>
-                    </div>
+                    </span>
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Visualizations</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Visualizations
+                  </p>
                   <div className="space-y-2">
                     {report.visualizations.map((viz, index) => (
                       <div
                         key={index}
-                        className="flex items-center gap-2 p-2 rounded bg-muted/30 text-xs"
+                        className="text-xs p-2 rounded bg-muted/50 flex items-center gap-2"
                       >
-                        <Badge variant="outline" className="text-[10px]">
-                          {viz.type}
-                        </Badge>
-                        <span className="truncate">{viz.title}</span>
+                        <span className="font-medium">{viz.type}</span>
+                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground truncate">
+                          {viz.title}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Export Formats</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Export Formats
+                  </p>
                   <div className="flex gap-2">
                     {report.exportFormats.map((format) => {
-                      const icons: Record<string, any> = {
+                      const icons: Record<string, LucideIcon> = {
                         PDF: FileText,
                         Excel: FileSpreadsheet,
                         CSV: FileSpreadsheet,

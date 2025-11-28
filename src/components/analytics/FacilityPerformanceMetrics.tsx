@@ -2,14 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/DataTable";
-import { facilityPerformance } from "@/data/analytics";
-import { TrendingUp, TrendingDown, DollarSign, Users, Star, Clock } from "lucide-react";
+import { DataTable, ColumnDef } from "@/components/DataTable";
+import { facilityPerformance, FacilityPerformance } from "@/data/analytics";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Users,
+  Star,
+  Clock,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -25,7 +30,10 @@ import {
 
 export function FacilityPerformanceMetrics() {
   // Calculate system totals
-  const totalRevenue = facilityPerformance.reduce((sum, f) => sum + f.totalRevenue, 0);
+  const totalRevenue = facilityPerformance.reduce(
+    (sum, f) => sum + f.totalRevenue,
+    0,
+  );
   const avgGrowth =
     facilityPerformance.reduce((sum, f) => sum + f.revenueGrowth, 0) /
     facilityPerformance.length;
@@ -33,7 +41,8 @@ export function FacilityPerformanceMetrics() {
     facilityPerformance.reduce((sum, f) => sum + f.customerSatisfaction, 0) /
     facilityPerformance.length;
   const avgNPS =
-    facilityPerformance.reduce((sum, f) => sum + f.nps, 0) / facilityPerformance.length;
+    facilityPerformance.reduce((sum, f) => sum + f.nps, 0) /
+    facilityPerformance.length;
 
   // Prepare radar chart data
   const radarData = facilityPerformance.map((f) => ({
@@ -45,32 +54,36 @@ export function FacilityPerformanceMetrics() {
   }));
 
   // Table columns
-  const columns = [
+  const columns: ColumnDef<FacilityPerformance & Record<string, unknown>>[] = [
     {
       key: "facilityName",
       label: "Facility",
-      render: (item: any) => (
-        <div className="font-medium">{item.facilityName}</div>
-      ),
+      render: (item) => <div className="font-medium">{item.facilityName}</div>,
     },
     {
       key: "totalRevenue",
       label: "Revenue",
-      render: (item: any) => (
-        <span className="font-semibold">${(item.totalRevenue / 1000).toFixed(0)}K</span>
+      render: (item) => (
+        <span className="font-semibold">
+          ${(item.totalRevenue / 1000).toFixed(0)}K
+        </span>
       ),
     },
     {
       key: "revenueGrowth",
       label: "Growth",
-      render: (item: any) => (
+      render: (item) => (
         <div className="flex items-center gap-1">
           {item.revenueGrowth > 0 ? (
             <TrendingUp className="h-3 w-3 text-success" />
           ) : (
             <TrendingDown className="h-3 w-3 text-destructive" />
           )}
-          <span className={item.revenueGrowth > 0 ? "text-success" : "text-destructive"}>
+          <span
+            className={
+              item.revenueGrowth > 0 ? "text-success" : "text-destructive"
+            }
+          >
             {item.revenueGrowth > 0 ? "+" : ""}
             {item.revenueGrowth}%
           </span>
@@ -80,7 +93,7 @@ export function FacilityPerformanceMetrics() {
     {
       key: "staffEfficiency",
       label: "Staff Efficiency",
-      render: (item: any) => (
+      render: (item) => (
         <div className="flex items-center gap-2">
           <div className="w-20 bg-muted rounded-full h-2">
             <div
@@ -95,18 +108,23 @@ export function FacilityPerformanceMetrics() {
     {
       key: "customerSatisfaction",
       label: "Satisfaction",
-      render: (item: any) => (
+      render: (item) => (
         <div className="flex items-center gap-1">
           <Star className="h-4 w-4 text-warning fill-warning" />
-          <span className="font-medium">{item.customerSatisfaction.toFixed(1)}</span>
+          <span className="font-medium">
+            {item.customerSatisfaction.toFixed(1)}
+          </span>
         </div>
       ),
     },
     {
       key: "nps",
       label: "NPS",
-      render: (item: any) => (
-        <Badge variant={item.nps >= 70 ? "default" : "secondary"} className="text-xs">
+      render: (item) => (
+        <Badge
+          variant={item.nps >= 70 ? "default" : "secondary"}
+          className="text-xs"
+        >
           {item.nps}
         </Badge>
       ),
@@ -129,8 +147,8 @@ export function FacilityPerformanceMetrics() {
                     ${(totalRevenue / 1000).toFixed(0)}K
                   </h3>
                   <span className="inline-flex items-center text-xs font-medium text-success">
-                    <TrendingUp className="h-3 w-3 mr-0.5" />
-                    +{avgGrowth.toFixed(1)}%
+                    <TrendingUp className="h-3 w-3 mr-0.5" />+
+                    {avgGrowth.toFixed(1)}%
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -140,7 +158,8 @@ export function FacilityPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <DollarSign className="h-5 w-5 text-white" />
@@ -168,7 +187,8 @@ export function FacilityPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <TrendingUp className="h-5 w-5 text-white" />
@@ -197,7 +217,8 @@ export function FacilityPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <Star className="h-5 w-5 text-white" />
@@ -225,7 +246,8 @@ export function FacilityPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Users className="h-5 w-5 text-white" />
@@ -249,7 +271,11 @@ export function FacilityPerformanceMetrics() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={facilityPerformance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="facilityName"
                   axisLine={false}
@@ -272,9 +298,16 @@ export function FacilityPerformanceMetrics() {
                     borderRadius: "12px",
                     boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                   }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                  formatter={(value: number) => [
+                    `$${value.toLocaleString()}`,
+                    "Revenue",
+                  ]}
                 />
-                <Bar dataKey="totalRevenue" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                <Bar
+                  dataKey="totalRevenue"
+                  fill="#3b82f6"
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -363,7 +396,11 @@ export function FacilityPerformanceMetrics() {
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={facilityPerformance} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    horizontal={false}
+                  />
                   <XAxis
                     type="number"
                     axisLine={false}
@@ -420,8 +457,11 @@ export function FacilityPerformanceMetrics() {
         </CardHeader>
         <CardContent>
           <DataTable
-            columns={columns as any}
-            data={facilityPerformance as any}
+            columns={columns}
+            data={
+              facilityPerformance as (FacilityPerformance &
+                Record<string, unknown>)[]
+            }
           />
         </CardContent>
       </Card>
@@ -433,13 +473,17 @@ export function FacilityPerformanceMetrics() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-lg font-semibold">{facility.facilityName}</h4>
+                  <h4 className="text-lg font-semibold">
+                    {facility.facilityName}
+                  </h4>
                   <p className="text-sm text-muted-foreground">
                     Period: {facility.period}
                   </p>
                 </div>
                 <Badge
-                  variant={facility.revenueGrowth >= 12 ? "default" : "secondary"}
+                  variant={
+                    facility.revenueGrowth >= 12 ? "default" : "secondary"
+                  }
                   className="text-xs"
                 >
                   {facility.revenueGrowth >= 12 ? "Top Performer" : "Good"}
@@ -453,8 +497,7 @@ export function FacilityPerformanceMetrics() {
                     ${(facility.totalRevenue / 1000).toFixed(0)}K
                   </p>
                   <div className="flex items-center gap-1 text-xs text-success mt-0.5">
-                    <TrendingUp className="h-3 w-3" />
-                    +{facility.revenueGrowth}%
+                    <TrendingUp className="h-3 w-3" />+{facility.revenueGrowth}%
                   </div>
                 </div>
 
@@ -467,8 +510,12 @@ export function FacilityPerformanceMetrics() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Efficiency</p>
-                  <p className="text-lg font-bold">{facility.staffEfficiency}%</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Efficiency
+                  </p>
+                  <p className="text-lg font-bold">
+                    {facility.staffEfficiency}%
+                  </p>
                   <div className="w-full bg-muted rounded-full h-1 mt-1">
                     <div
                       className="bg-primary rounded-full h-1"
@@ -478,29 +525,45 @@ export function FacilityPerformanceMetrics() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Satisfaction</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Satisfaction
+                  </p>
                   <div className="flex items-center gap-1">
-                    <p className="text-lg font-bold">{facility.customerSatisfaction}</p>
+                    <p className="text-lg font-bold">
+                      {facility.customerSatisfaction}
+                    </p>
                     <Star className="h-4 w-4 text-warning fill-warning" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Out of 5.0</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Out of 5.0
+                  </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Retention</p>
-                  <p className="text-lg font-bold">{facility.customerRetention}%</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Retention
+                  </p>
+                  <p className="text-lg font-bold">
+                    {facility.customerRetention}%
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     NPS: {facility.nps}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Response Time</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Response Time
+                  </p>
                   <div className="flex items-center gap-1">
-                    <p className="text-lg font-bold">{facility.averageResponseTime}</p>
+                    <p className="text-lg font-bold">
+                      {facility.averageResponseTime}
+                    </p>
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">hours avg</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    hours avg
+                  </p>
                 </div>
               </div>
             </CardContent>

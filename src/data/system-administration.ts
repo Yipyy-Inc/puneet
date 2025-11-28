@@ -6,7 +6,13 @@ export interface AuditLog {
   userName: string;
   userRole: string;
   action: string;
-  category: "Financial" | "User Access" | "Configuration" | "Security" | "Data" | "System";
+  category:
+    | "Financial"
+    | "User Access"
+    | "Configuration"
+    | "Security"
+    | "Data"
+    | "System";
   entityType: string;
   entityId: string;
   entityName: string;
@@ -102,7 +108,14 @@ export interface RetentionPolicy {
 export interface Integration {
   id: string;
   name: string;
-  type: "Email" | "SMS" | "Messaging" | "Feedback" | "Payment" | "Storage" | "Analytics";
+  type:
+    | "Email"
+    | "SMS"
+    | "Messaging"
+    | "Feedback"
+    | "Payment"
+    | "Storage"
+    | "Analytics";
   provider: string;
   status: "Active" | "Inactive" | "Error" | "Testing";
   connectedAt: string;
@@ -113,7 +126,7 @@ export interface Integration {
     encrypted: boolean;
     lastUpdated: string;
   };
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   usageStats: {
     totalRequests: number;
     successRate: number;
@@ -279,7 +292,11 @@ export const auditLogs: AuditLog[] = [
     entityId: "config-001",
     entityName: "Email Service Settings",
     changes: [
-      { field: "smtp_host", oldValue: "smtp.old.com", newValue: "smtp.new.com" },
+      {
+        field: "smtp_host",
+        oldValue: "smtp.old.com",
+        newValue: "smtp.new.com",
+      },
       { field: "smtp_port", oldValue: "587", newValue: "465" },
     ],
     ipAddress: "192.168.1.100",
@@ -609,7 +626,12 @@ export const apiKeys: ApiKey[] = [
     createdAt: "2024-06-15",
     lastUsed: "2025-11-28T14:25:00Z",
     status: "Active",
-    permissions: ["read:bookings", "write:bookings", "read:clients", "read:pets"],
+    permissions: [
+      "read:bookings",
+      "write:bookings",
+      "read:clients",
+      "read:pets",
+    ],
     rateLimit: {
       requestsPerMinute: 100,
       requestsPerDay: 50000,
@@ -798,7 +820,8 @@ export function getAuditLogsBySeverity(severity: string): AuditLog[] {
 
 export function getActiveBackups(): DataBackup[] {
   return dataBackups.filter(
-    (backup) => backup.status === "Completed" || backup.status === "In Progress"
+    (backup) =>
+      backup.status === "Completed" || backup.status === "In Progress",
   );
 }
 

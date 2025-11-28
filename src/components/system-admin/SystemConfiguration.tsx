@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -29,14 +30,15 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export function SystemConfiguration() {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
 
   const getIntegrationStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any; icon: any; className: string }> = {
+    const variants: Record<
+      string,
+      { variant: any; icon: any; className: string }
+    > = {
       Active: {
         variant: "default",
         icon: CheckCircle2,
@@ -61,7 +63,10 @@ export function SystemConfiguration() {
     const config = variants[status] || variants.Inactive;
     const Icon = config.icon;
     return (
-      <Badge variant={config.variant} className={`text-xs ${config.className} gap-1`}>
+      <Badge
+        variant={config.variant}
+        className={`text-xs ${config.className} gap-1`}
+      >
         <Icon className="h-3 w-3" />
         {status}
       </Badge>
@@ -72,8 +77,14 @@ export function SystemConfiguration() {
     const variants: Record<string, { variant: any; className: string }> = {
       Active: { variant: "default", className: "bg-green-100 text-green-700" },
       Expired: { variant: "destructive", className: "bg-red-100 text-red-700" },
-      Revoked: { variant: "destructive", className: "bg-gray-100 text-gray-700" },
-      Suspended: { variant: "secondary", className: "bg-yellow-100 text-yellow-700" },
+      Revoked: {
+        variant: "destructive",
+        className: "bg-gray-100 text-gray-700",
+      },
+      Suspended: {
+        variant: "secondary",
+        className: "bg-yellow-100 text-yellow-700",
+      },
     };
     const config = variants[status] || variants.Suspended;
     return (
@@ -149,7 +160,8 @@ export function SystemConfiguration() {
       key: "testStatus",
       label: "Test Status",
       render: (item: any) => {
-        if (!item.testStatus) return <span className="text-xs text-muted-foreground">-</span>;
+        if (!item.testStatus)
+          return <span className="text-xs text-muted-foreground">-</span>;
         return (
           <Badge
             variant={item.testStatus === "Passed" ? "default" : "destructive"}
@@ -162,7 +174,7 @@ export function SystemConfiguration() {
     },
   ];
 
-  const integrationActions = (item: any) => (
+  const integrationActions = () => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-2">
         <TestTube className="h-4 w-4" />
@@ -183,7 +195,9 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div>
           <div className="font-medium">{item.name}</div>
-          <div className="text-xs text-muted-foreground">{item.description}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.description}
+          </div>
         </div>
       ),
     },
@@ -193,7 +207,9 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div className="flex items-center gap-2">
           <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-            {showApiKeys[item.id] ? item.key : item.key.substring(0, 20) + "..."}
+            {showApiKeys[item.id]
+              ? item.key
+              : item.key.substring(0, 20) + "..."}
           </code>
           <Button
             variant="ghost"
@@ -240,7 +256,12 @@ export function SystemConfiguration() {
             {item.usageStats.totalRequests.toLocaleString()}
           </div>
           <div className="text-xs text-muted-foreground">
-            {((item.usageStats.successfulRequests / item.usageStats.totalRequests) * 100).toFixed(1)}% success
+            {(
+              (item.usageStats.successfulRequests /
+                item.usageStats.totalRequests) *
+              100
+            ).toFixed(1)}
+            % success
           </div>
         </div>
       ),
@@ -250,13 +271,15 @@ export function SystemConfiguration() {
       label: "Last Used",
       render: (item: any) => (
         <span className="text-sm">
-          {item.lastUsed ? new Date(item.lastUsed).toLocaleDateString() : "Never"}
+          {item.lastUsed
+            ? new Date(item.lastUsed).toLocaleDateString()
+            : "Never"}
         </span>
       ),
     },
   ];
 
-  const apiKeyActions = (item: any) => (
+  const apiKeyActions = () => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-2">
         <RotateCcw className="h-4 w-4" />
@@ -277,7 +300,9 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div>
           <div className="font-medium">{item.name}</div>
-          <div className="text-xs text-muted-foreground">{item.description}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.description}
+          </div>
         </div>
       ),
     },
@@ -323,14 +348,21 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div className="text-sm">
           <div>{new Date(item.lastModified).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">by {item.modifiedBy}</div>
+          <div className="text-xs text-muted-foreground">
+            by {item.modifiedBy}
+          </div>
         </div>
       ),
     },
   ];
 
   const settingsActions = (item: any) => (
-    <Button variant="ghost" size="sm" disabled={!item.isEditable} className="gap-2">
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={!item.isEditable}
+      className="gap-2"
+    >
       <Settings className="h-4 w-4" />
       Edit
     </Button>
@@ -344,7 +376,9 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div>
           <div className="font-medium">{item.name}</div>
-          <div className="text-xs text-muted-foreground">{item.description}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.description}
+          </div>
         </div>
       ),
     },
@@ -352,7 +386,10 @@ export function SystemConfiguration() {
       key: "enabled",
       label: "Status",
       render: (item: any) => (
-        <Switch checked={item.enabled} className="data-[state=checked]:bg-primary" />
+        <Switch
+          checked={item.enabled}
+          className="data-[state=checked]:bg-primary"
+        />
       ),
     },
     {
@@ -366,7 +403,9 @@ export function SystemConfiguration() {
               style={{ width: `${item.rolloutPercentage}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{item.rolloutPercentage}%</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {item.rolloutPercentage}%
+          </p>
         </div>
       ),
     },
@@ -397,13 +436,15 @@ export function SystemConfiguration() {
       render: (item: any) => (
         <div className="text-sm">
           <div>{new Date(item.createdAt).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">by {item.createdBy}</div>
+          <div className="text-xs text-muted-foreground">
+            by {item.createdBy}
+          </div>
         </div>
       ),
     },
   ];
 
-  const featureFlagActions = (item: any) => (
+  const featureFlagActions = () => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-2">
         <Settings className="h-4 w-4" />
@@ -413,7 +454,9 @@ export function SystemConfiguration() {
   );
 
   // Calculate statistics
-  const activeIntegrations = integrations.filter((i) => i.status === "Active").length;
+  const activeIntegrations = integrations.filter(
+    (i) => i.status === "Active",
+  ).length;
   const activeApiKeys = apiKeys.filter((k) => k.status === "Active").length;
   const editableSettings = systemSettings.filter((s) => s.isEditable).length;
   const enabledFlags = featureFlags.filter((f) => f.enabled).length;
@@ -443,7 +486,9 @@ export function SystemConfiguration() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Active Integrations
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{activeIntegrations}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {activeIntegrations}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   of {integrations.length} total
                 </p>
@@ -451,7 +496,8 @@ export function SystemConfiguration() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Plug className="h-5 w-5 text-white" />
@@ -467,7 +513,9 @@ export function SystemConfiguration() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   API Keys
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{activeApiKeys}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {activeApiKeys}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Active keys
                 </p>
@@ -475,7 +523,8 @@ export function SystemConfiguration() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <Key className="h-5 w-5 text-white" />
@@ -491,7 +540,9 @@ export function SystemConfiguration() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   System Settings
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{editableSettings}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {editableSettings}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Configurable
                 </p>
@@ -499,7 +550,8 @@ export function SystemConfiguration() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Settings className="h-5 w-5 text-white" />
@@ -515,7 +567,9 @@ export function SystemConfiguration() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Feature Flags
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{enabledFlags}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {enabledFlags}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Enabled features
                 </p>
@@ -523,7 +577,8 @@ export function SystemConfiguration() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <Flag className="h-5 w-5 text-white" />
@@ -546,7 +601,9 @@ export function SystemConfiguration() {
         <TabsContent value="integrations" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Integration Management</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Integration Management
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Configure and monitor third-party service integrations
               </p>
@@ -567,7 +624,9 @@ export function SystemConfiguration() {
         <TabsContent value="api-keys" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">API Key Management</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                API Key Management
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Manage API keys and access permissions
               </p>
@@ -590,7 +649,9 @@ export function SystemConfiguration() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-semibold">System Settings</CardTitle>
+                  <CardTitle className="text-lg font-semibold">
+                    System Settings
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Configure global system parameters
                   </p>
@@ -617,7 +678,9 @@ export function SystemConfiguration() {
         <TabsContent value="features" className="space-y-6">
           <Card className="border-0 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Feature Flag Management</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Feature Flag Management
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Control feature rollout and experimentation
               </p>

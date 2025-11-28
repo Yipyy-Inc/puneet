@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -10,11 +11,9 @@ import {
   Shield,
   AlertTriangle,
   Activity,
-  TrendingUp,
   Eye,
   Download,
   Filter,
-  Calendar,
   User,
   FileText,
 } from "lucide-react";
@@ -26,8 +25,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   PieChart,
@@ -37,7 +34,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -48,9 +44,18 @@ export function AuditLogsManager() {
   const getSeverityBadge = (severity: string) => {
     const variants: Record<string, { variant: any; className: string }> = {
       Low: { variant: "secondary", className: "bg-blue-100 text-blue-700" },
-      Medium: { variant: "secondary", className: "bg-yellow-100 text-yellow-700" },
-      High: { variant: "secondary", className: "bg-orange-100 text-orange-700" },
-      Critical: { variant: "destructive", className: "bg-red-100 text-red-700" },
+      Medium: {
+        variant: "secondary",
+        className: "bg-yellow-100 text-yellow-700",
+      },
+      High: {
+        variant: "secondary",
+        className: "bg-orange-100 text-orange-700",
+      },
+      Critical: {
+        variant: "destructive",
+        className: "bg-red-100 text-red-700",
+      },
     };
     const config = variants[severity] || variants.Low;
     return (
@@ -83,7 +88,10 @@ export function AuditLogsManager() {
       System: "bg-gray-100 text-gray-700",
     };
     return (
-      <Badge variant="secondary" className={`text-xs ${colors[category] || ""}`}>
+      <Badge
+        variant="secondary"
+        className={`text-xs ${colors[category] || ""}`}
+      >
         {category}
       </Badge>
     );
@@ -159,7 +167,14 @@ export function AuditLogsManager() {
     </Button>
   );
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#6366f1"];
+  const COLORS = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ec4899",
+    "#6366f1",
+  ];
 
   return (
     <div className="space-y-6">
@@ -202,7 +217,8 @@ export function AuditLogsManager() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <FileText className="h-5 w-5 text-white" />
@@ -228,7 +244,8 @@ export function AuditLogsManager() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  background:
+                    "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
                 }}
               >
                 <Shield className="h-5 w-5 text-white" />
@@ -254,7 +271,8 @@ export function AuditLogsManager() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <AlertTriangle className="h-5 w-5 text-white" />
@@ -280,7 +298,8 @@ export function AuditLogsManager() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Activity className="h-5 w-5 text-white" />
@@ -306,7 +325,11 @@ export function AuditLogsManager() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={auditStatistics.weeklyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
@@ -359,13 +382,18 @@ export function AuditLogsManager() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry: any) => `${entry.category}: ${entry.percentage}%`}
+                    label={(entry: any) =>
+                      `${entry.category}: ${entry.percentage}%`
+                    }
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="count"
                   >
                     {auditStatistics.categoryBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -386,7 +414,9 @@ export function AuditLogsManager() {
       {/* Top Users Activity */}
       <Card className="border-0 shadow-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Top Active Users</CardTitle>
+          <CardTitle className="text-lg font-semibold">
+            Top Active Users
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Users with the most logged actions
           </p>
@@ -423,7 +453,9 @@ export function AuditLogsManager() {
       {/* Audit Logs Table */}
       <Card className="border-0 shadow-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Recent Audit Logs</CardTitle>
+          <CardTitle className="text-lg font-semibold">
+            Recent Audit Logs
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Detailed view of all system activities and changes
           </p>
@@ -453,19 +485,27 @@ export function AuditLogsManager() {
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Action</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Action
+                  </p>
                   <p className="text-lg font-semibold">{selectedLog.action}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Status
+                  </p>
                   {getStatusBadge(selectedLog.status)}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Timestamp</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Timestamp
+                  </p>
                   <p>{new Date(selectedLog.timestamp).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Severity</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Severity
+                  </p>
                   {getSeverityBadge(selectedLog.severity)}
                 </div>
               </div>
@@ -480,7 +520,9 @@ export function AuditLogsManager() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">User Name</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      User Name
+                    </p>
                     <p className="font-medium">{selectedLog.userName}</p>
                   </div>
                   <div>
@@ -488,11 +530,15 @@ export function AuditLogsManager() {
                     <p className="font-medium">{selectedLog.userRole}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">IP Address</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      IP Address
+                    </p>
                     <p className="font-mono text-sm">{selectedLog.ipAddress}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">User Agent</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      User Agent
+                    </p>
                     <p className="text-sm truncate">{selectedLog.userAgent}</p>
                   </div>
                 </CardContent>
@@ -508,20 +554,28 @@ export function AuditLogsManager() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Entity Type</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Entity Type
+                    </p>
                     <p className="font-medium">{selectedLog.entityType}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Entity Name</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Entity Name
+                    </p>
                     <p className="font-medium">{selectedLog.entityName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Category</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Category
+                    </p>
                     {getCategoryBadge(selectedLog.category)}
                   </div>
                   {selectedLog.facilityName && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Facility</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Facility
+                      </p>
                       <p className="font-medium">{selectedLog.facilityName}</p>
                     </div>
                   )}
@@ -540,13 +594,18 @@ export function AuditLogsManager() {
                   <CardContent>
                     <div className="space-y-3">
                       {selectedLog.changes.map((change: any, index: number) => (
-                        <div key={index} className="border-l-2 border-primary pl-4">
+                        <div
+                          key={index}
+                          className="border-l-2 border-primary pl-4"
+                        >
                           <p className="font-medium text-sm">{change.field}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
                               {change.oldValue}
                             </span>
-                            <span className="text-xs text-muted-foreground">→</span>
+                            <span className="text-xs text-muted-foreground">
+                              →
+                            </span>
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                               {change.newValue}
                             </span>
@@ -564,7 +623,9 @@ export function AuditLogsManager() {
                   <CardTitle className="text-sm">Description</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{selectedLog.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedLog.description}
+                  </p>
                 </CardContent>
               </Card>
             </div>

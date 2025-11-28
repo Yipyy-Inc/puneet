@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { acquisitionMetrics, customerAcquisitions } from "@/data/analytics";
-import { TrendingUp, TrendingDown, Users, DollarSign, Target, Award } from "lucide-react";
+import { acquisitionMetrics } from "@/data/analytics";
+import { TrendingUp, Users, DollarSign, Award } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -20,7 +20,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#6366f1"];
+const COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#6366f1",
+];
 
 export function CustomerAcquisitionMetrics() {
   const metrics = acquisitionMetrics;
@@ -43,7 +50,10 @@ export function CustomerAcquisitionMetrics() {
 
   // Prepare LTV vs CAC comparison
   const ltvCacData = metrics.channelBreakdown.map((channel) => ({
-    channel: channel.channel.length > 10 ? channel.channel.slice(0, 10) + "..." : channel.channel,
+    channel:
+      channel.channel.length > 10
+        ? channel.channel.slice(0, 10) + "..."
+        : channel.channel,
     ltv: channel.ltv,
     cac: channel.cac,
     ratio: (channel.ltv / channel.cac).toFixed(1),
@@ -65,8 +75,8 @@ export function CustomerAcquisitionMetrics() {
                     {metrics.totalNewCustomers.toLocaleString()}
                   </h3>
                   <span className="inline-flex items-center text-xs font-medium text-success">
-                    <TrendingUp className="h-3 w-3 mr-0.5" />
-                    +{metrics.growthRate}%
+                    <TrendingUp className="h-3 w-3 mr-0.5" />+
+                    {metrics.growthRate}%
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -76,7 +86,8 @@ export function CustomerAcquisitionMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Users className="h-5 w-5 text-white" />
@@ -104,7 +115,8 @@ export function CustomerAcquisitionMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <DollarSign className="h-5 w-5 text-white" />
@@ -132,7 +144,8 @@ export function CustomerAcquisitionMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <TrendingUp className="h-5 w-5 text-white" />
@@ -160,7 +173,8 @@ export function CustomerAcquisitionMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <Award className="h-5 w-5 text-white" />
@@ -186,7 +200,11 @@ export function CustomerAcquisitionMetrics() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={growthTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="month"
                     axisLine={false}
@@ -259,13 +277,18 @@ export function CustomerAcquisitionMetrics() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry: any) => `${entry.name}: ${entry.percentage.toFixed(1)}%`}
+                    label={({ name, percent }) =>
+                      `${name ?? ""}: ${((percent ?? 0) * 100).toFixed(1)}%`
+                    }
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
                   >
                     {channelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -275,7 +298,10 @@ export function CustomerAcquisitionMetrics() {
                       borderRadius: "12px",
                       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                     }}
-                    formatter={(value: number) => [value.toLocaleString(), "Customers"]}
+                    formatter={(value: number) => [
+                      value.toLocaleString(),
+                      "Customers",
+                    ]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -291,14 +317,19 @@ export function CustomerAcquisitionMetrics() {
             LTV vs CAC by Channel
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Customer lifetime value compared to acquisition cost (higher ratio is better)
+            Customer lifetime value compared to acquisition cost (higher ratio
+            is better)
           </p>
         </CardHeader>
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={ltvCacData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="channel"
                   axisLine={false}
@@ -321,8 +352,18 @@ export function CustomerAcquisitionMetrics() {
                   formatter={(value: number) => [`$${value}`, ""]}
                 />
                 <Legend />
-                <Bar dataKey="ltv" fill="#10b981" name="Lifetime Value" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="cac" fill="#f59e0b" name="Acquisition Cost" radius={[8, 8, 0, 0]} />
+                <Bar
+                  dataKey="ltv"
+                  fill="#10b981"
+                  name="Lifetime Value"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar
+                  dataKey="cac"
+                  fill="#f59e0b"
+                  name="Acquisition Cost"
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -332,7 +373,9 @@ export function CustomerAcquisitionMetrics() {
                 key={index}
                 className="p-3 rounded-lg bg-muted/50 text-center"
               >
-                <p className="text-xs text-muted-foreground truncate">{channel.channel}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {channel.channel}
+                </p>
                 <p className="text-lg font-bold mt-1">{channel.ratio}:1</p>
                 <p className="text-xs text-muted-foreground">LTV:CAC</p>
               </div>
@@ -380,7 +423,9 @@ export function CustomerAcquisitionMetrics() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">LTV</p>
-                    <p className="font-semibold">${channel.ltv.toLocaleString()}</p>
+                    <p className="font-semibold">
+                      ${channel.ltv.toLocaleString()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">ROI</p>

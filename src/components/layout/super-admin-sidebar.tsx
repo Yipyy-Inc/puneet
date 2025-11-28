@@ -4,7 +4,6 @@ import {
   Building,
   CreditCard,
   Shield,
-  BarChart3,
   CheckSquare,
   Bot,
   Home,
@@ -21,13 +20,9 @@ import {
   DollarSign,
   TrendingUp,
   FileText,
-  Users,
-  Calendar,
-  PieChart,
   BarChart2,
   Database,
   Settings,
-  Plug,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 

@@ -1,9 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { systemReservationMetrics } from "@/data/analytics";
-import { Calendar, CheckCircle2, XCircle, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import {
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -23,8 +28,12 @@ export function ReservationAnalytics() {
   const metrics = systemReservationMetrics;
 
   // Calculate additional metrics
-  const pendingRate = ((metrics.pendingReservations / metrics.totalReservations) * 100).toFixed(1);
-  const totalProcessed = metrics.completedReservations + metrics.cancelledReservations;
+  const pendingRate = (
+    (metrics.pendingReservations / metrics.totalReservations) *
+    100
+  ).toFixed(1);
+  const totalProcessed =
+    metrics.completedReservations + metrics.cancelledReservations;
 
   return (
     <div className="space-y-6">
@@ -49,7 +58,8 @@ export function ReservationAnalytics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Calendar className="h-5 w-5 text-white" />
@@ -80,7 +90,8 @@ export function ReservationAnalytics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <CheckCircle2 className="h-5 w-5 text-white" />
@@ -111,7 +122,8 @@ export function ReservationAnalytics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  background:
+                    "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
                 }}
               >
                 <XCircle className="h-5 w-5 text-white" />
@@ -139,7 +151,8 @@ export function ReservationAnalytics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <TrendingUp className="h-5 w-5 text-white" />
@@ -164,16 +177,32 @@ export function ReservationAnalytics() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.trends}>
                 <defs>
-                  <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorReservations"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorCancellations" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorCancellations"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="month"
                   axisLine={false}
@@ -231,7 +260,11 @@ export function ReservationAnalytics() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={metrics.peakUsageTimes} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    horizontal={false}
+                  />
                   <XAxis
                     type="number"
                     axisLine={false}
@@ -354,11 +387,17 @@ export function ReservationAnalytics() {
               <div className="pt-4 mt-4 border-t border-border space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Processed</span>
-                  <span className="font-semibold">{totalProcessed.toLocaleString()}</span>
+                  <span className="font-semibold">
+                    {totalProcessed.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Avg Booking Value</span>
-                  <span className="font-semibold">${metrics.averageBookingValue}</span>
+                  <span className="text-muted-foreground">
+                    Avg Booking Value
+                  </span>
+                  <span className="font-semibold">
+                    ${metrics.averageBookingValue}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Revenue</span>
@@ -386,7 +425,11 @@ export function ReservationAnalytics() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={metrics.trends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="month"
                   axisLine={false}

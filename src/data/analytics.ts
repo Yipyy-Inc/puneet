@@ -5,7 +5,13 @@ export interface CustomerAcquisition {
   facilityName: string;
   period: string;
   newCustomers: number;
-  acquisitionChannel: "Direct" | "Referral" | "Social Media" | "Paid Ads" | "Organic Search" | "Other";
+  acquisitionChannel:
+    | "Direct"
+    | "Referral"
+    | "Social Media"
+    | "Paid Ads"
+    | "Organic Search"
+    | "Other";
   signUpDate: string;
   customerLifetimeValue: number;
   retentionRate: number;
@@ -149,7 +155,7 @@ export interface CustomReport {
     facilities: string[];
     metrics: string[];
     groupBy: string;
-    filters: Record<string, any>;
+    filters: Record<string, unknown>;
   };
   visualizations: {
     type: "Table" | "Line Chart" | "Bar Chart" | "Pie Chart" | "Area Chart";
@@ -212,10 +218,34 @@ export const acquisitionMetrics: AcquisitionMetrics = {
   monthlyGrowthRate: 12.3,
   yearlyGrowthRate: 145.2,
   channelBreakdown: [
-    { channel: "Social Media", customers: 385, percentage: 30.8, cac: 45, ltv: 2400 },
-    { channel: "Referral", customers: 325, percentage: 26.0, cac: 25, ltv: 2800 },
-    { channel: "Paid Ads", customers: 275, percentage: 22.0, cac: 75, ltv: 2200 },
-    { channel: "Organic Search", customers: 165, percentage: 13.2, cac: 35, ltv: 2500 },
+    {
+      channel: "Social Media",
+      customers: 385,
+      percentage: 30.8,
+      cac: 45,
+      ltv: 2400,
+    },
+    {
+      channel: "Referral",
+      customers: 325,
+      percentage: 26.0,
+      cac: 25,
+      ltv: 2800,
+    },
+    {
+      channel: "Paid Ads",
+      customers: 275,
+      percentage: 22.0,
+      cac: 75,
+      ltv: 2200,
+    },
+    {
+      channel: "Organic Search",
+      customers: 165,
+      percentage: 13.2,
+      cac: 35,
+      ltv: 2500,
+    },
     { channel: "Direct", customers: 80, percentage: 6.4, cac: 20, ltv: 2600 },
     { channel: "Other", customers: 20, percentage: 1.6, cac: 50, ltv: 1800 },
   ],
@@ -351,9 +381,27 @@ export const facilityUtilization: FacilityUtilization[] = [
 
 export const utilizationComparison: UtilizationComparison = {
   facilities: [
-    { facilityId: "3", facilityName: "Pet Paradise Miami", utilizationRate: 85.2, occupancyRate: 88.7, efficiency: 89.5 },
-    { facilityId: "1", facilityName: "Pawsome Care NYC", utilizationRate: 78.5, occupancyRate: 82.3, efficiency: 85.2 },
-    { facilityId: "2", facilityName: "Happy Tails LA", utilizationRate: 72.8, occupancyRate: 76.5, efficiency: 81.3 },
+    {
+      facilityId: "3",
+      facilityName: "Pet Paradise Miami",
+      utilizationRate: 85.2,
+      occupancyRate: 88.7,
+      efficiency: 89.5,
+    },
+    {
+      facilityId: "1",
+      facilityName: "Pawsome Care NYC",
+      utilizationRate: 78.5,
+      occupancyRate: 82.3,
+      efficiency: 85.2,
+    },
+    {
+      facilityId: "2",
+      facilityName: "Happy Tails LA",
+      utilizationRate: 72.8,
+      occupancyRate: 76.5,
+      efficiency: 81.3,
+    },
   ],
   systemAverage: 78.8,
   topPerformer: "Pet Paradise Miami",
@@ -448,7 +496,8 @@ export const customReports: CustomReport[] = [
   {
     id: "cr-1",
     name: "Monthly Revenue Summary",
-    description: "Comprehensive revenue analysis across all facilities with growth trends",
+    description:
+      "Comprehensive revenue analysis across all facilities with growth trends",
     createdBy: "Admin User",
     createdAt: "2025-10-15",
     lastRun: "2025-11-26",
@@ -467,8 +516,16 @@ export const customReports: CustomReport[] = [
       filters: { status: "active" },
     },
     visualizations: [
-      { type: "Line Chart", title: "Revenue Trend", dataSource: "revenue_data" },
-      { type: "Bar Chart", title: "Facility Comparison", dataSource: "facility_revenue" },
+      {
+        type: "Line Chart",
+        title: "Revenue Trend",
+        dataSource: "revenue_data",
+      },
+      {
+        type: "Bar Chart",
+        title: "Facility Comparison",
+        dataSource: "facility_revenue",
+      },
     ],
     exportFormats: ["PDF", "Excel"],
   },
@@ -494,8 +551,16 @@ export const customReports: CustomReport[] = [
       filters: {},
     },
     visualizations: [
-      { type: "Pie Chart", title: "Channel Distribution", dataSource: "acquisition_channels" },
-      { type: "Area Chart", title: "Sign-up Trends", dataSource: "signup_trends" },
+      {
+        type: "Pie Chart",
+        title: "Channel Distribution",
+        dataSource: "acquisition_channels",
+      },
+      {
+        type: "Area Chart",
+        title: "Sign-up Trends",
+        dataSource: "signup_trends",
+      },
     ],
     exportFormats: ["PDF", "CSV"],
   },
@@ -521,15 +586,25 @@ export const customReports: CustomReport[] = [
       filters: {},
     },
     visualizations: [
-      { type: "Line Chart", title: "Uptime Monitoring", dataSource: "uptime_data" },
-      { type: "Bar Chart", title: "Error Distribution", dataSource: "error_data" },
+      {
+        type: "Line Chart",
+        title: "Uptime Monitoring",
+        dataSource: "uptime_data",
+      },
+      {
+        type: "Bar Chart",
+        title: "Error Distribution",
+        dataSource: "error_data",
+      },
     ],
     exportFormats: ["PDF", "JSON"],
   },
 ];
 
 // Helper functions
-export function getAcquisitionByChannel(channel: string): CustomerAcquisition[] {
+export function getAcquisitionByChannel(
+  channel: string,
+): CustomerAcquisition[] {
   return customerAcquisitions.filter((ca) => ca.acquisitionChannel === channel);
 }
 
@@ -538,18 +613,24 @@ export function getTotalNewCustomers(): number {
 }
 
 export function getAverageLifetimeValue(): number {
-  const total = customerAcquisitions.reduce((sum, ca) => sum + ca.customerLifetimeValue, 0);
+  const total = customerAcquisitions.reduce(
+    (sum, ca) => sum + ca.customerLifetimeValue,
+    0,
+  );
   return total / customerAcquisitions.length;
 }
 
 export function getSystemUtilizationAverage(): number {
-  const total = facilityUtilization.reduce((sum, fu) => sum + fu.utilizationRate, 0);
+  const total = facilityUtilization.reduce(
+    (sum, fu) => sum + fu.utilizationRate,
+    0,
+  );
   return total / facilityUtilization.length;
 }
 
 export function getTopPerformingFacility(): FacilityPerformance | undefined {
   return facilityPerformance.reduce((top, facility) =>
-    facility.totalRevenue > (top?.totalRevenue || 0) ? facility : top
+    facility.totalRevenue > (top?.totalRevenue || 0) ? facility : top,
   );
 }
 

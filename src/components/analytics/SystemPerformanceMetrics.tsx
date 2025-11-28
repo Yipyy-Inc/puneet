@@ -3,10 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { systemPerformance } from "@/data/analytics";
-import { Activity, Clock, AlertCircle, CheckCircle2, Users, Zap } from "lucide-react";
 import {
-  LineChart,
-  Line,
+  Activity,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  Users,
+  Zap,
+} from "lucide-react";
+import {
   AreaChart,
   Area,
   BarChart,
@@ -15,7 +20,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -23,8 +27,14 @@ export function SystemPerformanceMetrics() {
   const metrics = systemPerformance;
 
   // Calculate additional metrics
-  const successRate = ((metrics.successfulRequests / metrics.totalRequests) * 100).toFixed(2);
-  const failureRate = ((metrics.failedRequests / metrics.totalRequests) * 100).toFixed(2);
+  const successRate = (
+    (metrics.successfulRequests / metrics.totalRequests) *
+    100
+  ).toFixed(2);
+  const failureRate = (
+    (metrics.failedRequests / metrics.totalRequests) *
+    100
+  ).toFixed(2);
 
   return (
     <div className="space-y-6">
@@ -50,7 +60,8 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <Activity className="h-5 w-5 text-white" />
@@ -71,14 +82,13 @@ export function SystemPerformanceMetrics() {
                     {metrics.averageResponseTime}ms
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Average
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Average</p>
               </div>
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Clock className="h-5 w-5 text-white" />
@@ -109,7 +119,8 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <AlertCircle className="h-5 w-5 text-white" />
@@ -137,7 +148,8 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Users className="h-5 w-5 text-white" />
@@ -167,7 +179,11 @@ export function SystemPerformanceMetrics() {
                     <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#e2e8f0"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
@@ -202,9 +218,14 @@ export function SystemPerformanceMetrics() {
           </div>
           <div className="mt-4 grid grid-cols-4 gap-4">
             {metrics.uptimeTrend.map((week, index) => (
-              <div key={index} className="text-center p-3 rounded-lg bg-muted/50">
+              <div
+                key={index}
+                className="text-center p-3 rounded-lg bg-muted/50"
+              >
                 <p className="text-xs text-muted-foreground">{week.date}</p>
-                <p className="text-xl font-bold text-success mt-1">{week.uptime}%</p>
+                <p className="text-xl font-bold text-success mt-1">
+                  {week.uptime}%
+                </p>
               </div>
             ))}
           </div>
@@ -226,7 +247,11 @@ export function SystemPerformanceMetrics() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={metrics.errorTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
@@ -246,7 +271,12 @@ export function SystemPerformanceMetrics() {
                       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                     }}
                   />
-                  <Bar dataKey="errors" fill="#ef4444" radius={[8, 8, 0, 0]} name="Errors" />
+                  <Bar
+                    dataKey="errors"
+                    fill="#ef4444"
+                    radius={[8, 8, 0, 0]}
+                    name="Errors"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -274,7 +304,10 @@ export function SystemPerformanceMetrics() {
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-3">
-                  <div className="bg-primary rounded-full h-3" style={{ width: "100%" }} />
+                  <div
+                    className="bg-primary rounded-full h-3"
+                    style={{ width: "100%" }}
+                  />
                 </div>
               </div>
 
@@ -354,7 +387,8 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-12 h-12 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Zap className="h-6 w-6 text-white" />
@@ -373,14 +407,17 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-12 h-12 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <Activity className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">API Response</p>
-                <p className="text-2xl font-bold">{metrics.apiResponseTime}ms</p>
+                <p className="text-2xl font-bold">
+                  {metrics.apiResponseTime}ms
+                </p>
               </div>
             </div>
           </CardContent>
@@ -392,14 +429,17 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-12 h-12 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Avg Session</p>
-                <p className="text-2xl font-bold">{metrics.averageSessionDuration}m</p>
+                <p className="text-2xl font-bold">
+                  {metrics.averageSessionDuration}m
+                </p>
               </div>
             </div>
           </CardContent>
@@ -411,7 +451,8 @@ export function SystemPerformanceMetrics() {
               <div
                 className="flex items-center justify-center w-12 h-12 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
                 <CheckCircle2 className="h-6 w-6 text-white" />
@@ -447,19 +488,27 @@ export function SystemPerformanceMetrics() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center justify-between">
                   <span>Database Cluster</span>
-                  <Badge variant="default" className="text-xs">100%</Badge>
+                  <Badge variant="default" className="text-xs">
+                    100%
+                  </Badge>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>API Gateway</span>
-                  <Badge variant="default" className="text-xs">99.9%</Badge>
+                  <Badge variant="default" className="text-xs">
+                    99.9%
+                  </Badge>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Authentication Service</span>
-                  <Badge variant="default" className="text-xs">100%</Badge>
+                  <Badge variant="default" className="text-xs">
+                    100%
+                  </Badge>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Payment Gateway</span>
-                  <Badge variant="default" className="text-xs">99.8%</Badge>
+                  <Badge variant="default" className="text-xs">
+                    99.8%
+                  </Badge>
                 </li>
               </ul>
             </div>

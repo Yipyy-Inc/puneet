@@ -12,7 +12,7 @@ import { DataTable, ColumnDef } from "@/components/DataTable";
 import { transactions, Transaction } from "@/data/transactions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, RefreshCw, XCircle } from "lucide-react";
+import { MoreHorizontal, Download, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

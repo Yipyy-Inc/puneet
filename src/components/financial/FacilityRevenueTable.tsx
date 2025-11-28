@@ -91,7 +91,7 @@ export function FacilityRevenueTable() {
     },
   ];
 
-  const renderActions = (item: RevenueData) => (
+  const renderActions = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
