@@ -8,13 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users,
   TrendingUp,
-  DollarSign,
-  Target,
   UserPlus,
   ArrowRight,
   Activity,
   Building2,
-  Calendar,
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,15 +28,11 @@ import {
   getWeightedPipelineValue,
 } from "@/data/crm/leads";
 import {
-  activities,
   getRecentActivities,
   getUpcomingActivities,
 } from "@/data/crm/activities";
 import { salesTeamMembers, getTeamTotalRevenue } from "@/data/crm/sales-team";
-import {
-  onboardingChecklists,
-  getPendingOnboardings,
-} from "@/data/crm/onboarding";
+import { getPendingOnboardings } from "@/data/crm/onboarding";
 
 export default function CRMDashboardPage() {
   const [activityTab, setActivityTab] = useState<"recent" | "upcoming">(

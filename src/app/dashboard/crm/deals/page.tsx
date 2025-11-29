@@ -62,7 +62,7 @@ function formatCurrency(value: number): string {
 }
 
 export default function DealsPage() {
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [, setSelectedDeal] = useState<Deal | null>(null);
 
   const activeDeals = getActiveDeals();
   const wonDeals = getWonDeals();

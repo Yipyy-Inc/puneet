@@ -19,7 +19,7 @@ export interface RevenueData {
   createdAt: string;
 }
 
-export interface RevenueTrend {
+interface RevenueTrend {
   month: string; // YYYY-MM format
   totalRevenue: number;
   subscriptionRevenue: number;
@@ -386,33 +386,3 @@ export const commissionTracking: CommissionTracking[] = [
     notes: "Follow up required",
   },
 ];
-
-// Helper functions
-export function getTotalRevenue(): number {
-  return revenueData.reduce((sum, data) => sum + data.totalRevenue, 0);
-}
-
-export function getTotalCommission(): number {
-  return revenueData.reduce((sum, data) => sum + data.commissionAmount, 0);
-}
-
-export function getRevenueByFacility(facilityId: number): RevenueData[] {
-  return revenueData.filter((data) => data.facilityId === facilityId);
-}
-
-export function getRevenueByPeriod(period: string): RevenueData[] {
-  return revenueData.filter((data) => data.period === period);
-}
-
-export function getAverageCommissionRate(): number {
-  const total = revenueData.reduce((sum, data) => sum + data.commissionRate, 0);
-  return total / revenueData.length;
-}
-
-export function getPendingCommissions(): CommissionTracking[] {
-  return commissionTracking.filter((comm) => comm.status === "pending");
-}
-
-export function getOverdueCommissions(): CommissionTracking[] {
-  return commissionTracking.filter((comm) => comm.status === "overdue");
-}

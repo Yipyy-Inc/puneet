@@ -113,31 +113,7 @@ export interface SecurityAlert {
   affectedResources: string[];
 }
 
-export interface SecurityBreach {
-  id: string;
-  breachType:
-    | "Data Leak"
-    | "Unauthorized Access"
-    | "SQL Injection"
-    | "XSS Attack"
-    | "DDoS Attack"
-    | "Malware";
-  severity: "Low" | "Medium" | "High" | "Critical";
-  title: string;
-  description: string;
-  detectedAt: string;
-  detectedBy: "Automated System" | "Security Team" | "User Report";
-  affectedSystems: string[];
-  affectedUsers: number;
-  dataCompromised: string[];
-  status: "Detected" | "Contained" | "Investigating" | "Resolved";
-  incidentCommander?: string;
-  resolutionTime?: string;
-  mitigationSteps: string[];
-  postMortemCompleted: boolean;
-}
-
-export interface SecurityDashboardStats {
+interface SecurityDashboardStats {
   totalFailedLogins: number;
   failedLoginsToday: number;
   activeAlerts: number;
@@ -645,54 +621,6 @@ export const securityAlerts: SecurityAlert[] = [
     resolvedAt: "2024-11-28T08:00:00Z",
     actionsTaken: "Access revoked, user notified, incident logged",
     affectedResources: ["Customer Database", "PII Records"],
-  },
-];
-
-export const securityBreaches: SecurityBreach[] = [
-  {
-    id: "breach-1",
-    breachType: "Unauthorized Access",
-    severity: "High",
-    title: "Unauthorized API Access Detected",
-    description: "Multiple API calls made with expired authentication tokens",
-    detectedAt: "2024-11-20T15:30:00Z",
-    detectedBy: "Automated System",
-    affectedSystems: ["API Gateway", "Authentication Service"],
-    affectedUsers: 0,
-    dataCompromised: ["API Logs"],
-    status: "Resolved",
-    incidentCommander: "Security Lead",
-    resolutionTime: "4h 30m",
-    mitigationSteps: [
-      "Revoked all expired tokens",
-      "Enhanced token validation",
-      "Implemented rate limiting",
-      "Notified security team",
-    ],
-    postMortemCompleted: true,
-  },
-  {
-    id: "breach-2",
-    breachType: "DDoS Attack",
-    severity: "Medium",
-    title: "Distributed Denial of Service Attack",
-    description:
-      "High volume of requests from multiple IPs targeting login endpoint",
-    detectedAt: "2024-11-15T03:20:00Z",
-    detectedBy: "Automated System",
-    affectedSystems: ["Web Server", "Load Balancer"],
-    affectedUsers: 1250,
-    dataCompromised: [],
-    status: "Resolved",
-    incidentCommander: "DevOps Lead",
-    resolutionTime: "2h 15m",
-    mitigationSteps: [
-      "Activated DDoS protection",
-      "Blocked malicious IPs",
-      "Scaled infrastructure",
-      "Implemented CAPTCHA",
-    ],
-    postMortemCompleted: true,
   },
 ];
 
@@ -1224,29 +1152,3 @@ export const auditTrails: AuditTrail[] = [
     dataClassification: "Confidential",
   },
 ];
-
-// Helper functions
-export const getActiveMFA = () =>
-  mfaSettings.filter((m) => m.status === "Active");
-export const getActiveIPs = () =>
-  ipWhitelist.filter((ip) => ip.status === "Active");
-export const getBlockedIPs = () =>
-  ipWhitelist.filter((ip) => ip.status === "Blocked");
-export const getActiveSessions = () =>
-  activeSessions.filter((s) => s.status === "Active");
-export const getActivePasswordPolicies = () =>
-  passwordPolicies.filter((p) => p.status === "Active");
-export const getCriticalAlerts = () =>
-  securityAlerts.filter((a) => a.severity === "Critical");
-export const getCompliantAreas = () =>
-  gdprCompliance.filter((g) => g.status === "Compliant");
-export const getNonCompliantSettings = () =>
-  dataProtectionSettings.filter((s) => !s.isCompliant);
-export const getActivePolicies = () =>
-  privacyPolicies.filter((p) => p.status === "Active");
-export const getActiveConsents = () =>
-  userConsents.filter((c) => c.status === "Active");
-export const getCompliantFrameworks = () =>
-  complianceFrameworks.filter((f) => f.status === "Compliant");
-export const getExpiringCertificates = () =>
-  certificates.filter((c) => c.daysUntilExpiry <= 30 && c.daysUntilExpiry > 0);

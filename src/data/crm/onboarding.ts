@@ -1,4 +1,4 @@
-export interface OnboardingStep {
+interface OnboardingStep {
   id: string;
   title: string;
   description: string;
@@ -233,12 +233,6 @@ export const onboardingChecklists: OnboardingChecklist[] = [
 export function getOnboardingProgress(checklist: OnboardingChecklist): number {
   const completedSteps = checklist.steps.filter((s) => s.completed).length;
   return Math.round((completedSteps / checklist.steps.length) * 100);
-}
-
-export function getOnboardingByLeadId(
-  leadId: string,
-): OnboardingChecklist | undefined {
-  return onboardingChecklists.find((o) => o.leadId === leadId);
 }
 
 export function getPendingOnboardings(): OnboardingChecklist[] {

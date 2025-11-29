@@ -167,7 +167,7 @@ export interface NotificationChannel {
   lastUsed: string;
 }
 
-export interface HealthDashboardStats {
+interface HealthDashboardStats {
   overallHealth: number;
   serversOnline: number;
   totalServers: number;

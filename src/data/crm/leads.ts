@@ -436,22 +436,6 @@ export const leads: Lead[] = [
 ];
 
 // Helper functions
-export function getLeadById(leadId: string): Lead | undefined {
-  return leads.find((lead) => lead.id === leadId);
-}
-
-export function getLeadsByStatus(status: PipelineStage): Lead[] {
-  return leads.filter((lead) => lead.status === status);
-}
-
-export function getLeadsByAssignee(repId: string): Lead[] {
-  return leads.filter((lead) => lead.assignedTo === repId);
-}
-
-export function getLeadsBySource(source: LeadSource): Lead[] {
-  return leads.filter((lead) => lead.source === source);
-}
-
 export function getLeadsCountByStage(): Record<PipelineStage, number> {
   return pipelineStageOrder.reduce(
     (acc, stage) => {

@@ -1,7 +1,7 @@
 // Payment and Transaction Data Models
 
-export type PaymentStatus = "success" | "failed" | "pending" | "refunded";
-export type PaymentMethod =
+type PaymentStatus = "success" | "failed" | "pending" | "refunded";
+type PaymentMethod =
   | "credit_card"
   | "debit_card"
   | "bank_transfer"
@@ -53,7 +53,7 @@ export interface PaymentProvider {
   };
 }
 
-export interface PaymentAnalytics {
+interface PaymentAnalytics {
   period: string;
   totalTransactions: number;
   successfulTransactions: number;
@@ -368,37 +368,3 @@ export const paymentAnalytics: PaymentAnalytics = {
     },
   ],
 };
-
-// Helper functions
-export function getTransactionsByFacility(facilityId: number): Transaction[] {
-  return transactions.filter((txn) => txn.facilityId === facilityId);
-}
-
-export function getTransactionsByStatus(status: PaymentStatus): Transaction[] {
-  return transactions.filter((txn) => txn.status === status);
-}
-
-export function getTransactionsByProvider(provider: string): Transaction[] {
-  return transactions.filter((txn) => txn.paymentProvider === provider);
-}
-
-export function calculateTotalVolume(): number {
-  return transactions
-    .filter((txn) => txn.status === "success")
-    .reduce((sum, txn) => sum + txn.amount, 0);
-}
-
-export function calculateSuccessRate(): number {
-  const successful = transactions.filter(
-    (txn) => txn.status === "success",
-  ).length;
-  return (successful / transactions.length) * 100;
-}
-
-export function getFailedTransactions(): Transaction[] {
-  return transactions.filter((txn) => txn.status === "failed");
-}
-
-export function getRefundedTransactions(): Transaction[] {
-  return transactions.filter((txn) => txn.status === "refunded");
-}

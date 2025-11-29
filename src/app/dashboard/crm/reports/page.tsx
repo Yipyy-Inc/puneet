@@ -15,14 +15,11 @@ import {
 import {
   BarChart3,
   TrendingUp,
-  Users,
   DollarSign,
   Download,
   Calendar,
   Target,
-  PieChart,
   ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -46,16 +43,9 @@ import {
   LeadSource,
   leadSourceLabels,
   pipelineStageLabels,
-  PipelineStage,
   pipelineStageOrder,
-  getLeadsCountByStage,
 } from "@/data/crm/leads";
-import {
-  deals,
-  getWonDeals,
-  getLostDeals,
-  getActiveDeals,
-} from "@/data/crm/deals";
+import { getWonDeals, getLostDeals, getActiveDeals } from "@/data/crm/deals";
 import { salesTeamMembers, getTeamTotalRevenue } from "@/data/crm/sales-team";
 
 const COLORS = [
@@ -339,7 +329,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {funnelData.map((item, index) => (
+                  {funnelData.map((item) => (
                     <div key={item.stage} className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span>{item.stage}</span>

@@ -196,7 +196,7 @@ function StepItem({
   );
 }
 
-export function OnboardingChecklist({
+function OnboardingChecklist({
   checklist,
   onStepToggle,
   onStepNoteUpdate,

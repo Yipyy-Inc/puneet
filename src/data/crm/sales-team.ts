@@ -242,24 +242,8 @@ export const teamGoals: TeamGoal[] = [
 ];
 
 // Helper functions
-export function getTeamMemberById(id: string): SalesTeamMember | undefined {
-  return salesTeamMembers.find((member) => member.id === id);
-}
-
 export function getActiveTeamMembers(): SalesTeamMember[] {
   return salesTeamMembers.filter((member) => member.status === "active");
-}
-
-export function getTeamMembersByRole(
-  role: SalesTeamMember["role"],
-): SalesTeamMember[] {
-  return salesTeamMembers.filter((member) => member.role === role);
-}
-
-export function getTeamLeaderboard(): SalesTeamMember[] {
-  return [...salesTeamMembers]
-    .filter((m) => m.status === "active")
-    .sort((a, b) => b.performance.totalRevenue - a.performance.totalRevenue);
 }
 
 export function getTeamTotalRevenue(): number {
@@ -277,14 +261,4 @@ export function getTeamAvgConversionRate(): number {
     0,
   );
   return totalRate / activeMembers.length;
-}
-
-export function getGoalsByMember(memberId: string): TeamGoal[] {
-  return teamGoals.filter(
-    (goal) => goal.assignedTo === memberId || goal.assignedTo === "team",
-  );
-}
-
-export function getTeamGoals(): TeamGoal[] {
-  return teamGoals.filter((goal) => goal.assignedTo === "team");
 }

@@ -198,23 +198,3 @@ export const subscriptionTiers: SubscriptionTier[] = [
     updatedAt: "2025-11-27T00:00:00Z",
   },
 ];
-
-// Helper functions
-export function getTierById(tierId: string): SubscriptionTier | undefined {
-  return subscriptionTiers.find((tier) => tier.id === tierId);
-}
-
-export function getActiveTiers(): SubscriptionTier[] {
-  return subscriptionTiers.filter((tier) => tier.isActive);
-}
-
-export function getTiersByType(type: TierType): SubscriptionTier[] {
-  return subscriptionTiers.filter((tier) => tier.type === type);
-}
-
-export function calculateTierPrice(
-  tier: SubscriptionTier,
-  billingCycle: "monthly" | "quarterly" | "yearly",
-): number {
-  return tier.pricing[billingCycle];
-}

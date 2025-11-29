@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type CalendarView = "day" | "week" | "month" | "list";
+type CalendarView = "day" | "week" | "month" | "list";
 
 export interface CalendarItem {
   id: string | number;
@@ -36,19 +36,19 @@ export interface CalendarRowData {
   [key: string]: unknown;
 }
 
-export interface CalendarRenderProps<T extends CalendarItem> {
+interface CalendarRenderProps<T extends CalendarItem> {
   item: T;
   isToday: boolean;
 }
 
-export interface CalendarCellRenderProps<T extends CalendarItem> {
+interface CalendarCellRenderProps<T extends CalendarItem> {
   date: Date;
   items: T[];
   isToday: boolean;
   isCurrentMonth: boolean;
 }
 
-export interface CalendarConfig<T extends CalendarItem> {
+interface CalendarConfig<T extends CalendarItem> {
   // Required callbacks
   onItemClick?: (item: T) => void;
   onAddClick?: (date: string) => void;

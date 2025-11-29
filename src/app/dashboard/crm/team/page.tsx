@@ -31,21 +31,11 @@ import {
   getActiveTeamMembers,
   getTeamTotalRevenue,
   getTeamAvgConversionRate,
-  SalesTeamMember,
 } from "@/data/crm/sales-team";
-
-const roleLabels: Record<SalesTeamMember["role"], string> = {
-  sales_rep: "Sales Rep",
-  sales_manager: "Sales Manager",
-  account_executive: "Account Executive",
-};
 
 export default function TeamPage() {
   const [period, setPeriod] = useState<"monthly" | "quarterly" | "yearly">(
     "monthly",
-  );
-  const [selectedMember, setSelectedMember] = useState<SalesTeamMember | null>(
-    null,
   );
 
   const activeMembers = getActiveTeamMembers();

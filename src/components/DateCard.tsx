@@ -55,5 +55,3 @@ export function InfoCard({
     </Card>
   );
 }
-
-export { InfoCard as DateCard };

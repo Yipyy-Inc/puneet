@@ -14,7 +14,7 @@ export interface Contact {
   updatedAt: string;
 }
 
-export interface CommunicationRecord {
+interface CommunicationRecord {
   id: string;
   contactId: string;
   type: "email" | "call" | "meeting" | "note";
@@ -37,8 +37,6 @@ export const contactTags = [
   "vip",
   "competitor-user",
 ] as const;
-
-export type ContactTag = (typeof contactTags)[number];
 
 export const contacts: Contact[] = [
   {
@@ -299,18 +297,6 @@ export const communicationHistory: CommunicationRecord[] = [
 ];
 
 // Helper functions
-export function getContactById(contactId: string): Contact | undefined {
-  return contacts.find((contact) => contact.id === contactId);
-}
-
-export function getContactsByFacility(facilityId: string): Contact[] {
-  return contacts.filter((contact) => contact.facilityId === facilityId);
-}
-
-export function getContactsByTag(tag: ContactTag): Contact[] {
-  return contacts.filter((contact) => contact.tags.includes(tag));
-}
-
 export function getDecisionMakers(): Contact[] {
   return contacts.filter((contact) => contact.isDecisionMaker);
 }
@@ -321,15 +307,4 @@ export function getCommunicationByContact(
   return communicationHistory.filter(
     (record) => record.contactId === contactId,
   );
-}
-
-export function getRecentCommunications(
-  limit: number = 10,
-): CommunicationRecord[] {
-  return [...communicationHistory]
-    .sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    )
-    .slice(0, limit);
 }

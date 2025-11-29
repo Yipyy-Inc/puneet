@@ -260,40 +260,8 @@ export const modules: Module[] = [
 ];
 
 // Helper functions
-export function getModuleById(moduleId: string): Module | undefined {
-  return modules.find((module) => module.id === moduleId);
-}
-
-export function getActiveModules(): Module[] {
-  return modules.filter((module) => module.isActive);
-}
-
 export function getModulesByCategory(
   category: "core" | "advanced" | "premium" | "addon",
 ): Module[] {
   return modules.filter((module) => module.category === category);
-}
-
-export function getModulesByTier(
-  tier: "beginner" | "pro" | "enterprise",
-): Module[] {
-  return modules.filter(
-    (module) => module.requiredTier === tier || module.requiredTier === "all",
-  );
-}
-
-export function calculateModulePrice(
-  module: Module,
-  billingCycle: "monthly" | "quarterly" | "yearly",
-): number {
-  return module.pricing[billingCycle];
-}
-
-export function getModuleDependencies(moduleId: string): Module[] {
-  const module = getModuleById(moduleId);
-  if (!module) return [];
-
-  return module.dependencies
-    .map((depId) => getModuleById(depId))
-    .filter((dep): dep is Module => dep !== undefined);
 }

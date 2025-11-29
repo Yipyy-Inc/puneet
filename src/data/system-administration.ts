@@ -1,5 +1,5 @@
 // Audit & Logging Data Models
-export interface AuditLog {
+interface AuditLog {
   id: string;
   timestamp: string;
   userId: string;
@@ -30,7 +30,7 @@ export interface AuditLog {
   description: string;
 }
 
-export interface AuditStatistics {
+interface AuditStatistics {
   totalLogs: number;
   financialChanges: number;
   userAccessEvents: number;
@@ -45,7 +45,7 @@ export interface AuditStatistics {
 }
 
 // Data Management Models
-export interface DataBackup {
+interface DataBackup {
   id: string;
   backupName: string;
   backupType: "Full" | "Incremental" | "Differential";
@@ -67,7 +67,7 @@ export interface DataBackup {
   compressionRatio: number;
 }
 
-export interface DataRecovery {
+interface DataRecovery {
   id: string;
   recoveryName: string;
   backupId: string;
@@ -88,7 +88,7 @@ export interface DataRecovery {
   errorMessage?: string;
 }
 
-export interface RetentionPolicy {
+interface RetentionPolicy {
   id: string;
   policyName: string;
   dataType: string;
@@ -105,7 +105,7 @@ export interface RetentionPolicy {
 }
 
 // System Configuration Models
-export interface Integration {
+interface Integration {
   id: string;
   name: string;
   type:
@@ -137,7 +137,7 @@ export interface Integration {
   testStatus?: "Passed" | "Failed" | "Not Tested";
 }
 
-export interface ApiKey {
+interface ApiKey {
   id: string;
   name: string;
   key: string;
@@ -163,7 +163,7 @@ export interface ApiKey {
   description: string;
 }
 
-export interface SystemSetting {
+interface SystemSetting {
   id: string;
   category: "General" | "Security" | "Performance" | "Features" | "Maintenance";
   name: string;
@@ -179,7 +179,7 @@ export interface SystemSetting {
   validationRules?: string[];
 }
 
-export interface FeatureFlag {
+interface FeatureFlag {
   id: string;
   name: string;
   key: string;
@@ -808,35 +808,3 @@ export const featureFlags: FeatureFlag[] = [
     lastModified: "2025-10-15",
   },
 ];
-
-// Helper functions
-export function getAuditLogsByCategory(category: string): AuditLog[] {
-  return auditLogs.filter((log) => log.category === category);
-}
-
-export function getAuditLogsBySeverity(severity: string): AuditLog[] {
-  return auditLogs.filter((log) => log.severity === severity);
-}
-
-export function getActiveBackups(): DataBackup[] {
-  return dataBackups.filter(
-    (backup) =>
-      backup.status === "Completed" || backup.status === "In Progress",
-  );
-}
-
-export function getActiveIntegrations(): Integration[] {
-  return integrations.filter((int) => int.status === "Active");
-}
-
-export function getActiveApiKeys(): ApiKey[] {
-  return apiKeys.filter((key) => key.status === "Active");
-}
-
-export function getEditableSettings(): SystemSetting[] {
-  return systemSettings.filter((setting) => setting.isEditable);
-}
-
-export function getEnabledFeatureFlags(): FeatureFlag[] {
-  return featureFlags.filter((flag) => flag.enabled);
-}

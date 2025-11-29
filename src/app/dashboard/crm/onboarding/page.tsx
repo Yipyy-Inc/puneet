@@ -21,10 +21,7 @@ import {
   Filter,
   Plus,
 } from "lucide-react";
-import {
-  OnboardingChecklistList,
-  OnboardingChecklist,
-} from "@/components/crm/OnboardingChecklist";
+import { OnboardingChecklistList } from "@/components/crm/OnboardingChecklist";
 import {
   onboardingChecklists,
   onboardingSteps,

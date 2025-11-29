@@ -25,13 +25,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BookingModal } from "@/components/modals/BookingModal";
-import { GenericCalendar } from "@/components/calendar";
-import type { CalendarItem } from "@/components/calendar";
-import { CreateBookingModal } from "@/components/bookings/CreateBookingModal";
-import { EditBookingModal } from "@/components/bookings/EditBookingModal";
-import { CancelBookingModal } from "@/components/bookings/CancelBookingModal";
-import { ProcessPaymentModal } from "@/components/bookings/ProcessPaymentModal";
-import { RefundBookingModal } from "@/components/bookings/RefundBookingModal";
+import { GenericCalendar, CalendarItem } from "@/components/GenericCalendar";
+import { CreateBookingModal } from "@/components/bookings/modals/CreateBookingModal";
+import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
+import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
+import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
+import { RefundBookingModal } from "@/components/bookings/modals/RefundBookingModal";
 import {
   Download,
   Calendar,

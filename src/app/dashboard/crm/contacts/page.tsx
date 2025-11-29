@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
 import {
   Dialog,
@@ -30,14 +29,12 @@ import {
   Trash2,
   Mail,
   Phone,
-  Search,
   MessageSquare,
 } from "lucide-react";
 import {
   contacts,
   Contact,
   contactTags,
-  ContactTag,
   communicationHistory,
   getCommunicationByContact,
   getDecisionMakers,
@@ -59,16 +56,9 @@ const tagColors: Record<string, string> = {
 export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   const decisionMakers = getDecisionMakers();
   const withFacility = contacts.filter((c) => c.facilityId);
-  const recentContacts = [...contacts]
-    .sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )
-    .slice(0, 5);
 
   const columns: ColumnDef<Contact>[] = [
     {

@@ -225,18 +225,6 @@ export const deals: Deal[] = [
 ];
 
 // Helper functions
-export function getDealById(dealId: string): Deal | undefined {
-  return deals.find((deal) => deal.id === dealId);
-}
-
-export function getDealsByStage(stage: DealStage): Deal[] {
-  return deals.filter((deal) => deal.stage === stage);
-}
-
-export function getDealsByAssignee(repId: string): Deal[] {
-  return deals.filter((deal) => deal.assignedTo === repId);
-}
-
 export function calculatePipelineValue(dealsList: Deal[]): number {
   return dealsList.reduce((sum, deal) => {
     if (deal.stage !== "closed_lost") {

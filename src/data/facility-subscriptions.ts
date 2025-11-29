@@ -1,6 +1,6 @@
 // Facility Subscription Data Models
 
-export type SubscriptionStatus =
+type SubscriptionStatus =
   | "active"
   | "trial"
   | "suspended"
@@ -448,103 +448,9 @@ export const facilitySubscriptions: FacilitySubscription[] = [
   },
 ];
 
-// Module usage tracking for analytics
-export interface ModuleUsageStats {
-  facilityId: number;
-  moduleId: string;
-  usageMetrics: {
-    lastAccessed: string;
-    totalSessions: number;
-    avgSessionDuration: number; // in minutes
-    featuresUsed: string[];
-    usageScore: number; // 0-100
-  };
-  adoptionDate: string;
-}
-
-export const moduleUsageStats: ModuleUsageStats[] = [
-  {
-    facilityId: 1,
-    moduleId: "module-grooming-management",
-    usageMetrics: {
-      lastAccessed: "2025-11-27",
-      totalSessions: 342,
-      avgSessionDuration: 23,
-      featuresUsed: [
-        "appointment-scheduling",
-        "photo-management",
-        "grooming-notes",
-      ],
-      usageScore: 87,
-    },
-    adoptionDate: "2025-06-15",
-  },
-  {
-    facilityId: 3,
-    moduleId: "module-training-education",
-    usageMetrics: {
-      lastAccessed: "2025-11-26",
-      totalSessions: 156,
-      avgSessionDuration: 45,
-      featuresUsed: ["course-management", "certification-tracking"],
-      usageScore: 72,
-    },
-    adoptionDate: "2025-03-10",
-  },
-];
-
 // Helper functions
-export function getSubscriptionByFacilityId(
-  facilityId: number,
-): FacilitySubscription | undefined {
-  return facilitySubscriptions.find((sub) => sub.facilityId === facilityId);
-}
-
 export function getSubscriptionsByStatus(
   status: SubscriptionStatus,
 ): FacilitySubscription[] {
   return facilitySubscriptions.filter((sub) => sub.status === status);
-}
-
-export function getSubscriptionsByTier(tierId: string): FacilitySubscription[] {
-  return facilitySubscriptions.filter((sub) => sub.tierId === tierId);
-}
-
-export function getActiveSubscriptions(): FacilitySubscription[] {
-  return facilitySubscriptions.filter((sub) => sub.status === "active");
-}
-
-export function getExpiringSubscriptions(
-  daysThreshold: number = 30,
-): FacilitySubscription[] {
-  const today = new Date();
-  const thresholdDate = new Date(today);
-  thresholdDate.setDate(today.getDate() + daysThreshold);
-
-  return facilitySubscriptions.filter((sub) => {
-    const endDate = new Date(sub.endDate);
-    return (
-      endDate <= thresholdDate && endDate >= today && sub.status === "active"
-    );
-  });
-}
-
-export function getUpsellOpportunities(): FacilitySubscription[] {
-  return facilitySubscriptions.filter((sub) => {
-    const usagePercent =
-      (sub.usage.currentUsers /
-        (sub.customizations?.maxUsers || getTierLimit(sub.tierId, "users"))) *
-      100;
-    return usagePercent > 80 && sub.status === "active";
-  });
-}
-
-function getTierLimit(tierId: string, limitType: string): number {
-  // This would normally reference the subscription-tiers data
-  const limits: Record<string, Record<string, number>> = {
-    "tier-beginner": { users: 5 },
-    "tier-pro": { users: 20 },
-    "tier-enterprise": { users: -1 },
-  };
-  return limits[tierId]?.[limitType] || 0;
 }

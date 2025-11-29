@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -30,7 +29,6 @@ import {
   Phone,
   MapPin,
   DollarSign,
-  Calendar,
   ArrowRight,
   Sparkles,
 } from "lucide-react";

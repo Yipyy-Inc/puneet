@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   ServiceSettingsComponent,
   ServiceSettings,
-} from "@/components/facility/services/service-settings";
+} from "@/components/facility/service-settings";
 import { Stethoscope } from "lucide-react";
 import { facilities } from "@/data/facilities";
 

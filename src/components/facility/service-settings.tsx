@@ -29,12 +29,12 @@ import {
   Info,
 } from "lucide-react";
 
-export interface ServiceLocation {
+interface ServiceLocation {
   name: string;
   address: string;
 }
 
-export interface ServicePackage {
+interface ServicePackage {
   id: string;
   name: string;
   price: number;
@@ -43,7 +43,7 @@ export interface ServicePackage {
   includes: string[];
 }
 
-export interface ServiceSession {
+interface ServiceSession {
   id: string;
   date: string;
   time: string;

@@ -5,8 +5,11 @@ import { useTranslations } from "next-intl";
 import { schedules } from "@/data/schedules";
 import { users } from "@/data/users";
 import { facilities } from "@/data/facilities";
-import { GenericCalendar } from "@/components/calendar";
-import type { CalendarItem, CalendarRowData } from "@/components/calendar";
+import {
+  GenericCalendar,
+  CalendarItem,
+  CalendarRowData,
+} from "@/components/GenericCalendar";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [

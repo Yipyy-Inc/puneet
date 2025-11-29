@@ -1,13 +1,9 @@
 // Promotions & Discounts Management Data Models
 
-export type PromotionScope = "facility" | "system-wide";
-export type PromotionStatus = "active" | "scheduled" | "expired" | "paused";
-export type DiscountType =
-  | "percentage"
-  | "fixed-amount"
-  | "bundle"
-  | "first-time";
-export type PromotionTarget =
+type PromotionScope = "facility" | "system-wide";
+type PromotionStatus = "active" | "scheduled" | "expired" | "paused";
+type DiscountType = "percentage" | "fixed-amount" | "bundle" | "first-time";
+type PromotionTarget =
   | "all-services"
   | "boarding"
   | "daycare"
@@ -92,7 +88,7 @@ export interface FirstTimeOffer {
   isActive: boolean;
 }
 
-export interface PromotionPerformance {
+interface PromotionPerformance {
   promoId: string;
   promoCode: string;
   promoName: string;
@@ -113,7 +109,7 @@ export interface PromotionPerformance {
   topService?: string;
 }
 
-export interface DiscountImpactMetric {
+interface DiscountImpactMetric {
   period: string; // "week-1", "week-2", etc.
   totalBookings: number;
   discountedBookings: number;
@@ -125,7 +121,7 @@ export interface DiscountImpactMetric {
   revenueImpact: number; // percentage change
 }
 
-export interface RedemptionTrend {
+interface RedemptionTrend {
   date: string;
   redemptions: number;
   revenue: number;
@@ -133,7 +129,7 @@ export interface RedemptionTrend {
   newCustomers: number;
 }
 
-export interface PromotionStats {
+interface PromotionStats {
   totalPromotions: number;
   activePromotions: number;
   scheduledPromotions: number;

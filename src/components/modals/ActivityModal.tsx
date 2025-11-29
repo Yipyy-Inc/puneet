@@ -28,7 +28,7 @@ import {
   CheckSquare,
   Clock,
 } from "lucide-react";
-import { Activity, ActivityType, ActivityStatus } from "@/data/crm/activities";
+import { Activity, ActivityType } from "@/data/crm/activities";
 import { salesTeamMembers } from "@/data/crm/sales-team";
 
 interface ActivityModalProps {

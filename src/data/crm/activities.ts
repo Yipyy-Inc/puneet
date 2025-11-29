@@ -22,26 +22,6 @@ export interface Activity {
   updatedAt: string;
 }
 
-export interface TaskReminder {
-  id: string;
-  activityId: string;
-  reminderDate: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export const activityTypes: {
-  value: ActivityType;
-  label: string;
-  icon: string;
-}[] = [
-  { value: "call", label: "Phone Call", icon: "Phone" },
-  { value: "email", label: "Email", icon: "Mail" },
-  { value: "meeting", label: "Meeting", icon: "Calendar" },
-  { value: "note", label: "Note", icon: "FileText" },
-  { value: "task", label: "Task", icon: "CheckSquare" },
-];
-
 export const activities: Activity[] = [
   {
     id: "act-001",
@@ -270,61 +250,7 @@ export const activities: Activity[] = [
   },
 ];
 
-export const taskReminders: TaskReminder[] = [
-  {
-    id: "rem-001",
-    activityId: "act-003",
-    reminderDate: "2025-01-15T09:00:00Z",
-    isRead: false,
-    createdAt: "2025-01-10T15:10:00Z",
-  },
-  {
-    id: "rem-002",
-    activityId: "act-007",
-    reminderDate: "2025-01-14T13:00:00Z",
-    isRead: false,
-    createdAt: "2025-01-08T16:30:00Z",
-  },
-  {
-    id: "rem-003",
-    activityId: "act-010",
-    reminderDate: "2025-01-13T10:00:00Z",
-    isRead: false,
-    createdAt: "2025-01-11T10:00:00Z",
-  },
-  {
-    id: "rem-004",
-    activityId: "act-012",
-    reminderDate: "2025-01-16T09:00:00Z",
-    isRead: false,
-    createdAt: "2025-01-12T09:00:00Z",
-  },
-  {
-    id: "rem-005",
-    activityId: "act-014",
-    reminderDate: "2025-01-13T14:30:00Z",
-    isRead: false,
-    createdAt: "2025-01-12T14:00:00Z",
-  },
-];
-
 // Helper functions
-export function getActivitiesByLead(leadId: string): Activity[] {
-  return activities.filter((activity) => activity.leadId === leadId);
-}
-
-export function getActivitiesByDeal(dealId: string): Activity[] {
-  return activities.filter((activity) => activity.dealId === dealId);
-}
-
-export function getActivitiesByContact(contactId: string): Activity[] {
-  return activities.filter((activity) => activity.contactId === contactId);
-}
-
-export function getActivitiesByAssignee(userId: string): Activity[] {
-  return activities.filter((activity) => activity.assignedTo === userId);
-}
-
 export function getPendingActivities(): Activity[] {
   return activities.filter((activity) => activity.status === "pending");
 }

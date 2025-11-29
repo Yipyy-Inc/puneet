@@ -3,14 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Building2,
-  Mail,
-  Phone,
-  DollarSign,
-  Calendar,
-  User,
-} from "lucide-react";
+import { Mail, Phone, DollarSign, Calendar, User } from "lucide-react";
 import { Lead, leadSourceLabels, expectedTierLabels } from "@/data/crm/leads";
 import { salesTeamMembers } from "@/data/crm/sales-team";
 

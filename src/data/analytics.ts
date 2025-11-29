@@ -1,26 +1,5 @@
 // Customer Acquisition Analytics
-export interface CustomerAcquisition {
-  id: string;
-  facilityId: string;
-  facilityName: string;
-  period: string;
-  newCustomers: number;
-  acquisitionChannel:
-    | "Direct"
-    | "Referral"
-    | "Social Media"
-    | "Paid Ads"
-    | "Organic Search"
-    | "Other";
-  signUpDate: string;
-  customerLifetimeValue: number;
-  retentionRate: number;
-  churnRate: number;
-  averageOrderValue: number;
-  totalRevenue: number;
-}
-
-export interface AcquisitionMetrics {
+interface AcquisitionMetrics {
   period: string;
   totalNewCustomers: number;
   growthRate: number;
@@ -38,23 +17,7 @@ export interface AcquisitionMetrics {
 }
 
 // Reservation Analytics
-export interface ReservationAnalytics {
-  id: string;
-  facilityId: string;
-  facilityName: string;
-  period: string;
-  totalReservations: number;
-  completedReservations: number;
-  cancelledReservations: number;
-  cancellationRate: number;
-  peakHours: { hour: number; count: number }[];
-  peakDays: { day: string; count: number }[];
-  averageBookingValue: number;
-  totalRevenue: number;
-  bookingTrends: { date: string; count: number }[];
-}
-
-export interface SystemReservationMetrics {
+interface SystemReservationMetrics {
   period: string;
   totalReservations: number;
   completedReservations: number;
@@ -69,7 +32,7 @@ export interface SystemReservationMetrics {
 }
 
 // Facility Utilization
-export interface FacilityUtilization {
+interface FacilityUtilization {
   id: string;
   facilityId: string;
   facilityName: string;
@@ -85,7 +48,7 @@ export interface FacilityUtilization {
   utilizationTrend: { date: string; rate: number }[];
 }
 
-export interface UtilizationComparison {
+interface UtilizationComparison {
   facilities: {
     facilityId: string;
     facilityName: string;
@@ -118,7 +81,7 @@ export interface FacilityPerformance {
   nps: number; // Net Promoter Score
 }
 
-export interface SystemPerformance {
+interface SystemPerformance {
   period: string;
   systemUptime: number;
   averageResponseTime: number;
@@ -165,52 +128,6 @@ export interface CustomReport {
   exportFormats: ("PDF" | "Excel" | "CSV" | "JSON")[];
 }
 
-// Mock Data
-export const customerAcquisitions: CustomerAcquisition[] = [
-  {
-    id: "ca-1",
-    facilityId: "1",
-    facilityName: "Pawsome Care NYC",
-    period: "2025-11",
-    newCustomers: 145,
-    acquisitionChannel: "Social Media",
-    signUpDate: "2025-11-15",
-    customerLifetimeValue: 2400,
-    retentionRate: 85,
-    churnRate: 15,
-    averageOrderValue: 120,
-    totalRevenue: 17400,
-  },
-  {
-    id: "ca-2",
-    facilityId: "2",
-    facilityName: "Happy Tails LA",
-    period: "2025-11",
-    newCustomers: 128,
-    acquisitionChannel: "Referral",
-    signUpDate: "2025-11-15",
-    customerLifetimeValue: 2200,
-    retentionRate: 82,
-    churnRate: 18,
-    averageOrderValue: 110,
-    totalRevenue: 14080,
-  },
-  {
-    id: "ca-3",
-    facilityId: "3",
-    facilityName: "Pet Paradise Miami",
-    period: "2025-11",
-    newCustomers: 156,
-    acquisitionChannel: "Paid Ads",
-    signUpDate: "2025-11-15",
-    customerLifetimeValue: 2600,
-    retentionRate: 88,
-    churnRate: 12,
-    averageOrderValue: 130,
-    totalRevenue: 20280,
-  },
-];
-
 export const acquisitionMetrics: AcquisitionMetrics = {
   period: "2025-11",
   totalNewCustomers: 1250,
@@ -252,37 +169,6 @@ export const acquisitionMetrics: AcquisitionMetrics = {
   averageLifetimeValue: 2450,
   averageRetentionRate: 84.5,
 };
-
-export const reservationAnalytics: ReservationAnalytics[] = [
-  {
-    id: "ra-1",
-    facilityId: "1",
-    facilityName: "Pawsome Care NYC",
-    period: "2025-11",
-    totalReservations: 842,
-    completedReservations: 756,
-    cancelledReservations: 86,
-    cancellationRate: 10.2,
-    peakHours: [
-      { hour: 9, count: 145 },
-      { hour: 14, count: 132 },
-      { hour: 17, count: 128 },
-    ],
-    peakDays: [
-      { day: "Friday", count: 185 },
-      { day: "Saturday", count: 168 },
-      { day: "Sunday", count: 145 },
-    ],
-    averageBookingValue: 125,
-    totalRevenue: 94500,
-    bookingTrends: [
-      { date: "2025-11-01", count: 28 },
-      { date: "2025-11-08", count: 32 },
-      { date: "2025-11-15", count: 35 },
-      { date: "2025-11-22", count: 38 },
-    ],
-  },
-];
 
 export const systemReservationMetrics: SystemReservationMetrics = {
   period: "2025-11",
@@ -600,44 +486,3 @@ export const customReports: CustomReport[] = [
     exportFormats: ["PDF", "JSON"],
   },
 ];
-
-// Helper functions
-export function getAcquisitionByChannel(
-  channel: string,
-): CustomerAcquisition[] {
-  return customerAcquisitions.filter((ca) => ca.acquisitionChannel === channel);
-}
-
-export function getTotalNewCustomers(): number {
-  return customerAcquisitions.reduce((sum, ca) => sum + ca.newCustomers, 0);
-}
-
-export function getAverageLifetimeValue(): number {
-  const total = customerAcquisitions.reduce(
-    (sum, ca) => sum + ca.customerLifetimeValue,
-    0,
-  );
-  return total / customerAcquisitions.length;
-}
-
-export function getSystemUtilizationAverage(): number {
-  const total = facilityUtilization.reduce(
-    (sum, fu) => sum + fu.utilizationRate,
-    0,
-  );
-  return total / facilityUtilization.length;
-}
-
-export function getTopPerformingFacility(): FacilityPerformance | undefined {
-  return facilityPerformance.reduce((top, facility) =>
-    facility.totalRevenue > (top?.totalRevenue || 0) ? facility : top,
-  );
-}
-
-export function getActiveReports(): CustomReport[] {
-  return customReports.filter((report) => report.status === "Active");
-}
-
-export function getScheduledReports(): CustomReport[] {
-  return customReports.filter((report) => report.schedule !== undefined);
-}
