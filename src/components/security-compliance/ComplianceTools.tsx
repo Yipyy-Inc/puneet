@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,17 +17,12 @@ import {
   Users,
   Database,
   Lock,
-  Globe,
   Settings,
   Eye,
   Download,
   RefreshCw,
-  Play,
   Award,
   FileCheck,
-  AlertCircle,
-  TrendingUp,
-  Calendar,
 } from "lucide-react";
 import {
   BarChart,
@@ -37,7 +31,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
 } from "recharts";
@@ -249,6 +242,11 @@ export function ComplianceTools() {
       <Button variant="ghost" size="icon" className="h-8 w-8">
         <Settings className="h-4 w-4" />
       </Button>
+      {!item.isCompliant && (
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <AlertTriangle className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 
@@ -301,9 +299,11 @@ export function ComplianceTools() {
       <Button variant="ghost" size="icon" className="h-8 w-8">
         <Eye className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Download className="h-4 w-4" />
-      </Button>
+      {item.status === "Active" && (
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 
@@ -500,10 +500,12 @@ export function ComplianceTools() {
         <Eye className="h-4 w-4" />
         View
       </Button>
-      <Button variant="ghost" size="sm" className="gap-1">
-        <Download className="h-4 w-4" />
-        Export
-      </Button>
+      {item.status === "Final" && (
+        <Button variant="ghost" size="sm" className="gap-1">
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      )}
     </div>
   );
 

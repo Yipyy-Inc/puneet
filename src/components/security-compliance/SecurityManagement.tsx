@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import {
-  Shield,
   ShieldCheck,
   ShieldAlert,
   Lock,
@@ -19,8 +16,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Activity,
-  TrendingUp,
   MapPin,
   Monitor,
   Smartphone,
@@ -41,7 +36,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
 import {
   mfaSettings,
@@ -60,10 +54,6 @@ import {
 } from "@/data/security-compliance";
 
 export function SecurityManagement() {
-  const [selectedAlert, setSelectedAlert] = useState<SecurityAlert | null>(
-    null
-  );
-
   // Badge helpers
   const getMFAStatusBadge = (status: string) => {
     const variants: Record<
@@ -208,13 +198,13 @@ export function SecurityManagement() {
       <Button variant="ghost" size="sm">
         <Settings className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
-        <Eye className="h-4 w-4" />
-      </Button>
+      {item.mfaEnabled && (
+        <Button variant="ghost" size="sm">
+          <Eye className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
-
-  // IP Whitelist Table Columns
   const ipColumns = [
     {
       key: "ipAddress",
@@ -434,9 +424,11 @@ export function SecurityManagement() {
       <Button variant="ghost" size="sm">
         <Settings className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm">
-        <Play className="h-4 w-4" />
-      </Button>
+      {item.status === "Active" && (
+        <Button variant="ghost" size="sm">
+          <Eye className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ import {
   Eye,
   Play,
   Check,
-  TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
@@ -242,9 +240,11 @@ export function AlertsNotifications() {
       <Button variant="ghost" size="icon" className="h-8 w-8">
         <Settings className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Eye className="h-4 w-4" />
-      </Button>
+      {item.enabled && (
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Eye className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 
@@ -308,9 +308,11 @@ export function AlertsNotifications() {
       <Button variant="ghost" size="icon" className="h-8 w-8">
         <Settings className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Zap className="h-4 w-4" />
-      </Button>
+      {item.status === "Active" && (
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Zap className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 

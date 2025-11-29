@@ -25,7 +25,6 @@ import {
   TrendingUp,
   Target,
   DollarSign,
-  Users,
   BarChart3,
   PieChart as PieChartIcon,
   Activity,
@@ -36,10 +35,6 @@ import {
   promotionPerformance,
   discountImpactMetrics,
   redemptionTrends,
-} from "@/data/promotions";
-import type {
-  PromotionPerformance,
-  DiscountImpactMetric,
 } from "@/data/promotions";
 
 const COLORS = [

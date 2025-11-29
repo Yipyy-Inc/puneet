@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -10,20 +9,17 @@ import {
   Server,
   Database,
   Activity,
-  TrendingUp,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Clock,
   Cpu,
   HardDrive,
-  Network,
   Gauge,
   Globe,
   Zap,
   Link,
   BarChart3,
-  LineChart as LineChartIcon,
   ArrowUp,
   ArrowDown,
   Minus,
@@ -33,14 +29,11 @@ import {
   Line,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   ResponsiveContainer,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
 import {
   serverStatuses,

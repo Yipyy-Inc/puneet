@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Package,
   Gift,
-  Calendar,
   Users,
   DollarSign,
   Percent,
