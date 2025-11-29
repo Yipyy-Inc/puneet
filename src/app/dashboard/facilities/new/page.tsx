@@ -151,6 +151,22 @@ interface StaffMember {
   autoGeneratePassword: boolean;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+  services: string[];
+  operatingHours: Record<
+    string,
+    { enabled: boolean; open: string; close: string }
+  >;
+}
+
 const getModuleIcon = (iconName: string) => {
   switch (iconName) {
     case "Calendar":
@@ -229,20 +245,9 @@ export default function NewFacilityPage() {
     limitPets: "",
 
     // Location & Contact
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "US",
-    phone: "",
     email: "",
-    operatingHours: daysOfWeek.reduce(
-      (acc, day) => ({
-        ...acc,
-        [day]: { enabled: day !== "Sunday", open: "08:00", close: "18:00" },
-      }),
-      {} as Record<string, { enabled: boolean; open: string; close: string }>,
-    ),
+    phone: "",
+    locations: [] as Location[],
 
     // Owner Details
     ownerName: "",
@@ -275,9 +280,22 @@ export default function NewFacilityPage() {
         newErrors.businessTypes = "Select at least one business type";
       }
     } else if (step === 2) {
-      if (!formData.address.trim()) newErrors.address = "Address is required";
-      if (!formData.city.trim()) newErrors.city = "City is required";
-      if (!formData.state.trim()) newErrors.state = "State is required";
+      if (formData.locations.length === 0) {
+        newErrors.locations = "Add at least one location";
+      } else {
+        formData.locations.forEach((loc, index) => {
+          if (!loc.name.trim())
+            newErrors[`loc_${index}_name`] = "Location name is required";
+          if (!loc.address.trim())
+            newErrors[`loc_${index}_address`] = "Address is required";
+          if (!loc.city.trim())
+            newErrors[`loc_${index}_city`] = "City is required";
+          if (!loc.state.trim())
+            newErrors[`loc_${index}_state`] = "State is required";
+          if (loc.services.length === 0)
+            newErrors[`loc_${index}_services`] = "Select at least one service";
+        });
+      }
     } else if (step === 3) {
       if (!formData.ownerName.trim())
         newErrors.ownerName = "Owner name is required";
@@ -343,33 +361,112 @@ export default function NewFacilityPage() {
     }));
   };
 
-  const toggleOperatingDay = (day: string) => {
+  const createDefaultOperatingHours = () =>
+    daysOfWeek.reduce(
+      (acc, day) => ({
+        ...acc,
+        [day]: { enabled: day !== "Sunday", open: "08:00", close: "18:00" },
+      }),
+      {} as Record<string, { enabled: boolean; open: string; close: string }>,
+    );
+
+  const addLocation = () => {
+    const newLocation: Location = {
+      id: `loc-${Date.now()}`,
+      name: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "US",
+      phone: "",
+      services: [],
+      operatingHours: createDefaultOperatingHours(),
+    };
     setFormData((prev) => ({
       ...prev,
-      operatingHours: {
-        ...prev.operatingHours,
-        [day]: {
-          ...prev.operatingHours[day],
-          enabled: !prev.operatingHours[day].enabled,
-        },
-      },
+      locations: [...prev.locations, newLocation],
     }));
   };
 
-  const updateOperatingHours = (
+  const removeLocation = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      locations: prev.locations.filter((l) => l.id !== id),
+    }));
+  };
+
+  const updateLocation = (
+    id: string,
+    field: keyof Location,
+    value: string | string[],
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      locations: prev.locations.map((l) =>
+        l.id === id ? { ...l, [field]: value } : l,
+      ),
+    }));
+  };
+
+  const toggleLocationService = (locationId: string, serviceId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      locations: prev.locations.map((l) =>
+        l.id === locationId
+          ? {
+              ...l,
+              services: l.services.includes(serviceId)
+                ? l.services.filter((s) => s !== serviceId)
+                : [...l.services, serviceId],
+            }
+          : l,
+      ),
+    }));
+  };
+
+  const toggleLocationOperatingDay = (locationId: string, day: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      locations: prev.locations.map((l) =>
+        l.id === locationId
+          ? {
+              ...l,
+              operatingHours: {
+                ...l.operatingHours,
+                [day]: {
+                  ...l.operatingHours[day],
+                  enabled: !l.operatingHours[day].enabled,
+                },
+              },
+            }
+          : l,
+      ),
+    }));
+  };
+
+  const updateLocationOperatingHours = (
+    locationId: string,
     day: string,
     field: "open" | "close",
     value: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
-      operatingHours: {
-        ...prev.operatingHours,
-        [day]: {
-          ...prev.operatingHours[day],
-          [field]: value,
-        },
-      },
+      locations: prev.locations.map((l) =>
+        l.id === locationId
+          ? {
+              ...l,
+              operatingHours: {
+                ...l.operatingHours,
+                [day]: {
+                  ...l.operatingHours[day],
+                  [field]: value,
+                },
+              },
+            }
+          : l,
+      ),
     }));
   };
 
@@ -671,156 +768,348 @@ export default function NewFacilityPage() {
       case 2:
         return (
           <div className="space-y-6">
-            <div className="space-y-4">
-              <Label>Address</Label>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-sm">
-                    Street Address <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    placeholder="123 Main Street"
-                    className={errors.address ? "border-destructive" : ""}
-                  />
-                  {errors.address && (
-                    <p className="text-sm text-destructive">{errors.address}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city" className="text-sm">
-                      City <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData({ ...formData, city: e.target.value })
-                      }
-                      placeholder="City"
-                      className={errors.city ? "border-destructive" : ""}
-                    />
-                    {errors.city && (
-                      <p className="text-sm text-destructive">{errors.city}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state" className="text-sm">
-                      State <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="state"
-                      value={formData.state}
-                      onChange={(e) =>
-                        setFormData({ ...formData, state: e.target.value })
-                      }
-                      placeholder="State"
-                      className={errors.state ? "border-destructive" : ""}
-                    />
-                    {errors.state && (
-                      <p className="text-sm text-destructive">{errors.state}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode" className="text-sm">
-                      ZIP Code
-                    </Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) =>
-                        setFormData({ ...formData, zipCode: e.target.value })
-                      }
-                      placeholder="12345"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm">
-                      Country
-                    </Label>
-                    <Select
-                      value={formData.country}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, country: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="UK">United Kingdom</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>
+                  Locations <span className="text-destructive">*</span>
+                </Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add locations and specify which services are available at each
+                </p>
               </div>
+              <Button onClick={addLocation} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <Label>Operating Hours</Label>
-              </div>
-              <div className="space-y-3">
-                {daysOfWeek.map((day) => (
-                  <div
-                    key={day}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+            {errors.locations && (
+              <p className="text-sm text-destructive">{errors.locations}</p>
+            )}
+
+            {formData.locations.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center">
+                  <MapPin className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground">
+                    No locations added yet
+                  </p>
+                  <Button
+                    onClick={addLocation}
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
                   >
-                    <div className="flex items-center gap-2 w-32">
-                      <Checkbox
-                        id={`day-${day}`}
-                        checked={formData.operatingHours[day].enabled}
-                        onCheckedChange={() => toggleOperatingDay(day)}
-                      />
-                      <Label
-                        htmlFor={`day-${day}`}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {day}
-                      </Label>
-                    </div>
-                    {formData.operatingHours[day].enabled ? (
-                      <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Location
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {formData.locations.map((location, index) => (
+                  <Card key={location.id} className="border-0 shadow-card">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Location {index + 1}
+                          {location.name && ` - ${location.name}`}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLocation(location.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Location Name */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Location Name{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
                         <Input
-                          type="time"
-                          value={formData.operatingHours[day].open}
+                          value={location.name}
                           onChange={(e) =>
-                            updateOperatingHours(day, "open", e.target.value)
+                            updateLocation(location.id, "name", e.target.value)
                           }
-                          className="w-32"
+                          placeholder="e.g., Main Campus, Downtown Branch"
+                          className={
+                            errors[`loc_${index}_name`]
+                              ? "border-destructive"
+                              : ""
+                          }
                         />
-                        <span className="text-muted-foreground">to</span>
+                        {errors[`loc_${index}_name`] && (
+                          <p className="text-sm text-destructive">
+                            {errors[`loc_${index}_name`]}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Address */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Street Address{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
                         <Input
-                          type="time"
-                          value={formData.operatingHours[day].close}
+                          value={location.address}
                           onChange={(e) =>
-                            updateOperatingHours(day, "close", e.target.value)
+                            updateLocation(
+                              location.id,
+                              "address",
+                              e.target.value,
+                            )
                           }
-                          className="w-32"
+                          placeholder="123 Main Street"
+                          className={
+                            errors[`loc_${index}_address`]
+                              ? "border-destructive"
+                              : ""
+                          }
+                        />
+                        {errors[`loc_${index}_address`] && (
+                          <p className="text-sm text-destructive">
+                            {errors[`loc_${index}_address`]}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">
+                            City <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            value={location.city}
+                            onChange={(e) =>
+                              updateLocation(
+                                location.id,
+                                "city",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="City"
+                            className={
+                              errors[`loc_${index}_city`]
+                                ? "border-destructive"
+                                : ""
+                            }
+                          />
+                          {errors[`loc_${index}_city`] && (
+                            <p className="text-sm text-destructive">
+                              {errors[`loc_${index}_city`]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">
+                            State <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            value={location.state}
+                            onChange={(e) =>
+                              updateLocation(
+                                location.id,
+                                "state",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="State"
+                            className={
+                              errors[`loc_${index}_state`]
+                                ? "border-destructive"
+                                : ""
+                            }
+                          />
+                          {errors[`loc_${index}_state`] && (
+                            <p className="text-sm text-destructive">
+                              {errors[`loc_${index}_state`]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">ZIP Code</Label>
+                          <Input
+                            value={location.zipCode}
+                            onChange={(e) =>
+                              updateLocation(
+                                location.id,
+                                "zipCode",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="12345"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Country</Label>
+                          <Select
+                            value={location.country}
+                            onValueChange={(value) =>
+                              updateLocation(location.id, "country", value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="US">United States</SelectItem>
+                              <SelectItem value="CA">Canada</SelectItem>
+                              <SelectItem value="UK">United Kingdom</SelectItem>
+                              <SelectItem value="AU">Australia</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm">Phone</Label>
+                        <Input
+                          value={location.phone}
+                          onChange={(e) =>
+                            updateLocation(location.id, "phone", e.target.value)
+                          }
+                          placeholder="(555) 123-4567"
                         />
                       </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        Closed
-                      </span>
-                    )}
-                  </div>
+
+                      {/* Services at this location */}
+                      <div className="space-y-3 pt-2 border-t">
+                        <Label className="text-sm">
+                          Services at this Location{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Select which services are offered at this location
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {businessTypes.map((type) => {
+                            const isSelected = location.services.includes(
+                              type.id,
+                            );
+                            const isBusinessTypeEnabled =
+                              formData.businessTypes.includes(type.id);
+                            return (
+                              <div
+                                key={type.id}
+                                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "border-muted hover:border-muted-foreground/30"
+                                } ${!isBusinessTypeEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                                onClick={() => {
+                                  if (isBusinessTypeEnabled) {
+                                    toggleLocationService(location.id, type.id);
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  disabled={!isBusinessTypeEnabled}
+                                  className="pointer-events-none"
+                                />
+                                <type.icon className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{type.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {errors[`loc_${index}_services`] && (
+                          <p className="text-sm text-destructive">
+                            {errors[`loc_${index}_services`]}
+                          </p>
+                        )}
+                        {formData.businessTypes.length === 0 && (
+                          <p className="text-xs text-amber-600">
+                            Select business types in the previous step to enable
+                            services
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Operating Hours */}
+                      <div className="space-y-3 pt-2 border-t">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <Label className="text-sm">Operating Hours</Label>
+                        </div>
+                        <div className="space-y-2">
+                          {daysOfWeek.map((day) => (
+                            <div
+                              key={day}
+                              className="flex items-center gap-4 p-2 rounded-lg bg-muted/50"
+                            >
+                              <div className="flex items-center gap-2 w-28">
+                                <Checkbox
+                                  id={`${location.id}-day-${day}`}
+                                  checked={location.operatingHours[day].enabled}
+                                  onCheckedChange={() =>
+                                    toggleLocationOperatingDay(location.id, day)
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`${location.id}-day-${day}`}
+                                  className="text-xs font-medium cursor-pointer"
+                                >
+                                  {day.slice(0, 3)}
+                                </Label>
+                              </div>
+                              {location.operatingHours[day].enabled ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="time"
+                                    value={location.operatingHours[day].open}
+                                    onChange={(e) =>
+                                      updateLocationOperatingHours(
+                                        location.id,
+                                        day,
+                                        "open",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-28 h-8 text-xs"
+                                  />
+                                  <span className="text-xs text-muted-foreground">
+                                    to
+                                  </span>
+                                  <Input
+                                    type="time"
+                                    value={location.operatingHours[day].close}
+                                    onChange={(e) =>
+                                      updateLocationOperatingHours(
+                                        location.id,
+                                        day,
+                                        "close",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-28 h-8 text-xs"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  Closed
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         );
 
@@ -1406,29 +1695,58 @@ export default function NewFacilityPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  Location
+                  Locations ({formData.locations.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b">
-                  <span className="text-muted-foreground">Address</span>
-                  <span className="font-medium text-right">
-                    {formData.address}
-                    <br />
-                    {formData.city}, {formData.state} {formData.zipCode}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-muted-foreground">Operating Days</span>
-                  <span className="font-medium">
-                    {
-                      Object.values(formData.operatingHours).filter(
-                        (h) => h.enabled,
-                      ).length
-                    }{" "}
-                    days/week
-                  </span>
-                </div>
+              <CardContent className="space-y-3 text-sm">
+                {formData.locations.map((location, index) => (
+                  <div
+                    key={location.id}
+                    className={index > 0 ? "pt-3 border-t" : ""}
+                  >
+                    <div className="flex justify-between py-1">
+                      <span className="text-muted-foreground">
+                        {location.name || `Location ${index + 1}`}
+                      </span>
+                      <span className="font-medium text-right text-xs">
+                        {location.address}, {location.city}, {location.state}{" "}
+                        {location.zipCode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-muted-foreground text-xs">
+                        Services
+                      </span>
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        {location.services.map((serviceId) => (
+                          <Badge
+                            key={serviceId}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {
+                              businessTypes.find((t) => t.id === serviceId)
+                                ?.label
+                            }
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-muted-foreground text-xs">
+                        Operating Days
+                      </span>
+                      <span className="font-medium text-xs">
+                        {
+                          Object.values(location.operatingHours).filter(
+                            (h) => h.enabled,
+                          ).length
+                        }{" "}
+                        days/week
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
 
