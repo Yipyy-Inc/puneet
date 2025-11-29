@@ -126,7 +126,10 @@
     "complianceTools": "Outils de conformité",
     "systemHealth": "Santé et surveillance du système",
     "systemStatus": "État du système",
-    "alertsNotifications": "Alertes et notifications"
+    "alertsNotifications": "Alertes et notifications",
+    "promotionsDiscounts": "Promotions et rabais",
+    "promoCodeSystem": "Système de codes promo",
+    "performanceMetrics": "Métriques de performance"
   },
   "dashboard": {
     "title": "Tableau de bord",

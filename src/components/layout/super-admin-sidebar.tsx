@@ -23,6 +23,7 @@ import {
   BarChart2,
   Database,
   Settings,
+  Tag,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -263,6 +264,23 @@ export function AppSidebar() {
           title: t("alertsNotifications"),
           url: "/dashboard/system-health/alerts-notifications",
           icon: AlertTriangle,
+          disabled: false,
+        },
+      ],
+    },
+    {
+      label: t("promotionsDiscounts"),
+      items: [
+        {
+          title: t("promoCodeSystem"),
+          url: "/dashboard/promotions/promo-code-system",
+          icon: Tag,
+          disabled: false,
+        },
+        {
+          title: t("performanceMetrics"),
+          url: "/dashboard/promotions/performance-metrics",
+          icon: TrendingUp,
           disabled: false,
         },
       ],

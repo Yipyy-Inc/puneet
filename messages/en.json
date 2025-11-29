@@ -128,7 +128,10 @@
     "complianceTools": "Compliance Tools",
     "systemHealth": "System Health & Monitoring",
     "systemStatus": "System Status",
-    "alertsNotifications": "Alerts & Notifications"
+    "alertsNotifications": "Alerts & Notifications",
+    "promotionsDiscounts": "Promotions & Discounts",
+    "promoCodeSystem": "Promo Code System",
+    "performanceMetrics": "Performance Metrics"
   },
   "dashboard": {
     "title": "Dashboard",
