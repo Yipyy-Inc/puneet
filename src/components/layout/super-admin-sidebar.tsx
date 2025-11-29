@@ -2,14 +2,9 @@
 
 import {
   Building,
-  CreditCard,
   Shield,
-  CheckSquare,
-  Bot,
   Home,
   Wrench,
-  Globe,
-  AlertTriangle,
   Layers,
   UserCog,
   Activity,
@@ -22,14 +17,15 @@ import {
   FileText,
   BarChart2,
   Database,
-  Settings,
   Tag,
   Users,
   Target,
   UserPlus,
   ClipboardList,
-  Mail,
   Trophy,
+  Settings,
+  CheckSquare,
+  AlertTriangle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -199,12 +195,6 @@ export function AppSidebar() {
       label: t("platformOperations"),
       items: [
         {
-          title: t("subscriptionBilling"),
-          url: "/dashboard/billing",
-          icon: CreditCard,
-          disabled: true,
-        },
-        {
           title: t("subscriptionManagement"),
           url: "/dashboard/subscriptions",
           icon: Package,
@@ -215,18 +205,6 @@ export function AppSidebar() {
           url: "/dashboard/financial",
           icon: DollarSign,
           disabled: false,
-        },
-        {
-          title: t("globalSettings"),
-          url: "/dashboard/settings",
-          icon: Globe,
-          disabled: true,
-        },
-        {
-          title: t("complianceData"),
-          url: "/dashboard/compliance",
-          icon: Shield,
-          disabled: true,
         },
       ],
     },
@@ -247,29 +225,7 @@ export function AppSidebar() {
         },
       ],
     },
-    {
-      label: t("supportFeatures"),
-      items: [
-        {
-          title: t("incidents"),
-          url: "/dashboard/incidents",
-          icon: AlertTriangle,
-          disabled: false,
-        },
-        {
-          title: t("taskOperations"),
-          url: "/dashboard/tasks",
-          icon: CheckSquare,
-          disabled: true,
-        },
-        {
-          title: t("aiPersonalization"),
-          url: "/dashboard/ai",
-          icon: Bot,
-          disabled: true,
-        },
-      ],
-    },
+
     {
       label: t("systemAdministration"),
       items: [

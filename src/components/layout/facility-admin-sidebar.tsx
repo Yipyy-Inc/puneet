@@ -2,12 +2,10 @@
 
 import {
   Home,
-  BarChart3,
   Users,
   PawPrint,
   Calendar,
   UserCheck,
-  Settings,
   Package,
   Clock,
   MessageSquare,
@@ -31,12 +29,6 @@ export function FacilitySidebar() {
           url: "/facility/dashboard",
           icon: Home,
           disabled: false,
-        },
-        {
-          title: t("analyticsReporting"),
-          url: "/facility/analytics",
-          icon: BarChart3,
-          disabled: true,
         },
       ],
     },
@@ -130,17 +122,6 @@ export function FacilitySidebar() {
           url: "/facility/dashboard/billing",
           icon: DollarSign,
           disabled: false,
-        },
-      ],
-    },
-    {
-      label: tCommon("settings"),
-      items: [
-        {
-          title: t("facilitySettings"),
-          url: "/facility/settings",
-          icon: Settings,
-          disabled: true,
         },
       ],
     },

@@ -36,7 +36,6 @@ import {
   Activity,
   Plus,
   Clock,
-  Headphones,
   Megaphone,
   TrendingUp,
   TrendingDown,
@@ -105,12 +104,7 @@ const quickActions = [
     icon: Clock,
     href: "/dashboard/analytics",
   },
-  {
-    id: 3,
-    label: "Support",
-    icon: Headphones,
-    href: "/dashboard/support",
-  },
+
   {
     id: 4,
     label: "Announce",
