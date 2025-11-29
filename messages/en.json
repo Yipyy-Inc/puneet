@@ -125,7 +125,10 @@
     "systemConfiguration": "System Configuration",
     "securityCompliance": "Security & Compliance",
     "securityManagement": "Security Management",
-    "complianceTools": "Compliance Tools"
+    "complianceTools": "Compliance Tools",
+    "systemHealth": "System Health & Monitoring",
+    "systemStatus": "System Status",
+    "alertsNotifications": "Alerts & Notifications"
   },
   "dashboard": {
     "title": "Dashboard",

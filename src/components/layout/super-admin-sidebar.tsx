@@ -250,6 +250,23 @@ export function AppSidebar() {
         },
       ],
     },
+    {
+      label: t("systemHealth"),
+      items: [
+        {
+          title: t("systemStatus"),
+          url: "/dashboard/system-health/system-status",
+          icon: Activity,
+          disabled: false,
+        },
+        {
+          title: t("alertsNotifications"),
+          url: "/dashboard/system-health/alerts-notifications",
+          icon: AlertTriangle,
+          disabled: false,
+        },
+      ],
+    },
   ];
 
   const handleLogout = () => {

@@ -123,7 +123,10 @@
     "systemConfiguration": "Configuration système",
     "securityCompliance": "Sécurité et conformité",
     "securityManagement": "Gestion de la sécurité",
-    "complianceTools": "Outils de conformité"
+    "complianceTools": "Outils de conformité",
+    "systemHealth": "Santé et surveillance du système",
+    "systemStatus": "État du système",
+    "alertsNotifications": "Alertes et notifications"
   },
   "dashboard": {
     "title": "Tableau de bord",
