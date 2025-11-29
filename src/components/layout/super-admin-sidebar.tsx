@@ -24,6 +24,12 @@ import {
   Database,
   Settings,
   Tag,
+  Users,
+  Target,
+  UserPlus,
+  ClipboardList,
+  Mail,
+  Trophy,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -92,6 +98,59 @@ export function AppSidebar() {
           title: t("customReports"),
           url: "/dashboard/analytics/reports",
           icon: FileText,
+          disabled: false,
+        },
+      ],
+    },
+    {
+      label: "CRM",
+      items: [
+        {
+          title: "Overview",
+          url: "/dashboard/crm",
+          icon: Target,
+          disabled: false,
+        },
+        {
+          title: "Leads",
+          url: "/dashboard/crm/leads",
+          icon: UserPlus,
+          disabled: false,
+        },
+        {
+          title: "Deals",
+          url: "/dashboard/crm/deals",
+          icon: DollarSign,
+          disabled: false,
+        },
+        {
+          title: "Contacts",
+          url: "/dashboard/crm/contacts",
+          icon: Users,
+          disabled: false,
+        },
+        {
+          title: "Activities",
+          url: "/dashboard/crm/activities",
+          icon: ClipboardList,
+          disabled: false,
+        },
+        {
+          title: "Onboarding",
+          url: "/dashboard/crm/onboarding",
+          icon: CheckSquare,
+          disabled: false,
+        },
+        {
+          title: "Reports",
+          url: "/dashboard/crm/reports",
+          icon: BarChart2,
+          disabled: false,
+        },
+        {
+          title: "Team",
+          url: "/dashboard/crm/team",
+          icon: Trophy,
           disabled: false,
         },
       ],

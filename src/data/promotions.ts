@@ -2,8 +2,18 @@
 
 export type PromotionScope = "facility" | "system-wide";
 export type PromotionStatus = "active" | "scheduled" | "expired" | "paused";
-export type DiscountType = "percentage" | "fixed-amount" | "bundle" | "first-time";
-export type PromotionTarget = "all-services" | "boarding" | "daycare" | "grooming" | "veterinary" | "training";
+export type DiscountType =
+  | "percentage"
+  | "fixed-amount"
+  | "bundle"
+  | "first-time";
+export type PromotionTarget =
+  | "all-services"
+  | "boarding"
+  | "daycare"
+  | "grooming"
+  | "veterinary"
+  | "training";
 
 export interface Promotion {
   id: string;

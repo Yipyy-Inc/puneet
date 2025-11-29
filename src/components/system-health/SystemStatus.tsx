@@ -54,7 +54,10 @@ import {
 export function SystemStatus() {
   // Badge helpers
   const getServerStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Online: "default",
       Offline: "destructive",
       Degraded: "outline",
@@ -76,7 +79,10 @@ export function SystemStatus() {
   };
 
   const getDBStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Healthy: "default",
       Degraded: "outline",
       Critical: "destructive",
@@ -86,7 +92,10 @@ export function SystemStatus() {
   };
 
   const getAPIStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Available: "default",
       Degraded: "outline",
       Down: "destructive",
@@ -96,7 +105,10 @@ export function SystemStatus() {
   };
 
   const getServiceStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Operational: "default",
       Degraded: "outline",
       "Partial Outage": "destructive",
@@ -195,7 +207,9 @@ export function SystemStatus() {
             <Database className="h-4 w-4 text-muted-foreground" />
             {item.databaseName}
           </div>
-          <Badge variant="outline" className="text-xs mt-1">{item.type}</Badge>
+          <Badge variant="outline" className="text-xs mt-1">
+            {item.type}
+          </Badge>
         </div>
       ),
     },
@@ -237,10 +251,16 @@ export function SystemStatus() {
       label: "Endpoint",
       render: (item: APIEndpoint) => (
         <div className="min-w-0">
-          <div className="font-medium font-mono text-sm truncate">{item.endpoint}</div>
+          <div className="font-medium font-mono text-sm truncate">
+            {item.endpoint}
+          </div>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">{item.method}</Badge>
-            <span className="text-xs text-muted-foreground">{item.service}</span>
+            <Badge variant="outline" className="text-xs">
+              {item.method}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {item.service}
+            </span>
           </div>
         </div>
       ),
@@ -277,7 +297,9 @@ export function SystemStatus() {
       render: (item: ServiceUptime) => (
         <div className="min-w-0">
           <div className="font-medium">{item.serviceName}</div>
-          <Badge variant="outline" className="text-xs mt-1">{item.category}</Badge>
+          <Badge variant="outline" className="text-xs mt-1">
+            {item.category}
+          </Badge>
         </div>
       ),
     },
@@ -292,7 +314,9 @@ export function SystemStatus() {
       render: (item: ServiceUptime) => (
         <div className="text-sm space-y-1">
           <div>24h: {item.uptime24h}%</div>
-          <div className="text-xs text-muted-foreground">7d: {item.uptime7d}%</div>
+          <div className="text-xs text-muted-foreground">
+            7d: {item.uptime7d}%
+          </div>
         </div>
       ),
     },
@@ -322,7 +346,9 @@ export function SystemStatus() {
       render: (item: PerformanceMetric) => (
         <div className="min-w-0">
           <div className="font-medium">{item.metricName}</div>
-          <Badge variant="outline" className="text-xs mt-1">{item.category}</Badge>
+          <Badge variant="outline" className="text-xs mt-1">
+            {item.category}
+          </Badge>
         </div>
       ),
     },
@@ -354,7 +380,9 @@ export function SystemStatus() {
       key: "threshold",
       label: "Threshold",
       render: (item: PerformanceMetric) => (
-        <div className="text-sm">{item.threshold} {item.unit}</div>
+        <div className="text-sm">
+          {item.threshold} {item.unit}
+        </div>
       ),
     },
   ];
@@ -367,7 +395,9 @@ export function SystemStatus() {
       render: (item: ResourceUtilization) => (
         <div className="min-w-0">
           <div className="font-medium">{item.resourceName}</div>
-          <Badge variant="outline" className="text-xs mt-1">{item.resourceType}</Badge>
+          <Badge variant="outline" className="text-xs mt-1">
+            {item.resourceType}
+          </Badge>
         </div>
       ),
     },
@@ -376,10 +406,14 @@ export function SystemStatus() {
       label: "Utilization",
       render: (item: ResourceUtilization) => (
         <div className="space-y-2">
-          <div className="text-sm font-medium">{item.current}{item.unit}</div>
+          <div className="text-sm font-medium">
+            {item.current}
+            {item.unit}
+          </div>
           <Progress value={item.current} className="h-2" />
           <div className="text-xs text-muted-foreground">
-            Peak: {item.peak}{item.unit}
+            Peak: {item.peak}
+            {item.unit}
           </div>
         </div>
       ),
@@ -393,7 +427,10 @@ export function SystemStatus() {
       key: "forecast",
       label: "30d Forecast",
       render: (item: ResourceUtilization) => (
-        <div className="text-sm">{item.forecast.days30}{item.unit}</div>
+        <div className="text-sm">
+          {item.forecast.days30}
+          {item.unit}
+        </div>
       ),
     },
   ];
@@ -441,10 +478,16 @@ export function SystemStatus() {
                   Servers Online
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
-                  {healthDashboardStats.serversOnline}/{healthDashboardStats.totalServers}
+                  {healthDashboardStats.serversOnline}/
+                  {healthDashboardStats.totalServers}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {((healthDashboardStats.serversOnline / healthDashboardStats.totalServers) * 100).toFixed(1)}% availability
+                  {(
+                    (healthDashboardStats.serversOnline /
+                      healthDashboardStats.totalServers) *
+                    100
+                  ).toFixed(1)}
+                  % availability
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
@@ -501,7 +544,9 @@ export function SystemStatus() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-0 shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">System Uptime (7 Days)</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              System Uptime (7 Days)
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
@@ -534,7 +579,9 @@ export function SystemStatus() {
 
         <Card className="border-0 shadow-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Error Rate Trend</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Error Rate Trend
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>

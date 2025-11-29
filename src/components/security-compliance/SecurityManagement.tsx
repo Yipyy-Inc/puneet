@@ -815,7 +815,7 @@ export function SecurityManagement() {
                               key={`cell-${index}`}
                               fill={COLORS[index % COLORS.length]}
                             />
-                          )
+                          ),
                         )}
                       </Pie>
                       <Tooltip />

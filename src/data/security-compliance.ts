@@ -76,7 +76,12 @@ export interface FailedLoginAttempt {
   ipAddress: string;
   location: string;
   attemptTime: string;
-  failureReason: "Invalid Password" | "Invalid Username" | "Account Locked" | "MFA Failed" | "IP Blocked";
+  failureReason:
+    | "Invalid Password"
+    | "Invalid Username"
+    | "Account Locked"
+    | "MFA Failed"
+    | "IP Blocked";
   deviceType: string;
   browser: string;
   severity: "Low" | "Medium" | "High" | "Critical";
@@ -86,7 +91,13 @@ export interface FailedLoginAttempt {
 
 export interface SecurityAlert {
   id: string;
-  alertType: "Suspicious Login" | "Multiple Failed Logins" | "Unusual Activity" | "Data Access Violation" | "Permission Escalation" | "Malware Detection";
+  alertType:
+    | "Suspicious Login"
+    | "Multiple Failed Logins"
+    | "Unusual Activity"
+    | "Data Access Violation"
+    | "Permission Escalation"
+    | "Malware Detection";
   severity: "Low" | "Medium" | "High" | "Critical";
   title: string;
   description: string;
@@ -104,7 +115,13 @@ export interface SecurityAlert {
 
 export interface SecurityBreach {
   id: string;
-  breachType: "Data Leak" | "Unauthorized Access" | "SQL Injection" | "XSS Attack" | "DDoS Attack" | "Malware";
+  breachType:
+    | "Data Leak"
+    | "Unauthorized Access"
+    | "SQL Injection"
+    | "XSS Attack"
+    | "DDoS Attack"
+    | "Malware";
   severity: "Low" | "Medium" | "High" | "Critical";
   title: string;
   description: string;
@@ -138,7 +155,13 @@ export interface SecurityDashboardStats {
 // Data Privacy Types
 export interface GDPRCompliance {
   id: string;
-  complianceArea: "Data Collection" | "Data Storage" | "Data Processing" | "User Rights" | "Data Breach" | "Consent Management";
+  complianceArea:
+    | "Data Collection"
+    | "Data Storage"
+    | "Data Processing"
+    | "User Rights"
+    | "Data Breach"
+    | "Consent Management";
   requirement: string;
   description: string;
   status: "Compliant" | "Partially Compliant" | "Non-Compliant" | "In Progress";
@@ -153,7 +176,13 @@ export interface GDPRCompliance {
 
 export interface DataProtectionSetting {
   id: string;
-  category: "Encryption" | "Access Control" | "Data Retention" | "Backup" | "Anonymization" | "Right to Erasure";
+  category:
+    | "Encryption"
+    | "Access Control"
+    | "Data Retention"
+    | "Backup"
+    | "Anonymization"
+    | "Right to Erasure";
   settingName: string;
   description: string;
   currentValue: string | boolean;
@@ -190,7 +219,13 @@ export interface UserConsent {
   userId: string;
   userName: string;
   userEmail: string;
-  consentType: "Marketing" | "Data Processing" | "Cookies" | "Third Party Sharing" | "Analytics" | "Terms of Service";
+  consentType:
+    | "Marketing"
+    | "Data Processing"
+    | "Cookies"
+    | "Third Party Sharing"
+    | "Analytics"
+    | "Terms of Service";
   consentGiven: boolean;
   consentedAt?: string;
   revokedAt?: string;
@@ -204,7 +239,15 @@ export interface UserConsent {
 // Regulatory Compliance Types
 export interface ComplianceFramework {
   id: string;
-  frameworkName: "GDPR" | "HIPAA" | "SOC 2" | "ISO 27001" | "PCI DSS" | "CCPA" | "SOX" | "Other";
+  frameworkName:
+    | "GDPR"
+    | "HIPAA"
+    | "SOC 2"
+    | "ISO 27001"
+    | "PCI DSS"
+    | "CCPA"
+    | "SOX"
+    | "Other";
   industry: string;
   description: string;
   applicableTo: string[];
@@ -222,7 +265,13 @@ export interface ComplianceFramework {
 export interface ComplianceReport {
   id: string;
   reportName: string;
-  reportType: "Audit Report" | "Compliance Assessment" | "Risk Assessment" | "Incident Report" | "Quarterly Review" | "Annual Review";
+  reportType:
+    | "Audit Report"
+    | "Compliance Assessment"
+    | "Risk Assessment"
+    | "Incident Report"
+    | "Quarterly Review"
+    | "Annual Review";
   framework: string[];
   generatedAt: string;
   generatedBy: string;
@@ -240,7 +289,13 @@ export interface ComplianceReport {
 export interface Certificate {
   id: string;
   certificateName: string;
-  certificateType: "SSL/TLS" | "Code Signing" | "Email" | "Client Authentication" | "Compliance" | "API";
+  certificateType:
+    | "SSL/TLS"
+    | "Code Signing"
+    | "Email"
+    | "Client Authentication"
+    | "Compliance"
+    | "API";
   issuer: string;
   issuedTo: string;
   issuedAt: string;
@@ -258,7 +313,13 @@ export interface Certificate {
 
 export interface AuditTrail {
   id: string;
-  eventType: "Access" | "Modification" | "Deletion" | "Export" | "Configuration Change" | "User Action";
+  eventType:
+    | "Access"
+    | "Modification"
+    | "Deletion"
+    | "Export"
+    | "Configuration Change"
+    | "User Action";
   description: string;
   userId: string;
   userName: string;
@@ -572,7 +633,8 @@ export const securityAlerts: SecurityAlert[] = [
     alertType: "Data Access Violation",
     severity: "Critical",
     title: "Unauthorized Data Access Attempt",
-    description: "Attempt to access restricted customer data without proper permissions",
+    description:
+      "Attempt to access restricted customer data without proper permissions",
     userId: "user-105",
     userName: "Jane Staff",
     ipAddress: "192.168.1.150",
@@ -614,7 +676,8 @@ export const securityBreaches: SecurityBreach[] = [
     breachType: "DDoS Attack",
     severity: "Medium",
     title: "Distributed Denial of Service Attack",
-    description: "High volume of requests from multiple IPs targeting login endpoint",
+    description:
+      "High volume of requests from multiple IPs targeting login endpoint",
     detectedAt: "2024-11-15T03:20:00Z",
     detectedBy: "Automated System",
     affectedSystems: ["Web Server", "Load Balancer"],
@@ -672,7 +735,8 @@ export const gdprCompliance: GDPRCompliance[] = [
     id: "gdpr-1",
     complianceArea: "Data Collection",
     requirement: "Article 5 - Lawfulness, fairness and transparency",
-    description: "Ensure all data collection has legal basis and is transparent to users",
+    description:
+      "Ensure all data collection has legal basis and is transparent to users",
     status: "Compliant",
     lastAudited: "2024-10-15T10:00:00Z",
     nextAuditDue: "2025-01-15T10:00:00Z",
@@ -709,7 +773,8 @@ export const gdprCompliance: GDPRCompliance[] = [
     id: "gdpr-4",
     complianceArea: "Data Breach",
     requirement: "Article 33 - Notification of breach",
-    description: "Notify authorities within 72 hours of becoming aware of breach",
+    description:
+      "Notify authorities within 72 hours of becoming aware of breach",
     status: "Compliant",
     lastAudited: "2024-11-10T11:00:00Z",
     nextAuditDue: "2025-02-10T11:00:00Z",
@@ -738,7 +803,8 @@ export const dataProtectionSettings: DataProtectionSetting[] = [
     id: "setting-2",
     category: "Data Retention",
     settingName: "Customer Data Retention Period",
-    description: "Number of years to retain customer data after account closure",
+    description:
+      "Number of years to retain customer data after account closure",
     currentValue: "7 years",
     recommendedValue: "3 years",
     isCompliant: false,
@@ -794,7 +860,8 @@ export const privacyPolicies: PrivacyPolicy[] = [
     acceptanceRequired: true,
     acceptanceCount: 45678,
     documentUrl: "/policies/privacy-policy-v3.2.pdf",
-    changes: "Updated data retention policies and third-party sharing disclosures",
+    changes:
+      "Updated data retention policies and third-party sharing disclosures",
   },
   {
     id: "policy-2",
@@ -828,7 +895,8 @@ export const privacyPolicies: PrivacyPolicy[] = [
     acceptanceRequired: false,
     acceptanceCount: 0,
     documentUrl: "/policies/gdpr-compliance-v1.5.pdf",
-    changes: "Enhanced user rights procedures and data breach notification process",
+    changes:
+      "Enhanced user rights procedures and data breach notification process",
   },
 ];
 
@@ -893,7 +961,8 @@ export const complianceFrameworks: ComplianceFramework[] = [
     id: "framework-1",
     frameworkName: "GDPR",
     industry: "All Industries",
-    description: "General Data Protection Regulation compliance for EU data protection",
+    description:
+      "General Data Protection Regulation compliance for EU data protection",
     applicableTo: ["All Facilities", "All Users"],
     requirements: 99,
     completedRequirements: 94,
@@ -908,7 +977,8 @@ export const complianceFrameworks: ComplianceFramework[] = [
     id: "framework-2",
     frameworkName: "SOC 2",
     industry: "Technology",
-    description: "Service Organization Control 2 for security, availability, and confidentiality",
+    description:
+      "Service Organization Control 2 for security, availability, and confidentiality",
     applicableTo: ["All Systems"],
     requirements: 64,
     completedRequirements: 58,
@@ -937,7 +1007,8 @@ export const complianceFrameworks: ComplianceFramework[] = [
     id: "framework-4",
     frameworkName: "PCI DSS",
     industry: "Payment Processing",
-    description: "Payment Card Industry Data Security Standard for payment data protection",
+    description:
+      "Payment Card Industry Data Security Standard for payment data protection",
     applicableTo: ["Payment Systems", "Customer Billing"],
     requirements: 12,
     completedRequirements: 12,
@@ -1155,15 +1226,27 @@ export const auditTrails: AuditTrail[] = [
 ];
 
 // Helper functions
-export const getActiveMFA = () => mfaSettings.filter((m) => m.status === "Active");
-export const getActiveIPs = () => ipWhitelist.filter((ip) => ip.status === "Active");
-export const getBlockedIPs = () => ipWhitelist.filter((ip) => ip.status === "Blocked");
-export const getActiveSessions = () => activeSessions.filter((s) => s.status === "Active");
-export const getActivePasswordPolicies = () => passwordPolicies.filter((p) => p.status === "Active");
-export const getCriticalAlerts = () => securityAlerts.filter((a) => a.severity === "Critical");
-export const getCompliantAreas = () => gdprCompliance.filter((g) => g.status === "Compliant");
-export const getNonCompliantSettings = () => dataProtectionSettings.filter((s) => !s.isCompliant);
-export const getActivePolicies = () => privacyPolicies.filter((p) => p.status === "Active");
-export const getActiveConsents = () => userConsents.filter((c) => c.status === "Active");
-export const getCompliantFrameworks = () => complianceFrameworks.filter((f) => f.status === "Compliant");
-export const getExpiringCertificates = () => certificates.filter((c) => c.daysUntilExpiry <= 30 && c.daysUntilExpiry > 0);
+export const getActiveMFA = () =>
+  mfaSettings.filter((m) => m.status === "Active");
+export const getActiveIPs = () =>
+  ipWhitelist.filter((ip) => ip.status === "Active");
+export const getBlockedIPs = () =>
+  ipWhitelist.filter((ip) => ip.status === "Blocked");
+export const getActiveSessions = () =>
+  activeSessions.filter((s) => s.status === "Active");
+export const getActivePasswordPolicies = () =>
+  passwordPolicies.filter((p) => p.status === "Active");
+export const getCriticalAlerts = () =>
+  securityAlerts.filter((a) => a.severity === "Critical");
+export const getCompliantAreas = () =>
+  gdprCompliance.filter((g) => g.status === "Compliant");
+export const getNonCompliantSettings = () =>
+  dataProtectionSettings.filter((s) => !s.isCompliant);
+export const getActivePolicies = () =>
+  privacyPolicies.filter((p) => p.status === "Active");
+export const getActiveConsents = () =>
+  userConsents.filter((c) => c.status === "Active");
+export const getCompliantFrameworks = () =>
+  complianceFrameworks.filter((f) => f.status === "Compliant");
+export const getExpiringCertificates = () =>
+  certificates.filter((c) => c.daysUntilExpiry <= 30 && c.daysUntilExpiry > 0);

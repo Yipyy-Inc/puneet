@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="bg-background">
+      <SidebarInset className="w-full overflow-x-hidden">
         <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/50 bg-background/80 backdrop-blur-md px-6">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted transition-colors" />

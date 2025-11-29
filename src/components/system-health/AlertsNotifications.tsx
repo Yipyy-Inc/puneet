@@ -36,7 +36,10 @@ import {
 export function AlertsNotifications() {
   // Badge helpers
   const getSeverityBadge = (severity: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Low: "secondary",
       Medium: "outline",
       High: "default",
@@ -46,7 +49,10 @@ export function AlertsNotifications() {
   };
 
   const getAlertStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       New: "destructive",
       Acknowledged: "outline",
       Investigating: "default",
@@ -284,9 +290,7 @@ export function AlertsNotifications() {
       key: "recipients",
       label: "Recipients",
       render: (item: NotificationChannel) => (
-        <div className="text-sm">
-          {item.recipients.length} recipient(s)
-        </div>
+        <div className="text-sm">{item.recipients.length} recipient(s)</div>
       ),
     },
     {
@@ -318,14 +322,14 @@ export function AlertsNotifications() {
 
   // Calculate stats
   const criticalAlerts = systemAlerts.filter(
-    (a) => a.severity === "Critical"
+    (a) => a.severity === "Critical",
   ).length;
   const activeAlerts = systemAlerts.filter(
-    (a) => a.status === "New" || a.status === "Investigating"
+    (a) => a.status === "New" || a.status === "Investigating",
   ).length;
   const totalImpacted = systemAlerts.reduce(
     (sum, a) => sum + a.impactedUsers,
-    0
+    0,
   );
   const activeConfigs = alertConfigurations.filter((c) => c.enabled).length;
 
@@ -459,7 +463,10 @@ export function AlertsNotifications() {
         </TabsContent>
 
         {/* Alert Configuration Tab */}
-        <TabsContent value="configuration" className="space-y-6 overflow-x-hidden">
+        <TabsContent
+          value="configuration"
+          className="space-y-6 overflow-x-hidden"
+        >
           <Card className="border-0 shadow-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -467,7 +474,8 @@ export function AlertsNotifications() {
                 Alert Configuration
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Configure alert thresholds, notification channels, and escalation rules
+                Configure alert thresholds, notification channels, and
+                escalation rules
               </p>
             </CardHeader>
             <CardContent>

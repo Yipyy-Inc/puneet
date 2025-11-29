@@ -38,7 +38,7 @@ const getScopeBadge = (scope: string) => {
 };
 
 const getStatusBadge = (
-  status: string
+  status: string,
 ): "default" | "secondary" | "destructive" | "outline" => {
   const variants: Record<
     string,
@@ -486,7 +486,7 @@ export function PromoCodeSystem() {
             <DataTable
               data={
                 promotions.filter(
-                  (p) => p.status === "active"
+                  (p) => p.status === "active",
                 ) as unknown as Record<string, unknown>[]
               }
               columns={activePromosColumns}
@@ -503,7 +503,7 @@ export function PromoCodeSystem() {
             <DataTable
               data={
                 promotions.filter(
-                  (p) => p.status === "scheduled"
+                  (p) => p.status === "scheduled",
                 ) as unknown as Record<string, unknown>[]
               }
               columns={activePromosColumns}

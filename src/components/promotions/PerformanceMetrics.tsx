@@ -58,11 +58,11 @@ export function PerformanceMetrics() {
     promotionPerformance.length;
   const totalRevenue = promotionPerformance.reduce(
     (sum, p) => sum + p.totalRevenue,
-    0
+    0,
   );
   const totalDiscount = promotionPerformance.reduce(
     (sum, p) => sum + p.totalDiscount,
-    0
+    0,
   );
 
   // Statistics Cards

@@ -56,7 +56,10 @@ import {
 export function ComplianceTools() {
   // Badge helpers
   const getComplianceStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Compliant: "default",
       "Partially Compliant": "outline",
       "Non-Compliant": "destructive",
@@ -78,7 +81,10 @@ export function ComplianceTools() {
   };
 
   const getPriorityBadge = (priority: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Low: "secondary",
       Medium: "outline",
       High: "default",
@@ -88,7 +94,10 @@ export function ComplianceTools() {
   };
 
   const getPolicyStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Active: "default",
       Draft: "outline",
       Archived: "secondary",
@@ -118,7 +127,10 @@ export function ComplianceTools() {
   };
 
   const getCertificateStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Valid: "default",
       "Expiring Soon": "outline",
       Expired: "destructive",
@@ -147,8 +159,12 @@ export function ComplianceTools() {
       render: (item: GDPRCompliance) => (
         <div className="min-w-0">
           <div className="font-medium">{item.complianceArea}</div>
-          <div className="text-xs text-muted-foreground">{item.requirement}</div>
-          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.requirement}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {item.description}
+          </div>
         </div>
       ),
     },
@@ -168,7 +184,9 @@ export function ComplianceTools() {
       render: (item: GDPRCompliance) => (
         <div className="text-sm">
           <div>{new Date(item.nextAuditDue).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">{item.responsiblePerson}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.responsiblePerson}
+          </div>
         </div>
       ),
     },
@@ -195,8 +213,12 @@ export function ComplianceTools() {
       render: (item: DataProtectionSetting) => (
         <div className="min-w-0">
           <div className="font-medium truncate">{item.settingName}</div>
-          <div className="text-xs text-muted-foreground line-clamp-1">{item.description}</div>
-          <Badge variant="outline" className="text-xs mt-1">{item.category}</Badge>
+          <div className="text-xs text-muted-foreground line-clamp-1">
+            {item.description}
+          </div>
+          <Badge variant="outline" className="text-xs mt-1">
+            {item.category}
+          </Badge>
         </div>
       ),
     },
@@ -258,7 +280,10 @@ export function ComplianceTools() {
       render: (item: PrivacyPolicy) => (
         <div className="min-w-0">
           <div className="font-medium truncate">{item.policyName}</div>
-          <div className="text-xs text-muted-foreground">v{item.version} · {new Date(item.effectiveDate).toLocaleDateString()}</div>
+          <div className="text-xs text-muted-foreground">
+            v{item.version} ·{" "}
+            {new Date(item.effectiveDate).toLocaleDateString()}
+          </div>
         </div>
       ),
     },
@@ -315,7 +340,9 @@ export function ComplianceTools() {
       render: (item: UserConsent) => (
         <div className="min-w-0">
           <div className="font-medium truncate">{item.userName}</div>
-          <div className="text-xs text-muted-foreground truncate">{item.userEmail}</div>
+          <div className="text-xs text-muted-foreground truncate">
+            {item.userEmail}
+          </div>
         </div>
       ),
     },
@@ -324,8 +351,14 @@ export function ComplianceTools() {
       label: "Type / Channel",
       render: (item: UserConsent) => (
         <div className="space-y-1">
-          <Badge variant="outline" className="text-xs">{item.consentType}</Badge>
-          <div><Badge variant="outline" className="text-xs">{item.communicationChannel}</Badge></div>
+          <Badge variant="outline" className="text-xs">
+            {item.consentType}
+          </Badge>
+          <div>
+            <Badge variant="outline" className="text-xs">
+              {item.communicationChannel}
+            </Badge>
+          </div>
         </div>
       ),
     },
@@ -355,8 +388,8 @@ export function ComplianceTools() {
             {item.consentedAt
               ? new Date(item.consentedAt).toLocaleDateString()
               : item.revokedAt
-              ? new Date(item.revokedAt).toLocaleDateString()
-              : "N/A"}
+                ? new Date(item.revokedAt).toLocaleDateString()
+                : "N/A"}
           </div>
         </div>
       ),
@@ -396,7 +429,8 @@ export function ComplianceTools() {
     {
       key: "status",
       label: "Status",
-      render: (item: ComplianceFramework) => getComplianceStatusBadge(item.status),
+      render: (item: ComplianceFramework) =>
+        getComplianceStatusBadge(item.status),
     },
     {
       key: "certificationDate",
@@ -464,7 +498,9 @@ export function ComplianceTools() {
     {
       key: "period",
       label: "Period",
-      render: (item: ComplianceReport) => <div className="text-sm">{item.period}</div>,
+      render: (item: ComplianceReport) => (
+        <div className="text-sm">{item.period}</div>
+      ),
     },
     {
       key: "findings",
@@ -526,7 +562,9 @@ export function ComplianceTools() {
     {
       key: "issuer",
       label: "Issuer",
-      render: (item: Certificate) => <div className="text-sm">{item.issuer}</div>,
+      render: (item: Certificate) => (
+        <div className="text-sm">{item.issuer}</div>
+      ),
     },
     {
       key: "expiresAt",
@@ -627,8 +665,8 @@ export function ComplianceTools() {
             item.result === "Success"
               ? "default"
               : item.result === "Failed"
-              ? "destructive"
-              : "secondary"
+                ? "destructive"
+                : "secondary"
           }
         >
           {item.result}
@@ -648,16 +686,16 @@ export function ComplianceTools() {
 
   // Calculate compliance stats
   const totalCompliantAreas = gdprCompliance.filter(
-    (g) => g.status === "Compliant"
+    (g) => g.status === "Compliant",
   ).length;
   const totalNonCompliantSettings = dataProtectionSettings.filter(
-    (s) => !s.isCompliant
+    (s) => !s.isCompliant,
   ).length;
   const avgComplianceScore =
     complianceFrameworks.reduce((acc, f) => acc + f.complianceScore, 0) /
     complianceFrameworks.length;
   const expiringCerts = certificates.filter(
-    (c) => c.daysUntilExpiry <= 30 && c.daysUntilExpiry > 0
+    (c) => c.daysUntilExpiry <= 30 && c.daysUntilExpiry > 0,
   ).length;
 
   const frameworkScores = complianceFrameworks.map((f) => ({
@@ -753,7 +791,9 @@ export function ComplianceTools() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Expiring Certificates
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{expiringCerts}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {expiringCerts}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Within 30 days
                 </p>
@@ -776,7 +816,10 @@ export function ComplianceTools() {
         </TabsList>
 
         {/* Data Privacy Tab */}
-        <TabsContent value="data-privacy" className="space-y-6 overflow-x-hidden">
+        <TabsContent
+          value="data-privacy"
+          className="space-y-6 overflow-x-hidden"
+        >
           {/* GDPR Compliance */}
           <Card className="border-0 shadow-card">
             <CardHeader>
@@ -875,7 +918,10 @@ export function ComplianceTools() {
                   <Tooltip />
                   <Bar dataKey="score" fill="#3b82f6" radius={[8, 8, 0, 0]}>
                     {frameworkScores.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Bar>
                 </BarChart>

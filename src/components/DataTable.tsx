@@ -250,7 +250,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     if (col.sortable === false) return;
                     if (sortKey === col.key) {
                       setSortDirection(
-                        sortDirection === "asc" ? "desc" : "asc"
+                        sortDirection === "asc" ? "desc" : "asc",
                       );
                     } else {
                       setSortKey(col.key);
@@ -331,7 +331,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       {page}
                     </PaginationLink>
                   </PaginationItem>
-                )
+                ),
               )}
               <PaginationItem>
                 <PaginationNext

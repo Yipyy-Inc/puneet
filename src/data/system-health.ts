@@ -105,7 +105,12 @@ export interface ResourceUtilization {
 
 export interface SystemAlert {
   alertId: string;
-  alertType: "Critical Error" | "Performance Degradation" | "Capacity Warning" | "Security Incident" | "Service Outage";
+  alertType:
+    | "Critical Error"
+    | "Performance Degradation"
+    | "Capacity Warning"
+    | "Security Incident"
+    | "Service Outage";
   severity: "Low" | "Medium" | "High" | "Critical";
   title: string;
   description: string;
@@ -147,7 +152,13 @@ export interface AlertConfiguration {
 export interface NotificationChannel {
   channelId: string;
   channelName: string;
-  channelType: "Email" | "SMS" | "Slack" | "PagerDuty" | "Webhook" | "Microsoft Teams";
+  channelType:
+    | "Email"
+    | "SMS"
+    | "Slack"
+    | "PagerDuty"
+    | "Webhook"
+    | "Microsoft Teams";
   status: "Active" | "Inactive" | "Failed";
   configuration: Record<string, any>;
   recipients: string[];
@@ -676,7 +687,8 @@ export const systemAlerts: SystemAlert[] = [
     alertType: "Performance Degradation",
     severity: "High",
     title: "Search Service Response Time Elevated",
-    description: "Search API response time has exceeded 1000ms for the past 15 minutes",
+    description:
+      "Search API response time has exceeded 1000ms for the past 15 minutes",
     source: "api-server-03",
     affectedServices: ["Search & Discovery"],
     status: "Investigating",
@@ -710,7 +722,8 @@ export const systemAlerts: SystemAlert[] = [
     alertType: "Critical Error",
     severity: "Critical",
     title: "Payment Gateway Connection Failed",
-    description: "Unable to establish connection with payment gateway - transaction processing affected",
+    description:
+      "Unable to establish connection with payment gateway - transaction processing affected",
     source: "payment-service",
     affectedServices: ["Payment Processing"],
     status: "New",
@@ -952,13 +965,48 @@ export const healthDashboardStats: HealthDashboardStats = {
   errorRate: 0.45,
   systemUptime: 99.87,
   dailyMetrics: [
-    { date: "2024-01-09", uptime: 99.95, errorRate: 0.28, avgResponseTime: 198 },
-    { date: "2024-01-10", uptime: 99.92, errorRate: 0.31, avgResponseTime: 205 },
-    { date: "2024-01-11", uptime: 99.98, errorRate: 0.25, avgResponseTime: 192 },
-    { date: "2024-01-12", uptime: 99.45, errorRate: 0.78, avgResponseTime: 267 },
-    { date: "2024-01-13", uptime: 99.87, errorRate: 0.35, avgResponseTime: 212 },
-    { date: "2024-01-14", uptime: 99.91, errorRate: 0.32, avgResponseTime: 218 },
-    { date: "2024-01-15", uptime: 99.87, errorRate: 0.45, avgResponseTime: 234 },
+    {
+      date: "2024-01-09",
+      uptime: 99.95,
+      errorRate: 0.28,
+      avgResponseTime: 198,
+    },
+    {
+      date: "2024-01-10",
+      uptime: 99.92,
+      errorRate: 0.31,
+      avgResponseTime: 205,
+    },
+    {
+      date: "2024-01-11",
+      uptime: 99.98,
+      errorRate: 0.25,
+      avgResponseTime: 192,
+    },
+    {
+      date: "2024-01-12",
+      uptime: 99.45,
+      errorRate: 0.78,
+      avgResponseTime: 267,
+    },
+    {
+      date: "2024-01-13",
+      uptime: 99.87,
+      errorRate: 0.35,
+      avgResponseTime: 212,
+    },
+    {
+      date: "2024-01-14",
+      uptime: 99.91,
+      errorRate: 0.32,
+      avgResponseTime: 218,
+    },
+    {
+      date: "2024-01-15",
+      uptime: 99.87,
+      errorRate: 0.45,
+      avgResponseTime: 234,
+    },
   ],
   serviceStatus: {
     operational: 15,
