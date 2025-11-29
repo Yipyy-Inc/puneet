@@ -233,6 +233,23 @@ export function AppSidebar() {
         },
       ],
     },
+    {
+      label: t("securityCompliance"),
+      items: [
+        {
+          title: t("securityManagement"),
+          url: "/dashboard/security-compliance/security-management",
+          icon: Shield,
+          disabled: false,
+        },
+        {
+          title: t("complianceTools"),
+          url: "/dashboard/security-compliance/compliance-tools",
+          icon: CheckSquare,
+          disabled: false,
+        },
+      ],
+    },
   ];
 
   const handleLogout = () => {

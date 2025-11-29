@@ -122,7 +122,10 @@
     "systemAdministration": "System Administration",
     "auditLogs": "Audit & Logging",
     "dataManagement": "Data Management",
-    "systemConfiguration": "System Configuration"
+    "systemConfiguration": "System Configuration",
+    "securityCompliance": "Security & Compliance",
+    "securityManagement": "Security Management",
+    "complianceTools": "Compliance Tools"
   },
   "dashboard": {
     "title": "Dashboard",

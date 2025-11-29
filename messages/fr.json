@@ -120,7 +120,10 @@
     "systemAdministration": "Administration système",
     "auditLogs": "Audit et journalisation",
     "dataManagement": "Gestion des données",
-    "systemConfiguration": "Configuration système"
+    "systemConfiguration": "Configuration système",
+    "securityCompliance": "Sécurité et conformité",
+    "securityManagement": "Gestion de la sécurité",
+    "complianceTools": "Outils de conformité"
   },
   "dashboard": {
     "title": "Tableau de bord",
