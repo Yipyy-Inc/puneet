@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -60,6 +60,9 @@ export function GenericSidebar({
   const [collapsedSections, setCollapsedSections] = React.useState<
     Record<string, boolean>
   >({});
+
+  // Track bulk collapse state
+  const [bulkCollapsed, setBulkCollapsed] = React.useState(false);
 
   // Resizable sidebar state
   const [sidebarWidth, setSidebarWidth] = React.useState(256); // Default 16rem = 256px
@@ -175,6 +178,20 @@ export function GenericSidebar({
     setCollapsedSections((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
+  // Toggle all sections
+  const toggleAllSections = () => {
+    const newBulkCollapsed = !bulkCollapsed;
+    setBulkCollapsed(newBulkCollapsed);
+
+    const newState: Record<string, boolean> = {};
+    menuSections.forEach((section) => {
+      // Don't collapse sections that have active items
+      const hasActiveItem = section.items.some((item) => pathname === item.url);
+      newState[section.label] = hasActiveItem ? false : newBulkCollapsed;
+    });
+    setCollapsedSections(newState);
+  };
+
   // Check if section should be open (not collapsed by user)
   const getSectionOpenState = (section: MenuSection) => {
     return !collapsedSections[section.label];
@@ -199,9 +216,27 @@ export function GenericSidebar({
       )}
       <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
         {/* Header */}
-        {isExpanded && header && (
-          <SidebarHeader className="px-5 py-5 border-b border-sidebar-border/50">
-            {header}
+        {isExpanded && (
+          <SidebarHeader className="px-5 py-3 border-b border-sidebar-border/50">
+            <div className="flex items-center justify-between">
+              {header}
+              <button
+                onClick={toggleAllSections}
+                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-sidebar-accent transition-colors"
+                title={
+                  bulkCollapsed
+                    ? "Expand all sections"
+                    : "Collapse all sections"
+                }
+              >
+                <ChevronUp
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    bulkCollapsed ? "rotate-180" : "",
+                  )}
+                />
+              </button>
+            </div>
           </SidebarHeader>
         )}
 
