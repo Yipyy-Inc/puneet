@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ChevronRight, ChevronUp } from "lucide-react";
+import { LogOut, ChevronRight, ChevronUp, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarInput,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,9 @@ export function GenericSidebar({
 
   // Track bulk collapse state
   const [bulkCollapsed, setBulkCollapsed] = React.useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Resizable sidebar state
   const [sidebarWidth, setSidebarWidth] = React.useState(256); // Default 16rem = 256px
@@ -197,6 +201,23 @@ export function GenericSidebar({
     return !collapsedSections[section.label];
   };
 
+  // Filter menu sections based on search query
+  const filteredMenuSections = React.useMemo(() => {
+    if (!searchQuery.trim()) return menuSections;
+
+    const query = searchQuery.toLowerCase();
+    return menuSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(query) ||
+            section.label.toLowerCase().includes(query),
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [menuSections, searchQuery]);
+
   return (
     <div
       ref={sidebarRef}
@@ -214,7 +235,7 @@ export function GenericSidebar({
           title="Click to expand sidebar"
         />
       )}
-      <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
+      <Sidebar collapsible="offcanvas" className="border-r-0 bg-sidebar">
         {/* Header */}
         {isExpanded && (
           <SidebarHeader className="px-5 py-3 border-b border-sidebar-border/50">
@@ -237,6 +258,25 @@ export function GenericSidebar({
                 />
               </button>
             </div>
+            {/* Search Input */}
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <SidebarInput
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-sm hover:bg-sidebar-accent"
+                >
+                  <X className="h-3 w-3 text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </SidebarHeader>
         )}
 
@@ -244,7 +284,7 @@ export function GenericSidebar({
         <SidebarContent
           className={cn("py-4 scrollbar-thin", isExpanded ? "px-3" : "px-1")}
         >
-          {menuSections.map((section, sectionIndex) => {
+          {filteredMenuSections.map((section, sectionIndex) => {
             const hasActiveItem = section.items.some(
               (item) => pathname === item.url,
             );
