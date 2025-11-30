@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/super-admin-sidebar";
+import { Metadata } from "next";
 import {
   SidebarInset,
   SidebarProvider,
@@ -8,6 +9,10 @@ import {
 } from "@/components/ui/sidebar";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { Bell } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Yipyy - Admin Dashboard",
+};
 
 export default async function DashboardLayout({
   children,

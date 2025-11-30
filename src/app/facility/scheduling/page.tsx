@@ -9,7 +9,7 @@ import {
   GenericCalendar,
   CalendarItem,
   CalendarRowData,
-} from "@/components/GenericCalendar";
+} from "@/components/ui/GenericCalendar";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [
@@ -330,7 +330,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   Dialog,
   DialogContent,

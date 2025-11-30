@@ -9,7 +9,7 @@ import {
   moduleQuotedPrices,
 } from "@/data/facilities";
 import { plans } from "@/data/plans";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { FacilityReports } from "@/components/facility/FacilityReports";
 import { TenantActivityLogs } from "@/components/facility/TenantActivityLogs";
 import { Button } from "@/components/ui/button";

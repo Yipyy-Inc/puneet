@@ -7,7 +7,7 @@ import { facilities as initialFacilities } from "@/data/facilities";
 import { facilityRequests } from "@/data/facility-requests";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { FacilityModal } from "@/components/modals/FacilityModal";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Plus,
   Download,

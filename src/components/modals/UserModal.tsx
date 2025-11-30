@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Badge } from "@/components/ui/badge";
 import { DetailsModal } from "@/components/modals/DetailsModal";
-import { InfoCard } from "@/components/DateCard";
-import { StatusBadge } from "@/components/StatusBadge";
+import { InfoCard } from "@/components/ui/DateCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   Building,
   Mail,

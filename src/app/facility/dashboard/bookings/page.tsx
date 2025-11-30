@@ -6,8 +6,8 @@ import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BookingModal } from "@/components/modals/BookingModal";
-import { GenericCalendar, CalendarItem } from "@/components/GenericCalendar";
+import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
 import { CreateBookingModal } from "@/components/bookings/modals/CreateBookingModal";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";

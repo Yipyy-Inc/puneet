@@ -21,11 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { supportTickets, SupportTicket } from "@/data/support-tickets";
 import { chatConversations, ChatConversation } from "@/data/chats";
 import { ChatPanel } from "@/components/support/ChatPanel";
-import { StatCard } from "@/components/StatCard";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   MessageSquare,
   Ticket,

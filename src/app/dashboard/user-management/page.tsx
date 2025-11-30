@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { adminUsers, roleDisplayNames, AdminUser } from "@/data/admin-users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,

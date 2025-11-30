@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   Dialog,
   DialogContent,
