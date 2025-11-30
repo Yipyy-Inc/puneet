@@ -449,7 +449,7 @@ export default function StaffAvailabilityPage() {
         open={isAvailabilityModalOpen}
         onOpenChange={setIsAvailabilityModalOpen}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Availability</DialogTitle>
             <DialogDescription>
@@ -533,7 +533,7 @@ export default function StaffAvailabilityPage() {
 
       {/* New Time-off Request Modal */}
       <Dialog open={isTimeOffModalOpen} onOpenChange={setIsTimeOffModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Request Time Off</DialogTitle>
             <DialogDescription>
@@ -640,7 +640,7 @@ export default function StaffAvailabilityPage() {
 
       {/* Review Request Modal */}
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Review Time-off Request</DialogTitle>
             <DialogDescription>

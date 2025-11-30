@@ -1259,7 +1259,7 @@ export default function FacilityDetailPage() {
 
       {/* Modules Edit Dialog */}
       <Dialog open={showModulesDialog} onOpenChange={setShowModulesDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className="min-w-5xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Manage Facility Modules</DialogTitle>
             <DialogDescription>
@@ -1362,7 +1362,7 @@ export default function FacilityDetailPage() {
 
       {/* Edit Contact Dialog */}
       <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Contact Information</DialogTitle>
             <DialogDescription>
@@ -1453,7 +1453,7 @@ export default function FacilityDetailPage() {
         open={showSubscriptionDialog}
         onOpenChange={setShowSubscriptionDialog}
       >
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className="min-w-5xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Manage Subscription</DialogTitle>
             <DialogDescription>
@@ -1590,7 +1590,7 @@ export default function FacilityDetailPage() {
 
       {/* Edit Limits Dialog */}
       <Dialog open={showLimitsDialog} onOpenChange={setShowLimitsDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Facility Limits</DialogTitle>
             <DialogDescription>

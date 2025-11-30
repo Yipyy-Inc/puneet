@@ -665,7 +665,7 @@ export default function PricingPage() {
 
       {/* Seasonal Pricing Modal */}
       <Dialog open={isSeasonalModalOpen} onOpenChange={setIsSeasonalModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingSeasonal ? "Edit" : "Add"} Seasonal Pricing
@@ -814,7 +814,7 @@ export default function PricingPage() {
 
       {/* Peak Surcharge Modal */}
       <Dialog open={isPeakModalOpen} onOpenChange={setIsPeakModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingPeak ? "Edit" : "Add"} Peak Surcharge
@@ -959,7 +959,7 @@ export default function PricingPage() {
 
       {/* Dynamic Pricing Modal */}
       <Dialog open={isDynamicModalOpen} onOpenChange={setIsDynamicModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingDynamic ? "Edit" : "Add"} Dynamic Pricing Rule

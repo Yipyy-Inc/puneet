@@ -312,7 +312,7 @@ export default function CustomerReachPage() {
               Send Campaign ({selectedClients.length})
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="min-w-5xl">
             <DialogHeader className="pb-6">
               <DialogTitle className="text-xl">
                 Send Marketing Campaign

@@ -646,7 +646,7 @@ export default function MembershipsPage() {
 
       {/* Plan Modal */}
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPlan ? "Edit" : "Create"} Membership Plan</DialogTitle>
             <DialogDescription>
@@ -826,7 +826,7 @@ export default function MembershipsPage() {
 
       {/* Subscription Modal */}
       <Dialog open={isSubscriptionModalOpen} onOpenChange={setIsSubscriptionModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Create Subscription</DialogTitle>
             <DialogDescription>
@@ -919,7 +919,7 @@ export default function MembershipsPage() {
 
       {/* Credits Modal */}
       <Dialog open={isCreditsModalOpen} onOpenChange={setIsCreditsModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Add Prepaid Credits</DialogTitle>
             <DialogDescription>Add prepaid credits to a customer account.</DialogDescription>

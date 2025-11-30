@@ -317,7 +317,7 @@ export default function ContactsPage() {
 
       {/* Contact Detail Modal */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Contact Details</DialogTitle>
           </DialogHeader>

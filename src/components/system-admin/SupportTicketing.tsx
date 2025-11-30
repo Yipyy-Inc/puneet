@@ -841,7 +841,7 @@ export function SupportTicketing() {
 
       {/* Ticket Detail Modal */}
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
           <div className="p-6 flex-1 overflow-y-auto">
             <DialogHeader className="mb-4">
               <div className="flex items-start justify-between">
@@ -907,7 +907,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.firstResponseDue,
+                                selectedTicket.sla.firstResponseDue
                               ).toLocaleTimeString()}
                             </p>
                           </div>
@@ -925,7 +925,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.escalationDue,
+                                selectedTicket.sla.escalationDue
                               ).toLocaleTimeString()}
                             </p>
                           </div>
@@ -941,7 +941,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.resolutionDue,
+                                selectedTicket.sla.resolutionDue
                               ).toLocaleString()}
                             </p>
                           </div>
@@ -1025,7 +1025,7 @@ export function SupportTicketing() {
                           </span>
                           <span>
                             {new Date(
-                              selectedTicket.resolution.resolvedAt,
+                              selectedTicket.resolution.resolvedAt
                             ).toLocaleString()}
                           </span>
                         </div>
@@ -1205,7 +1205,7 @@ export function SupportTicketing() {
 
       {/* Assign Agent Modal */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
@@ -1250,7 +1250,7 @@ export function SupportTicketing() {
               <div className="p-3 bg-muted/50 rounded-lg">
                 {(() => {
                   const agent = supportAgents.find(
-                    (a) => a.id === selectedAgentId,
+                    (a) => a.id === selectedAgentId
                   );
                   return agent ? (
                     <div className="space-y-2">
@@ -1307,7 +1307,7 @@ export function SupportTicketing() {
 
       {/* Resolve Ticket Dialog */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-success" />
@@ -1356,7 +1356,7 @@ export function SupportTicketing() {
 
       {/* SLA Settings Modal */}
       <Dialog open={isSLAModalOpen} onOpenChange={setIsSLAModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />

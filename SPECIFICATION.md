@@ -342,19 +342,19 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **6. Payments & Billing**
 
-- [ ] 🟢 Take payment: card (Stripe)
-- [ ] 🟢 Cash payments
-- [ ] 🟢 Saved card
+- [x] 🟢 Take payment: card (Stripe)
+- [x] 🟢 Cash payments
+- [x] 🟢 Saved card
 - [ ] 🟡 Split payments
-- [ ] 🟢 Gift cards (online)
-- [ ] 🟠 Gift cards (offline / physical)
-- [ ] 🟢 Customer credit / prepaid credits
-- [ ] 🟢 Deposits & refunds
-- [ ] 🟢 Auto-invoice from booking
-- [ ] 🟢 Recurring invoices for memberships
-- [ ] 🟠 Outstanding balance list
-- [ ] 🟠 Auto-reminder for outstanding balances
-- [ ] 🟢 Tips support
+- [x] 🟢 Gift cards (online)
+- [x] 🟠 Gift cards (offline / physical)
+- [x] 🟢 Customer credit / prepaid credits
+- [x] 🟢 Deposits & refunds
+- [x] 🟢 Auto-invoice from booking
+- [x] 🟢 Recurring invoices for memberships
+- [x] 🟠 Outstanding balance list
+- [x] 🟠 Auto-reminder for outstanding balances
+- [x] 🟢 Tips support
 
 ---
 

@@ -585,7 +585,7 @@ export default function KennelViewPage() {
 
       {/* Unified Kennel Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedKennel?.name}

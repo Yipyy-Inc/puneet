@@ -262,7 +262,7 @@ export default function RolesPermissionsPage() {
 
       {/* Role Details Modal */}
       <Dialog open={!!selectedRole} onOpenChange={() => setSelectedRole(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="min-w-5xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />

@@ -734,7 +734,7 @@ export function FeatureToggles() {
 
       {/* Tenant Module Configuration Modal */}
       <Dialog open={isTenantModalOpen} onOpenChange={setIsTenantModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
@@ -920,7 +920,7 @@ export function FeatureToggles() {
 
       {/* Flag Detail Modal */}
       <Dialog open={isFlagModalOpen} onOpenChange={setIsFlagModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Flag className="h-5 w-5" />
@@ -1059,7 +1059,7 @@ export function FeatureToggles() {
 
       {/* New Flag Modal */}
       <Dialog open={isNewFlagModalOpen} onOpenChange={setIsNewFlagModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />

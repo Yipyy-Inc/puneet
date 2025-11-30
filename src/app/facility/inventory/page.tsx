@@ -425,7 +425,7 @@ export default function InventoryPage() {
 
       {/* Add/Edit Item Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? "Edit Inventory Item" : "Add New Inventory Item"}

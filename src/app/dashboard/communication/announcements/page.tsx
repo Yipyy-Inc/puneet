@@ -537,7 +537,7 @@ export default function AnnouncementsPage() {
                 Create Announcement
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="min-w-5xl">
               <DialogHeader>
                 <DialogTitle>Create New Announcement</DialogTitle>
               </DialogHeader>
@@ -723,7 +723,7 @@ export default function AnnouncementsPage() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-primary" />
@@ -820,7 +820,7 @@ export default function AnnouncementsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Edit Announcement</DialogTitle>
           </DialogHeader>
@@ -844,7 +844,7 @@ export default function AnnouncementsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />

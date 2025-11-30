@@ -542,7 +542,7 @@ export default function StaffTasksPage() {
 
       {/* Assign Task Modal */}
       <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingTask ? "Edit Task" : "Assign New Task"}
@@ -691,7 +691,7 @@ export default function StaffTasksPage() {
 
       {/* Task Template Modal */}
       <Dialog open={isTemplateModalOpen} onOpenChange={setIsTemplateModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {editingTemplate ? "Edit Template" : "Create Task Template"}
@@ -824,7 +824,7 @@ export default function StaffTasksPage() {
 
       {/* Complete Task Modal */}
       <Dialog open={isCompleteModalOpen} onOpenChange={setIsCompleteModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Complete Task</DialogTitle>
             <DialogDescription>

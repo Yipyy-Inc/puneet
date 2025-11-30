@@ -1183,7 +1183,7 @@ export function GlobalSettings() {
 
       {/* Color Picker Dialog */}
       <Dialog open={showColorPicker} onOpenChange={setShowColorPicker}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Choose Color</DialogTitle>
             <DialogDescription>
@@ -1245,7 +1245,7 @@ export function GlobalSettings() {
 
       {/* Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Preview Changes</DialogTitle>
             <DialogDescription>
@@ -1310,7 +1310,7 @@ export function GlobalSettings() {
 
       {/* Save Success Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="min-w-5xl">
           <div className="flex flex-col items-center text-center py-4">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
               <Check className="h-8 w-8 text-green-600" />

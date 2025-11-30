@@ -508,7 +508,7 @@ export default function LiveSupportPage() {
 
         {/* Ticket Detail Modal */}
         <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+          <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
             <div className="p-6 flex-1 overflow-y-auto">
               <DialogHeader className="mb-4">
                 <DialogTitle className="text-xl">
@@ -689,7 +689,7 @@ export default function LiveSupportPage() {
           open={isResolveDialogOpen}
           onOpenChange={setIsResolveDialogOpen}
         >
-          <DialogContent className="max-w-md">
+          <DialogContent className="min-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-success" />
