@@ -26,29 +26,29 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Global Dashboard**
 
-* [ ] 🟠 System-wide KPIs (tenants, bookings, revenue, uptime)
-* [ ] 🟡 Active users count (staff + customers)
-* [ ] 🟠 Performance charts (revenue, growth, reservations trends)
-* [ ] 🟡 Customer acquisition trends
-* [ ] 🟡 Top/bottom facility performance
-* [ ] 🟡 Quick actions (add facility, view activities, open tickets, send announcements)
+* [x] 🟠 System-wide KPIs (tenants, bookings, revenue, uptime)
+* [x] 🟡 Active users count (staff + customers)
+* [x] 🟠 Performance charts (revenue, growth, reservations trends)
+* [x] 🟡 Customer acquisition trends
+* [x] 🟡 Top/bottom facility performance
+* [x] 🟡 Quick actions (add facility, view activities, open tickets, send announcements)
 
 ---
 
 ## **Tenant Management**
 
-* [ ] 🟢 Tenant list with search & filters
-* [ ] 🟠 Filters by plan, location, active/inactive status
-* [ ] 🟡 Search by owner name, phone number
-* [ ] 🟢 Activate, suspend, delete tenant
-* [ ] 🟡 Archive closed facilities
+* [x] 🟢 Tenant list with search & filters
+* [x] 🟠 Filters by plan, location, active/inactive status
+* [x] 🟡 Search by owner name, phone number
+* [x] 🟢 Activate, suspend, delete tenant
+* [x] 🟡 Archive closed facilities
 
 ---
 
 ## **Tenant Detail View**
 
-* [ ] 🟠 Basic tenant profile (existing) + enhanced usage data
-* [ ] 🟠 Staff count, user count, storage, subscription info
+* [x] 🟠 Basic tenant profile (existing) + enhanced usage data
+* [x] 🟠 Staff count, user count, storage, subscription info
 * [ ] 🟡 Staff utilization rate
 * [ ] 🟡 Customer & reservation growth analytics
 * [ ] 🟡 Module usage breakdown
@@ -58,23 +58,23 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Subscription & Plan Editor**
 
-* [ ] 🟢 Edit plans/features per tenant
-* [ ] 🟠 Multi-tier pricing (Beginner, Pro, Enterprise)
-* [ ] 🟠 Feature flags per tier
-* [ ] 🟡 Module-specific pricing
-* [ ] 🟡 Usage limits (reservations, storage, staff count)
-* [ ] 🟠 Upgrade/downgrade management
+* [x] 🟢 Edit plans/features per tenant
+* [x] 🟠 Multi-tier pricing (Beginner, Pro, Enterprise)
+* [x] 🟠 Feature flags per tier
+* [x] 🟡 Module-specific pricing
+* [x] 🟡 Usage limits (reservations, storage, staff count)
+* [x] 🟠 Upgrade/downgrade management
 
 ---
 
 ## **Billing & Payments Console**
 
-* [ ] 🟢 View facility invoices & billing history
-* [ ] 🟠 Refunds, adjustments, manual credits
-* [ ] 🟡 Payment provider analytics (success rate, failure rate)
-* [ ] 🟡 Multi-currency support
-* [ ] 🟡 Transaction logs & reconciliation tools
-* [ ] 🟡 Gateway-level performance dashboard
+* [x] 🟢 View facility invoices & billing history
+* [x] 🟠 Refunds, adjustments, manual credits
+* [x] 🟡 Payment provider analytics (success rate, failure rate)
+* [x] 🟡 Multi-currency support
+* [x] 🟡 Transaction logs & reconciliation tools
+* [x] 🟡 Gateway-level performance dashboard
 
 ---
 
@@ -140,53 +140,53 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Promotions & Discounts Console**
 
-* [ ] 🟡 Create system-wide or facility-specific promo codes
-* [ ] 🟡 Time-limited campaigns
-* [ ] 🟡 Percentage, fixed, bundle, or first-time offers
-* [ ] 🟡 Redemption limits
-* [ ] 🟡 Promo effectiveness analytics (ROI, conversion rate)
+* [x] 🟡 Create system-wide or facility-specific promo codes
+* [x] 🟡 Time-limited campaigns
+* [x] 🟡 Percentage, fixed, bundle, or first-time offers
+* [x] 🟡 Redemption limits
+* [x] 🟡 Promo effectiveness analytics (ROI, conversion rate)
 
 ---
 
 ## **CRM & Sales Pipeline**
 
-* [ ] 🟡 Lead capture (facility name, owner, size, service type)
-* [ ] 🟡 Pipeline stages (New → Demo → Proposal → Negotiation → Won/Lost)
-* [ ] 🟡 Drag-and-drop pipeline UI
-* [ ] 🟡 Deal tracking (tier, modules, value, close date)
-* [ ] 🟡 Sales activity logging (calls, emails, tasks)
-* [ ] 🟡 Follow-up reminders & task assignment
-* [ ] 🟡 Sales analytics (conversion rates, time-to-close, rep performance)
-* [ ] 🟡 One-click conversion → create facility account
-* [ ] 🟡 Onboarding checklist for new facilities
+* [x] 🟡 Lead capture (facility name, owner, size, service type)
+* [x] 🟡 Pipeline stages (New → Demo → Proposal → Negotiation → Won/Lost)
+* [x] 🟡 Drag-and-drop pipeline UI
+* [x] 🟡 Deal tracking (tier, modules, value, close date)
+* [x] 🟡 Sales activity logging (calls, emails, tasks)
+* [x] 🟡 Follow-up reminders & task assignment
+* [x] 🟡 Sales analytics (conversion rates, time-to-close, rep performance)
+* [x] 🟡 One-click conversion → create facility account
+* [x] 🟡 Onboarding checklist for new facilities
 
 ---
 
 # **2. Key Workflows**
 
-* [ ] 🟢 Create / suspend / delete tenant
+* [x] 🟢 Create / suspend / delete tenant
 * [ ] 🟢 Approve tenant signups
-* [ ] 🟠 Configure plan & features (now more complex)
+* [x] 🟠 Configure plan & features (now more complex)
 * [ ] 🟠 Backup/restore tenant data
 * [ ] 🟠 Manage support tickets & SLAs
 * [ ] 🟡 Impersonate facility admin for support
 * [ ] 🟡 Send system-wide announcements
-* [ ] 🟡 Manage promo campaigns
-* [ ] 🟡 Convert sales lead → facility account
-* [ ] 🟡 Configure payment providers per facility
+* [x] 🟡 Manage promo campaigns
+* [x] 🟡 Convert sales lead → facility account
+* [x] 🟡 Configure payment providers per facility
 
 ---
 
 # **3. Acceptance Criteria**
 
-* [ ] 🟢 Tenant creation & onboarding works end-to-end
+* [x] 🟢 Tenant creation & onboarding works end-to-end
 * [ ] 🟢 Feature toggles immediately reflect at tenant level
 * [ ] 🟢 All admin actions logged immutably
 * [ ] 🟡 Impersonation logs show session start, end, and actions
-* [ ] 🟡 Promo codes track usage and conversion
-* [ ] 🟡 Sales pipeline supports full lead → onboarding workflow
+* [x] 🟡 Promo codes track usage and conversion
+* [x] 🟡 Sales pipeline supports full lead → onboarding workflow
 * [ ] 🟡 Alerts fire when thresholds are crossed
-* [ ] 🟡 Payment analytics correctly reflect failures & retries
+* [x] 🟡 Payment analytics correctly reflect failures & retries
 
 ---
 
