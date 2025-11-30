@@ -118,6 +118,8 @@
     "createUser": "Créer un utilisateur",
     "activityTracking": "Suivi d'activité",
     "systemAdministration": "Administration système",
+    "featureToggles": "Bascules de fonctionnalités",
+    "supportTicketing": "Support et tickets",
     "auditLogs": "Audit et journalisation",
     "dataManagement": "Gestion des données",
     "systemConfiguration": "Configuration système",

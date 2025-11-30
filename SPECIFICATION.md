@@ -48,12 +48,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Tenant Detail View**
 
-- [x] 🟠 Basic tenant profile (existing) + enhanced usage data
-- [x] 🟠 Staff count, user count, storage, subscription info
-- [ ] 🟡 Staff utilization rate
-- [ ] 🟡 Customer & reservation growth analytics
-- [ ] 🟡 Module usage breakdown
-- [ ] 🟠 Activity logs & audit logs per tenant
+* [x] 🟠 Basic tenant profile (existing) + enhanced usage data
+* [x] 🟠 Staff count, user count, storage, subscription info
+* [ ] 🟡 Staff utilization rate
+* [ ] 🟡 Customer & reservation growth analytics
+* [ ] 🟡 Module usage breakdown
+* [x] 🟠 Activity logs & audit logs per tenant
 
 ---
 
@@ -81,51 +81,51 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Global Settings**
 
-- [ ] 🟢 Branding defaults
-- [ ] 🟢 Supported languages/currency
-- [ ] 🟢 System-wide defaults
-- [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
+* [x] 🟢 Branding defaults
+* [x] 🟢 Supported languages/currency
+* [x] 🟢 System-wide defaults
+* [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
 
 ---
 
 ## **Compliance & Data Tools**
 
-- [ ] 🟢 GDPR export/delete
-- [ ] 🟠 Data retention policies
-- [ ] 🟠 Backups + manual export
-- [ ] 🟡 Backup verification
-- [ ] 🟡 Point-in-time recovery
-- [ ] 🟡 Disaster recovery workflows
-- [ ] 🟡 Selective data restoration
+* [x] 🟢 GDPR export/delete
+* [x] 🟠 Data retention policies
+* [x] 🟠 Backups + manual export
+* [ ] 🟡 Backup verification
+* [ ] 🟡 Point-in-time recovery
+* [ ] 🟡 Disaster recovery workflows
+* [ ] 🟡 Selective data restoration
 
 ---
 
 ## **Support & Ticketing**
 
-- [ ] 🟢 View/assign tickets
-- [ ] 🟠 Priorities & SLAs
-- [ ] 🟠 Ticket history & timeline
-- [ ] 🟡 Real-time chat support
-- [ ] 🟡 Multiple concurrent chats
-- [ ] 🟡 Feature request tracking
+* [x] 🟢 View/assign tickets
+* [x] 🟠 Priorities & SLAs
+* [x] 🟠 Ticket history & timeline
+* [ ] 🟡 Real-time chat support
+* [ ] 🟡 Multiple concurrent chats
+* [ ] 🟡 Feature request tracking
 
 ---
 
 ## **Feature Toggles / Remote Config**
 
-- [ ] 🟢 Enable/disable modules per tenant
-- [ ] 🟠 Remote config flags applied instantly
-- [ ] 🟡 Module upgrade/downgrade analytics
+* [x] 🟢 Enable/disable modules per tenant
+* [x] 🟠 Remote config flags applied instantly
+* [ ] 🟡 Module upgrade/downgrade analytics
 
 ---
 
 ## **Audit Logs & Security**
 
-- [ ] 🟢 Log all admin actions
-- [ ] 🟠 Resource-level log indexing
-- [ ] 🟡 Impersonation session logs
-- [ ] 🟡 Security event logging (failed logins, suspicious activity)
-- [ ] 🟡 Financial change audits
+* [x] 🟢 Log all admin actions
+* [x] 🟠 Resource-level log indexing
+* [ ] 🟡 Impersonation session logs
+* [ ] 🟡 Security event logging (failed logins, suspicious activity)
+* [ ] 🟡 Financial change audits
 
 ---
 

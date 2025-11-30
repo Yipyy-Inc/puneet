@@ -23,6 +23,11 @@ import {
   RefreshCw,
   Award,
   FileCheck,
+  Trash2,
+  FileOutput,
+  UserX,
+  Play,
+  Mail,
 } from "lucide-react";
 import {
   BarChart,
@@ -43,6 +48,8 @@ import {
   complianceReports,
   certificates,
   auditTrails,
+  dataSubjectRequests,
+  dataSubjectRequestStats,
   type GDPRCompliance,
   type DataProtectionSetting,
   type PrivacyPolicy,
@@ -51,6 +58,7 @@ import {
   type ComplianceReport,
   type Certificate,
   type AuditTrail,
+  type DataSubjectRequest,
 } from "@/data/security-compliance";
 
 export function ComplianceTools() {
@@ -611,6 +619,176 @@ export function ComplianceTools() {
     </div>
   );
 
+  // Data Subject Request Status Badge
+  const getDSRStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      Pending: "secondary",
+      "In Progress": "outline",
+      Completed: "default",
+      Rejected: "destructive",
+      Extended: "outline",
+    };
+    const icons: Record<string, any> = {
+      Pending: Clock,
+      "In Progress": RefreshCw,
+      Completed: CheckCircle2,
+      Rejected: XCircle,
+      Extended: Clock,
+    };
+    const colors: Record<string, string> = {
+      Pending: "bg-yellow-100 text-yellow-700",
+      "In Progress": "bg-blue-100 text-blue-700",
+      Completed: "bg-green-100 text-green-700",
+      Rejected: "bg-red-100 text-red-700",
+      Extended: "bg-orange-100 text-orange-700",
+    };
+    const Icon = icons[status] || Clock;
+    return (
+      <Badge variant={variants[status] || "secondary"} className={`gap-1 ${colors[status] || ""}`}>
+        <Icon className="h-3 w-3" />
+        {status}
+      </Badge>
+    );
+  };
+
+  const getDSRTypeBadge = (type: string) => {
+    const colors: Record<string, string> = {
+      Export: "bg-blue-100 text-blue-700",
+      Deletion: "bg-red-100 text-red-700",
+      Rectification: "bg-purple-100 text-purple-700",
+      Restriction: "bg-orange-100 text-orange-700",
+      Objection: "bg-gray-100 text-gray-700",
+    };
+    const icons: Record<string, any> = {
+      Export: FileOutput,
+      Deletion: Trash2,
+      Rectification: Settings,
+      Restriction: Lock,
+      Objection: AlertTriangle,
+    };
+    const Icon = icons[type] || FileText;
+    return (
+      <Badge variant="secondary" className={`gap-1 ${colors[type] || ""}`}>
+        <Icon className="h-3 w-3" />
+        {type}
+      </Badge>
+    );
+  };
+
+  const getVerificationBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+      Verified: "default",
+      Pending: "secondary",
+      Failed: "destructive",
+    };
+    const icons: Record<string, any> = {
+      Verified: CheckCircle2,
+      Pending: Clock,
+      Failed: XCircle,
+    };
+    const Icon = icons[status] || Clock;
+    return (
+      <Badge variant={variants[status] || "secondary"} className="gap-1 text-xs">
+        <Icon className="h-3 w-3" />
+        {status}
+      </Badge>
+    );
+  };
+
+  // Data Subject Request Columns
+  const dataSubjectRequestColumns = [
+    {
+      key: "requesterName",
+      label: "Requester",
+      render: (item: DataSubjectRequest) => (
+        <div className="min-w-0">
+          <div className="font-medium">{item.requesterName}</div>
+          <div className="text-xs text-muted-foreground truncate">{item.requesterEmail}</div>
+          {item.facilityName && (
+            <div className="text-xs text-muted-foreground">{item.facilityName}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "requestType",
+      label: "Type",
+      render: (item: DataSubjectRequest) => getDSRTypeBadge(item.requestType),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (item: DataSubjectRequest) => (
+        <div className="space-y-1">
+          {getDSRStatusBadge(item.status)}
+          <div className="text-xs text-muted-foreground">
+            {getVerificationBadge(item.verificationStatus)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "dataCategories",
+      label: "Data Categories",
+      render: (item: DataSubjectRequest) => (
+        <div className="flex flex-wrap gap-1 max-w-[200px]">
+          {item.dataCategories.slice(0, 2).map((cat) => (
+            <Badge key={cat} variant="outline" className="text-xs">
+              {cat}
+            </Badge>
+          ))}
+          {item.dataCategories.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{item.dataCategories.length - 2}
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "submittedAt",
+      label: "Submitted",
+      render: (item: DataSubjectRequest) => (
+        <div className="text-sm">
+          <div>{new Date(item.submittedAt).toLocaleDateString()}</div>
+          <div className="text-xs text-muted-foreground">
+            Due: {new Date(item.deadline).toLocaleDateString()}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "assignedTo",
+      label: "Assigned To",
+      render: (item: DataSubjectRequest) => (
+        <div className="text-sm">
+          {item.assignedTo || <span className="text-muted-foreground">Unassigned</span>}
+        </div>
+      ),
+    },
+  ];
+
+  const dataSubjectRequestActions = (item: DataSubjectRequest) => (
+    <div className="flex gap-1">
+      <Button variant="ghost" size="icon" className="h-8 w-8" title="View Details">
+        <Eye className="h-4 w-4" />
+      </Button>
+      {item.status === "Pending" && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" title="Process Request">
+          <Play className="h-4 w-4" />
+        </Button>
+      )}
+      {item.status === "Completed" && item.requestType === "Export" && item.exportFileUrl && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" title="Download Export">
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" className="h-8 w-8" title="Send Notification">
+        <Mail className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   // Audit Trail Columns
   const auditTrailColumns = [
     {
@@ -807,13 +985,227 @@ export function ComplianceTools() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="data-privacy" className="space-y-6">
+      <Tabs defaultValue="data-subject-requests" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="data-subject-requests">
+            GDPR Requests
+          </TabsTrigger>
           <TabsTrigger value="data-privacy">Data Privacy</TabsTrigger>
           <TabsTrigger value="regulatory-compliance">
             Regulatory Compliance
           </TabsTrigger>
         </TabsList>
+
+        {/* Data Subject Requests Tab (GDPR Export/Delete) */}
+        <TabsContent value="data-subject-requests" className="space-y-6">
+          {/* DSR Stats */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Total Requests
+                    </p>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                      {dataSubjectRequestStats.totalRequests}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {dataSubjectRequestStats.thisMonthRequests} this month
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Pending
+                    </p>
+                    <h3 className="text-2xl font-bold tracking-tight text-yellow-600">
+                      {dataSubjectRequestStats.pendingRequests}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {dataSubjectRequestStats.inProgressRequests} in progress
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-yellow-500/20 to-yellow-600/20 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-yellow-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Compliance Rate
+                    </p>
+                    <h3 className="text-2xl font-bold tracking-tight text-green-600">
+                      {dataSubjectRequestStats.complianceRate}%
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Avg {dataSubjectRequestStats.avgCompletionDays} days to complete
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Overdue
+                    </p>
+                    <h3 className="text-2xl font-bold tracking-tight text-red-600">
+                      {dataSubjectRequestStats.overdueRequests}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      30-day GDPR deadline
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Request Type Breakdown */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <FileOutput className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Data Export Requests</p>
+                    <p className="text-xl font-bold">{dataSubjectRequestStats.exportRequests}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Right to Data Portability (Article 20)
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                    <UserX className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Data Deletion Requests</p>
+                    <p className="text-xl font-bold">{dataSubjectRequestStats.deletionRequests}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Right to Erasure (Article 17)
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Settings className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Rectification Requests</p>
+                    <p className="text-xl font-bold">{dataSubjectRequestStats.rectificationRequests}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Right to Rectification (Article 16)
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Data Subject Requests Table */}
+          <Card className="border-0 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Data Subject Requests (GDPR Export/Delete)
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage user data export and deletion requests per GDPR requirements
+              </p>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={dataSubjectRequestColumns as any}
+                data={dataSubjectRequests as any}
+                actions={dataSubjectRequestActions as any}
+                searchKey="requesterName"
+                searchPlaceholder="Search by name or email..."
+              />
+            </CardContent>
+          </Card>
+
+          {/* GDPR Articles Reference */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="border-0 shadow-card bg-blue-50/50">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileOutput className="h-4 w-4 text-blue-600" />
+                  Article 20 - Right to Data Portability
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Users have the right to receive their personal data in a structured,
+                  commonly used, machine-readable format and transmit it to another controller.
+                  Requests must be fulfilled within <strong>30 days</strong>.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Badge variant="outline" className="text-xs">JSON Export</Badge>
+                  <Badge variant="outline" className="text-xs">CSV Export</Badge>
+                  <Badge variant="outline" className="text-xs">ZIP Archive</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-card bg-red-50/50">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                  Article 17 - Right to Erasure
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Users have the right to request deletion of their personal data when
+                  it is no longer necessary, consent is withdrawn, or data was unlawfully processed.
+                  Requests must be fulfilled within <strong>30 days</strong>.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Badge variant="outline" className="text-xs">Data Deletion</Badge>
+                  <Badge variant="outline" className="text-xs">Anonymization</Badge>
+                  <Badge variant="outline" className="text-xs">Audit Log</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* Data Privacy Tab */}
         <TabsContent
