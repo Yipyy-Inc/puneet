@@ -375,25 +375,25 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### 8.1 Email & SMS Campaigns
 
-- [ ] 🟢 Template library
-- [ ] 🟢 Segment builder
-- [ ] 🟠 A/B testing
-- [ ] 🟢 Schedule campaigns
-- [ ] 🟠 Track opens / clicks
+- [x] 🟢 Template library
+- [x] 🟢 Segment builder
+- [x] 🟠 A/B testing
+- [x] 🟢 Schedule campaigns
+- [x] 🟠 Track opens / clicks
 
 ### 8.2 Loyalty & Referrals
 
-- [ ] 🟢 Points per $ spent
-- [ ] 🟠 Tier rules
-- [ ] 🟢 Referral codes
-- [ ] 🟢 Auto-reward
-- [ ] 🟠 Badge engine (customizable milestones / discounts per facility)
+- [x] 🟢 Points per $ spent
+- [x] 🟠 Tier rules
+- [x] 🟢 Referral codes
+- [x] 🟢 Auto-reward
+- [x] 🟠 Badge engine (customizable milestones / discounts per facility)
 
 ### 8.3 Promotions
 
-- [ ] 🟢 Create promo codes
-- [ ] 🟢 Usage limits
-- [ ] 🟠 Auto-apply rules
+- [x] 🟢 Create promo codes
+- [x] 🟢 Usage limits
+- [x] 🟠 Auto-apply rules
 
 ### 8.4 Paid-Ads Tracking
 

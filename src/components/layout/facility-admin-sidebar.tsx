@@ -159,7 +159,7 @@ export function FacilitySidebar() {
           title: "Marketing",
           url: "/facility/dashboard/marketing",
           icon: Megaphone,
-          disabled: true,
+          disabled: false,
         },
         {
           title: t("customerReach"),
