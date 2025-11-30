@@ -6,9 +6,9 @@ _Structured by view, with thorough checklists._
 
 Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, structured checklist**, with every item tagged as:
 
-- **🟢 Existing** (in original SRS)
-- **🟠 Extended** (in original SRS but expanded in new spec)
-- **🟡 New** (only appears in the new Super Admin spec)
+- 🟢 Existing (in original SRS)
+- 🟠 Extended (in original SRS but expanded in new spec)
+- 🟡 New (only appears in the new Super Admin spec)
 
 ---
 
@@ -213,94 +213,418 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - Staff (Groomer, Trainer)
 - Custom Roles via RBAC
 
-## **Screens / Components**
+---
 
-- Dashboard
-- Services Catalog
-- Pricing & Taxes
-- Booking Calendar
-- Client & Pet CRM
-- Staff Scheduling
-- Check-In / Check-Out
-- Messaging & Notifications
-- Payments & Invoicing
-- Reports & Exports
-- Waivers & Vaccination Vault
-- Incident Reporting
-- Retail / POS
-- Automations
-- Facility Settings
+## **1. Dashboard**
 
-## **Key Workflows**
-
-- Setup services & pricing
-- Publish available services to client portal
-- Create / modify bookings
-- Check-in/out workflow
-- Manage CRM & pet medical records
-- Handle incidents with follow-up tasks
-
-## **Acceptance Criteria**
-
-- Capacity rules must prevent overbooking
-- Staff conflicts must be detected unless override exists
-- Vaccine reminders triggered automatically
+- [ ] 🟢 Today's arrivals & departures cards
+- [ ] 🟢 One-click Check-In / Check-Out wizard
+- [ ] 🟡 QR scan option from customer profile for fast check-in
+- [ ] 🟡 Prearrival check-in system (parents fill feeding, medication, items details before arrival)
+- [ ] 🟠 Quick-action bar (New Booking, New Customer, Take Payment)
+- [ ] 🟠 Universal search (booking id, email, customer name, pet name)
 
 ---
 
-### **Facility Admin Checklist**
+## **2. Kennel View**
 
-#### **Services & Pricing**
+- [ ] 🟠 Visual grid (colour: vacant / occupied / reserved / maintenance)
+- [ ] 🟡 Timeline row per kennel
+- [ ] 🟡 Drag pet to move kennel
+- [ ] 🟡 Block / unblock kennels
+- [ ] 🟠 Extend / shorten stay inline with recalculation & charge
+- [ ] 🟡 Customizable room/feature names per facility in Settings
 
-- [ ] Create/edit services (duration, resources, capacity)
-- [ ] Support multiple pricing models
-- [ ] Seasonal pricing and blackout dates
+---
 
-#### **Booking & Calendar**
+## **3. Customers & Pets**
 
-- [ ] Daily/weekly/monthly views with filters
-- [ ] Real-time availability + waitlist logic
-- [ ] Overbooking prevention + transactional booking
+### Customer Management
+- [ ] 🟢 Searchable list of customer files
+- [ ] 🟡 Merge duplicates
+- [ ] 🟡 Import CSV
+- [ ] 🟢 Customer profiles: contact info, email, phone, address
+- [ ] 🟢 Pets linked to customer
+- [ ] 🟢 Booking history
+- [ ] 🟢 Docs / agreements storage
+- [ ] 🟠 Communications log (unified view)
+- [ ] 🟠 Call history with recordings
+- [ ] 🟡 Staff interaction log (who they spoke to)
+- [ ] 🟠 Quick buttons: Book, Message, Charge, Apply Credit
 
-#### **CRM (Clients & Pets)**
+### Pet Management
+- [ ] 🟢 Searchable pet profiles list
+- [ ] 🟠 Pet photo gallery
+- [ ] 🟠 Vaccinations with auto-expiry reminder (to facility AND parents)
+- [ ] 🟢 Medical / diet / behaviour info
+- [ ] 🟢 Stay history
+- [ ] 🟢 Report cards
+- [ ] 🟡 Badge wall for pets
+- [ ] 🟢 Vaccination PDF upload & reminder push
 
-- [ ] Household accounts
-- [ ] Pet profiles (breed, diet, behavior, vaccines)
-- [ ] Vaccine expiry reminders (30/14/7 days)
+### Behaviour Tags (Staff-Only, Internal)
+- [ ] 🟡 Master tag list in Settings → Pet Settings → Behaviour Tags
+- [ ] 🟡 Each tag = name + colour (hex) + icon
+- [ ] 🟡 Default starter set: Barker, Mounting, Food Aggressive, Escape Artist, Shy/Nervous, High Energy, Senior/Fragile, Medication Required
+- [ ] 🟡 Assign unlimited tags per pet (multi-select chips)
+- [ ] 🟡 Tags display as coloured pills on pet profile
+- [ ] 🟡 Auto-print on Boarding Card, Daily Care Sheet, Check-in modal, Appointment cards
+- [ ] 🟡 Smart warnings during check-in (e.g., "Food Aggressive" → suggest solitary kennel)
+- [ ] 🟡 Smart warnings during play-group assignment
+- [ ] 🟡 Filter Kennel View by tag
+- [ ] 🟡 Reports → Behaviour Tags summary (count per tag, per stay, per facility)
+- [ ] 🟡 Permissions: only "Edit Pet" role can add/remove tags
 
-#### **Staff Scheduling**
+---
 
-- [ ] Shift creation & recurring shifts
-- [ ] Conflict detection
-- [ ] ICS feed export (Phase 2)
+## **4. Staff**
 
-#### **Messaging & Notifications**
+### 4.1 Directory
+- [ ] 🟢 Add / edit staff profiles
+- [ ] 🟢 Roles & certifications
+- [ ] 🟠 Document storage for staff
+- [ ] 🟡 Emergency contact info
 
-- [ ] Internal staff chat
-- [ ] Client messaging + preferences
-- [ ] Attachments (images, files)
+### 4.2 Scheduling
+- [ ] 🟢 Calendar view (day / week / month)
+- [ ] 🟠 Shift templates & copy-paste
+- [ ] 🟢 Recurring shifts
+- [ ] 🟢 Availability grid + time-off request flow (approve / deny)
+- [ ] 🟡 Shift-swap request (manager approve)
+- [ ] 🟡 AI suggester: reads upcoming reservations & recommends head-count per shift
+- [ ] 🟠 Auto-scheduler: respects availability, max hours, labour budget vs revenue
+- [ ] 🟠 Staff hourly rates / salary for cost vs labour reports
+- [ ] 🟠 Real-time change push (30-min reminder)
+- [ ] 🟡 Sick-alert broadcast
+- [ ] 🟡 Open-shift pickup
+- [ ] 🟢 ICS feed export (Phase 2)
 
-#### **Payments & POS**
+### 4.3 Tasks
+- [ ] 🟢 Task templates (boarding, daycare, cleaning, medication)
+- [ ] 🟠 Shift tasks (assigned to particular shifts, customizable)
+- [ ] 🟢 Assign to shift or pet; set priority & photo-proof flag
+- [ ] 🟠 Repeat patterns (daily, weekly, custom)
+- [ ] 🟠 Completion = staff initials + ID + timestamp
 
-- [ ] Stripe card payments, deposits, refunds
-- [ ] Invoice templates
-- [ ] POS product management & inventory
+### 4.4 Performance
+- [ ] 🟡 Shift feedback after every shift (staff → manager) with notification
+- [ ] 🟠 Task completion rate per employee
 
-#### **Incident Reporting**
+### 4.5 Training & Loyalty
+- [ ] 🟡 Training video library; mark complete
+- [ ] 🟡 Assign training to new employees (watch videos, read content, take exams)
+- [ ] 🟡 Employee birthday notifications (customizable recipients)
+- [ ] 🟡 Points / rewards for covering shifts, perfect attendance
+- [ ] 🟡 Manager / owner can grant rewards
 
-- [ ] Severity + description + photos
-- [ ] Manager approval workflow
+---
 
-#### **Automations & AI**
+## **5. Services & Pricing**
 
-- [ ] Rule engine (“trigger → action”)
-- [ ] AI upsell assistant (Phase 2)
+- [ ] 🟢 Service catalog (boarding, daycare, grooming, training, extras)
+- [ ] 🟢 Packages & add-ons
+- [ ] 🟢 Size-based pricing
+- [ ] 🟢 Seasonal pricing
+- [ ] 🟢 Peak-surcharge rules
+- [ ] 🟠 Dynamic pricing engine (demand & occupancy driven)
+- [ ] 🟢 Memberships & prepaid credits
+- [ ] 🟢 Discount / promo code manager
 
-#### **Acceptance & QA**
+---
 
-- [ ] Full booking lifecycle test
-- [ ] Shift conflict tests
-- [ ] Vaccine reminder tests
+## **6. Payments & Billing**
+
+- [ ] 🟢 Take payment: card (Stripe)
+- [ ] 🟢 Cash payments
+- [ ] 🟢 Saved card
+- [ ] 🟡 Split payments
+- [ ] 🟢 Gift cards (online)
+- [ ] 🟠 Gift cards (offline / physical)
+- [ ] 🟢 Customer credit / prepaid credits
+- [ ] 🟢 Deposits & refunds
+- [ ] 🟢 Auto-invoice from booking
+- [ ] 🟢 Recurring invoices for memberships
+- [ ] 🟠 Outstanding balance list
+- [ ] 🟠 Auto-reminder for outstanding balances
+- [ ] 🟢 Tips support
+
+---
+
+## **7. Reports & Analytics**
+
+- [ ] 🟢 KPI tile row (bookings, occupancy %, AOV, retention)
+- [ ] 🟢 Pre-built reports: occupancy, no-show, cancellation
+- [ ] 🟠 Pre-built reports: labour cost
+- [ ] 🟢 Pre-built reports: top customers / client lifetime value
+- [ ] 🟠 Custom report builder (drag fields, filter, schedule email)
+- [ ] 🟢 Export CSV / PDF
+- [ ] 🟠 Export Excel
+- [ ] 🟡 Printables section (Daily Care Sheets, Boarding Cards for bulk print)
+
+---
+
+## **8. Marketing**
+
+### 8.1 Email & SMS Campaigns
+- [ ] 🟢 Template library
+- [ ] 🟢 Segment builder
+- [ ] 🟠 A/B testing
+- [ ] 🟢 Schedule campaigns
+- [ ] 🟠 Track opens / clicks
+
+### 8.2 Loyalty & Referrals
+- [ ] 🟢 Points per $ spent
+- [ ] 🟠 Tier rules
+- [ ] 🟢 Referral codes
+- [ ] 🟢 Auto-reward
+- [ ] 🟠 Badge engine (customizable milestones / discounts per facility)
+
+### 8.3 Promotions
+- [ ] 🟢 Create promo codes
+- [ ] 🟢 Usage limits
+- [ ] 🟠 Auto-apply rules
+
+### 8.4 Paid-Ads Tracking
+- [ ] 🟡 Google / Meta pixel integration
+- [ ] 🟡 ROI dashboard
+
+---
+
+## **9. Communications**
+
+### 9.1 Messaging Hub
+- [ ] 🟢 Unified inbox (email, SMS, in-app)
+- [ ] 🟢 Templates & file attach
+- [ ] 🟠 Per-customer communication history view
+
+### 9.2 Automations
+- [ ] 🟢 Booking confirmation
+- [ ] 🟢 24-hour reminder
+- [ ] 🟢 Check-in / out notice
+- [ ] 🟢 Payment receipt
+- [ ] 🟢 Vaccination expiry
+- [ ] 🟢 Grooming / training appointment reminder
+
+### 9.3 Real-Time Pet Updates
+- [ ] 🟠 One-tap buttons: "Eating now", "Potty break", "Play time", "Nap time" → pushes to owner
+- [ ] 🟢 Push notifications to owner
+
+### 9.4 AI Receptionist / Calling
+- [ ] 🟠 Call log
+- [ ] 🟠 Recording
+- [ ] 🟠 Voicemail
+- [ ] 🟠 Routing rules
+- [ ] 🟠 AI takes bookings over phone
+- [ ] 🟡 AI tour booking
+
+### 9.5 Internal Comms
+- [ ] 🟡 Manager announcements
+- [ ] 🟡 Shift hand-over notes
+- [ ] 🟢 @mentions
+
+---
+
+## **10. Daycare Module (Opt-In)**
+
+- [ ] 🟢 Daycare dashboard (current count, capacity bar)
+- [ ] 🟠 Timers
+- [ ] 🟢 Quick check-in / out with timer start / stop
+- [ ] 🟡 Play-group creator (size / temperament)
+- [ ] 🟢 Hourly, half-day, full-day rates
+- [ ] 🟢 Packages
+- [ ] 🟢 Daily report card auto-emailed (activities, meals, photos)
+
+---
+
+## **11. Boarding Module (Opt-In)**
+
+### Core Features
+- [ ] 🟢 Boarding dashboard (current guests, arrivals, departures)
+- [ ] 🟢 Nightly rates
+- [ ] 🟢 Multi-night discounts
+- [ ] 🟢 Peak surcharge
+- [ ] 🟢 Per-pet feeding schedule & tracker
+- [ ] 🟠 Appetite notes on feeding (ate-all / left-some / refused)
+- [ ] 🟢 Medication schedule & tracker (dose ✓ + initials)
+- [ ] 🟠 Photo proof on medication
+- [ ] 🟡 Kennel-clean checklist & blocker flag
+- [ ] 🟢 Stay extension wizard
+- [ ] 🟠 Early checkout wizard
+
+### Daily Care Sheet
+- [ ] 🟡 Auto-generated at check-in; lives digitally for whole stay
+- [ ] 🟠 Tracks feedings: time, food type, portion, ate-all / left-some / refused
+- [ ] 🟠 Tracks medications: time, dose, given-by initials, photo proof toggle
+- [ ] 🟡 Tracks potty breaks: time, ✓ / accident notes
+- [ ] 🟡 Tracks walks: time, duration, staff initials
+- [ ] 🟡 Tracks playtime: group or solo, start/end, notes
+- [ ] 🟡 Staff update via phone or kiosk → timestamps locked
+- [ ] 🟡 One-click "Print Today" or "Print Stay Summary" (PDF, fits clipboard)
+
+### Boarding Card / Kennel Card (Prints to Hang on Gate)
+- [ ] 🟡 Auto-generates when kennel assigned
+- [ ] 🟡 Contains: Pet photo (colour), pet name, breed, sex, weight, colour/markings
+- [ ] 🟡 Owner names + primary phone
+- [ ] 🟡 Check-in / check-out dates
+- [ ] 🟡 Allergy icon + list
+- [ ] 🟡 Medication icon + short schedule
+- [ ] 🟡 Feeding instructions (food brand, amount, times)
+- [ ] 🟡 Emergency vet contact
+- [ ] 🟡 QR code (links to full digital sheet)
+- [ ] 🟡 Template editor in Settings → Boarding → Kennel Card Layout
+- [ ] 🟡 Re-print anytime (replacement card or updated info)
+
+---
+
+## **12. Grooming Module (Opt-In)**
+
+- [ ] 🟢 Grooming calendar (online booking enabled)
+- [ ] 🟢 Stylist assignment & availability
+- [ ] 🟡 Style preference gallery (owner uploads reference photo)
+- [ ] 🟡 Progress tracker: Check-in → Bath → Dry → Haircut → Finish → Pick-up
+- [ ] 🟡 Real-time push + photo at each stage
+- [ ] 🟠 Before / after photo album per visit
+- [ ] 🟢 Grooming packages
+- [ ] 🟠 Product inventory
+
+---
+
+## **13. Training Module (Opt-In)**
+
+- [ ] 🟢 Class schedule & capacity
+- [ ] 🟢 Enrollment
+- [ ] 🟡 Wait-list
+- [ ] 🟡 Private session booking
+- [ ] 🟢 Trainer notes
+- [ ] 🟡 Homework assignment
+- [ ] 🟢 Progress tracker
+- [ ] 🟡 Skill badges
+- [ ] 🟡 Certificate auto-generation
+- [ ] 🟢 Packages
+- [ ] 🟡 Drop-in billing
+
+---
+
+## **14. Retail / POS (Opt-In)**
+
+- [ ] 🟢 POS screen (barcode scan, cart, discounts, split tender, print / email receipt)
+- [ ] 🟢 Product catalog with variants & stock toggle
+- [ ] 🟢 Inventory dashboard (stock value, low-stock alert, movement log)
+- [ ] 🟢 Low stock push notification to manager / staff
+- [ ] 🟢 Purchase orders & supplier list
+- [ ] 🟢 Online store sync (if enabled)
+
+---
+
+## **15. Incident Reporting**
+
+- [ ] 🟢 Create incident (type, severity, pets, staff, description, photos)
+- [ ] 🟢 Manager notification & follow-up tasks
+- [ ] 🟢 Incident history per pet
+- [ ] 🟢 Closed-loop marker
+- [ ] 🟢 Internal vs client-facing notes
+- [ ] 🟢 Severity levels & permissions
+
+---
+
+## **16. Settings**
+
+### Business Configuration
+- [ ] 🟢 Business profile, hours, locations, branding
+- [ ] 🟢 Booking rules, cancel policy, deposit %, capacity limits
+- [ ] 🟠 Kennel map, types, amenities (visual map)
+- [ ] 🟢 Pet size classes, vaccination rules
+
+### Financial
+- [ ] 🟢 Payment gateway, tax rates, currency
+- [ ] 🟢 Roles & permissions matrix
+- [ ] 🟠 Financial data lock-down
+
+### Notifications
+- [ ] 🟢 Notification toggles & template editor
+
+### Integrations
+- [ ] 🟢 SMS, email SMTP
+- [ ] 🟠 VOIP
+- [ ] 🟢 QuickBooks (Phase 2)
+- [ ] 🟢 AI tools
+- [ ] 🟡 Ads manager (Google, Facebook)
+- [ ] 🟡 Partnerships tab (pet insurance referral link / banner)
+
+### Subscription
+- [ ] 🟢 Subscription & module add-ons view
+
+### Audit
+- [ ] 🟢 Audit log for every setting change (who changed what, when, exportable)
+
+---
+
+## **17. Additional Features**
+
+- [ ] 🟡 QR code generation for each pet (wallet-size tag / app screen, scan at check-in/out)
+- [ ] 🟡 Pet-Collar Printer Integration (print bright temporary ID bands at check-in)
+  - Works with PetDetect or thermal printers (1" or 1.5" collar media)
+  - Pet name & owner last name (large text)
+  - Coloured stripe = care-alert level (Red = medication/special notes, Amber = senior/special needs, Blue = behaviour tag, Green = standard)
+  - Small icons: feeding schedule, meds, escape-risk, diet
+  - Facility logo + phone (repeats every 6")
+  - Auto-choose collar length (12", 18", 24", 30") based on stored pet size
+- [ ] 🟠 Reminder for grooming / vet appointments (separate from boarding)
+- [ ] 🟡 Customer community forum (pet-parents board, anonymised, with moderation queue)
+- [ ] 🟡 OTA performance reviews (Google / Yelp pull-in, reply inline)
+- [ ] 🟢 Live PetCam Integration (link live camera feeds for clients to view pets)
+- [ ] 🟢 Mobile App White-Label Option
+- [ ] 🟢 Smart Insights Dashboard (AI-driven)
+- [ ] 🟢 Digital Waivers & E-Signatures
+- [ ] 🟢 AI Recommendations at checkout ("Add nail trim?" upsell)
+- [ ] 🟢 Conflict detection for double-booked staff
+
+---
+
+## **Opt-In Modules (Managed by Super Admin)**
+
+- SMS module
+- Calling module
+- Email marketing module
+- AI receptionist module
+- Staff scheduling module
+- Daycare module
+- Boarding module
+- Grooming module
+- Training module
+- Retail / POS module
+
+---
+
+## **Key Workflows**
+
+- [ ] 🟢 Setup services & pricing
+- [ ] 🟢 Publish available services to client portal
+- [ ] 🟢 Create / modify bookings
+- [ ] 🟢 Check-in / out workflow (with QR option)
+- [ ] 🟢 Manage CRM & pet medical records
+- [ ] 🟢 Handle incidents with follow-up tasks
+- [ ] 🟡 Prearrival check-in flow (parents complete before arrival)
+- [ ] 🟡 Daily care sheet updates via mobile / kiosk
+- [ ] 🟡 Play-group assignment with smart warnings
+- [ ] 🟡 Shift-swap approval workflow
+- [ ] 🟡 Staff training assignment & completion tracking
+
+---
+
+## **Acceptance Criteria**
+
+- [ ] 🟢 Capacity rules must prevent overbooking
+- [ ] 🟢 Staff conflicts must be detected unless override exists
+- [ ] 🟢 Vaccine reminders triggered automatically (to facility AND parents)
+- [ ] 🟢 Full booking lifecycle test
+- [ ] 🟢 Shift conflict tests
+- [ ] 🟢 Vaccine reminder tests
+- [ ] 🟡 Behaviour tags display correctly on all relevant screens
+- [ ] 🟡 Smart warnings fire during check-in for tagged pets
+- [ ] 🟡 Daily care sheet timestamps are locked after staff submission
+- [ ] 🟡 Kennel cards print with all required fields
+- [ ] 🟡 Real-time pet updates push within 5 seconds
 
 ---
 

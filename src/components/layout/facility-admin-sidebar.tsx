@@ -10,6 +10,15 @@ import {
   Clock,
   MessageSquare,
   DollarSign,
+  BarChart3,
+  Megaphone,
+  AlertTriangle,
+  Settings,
+  Grid3X3,
+  Scissors,
+  GraduationCap,
+  ShoppingCart,
+  Bed,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -30,6 +39,29 @@ export function FacilitySidebar() {
           icon: Home,
           disabled: false,
         },
+        {
+          title: "Kennel View",
+          url: "/facility/dashboard/kennel-view",
+          icon: Grid3X3,
+          disabled: true,
+        },
+      ],
+    },
+    {
+      label: "Customers & Pets",
+      items: [
+        {
+          title: t("clients"),
+          url: "/facility/dashboard/clients",
+          icon: Users,
+          disabled: false,
+        },
+        {
+          title: tCommon("pets"),
+          url: "/facility/dashboard/pets",
+          icon: PawPrint,
+          disabled: false,
+        },
       ],
     },
     {
@@ -42,64 +74,6 @@ export function FacilitySidebar() {
           disabled: false,
         },
         {
-          title: t("clients"),
-          url: "/facility/dashboard/clients",
-          icon: Users,
-          disabled: false,
-        },
-        {
-          title: t("customerReach"),
-          url: "/facility/customer-reach",
-          icon: MessageSquare,
-          disabled: false,
-        },
-        {
-          title: tCommon("pets"),
-          url: "/facility/dashboard/pets",
-          icon: PawPrint,
-          disabled: false,
-        },
-      ],
-    },
-    {
-      label: tCommon("services"),
-      items: [
-        {
-          title: tServices("daycare"),
-          url: "/facility/dashboard/services/daycare",
-          icon: PawPrint,
-          disabled: false,
-        },
-        {
-          title: tServices("grooming"),
-          url: "/facility/dashboard/services/grooming",
-          icon: PawPrint,
-          disabled: false,
-        },
-        {
-          title: tServices("boarding"),
-          url: "/facility/dashboard/services/boarding",
-          icon: PawPrint,
-          disabled: false,
-        },
-        {
-          title: tServices("veterinary"),
-          url: "/facility/dashboard/services/vet",
-          icon: PawPrint,
-          disabled: false,
-        },
-        {
-          title: tServices("store"),
-          url: "/facility/dashboard/services/store",
-          icon: PawPrint,
-          disabled: false,
-        },
-      ],
-    },
-    {
-      label: t("management"),
-      items: [
-        {
           title: t("staff"),
           url: "/facility/staff",
           icon: UserCheck,
@@ -111,17 +85,97 @@ export function FacilitySidebar() {
           icon: Clock,
           disabled: false,
         },
+      ],
+    },
+    {
+      label: "Modules",
+      items: [
+        {
+          title: tServices("daycare"),
+          url: "/facility/dashboard/services/daycare",
+          icon: PawPrint,
+          disabled: false,
+        },
+        {
+          title: tServices("boarding"),
+          url: "/facility/dashboard/services/boarding",
+          icon: Bed,
+          disabled: false,
+        },
+        {
+          title: tServices("grooming"),
+          url: "/facility/dashboard/services/grooming",
+          icon: Scissors,
+          disabled: false,
+        },
+        {
+          title: "Training",
+          url: "/facility/dashboard/services/training",
+          icon: GraduationCap,
+          disabled: true,
+        },
+        {
+          title: tServices("store"),
+          url: "/facility/dashboard/services/store",
+          icon: ShoppingCart,
+          disabled: false,
+        },
+      ],
+    },
+    {
+      label: "Financial",
+      items: [
+        {
+          title: "Payments & Billing",
+          url: "/facility/dashboard/billing",
+          icon: DollarSign,
+          disabled: false,
+        },
         {
           title: t("inventory"),
           url: "/facility/inventory",
           icon: Package,
           disabled: false,
         },
+      ],
+    },
+    {
+      label: "Reports & Marketing",
+      items: [
         {
-          title: "Billing",
-          url: "/facility/dashboard/billing",
-          icon: DollarSign,
+          title: "Reports & Analytics",
+          url: "/facility/dashboard/reports",
+          icon: BarChart3,
+          disabled: true,
+        },
+        {
+          title: "Marketing",
+          url: "/facility/dashboard/marketing",
+          icon: Megaphone,
+          disabled: true,
+        },
+        {
+          title: t("customerReach"),
+          url: "/facility/customer-reach",
+          icon: MessageSquare,
           disabled: false,
+        },
+      ],
+    },
+    {
+      label: t("management"),
+      items: [
+        {
+          title: t("incidents"),
+          url: "/facility/dashboard/incidents",
+          icon: AlertTriangle,
+          disabled: true,
+        },
+        {
+          title: tCommon("settings"),
+          url: "/facility/dashboard/settings",
+          icon: Settings,
+          disabled: true,
         },
       ],
     },
