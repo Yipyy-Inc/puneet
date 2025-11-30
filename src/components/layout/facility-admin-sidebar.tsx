@@ -43,7 +43,7 @@ export function FacilitySidebar() {
           title: "Kennel View",
           url: "/facility/dashboard/kennel-view",
           icon: Grid3X3,
-          disabled: true,
+          disabled: false,
         },
       ],
     },
