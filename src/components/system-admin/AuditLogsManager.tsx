@@ -2,7 +2,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
@@ -54,37 +60,70 @@ import {
 } from "recharts";
 
 // Resource type icons and colors
-const resourceTypeConfig: Record<string, { icon: any; color: string; bgColor: string }> = {
-  Facility: { icon: Building, color: "text-blue-600", bgColor: "bg-blue-500/10" },
+const resourceTypeConfig: Record<
+  string,
+  { icon: any; color: string; bgColor: string }
+> = {
+  Facility: {
+    icon: Building,
+    color: "text-blue-600",
+    bgColor: "bg-blue-500/10",
+  },
   User: { icon: User, color: "text-purple-600", bgColor: "bg-purple-500/10" },
-  Subscription: { icon: Package, color: "text-green-600", bgColor: "bg-green-500/10" },
-  Payment: { icon: CreditCard, color: "text-orange-600", bgColor: "bg-orange-500/10" },
-  Setting: { icon: Settings, color: "text-gray-600", bgColor: "bg-gray-500/10" },
+  Subscription: {
+    icon: Package,
+    color: "text-green-600",
+    bgColor: "bg-green-500/10",
+  },
+  Payment: {
+    icon: CreditCard,
+    color: "text-orange-600",
+    bgColor: "bg-orange-500/10",
+  },
+  Setting: {
+    icon: Settings,
+    color: "text-gray-600",
+    bgColor: "bg-gray-500/10",
+  },
   Data: { icon: Database, color: "text-cyan-600", bgColor: "bg-cyan-500/10" },
   API: { icon: Key, color: "text-pink-600", bgColor: "bg-pink-500/10" },
-  Module: { icon: Layers, color: "text-indigo-600", bgColor: "bg-indigo-500/10" },
+  Module: {
+    icon: Layers,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-500/10",
+  },
 };
 
 export function AuditLogsManager() {
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedResourceType, setSelectedResourceType] = useState<string | null>(null);
-  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
+  const [selectedResourceType, setSelectedResourceType] = useState<
+    string | null
+  >(null);
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(
+    null,
+  );
   const [resourceSearch, setResourceSearch] = useState("");
 
   // Calculate resource index data
   const resourceIndex = useMemo(() => {
-    const index: Record<string, { 
-      type: string; 
-      resources: Record<string, { 
-        id: string; 
-        name: string; 
-        logCount: number; 
-        lastActivity: string;
-        severityCounts: Record<string, number>;
-      }> 
-    }> = {};
+    const index: Record<
+      string,
+      {
+        type: string;
+        resources: Record<
+          string,
+          {
+            id: string;
+            name: string;
+            logCount: number;
+            lastActivity: string;
+            severityCounts: Record<string, number>;
+          }
+        >;
+      }
+    > = {};
 
     auditLogs.forEach((log: any) => {
       if (!index[log.entityType]) {
@@ -100,9 +139,15 @@ export function AuditLogsManager() {
         };
       }
       index[log.entityType].resources[log.entityId].logCount++;
-      index[log.entityType].resources[log.entityId].severityCounts[log.severity]++;
-      if (new Date(log.timestamp) > new Date(index[log.entityType].resources[log.entityId].lastActivity)) {
-        index[log.entityType].resources[log.entityId].lastActivity = log.timestamp;
+      index[log.entityType].resources[log.entityId].severityCounts[
+        log.severity
+      ]++;
+      if (
+        new Date(log.timestamp) >
+        new Date(index[log.entityType].resources[log.entityId].lastActivity)
+      ) {
+        index[log.entityType].resources[log.entityId].lastActivity =
+          log.timestamp;
       }
     });
 
@@ -111,32 +156,46 @@ export function AuditLogsManager() {
 
   // Get resource type summary
   const resourceTypeSummary = useMemo(() => {
-    return Object.entries(resourceIndex).map(([type, data]) => ({
-      type,
-      resourceCount: Object.keys(data.resources).length,
-      totalLogs: Object.values(data.resources).reduce((sum, r) => sum + r.logCount, 0),
-      criticalLogs: Object.values(data.resources).reduce((sum, r) => sum + r.severityCounts.Critical, 0),
-    })).sort((a, b) => b.totalLogs - a.totalLogs);
+    return Object.entries(resourceIndex)
+      .map(([type, data]) => ({
+        type,
+        resourceCount: Object.keys(data.resources).length,
+        totalLogs: Object.values(data.resources).reduce(
+          (sum, r) => sum + r.logCount,
+          0,
+        ),
+        criticalLogs: Object.values(data.resources).reduce(
+          (sum, r) => sum + r.severityCounts.Critical,
+          0,
+        ),
+      }))
+      .sort((a, b) => b.totalLogs - a.totalLogs);
   }, [resourceIndex]);
 
   // Filter logs by selected resource
   const filteredLogs = useMemo(() => {
     if (!selectedResourceType && !selectedResourceId) return auditLogs;
     return auditLogs.filter((log: any) => {
-      if (selectedResourceType && log.entityType !== selectedResourceType) return false;
-      if (selectedResourceId && log.entityId !== selectedResourceId) return false;
+      if (selectedResourceType && log.entityType !== selectedResourceType)
+        return false;
+      if (selectedResourceId && log.entityId !== selectedResourceId)
+        return false;
       return true;
     });
   }, [selectedResourceType, selectedResourceId]);
 
   // Filter resources by search
   const filteredResources = useMemo(() => {
-    if (!selectedResourceType || !resourceIndex[selectedResourceType]) return [];
-    const resources = Object.values(resourceIndex[selectedResourceType].resources);
+    if (!selectedResourceType || !resourceIndex[selectedResourceType])
+      return [];
+    const resources = Object.values(
+      resourceIndex[selectedResourceType].resources,
+    );
     if (!resourceSearch) return resources;
-    return resources.filter(r => 
-      r.name.toLowerCase().includes(resourceSearch.toLowerCase()) ||
-      r.id.toLowerCase().includes(resourceSearch.toLowerCase())
+    return resources.filter(
+      (r) =>
+        r.name.toLowerCase().includes(resourceSearch.toLowerCase()) ||
+        r.id.toLowerCase().includes(resourceSearch.toLowerCase()),
     );
   }, [resourceIndex, selectedResourceType, resourceSearch]);
 
@@ -286,7 +345,9 @@ export function AuditLogsManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Logs & Security</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Audit Logs & Security
+          </h1>
           <p className="text-muted-foreground mt-1">
             Track all admin actions with resource-level indexing
           </p>
@@ -308,7 +369,7 @@ export function AuditLogsManager() {
         <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
           <Filter className="h-4 w-4 text-primary" />
           <span className="text-sm">
-            Filtering by: 
+            Filtering by:
             {selectedResourceType && (
               <Badge variant="outline" className="ml-2">
                 {selectedResourceType}
@@ -318,7 +379,9 @@ export function AuditLogsManager() {
               <>
                 <ChevronRight className="inline h-4 w-4 mx-1" />
                 <Badge variant="outline">
-                  {resourceIndex[selectedResourceType!]?.resources[selectedResourceId]?.name || selectedResourceId}
+                  {resourceIndex[selectedResourceType!]?.resources[
+                    selectedResourceId
+                  ]?.name || selectedResourceId}
                 </Badge>
               </>
             )}
@@ -326,7 +389,12 @@ export function AuditLogsManager() {
           <span className="text-sm text-muted-foreground ml-2">
             ({filteredLogs.length} logs)
           </span>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={clearResourceFilter}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={clearResourceFilter}
+          >
             <X className="h-4 w-4 mr-1" />
             Clear Filter
           </Button>
@@ -465,104 +533,106 @@ export function AuditLogsManager() {
 
           {/* Charts */}
           <div className="grid gap-6 lg:grid-cols-2">
-        {/* Activity Trend */}
-        <Card className="border-0 shadow-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Activity Trend (7 Days)
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Daily audit log volume over the past week
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={auditStatistics.weeklyTrend}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={{ fill: "#3b82f6", r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Category Breakdown */}
-        <Card className="border-0 shadow-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Category Breakdown
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Distribution of audit logs by category
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={auditStatistics.categoryBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry: any) =>
-                      `${entry.category}: ${entry.percentage}%`
-                    }
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {auditStatistics.categoryBreakdown.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+            {/* Activity Trend */}
+            <Card className="border-0 shadow-card">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">
+                  Activity Trend (7 Days)
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Daily audit log volume over the past week
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={auditStatistics.weeklyTrend}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#e2e8f0"
+                        vertical={false}
                       />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                      <XAxis
+                        dataKey="date"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        dot={{ fill: "#3b82f6", r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Category Breakdown */}
+            <Card className="border-0 shadow-card">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">
+                  Category Breakdown
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Distribution of audit logs by category
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={auditStatistics.categoryBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry: any) =>
+                          `${entry.category}: ${entry.percentage}%`
+                        }
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {auditStatistics.categoryBreakdown.map(
+                          (entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ),
+                        )}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "none",
+                          borderRadius: "12px",
+                          boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Top Users Activity */}
@@ -583,7 +653,9 @@ export function AuditLogsManager() {
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{user.userName}</div>
+                      <div className="font-medium truncate">
+                        {user.userName}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {user.actionCount.toLocaleString()} actions
                       </div>
@@ -618,9 +690,26 @@ export function AuditLogsManager() {
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={resourceTypeSummary} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                    <YAxis type="category" dataKey="type" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} width={80} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e2e8f0"
+                      horizontal={true}
+                      vertical={false}
+                    />
+                    <XAxis
+                      type="number"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="type"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      width={80}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#ffffff",
@@ -629,8 +718,18 @@ export function AuditLogsManager() {
                         boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                       }}
                     />
-                    <Bar dataKey="totalLogs" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Total Logs" />
-                    <Bar dataKey="criticalLogs" fill="#ef4444" radius={[0, 4, 4, 0]} name="Critical" />
+                    <Bar
+                      dataKey="totalLogs"
+                      fill="#3b82f6"
+                      radius={[0, 4, 4, 0]}
+                      name="Total Logs"
+                    />
+                    <Bar
+                      dataKey="criticalLogs"
+                      fill="#ef4444"
+                      radius={[0, 4, 4, 0]}
+                      name="Critical"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -649,7 +748,11 @@ export function AuditLogsManager() {
                     Latest admin actions and system changes
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setActiveTab("logs")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab("logs")}
+                >
                   View All
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
@@ -666,10 +769,17 @@ export function AuditLogsManager() {
                       setShowDetailsDialog(true);
                     }}
                   >
-                    <div className={`p-2 rounded-lg ${resourceTypeConfig[log.entityType]?.bgColor || "bg-muted"}`}>
+                    <div
+                      className={`p-2 rounded-lg ${resourceTypeConfig[log.entityType]?.bgColor || "bg-muted"}`}
+                    >
                       {(() => {
-                        const Icon = resourceTypeConfig[log.entityType]?.icon || FileText;
-                        return <Icon className={`h-4 w-4 ${resourceTypeConfig[log.entityType]?.color || "text-muted-foreground"}`} />;
+                        const Icon =
+                          resourceTypeConfig[log.entityType]?.icon || FileText;
+                        return (
+                          <Icon
+                            className={`h-4 w-4 ${resourceTypeConfig[log.entityType]?.color || "text-muted-foreground"}`}
+                          />
+                        );
                       })()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -700,19 +810,29 @@ export function AuditLogsManager() {
             {/* Resource Types List */}
             <Card className="border-0 shadow-card">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Resource Types</CardTitle>
-                <CardDescription>Click to view resources of each type</CardDescription>
+                <CardTitle className="text-lg font-semibold">
+                  Resource Types
+                </CardTitle>
+                <CardDescription>
+                  Click to view resources of each type
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {resourceTypeSummary.map((type) => {
-                  const config = resourceTypeConfig[type.type] || { icon: FileText, color: "text-muted-foreground", bgColor: "bg-muted" };
+                  const config = resourceTypeConfig[type.type] || {
+                    icon: FileText,
+                    color: "text-muted-foreground",
+                    bgColor: "bg-muted",
+                  };
                   const Icon = config.icon;
                   const isSelected = selectedResourceType === type.type;
                   return (
                     <div
                       key={type.type}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/50 border border-transparent"
+                        isSelected
+                          ? "bg-primary/10 border border-primary/30"
+                          : "hover:bg-muted/50 border border-transparent"
                       }`}
                       onClick={() => {
                         setSelectedResourceType(type.type);
@@ -747,13 +867,14 @@ export function AuditLogsManager() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-semibold">
-                      {selectedResourceType ? `${selectedResourceType} Resources` : "Select a Resource Type"}
+                      {selectedResourceType
+                        ? `${selectedResourceType} Resources`
+                        : "Select a Resource Type"}
                     </CardTitle>
                     <CardDescription>
-                      {selectedResourceType 
+                      {selectedResourceType
                         ? `${filteredResources.length} resources found`
-                        : "Choose a resource type from the left to view its resources"
-                      }
+                        : "Choose a resource type from the left to view its resources"}
                     </CardDescription>
                   </div>
                   {selectedResourceType && (
@@ -778,7 +899,9 @@ export function AuditLogsManager() {
                         <div
                           key={resource.id}
                           className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors ${
-                            isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/50 border border-transparent"
+                            isSelected
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-muted/50 border border-transparent"
                           }`}
                           onClick={() => {
                             setSelectedResourceId(resource.id);
@@ -787,16 +910,23 @@ export function AuditLogsManager() {
                         >
                           <div className="flex-1 min-w-0">
                             <p className="font-medium">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{resource.id}</p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {resource.id}
+                            </p>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
                             <div className="text-center">
                               <p className="font-bold">{resource.logCount}</p>
-                              <p className="text-xs text-muted-foreground">Logs</p>
+                              <p className="text-xs text-muted-foreground">
+                                Logs
+                              </p>
                             </div>
                             <div className="flex gap-1">
                               {resource.severityCounts.Critical > 0 && (
-                                <Badge variant="destructive" className="text-xs">
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
                                   {resource.severityCounts.Critical} Critical
                                 </Badge>
                               )}
@@ -807,8 +937,14 @@ export function AuditLogsManager() {
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Last activity</p>
-                              <p className="text-xs">{new Date(resource.lastActivity).toLocaleDateString()}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Last activity
+                              </p>
+                              <p className="text-xs">
+                                {new Date(
+                                  resource.lastActivity,
+                                ).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
                           <Button variant="ghost" size="sm">
@@ -827,8 +963,13 @@ export function AuditLogsManager() {
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <Layers className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No Resource Type Selected</p>
-                    <p className="text-sm mt-1">Select a resource type from the left panel to browse resources</p>
+                    <p className="text-lg font-medium">
+                      No Resource Type Selected
+                    </p>
+                    <p className="text-sm mt-1">
+                      Select a resource type from the left panel to browse
+                      resources
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -841,12 +982,11 @@ export function AuditLogsManager() {
           <Card className="border-0 shadow-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
-                {selectedResourceId 
+                {selectedResourceId
                   ? `Logs for ${resourceIndex[selectedResourceType!]?.resources[selectedResourceId]?.name || selectedResourceId}`
                   : selectedResourceType
                     ? `All ${selectedResourceType} Logs`
-                    : "All Audit Logs"
-                }
+                    : "All Audit Logs"}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 {filteredLogs.length} logs found

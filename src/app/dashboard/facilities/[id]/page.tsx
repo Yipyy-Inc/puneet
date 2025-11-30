@@ -235,7 +235,7 @@ export default function FacilityDetailPage() {
   const [showModulesDialog, setShowModulesDialog] = useState(false);
   const [showLogsSection, setShowLogsSection] = useState(false);
   const [enabledModules, setEnabledModules] = useState<string[]>(
-    facility.enabledModules || []
+    facility.enabledModules || [],
   );
   const [showLimitsDialog, setShowLimitsDialog] = useState(false);
   const [editableLimits, setEditableLimits] = useState({
@@ -254,14 +254,14 @@ export default function FacilityDetailPage() {
   const [selectedPlan, setSelectedPlan] = useState(facility.plan);
 
   const activeClients = facility.clients.filter(
-    (c) => c.status === "active"
+    (c) => c.status === "active",
   ).length;
   const services = facility.locationsList.flatMap((l) => l.services);
   const uniqueServices = [...new Set(services)];
 
   const totalRevenue = useMemo(
     () => revenueData.reduce((sum, d) => sum + d.revenue, 0),
-    []
+    [],
   );
 
   // Get the quoted price for a module (custom quote or base price)
@@ -282,7 +282,7 @@ export default function FacilityDetailPage() {
   const basePlanCost = planPrices[facility.plan] ?? 0;
   const modulesCost = enabledModules.reduce(
     (sum, moduleId) => sum + getModulePrice(moduleId),
-    0
+    0,
   );
   const monthlySubscriptionCost = basePlanCost + modulesCost;
 
@@ -326,7 +326,7 @@ export default function FacilityDetailPage() {
     setEnabledModules((prev) =>
       prev.includes(moduleId)
         ? prev.filter((id) => id !== moduleId)
-        : [...prev, moduleId]
+        : [...prev, moduleId],
     );
   };
 
@@ -346,7 +346,7 @@ export default function FacilityDetailPage() {
   };
 
   const handleStatusChange = (
-    newStatus: "active" | "inactive" | "suspended" | "archived"
+    newStatus: "active" | "inactive" | "suspended" | "archived",
   ) => {
     setStatusChangeModal({ newStatus });
   };

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,7 +85,9 @@ import { Progress } from "@/components/ui/progress";
 
 export function SupportTicketing() {
   const [ticketsState, setTicketsState] = useState(supportTickets);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
+    null,
+  );
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isSLAModalOpen, setIsSLAModalOpen] = useState(false);
@@ -90,17 +98,26 @@ export function SupportTicketing() {
 
   const stats = useMemo(() => getTicketStats(), []);
 
-  const updateTicketStatus = (ticketId: string, newStatus: SupportTicket["status"]) => {
+  const updateTicketStatus = (
+    ticketId: string,
+    newStatus: SupportTicket["status"],
+  ) => {
     setTicketsState((prev) =>
       prev.map((ticket) =>
         ticket.id === ticketId
-          ? { ...ticket, status: newStatus, updatedAt: new Date().toISOString() }
-          : ticket
-      )
+          ? {
+              ...ticket,
+              status: newStatus,
+              updatedAt: new Date().toISOString(),
+            }
+          : ticket,
+      ),
     );
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((prev) =>
-        prev ? { ...prev, status: newStatus, updatedAt: new Date().toISOString() } : null
+        prev
+          ? { ...prev, status: newStatus, updatedAt: new Date().toISOString() }
+          : null,
       );
     }
   };
@@ -118,8 +135,8 @@ export function SupportTicketing() {
               assignedAgentId: agentId,
               updatedAt: new Date().toISOString(),
             }
-          : ticket
-      )
+          : ticket,
+      ),
     );
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((prev) =>
@@ -130,7 +147,7 @@ export function SupportTicketing() {
               assignedAgentId: agentId,
               updatedAt: new Date().toISOString(),
             }
-          : null
+          : null,
       );
     }
     setIsAssignModalOpen(false);
@@ -196,18 +213,31 @@ export function SupportTicketing() {
     if (!ticket.sla) return null;
     const now = new Date();
     const resolutionDue = new Date(ticket.sla.resolutionDue);
-    const hoursRemaining = (resolutionDue.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const hoursRemaining =
+      (resolutionDue.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     if (ticket.status === "Resolved" || ticket.status === "Closed") {
       return ticket.sla.resolutionMet
         ? { status: "met", label: "SLA Met", color: "text-success" }
-        : { status: "breached", label: "SLA Breached", color: "text-destructive" };
+        : {
+            status: "breached",
+            label: "SLA Breached",
+            color: "text-destructive",
+          };
     }
 
     if (hoursRemaining < 0) {
-      return { status: "breached", label: "SLA Breached", color: "text-destructive" };
+      return {
+        status: "breached",
+        label: "SLA Breached",
+        color: "text-destructive",
+      };
     } else if (hoursRemaining < 2) {
-      return { status: "critical", label: "SLA Critical", color: "text-destructive" };
+      return {
+        status: "critical",
+        label: "SLA Critical",
+        color: "text-destructive",
+      };
     } else if (hoursRemaining < 4) {
       return { status: "warning", label: "SLA Warning", color: "text-warning" };
     }
@@ -276,7 +306,9 @@ export function SupportTicketing() {
       render: (ticket) => (
         <div className="max-w-[300px]">
           <p className="font-medium truncate">{ticket.title}</p>
-          <p className="text-xs text-muted-foreground truncate">{ticket.facility}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {ticket.facility}
+          </p>
         </div>
       ),
     },
@@ -452,7 +484,9 @@ export function SupportTicketing() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Support & Ticketing</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Support & Ticketing
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage support tickets, assign agents, and track SLAs
           </p>
@@ -566,7 +600,11 @@ export function SupportTicketing() {
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -601,7 +639,10 @@ export function SupportTicketing() {
         <TabsContent value="agents" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {supportAgents.map((agent) => (
-              <Card key={agent.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={agent.id}
+                className="hover:shadow-lg transition-shadow"
+              >
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <div className="relative">
@@ -619,8 +660,12 @@ export function SupportTicketing() {
                           {agent.role}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{agent.department}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{agent.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {agent.department}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {agent.email}
+                      </p>
                     </div>
                   </div>
 
@@ -642,14 +687,22 @@ export function SupportTicketing() {
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Active Tickets</span>
+                      <span className="text-muted-foreground">
+                        Active Tickets
+                      </span>
                       <span className="font-medium">{agent.activeTickets}</span>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Specializations</span>
+                      <span className="text-xs text-muted-foreground">
+                        Specializations
+                      </span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {agent.specializations.map((spec) => (
-                          <Badge key={spec} variant="outline" className="text-xs">
+                          <Badge
+                            key={spec}
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {spec}
                           </Badge>
                         ))}
@@ -670,7 +723,9 @@ export function SupportTicketing() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Badge className={`${getPriorityColor(sla.priority)} border`}>
+                      <Badge
+                        className={`${getPriorityColor(sla.priority)} border`}
+                      >
                         {sla.priority}
                       </Badge>
                       {sla.name}
@@ -689,15 +744,25 @@ export function SupportTicketing() {
                           ? `${sla.firstResponseTime * 60}m`
                           : `${sla.firstResponseTime}h`}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">First Response</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        First Response
+                      </p>
                     </div>
                     <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <p className="text-2xl font-bold text-warning">{sla.escalationTime}h</p>
-                      <p className="text-xs text-muted-foreground mt-1">Escalation</p>
+                      <p className="text-2xl font-bold text-warning">
+                        {sla.escalationTime}h
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Escalation
+                      </p>
                     </div>
                     <div className="text-center p-3 bg-muted/50 rounded-lg">
-                      <p className="text-2xl font-bold text-success">{sla.resolutionTime}h</p>
-                      <p className="text-xs text-muted-foreground mt-1">Resolution</p>
+                      <p className="text-2xl font-bold text-success">
+                        {sla.resolutionTime}h
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Resolution
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -712,41 +777,61 @@ export function SupportTicketing() {
                 <TrendingUp className="h-5 w-5" />
                 SLA Performance Overview
               </CardTitle>
-              <CardDescription>Current month performance metrics</CardDescription>
+              <CardDescription>
+                Current month performance metrics
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 md:grid-cols-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">First Response SLA</span>
-                    <span className="text-sm text-success font-semibold">94%</span>
+                    <span className="text-sm font-medium">
+                      First Response SLA
+                    </span>
+                    <span className="text-sm text-success font-semibold">
+                      94%
+                    </span>
                   </div>
                   <Progress value={94} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">47/50 tickets met</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    47/50 tickets met
+                  </p>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">Resolution SLA</span>
-                    <span className="text-sm text-warning font-semibold">88%</span>
+                    <span className="text-sm text-warning font-semibold">
+                      88%
+                    </span>
                   </div>
                   <Progress value={88} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">44/50 tickets met</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    44/50 tickets met
+                  </p>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Avg Response Time</span>
+                    <span className="text-sm font-medium">
+                      Avg Response Time
+                    </span>
                     <span className="text-sm font-semibold">45 min</span>
                   </div>
                   <Progress value={75} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">Target: 1 hour</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Target: 1 hour
+                  </p>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Avg Resolution Time</span>
+                    <span className="text-sm font-medium">
+                      Avg Resolution Time
+                    </span>
                     <span className="text-sm font-semibold">6.2 hrs</span>
                   </div>
                   <Progress value={82} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">Target: 8 hours</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Target: 8 hours
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -762,7 +847,9 @@ export function SupportTicketing() {
               <div className="flex items-start justify-between">
                 <div>
                   <DialogTitle className="text-xl flex items-center gap-2">
-                    <span className="font-mono text-primary">{selectedTicket?.id}</span>
+                    <span className="font-mono text-primary">
+                      {selectedTicket?.id}
+                    </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     {selectedTicket?.title}
                   </DialogTitle>
@@ -771,10 +858,14 @@ export function SupportTicketing() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={`${getStatusColor(selectedTicket?.status || "Open")} border`}>
+                  <Badge
+                    className={`${getStatusColor(selectedTicket?.status || "Open")} border`}
+                  >
                     {selectedTicket?.status}
                   </Badge>
-                  <Badge className={`${getPriorityColor(selectedTicket?.priority || "Low")} border`}>
+                  <Badge
+                    className={`${getPriorityColor(selectedTicket?.priority || "Low")} border`}
+                  >
                     {selectedTicket?.priority}
                   </Badge>
                 </div>
@@ -803,30 +894,55 @@ export function SupportTicketing() {
                       <CardContent className="pt-0">
                         <div className="grid grid-cols-3 gap-4">
                           <div className="text-center">
-                            <p className="text-xs text-muted-foreground mb-1">First Response</p>
-                            <p className={`text-sm font-medium ${selectedTicket.sla.firstResponseMet ? "text-success" : "text-muted-foreground"}`}>
-                              {selectedTicket.sla.firstResponseMet ? "✓ Met" : "Pending"}
+                            <p className="text-xs text-muted-foreground mb-1">
+                              First Response
+                            </p>
+                            <p
+                              className={`text-sm font-medium ${selectedTicket.sla.firstResponseMet ? "text-success" : "text-muted-foreground"}`}
+                            >
+                              {selectedTicket.sla.firstResponseMet
+                                ? "✓ Met"
+                                : "Pending"}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Due: {new Date(selectedTicket.sla.firstResponseDue).toLocaleTimeString()}
+                              Due:{" "}
+                              {new Date(
+                                selectedTicket.sla.firstResponseDue,
+                              ).toLocaleTimeString()}
                             </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Escalation</p>
-                            <p className={`text-sm font-medium ${selectedTicket.sla.isEscalated ? "text-destructive" : "text-muted-foreground"}`}>
-                              {selectedTicket.sla.isEscalated ? "⚠ Escalated" : "Not Escalated"}
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Escalation
+                            </p>
+                            <p
+                              className={`text-sm font-medium ${selectedTicket.sla.isEscalated ? "text-destructive" : "text-muted-foreground"}`}
+                            >
+                              {selectedTicket.sla.isEscalated
+                                ? "⚠ Escalated"
+                                : "Not Escalated"}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Due: {new Date(selectedTicket.sla.escalationDue).toLocaleTimeString()}
+                              Due:{" "}
+                              {new Date(
+                                selectedTicket.sla.escalationDue,
+                              ).toLocaleTimeString()}
                             </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Resolution</p>
-                            <p className={`text-sm font-medium ${getSLAStatus(selectedTicket)?.color}`}>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Resolution
+                            </p>
+                            <p
+                              className={`text-sm font-medium ${getSLAStatus(selectedTicket)?.color}`}
+                            >
                               {getSLAStatus(selectedTicket)?.label}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Due: {new Date(selectedTicket.sla.resolutionDue).toLocaleString()}
+                              Due:{" "}
+                              {new Date(
+                                selectedTicket.sla.resolutionDue,
+                              ).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -835,48 +951,60 @@ export function SupportTicketing() {
                   )}
 
                   {/* Messages */}
-                  {selectedTicket.messages && selectedTicket.messages.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Conversation ({selectedTicket.messages.length})
-                      </h4>
-                      <div className="space-y-3">
-                        {selectedTicket.messages.map((msg) => {
-                          const isSupport = msg.sender !== selectedTicket.requester;
-                          return (
-                            <div
-                              key={msg.id}
-                              className={`p-4 rounded-xl ${
-                                isSupport ? "bg-primary/10 ml-8" : "bg-muted/50 mr-8"
-                              }`}
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="font-medium text-sm">{msg.sender}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(msg.timestamp).toLocaleString()}
-                                </span>
+                  {selectedTicket.messages &&
+                    selectedTicket.messages.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          Conversation ({selectedTicket.messages.length})
+                        </h4>
+                        <div className="space-y-3">
+                          {selectedTicket.messages.map((msg) => {
+                            const isSupport =
+                              msg.sender !== selectedTicket.requester;
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`p-4 rounded-xl ${
+                                  isSupport
+                                    ? "bg-primary/10 ml-8"
+                                    : "bg-muted/50 mr-8"
+                                }`}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="font-medium text-sm">
+                                    {msg.sender}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(msg.timestamp).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm">{msg.message}</p>
+                                {msg.isInternal && (
+                                  <Badge
+                                    variant="outline"
+                                    className="mt-2 text-xs"
+                                  >
+                                    Internal Note
+                                  </Badge>
+                                )}
                               </div>
-                              <p className="text-sm">{msg.message}</p>
-                              {msg.isInternal && (
-                                <Badge variant="outline" className="mt-2 text-xs">
-                                  Internal Note
-                                </Badge>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
 
-                      {/* Reply Box */}
-                      <div className="mt-4 flex gap-2">
-                        <Textarea placeholder="Type your reply..." className="min-h-[80px]" />
-                        <Button className="shrink-0">
-                          <Send className="h-4 w-4" />
-                        </Button>
+                        {/* Reply Box */}
+                        <div className="mt-4 flex gap-2">
+                          <Textarea
+                            placeholder="Type your reply..."
+                            className="min-h-[80px]"
+                          />
+                          <Button className="shrink-0">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Resolution Info */}
                   {selectedTicket.resolution && (
@@ -888,14 +1016,24 @@ export function SupportTicketing() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0">
-                        <p className="text-sm">{selectedTicket.resolution.resolutionNote}</p>
+                        <p className="text-sm">
+                          {selectedTicket.resolution.resolutionNote}
+                        </p>
                         <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                          <span>Resolved by {selectedTicket.resolution.resolvedBy}</span>
-                          <span>{new Date(selectedTicket.resolution.resolvedAt).toLocaleString()}</span>
+                          <span>
+                            Resolved by {selectedTicket.resolution.resolvedBy}
+                          </span>
+                          <span>
+                            {new Date(
+                              selectedTicket.resolution.resolvedAt,
+                            ).toLocaleString()}
+                          </span>
                         </div>
                         {selectedTicket.resolution.satisfactionRating && (
                           <div className="mt-2 flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">Rating:</span>
+                            <span className="text-xs text-muted-foreground">
+                              Rating:
+                            </span>
                             {[...Array(5)].map((_, i) => (
                               <span
                                 key={i}
@@ -922,8 +1060,12 @@ export function SupportTicketing() {
                       <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <p className="font-medium">{selectedTicket.requester}</p>
-                          <p className="text-xs text-muted-foreground">{selectedTicket.requesterEmail}</p>
+                          <p className="font-medium">
+                            {selectedTicket.requester}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedTicket.requesterEmail}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
@@ -936,54 +1078,66 @@ export function SupportTicketing() {
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{new Date(selectedTicket.createdAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(selectedTicket.createdAt).toLocaleString()}
+                        </span>
                       </div>
-                      {selectedTicket.tags && selectedTicket.tags.length > 0 && (
-                        <div className="flex items-start gap-2 text-sm">
-                          <Tag className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="flex flex-wrap gap-1">
-                            {selectedTicket.tags.map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
+                      {selectedTicket.tags &&
+                        selectedTicket.tags.length > 0 && (
+                          <div className="flex items-start gap-2 text-sm">
+                            <Tag className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex flex-wrap gap-1">
+                              {selectedTicket.tags.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </CardContent>
                   </Card>
 
                   {/* Timeline */}
-                  {selectedTicket.timeline && selectedTicket.timeline.length > 0 && (
-                    <Card>
-                      <CardHeader className="py-3">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <History className="h-4 w-4" />
-                          Activity Timeline
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          {selectedTicket.timeline.map((event, index) => (
-                            <div key={event.id} className="flex gap-3">
-                              <div className="flex flex-col items-center">
-                                {getTimelineIcon(event.type)}
-                                {index < selectedTicket.timeline!.length - 1 && (
-                                  <div className="w-px h-full bg-border mt-1" />
-                                )}
+                  {selectedTicket.timeline &&
+                    selectedTicket.timeline.length > 0 && (
+                      <Card>
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            Activity Timeline
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            {selectedTicket.timeline.map((event, index) => (
+                              <div key={event.id} className="flex gap-3">
+                                <div className="flex flex-col items-center">
+                                  {getTimelineIcon(event.type)}
+                                  {index <
+                                    selectedTicket.timeline!.length - 1 && (
+                                    <div className="w-px h-full bg-border mt-1" />
+                                  )}
+                                </div>
+                                <div className="flex-1 pb-3">
+                                  <p className="text-sm">
+                                    {formatTimelineEvent(event)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {event.actor} •{" "}
+                                    {new Date(event.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex-1 pb-3">
-                                <p className="text-sm">{formatTimelineEvent(event)}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {event.actor} • {new Date(event.timestamp).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                   {/* Quick Actions */}
                   <Card>
@@ -1008,19 +1162,24 @@ export function SupportTicketing() {
                           variant="outline"
                           size="sm"
                           className="w-full justify-start"
-                          onClick={() => updateTicketStatus(selectedTicket.id, "In Progress")}
+                          onClick={() =>
+                            updateTicketStatus(selectedTicket.id, "In Progress")
+                          }
                         >
                           <Play className="h-4 w-4 mr-2" />
                           Start Progress
                         </Button>
                       )}
-                      {(selectedTicket.status === "Open" || selectedTicket.status === "In Progress") && (
+                      {(selectedTicket.status === "Open" ||
+                        selectedTicket.status === "In Progress") && (
                         <>
                           <Button
                             variant="outline"
                             size="sm"
                             className="w-full justify-start text-warning hover:text-warning"
-                            onClick={() => updateTicketStatus(selectedTicket.id, "Escalated")}
+                            onClick={() =>
+                              updateTicketStatus(selectedTicket.id, "Escalated")
+                            }
                           >
                             <ArrowUpCircle className="h-4 w-4 mr-2" />
                             Escalate
@@ -1055,12 +1214,18 @@ export function SupportTicketing() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Assign ticket <span className="font-mono font-medium">{selectedTicket?.id}</span> to a
-              support agent
+              Assign ticket{" "}
+              <span className="font-mono font-medium">
+                {selectedTicket?.id}
+              </span>{" "}
+              to a support agent
             </p>
             <div>
               <Label>Select Agent</Label>
-              <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+              <Select
+                value={selectedAgentId}
+                onValueChange={setSelectedAgentId}
+              >
                 <SelectTrigger className="mt-1.5">
                   <SelectValue placeholder="Choose an agent..." />
                 </SelectTrigger>
@@ -1084,7 +1249,9 @@ export function SupportTicketing() {
             {selectedAgentId && (
               <div className="p-3 bg-muted/50 rounded-lg">
                 {(() => {
-                  const agent = supportAgents.find((a) => a.id === selectedAgentId);
+                  const agent = supportAgents.find(
+                    (a) => a.id === selectedAgentId,
+                  );
                   return agent ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
@@ -1096,10 +1263,16 @@ export function SupportTicketing() {
                         <Badge variant="outline">{agent.role}</Badge>
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Specializations:</span>
+                        <span className="text-muted-foreground">
+                          Specializations:
+                        </span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {agent.specializations.map((spec) => (
-                            <Badge key={spec} variant="outline" className="text-xs">
+                            <Badge
+                              key={spec}
+                              variant="outline"
+                              className="text-xs"
+                            >
                               {spec}
                             </Badge>
                           ))}
@@ -1112,11 +1285,17 @@ export function SupportTicketing() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAssignModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button
-              onClick={() => selectedTicket && assignTicket(selectedTicket.id, selectedAgentId)}
+              onClick={() =>
+                selectedTicket &&
+                assignTicket(selectedTicket.id, selectedAgentId)
+              }
               disabled={!selectedAgentId}
             >
               <UserPlus className="h-4 w-4 mr-2" />
@@ -1138,7 +1317,9 @@ export function SupportTicketing() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               You are about to resolve ticket:{" "}
-              <span className="font-medium text-foreground">{selectedTicket?.title}</span>
+              <span className="font-medium text-foreground">
+                {selectedTicket?.title}
+              </span>
             </p>
             <div>
               <Label htmlFor="resolution-note">Resolution Note</Label>
@@ -1162,7 +1343,10 @@ export function SupportTicketing() {
             >
               Cancel
             </Button>
-            <Button className="bg-success hover:bg-success/90" onClick={handleResolveTicket}>
+            <Button
+              className="bg-success hover:bg-success/90"
+              onClick={handleResolveTicket}
+            >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Resolve Ticket
             </Button>
@@ -1181,15 +1365,17 @@ export function SupportTicketing() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Configure Service Level Agreements for different ticket priorities. SLAs define
-              response and resolution time targets.
+              Configure Service Level Agreements for different ticket
+              priorities. SLAs define response and resolution time targets.
             </p>
             <div className="space-y-4">
               {slaConfigs.map((sla) => (
                 <div key={sla.id} className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Badge className={`${getPriorityColor(sla.priority)} border`}>
+                      <Badge
+                        className={`${getPriorityColor(sla.priority)} border`}
+                      >
                         {sla.priority}
                       </Badge>
                       <span className="font-medium">{sla.name}</span>
@@ -1249,4 +1435,3 @@ export function SupportTicketing() {
     </div>
   );
 }
-

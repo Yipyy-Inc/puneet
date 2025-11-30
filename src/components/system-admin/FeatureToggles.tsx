@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -73,8 +79,11 @@ export function FeatureToggles() {
   const [activeTab, setActiveTab] = useState("tenants");
   const [tenantConfigs, setTenantConfigs] = useState(tenantModuleConfigs);
   const [remoteFlags, setRemoteFlags] = useState(remoteConfigFlags);
-  const [selectedTenant, setSelectedTenant] = useState<TenantModuleConfig | null>(null);
-  const [selectedFlag, setSelectedFlag] = useState<RemoteConfigFlag | null>(null);
+  const [selectedTenant, setSelectedTenant] =
+    useState<TenantModuleConfig | null>(null);
+  const [selectedFlag, setSelectedFlag] = useState<RemoteConfigFlag | null>(
+    null,
+  );
   const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
   const [isNewFlagModalOpen, setIsNewFlagModalOpen] = useState(false);
@@ -118,7 +127,11 @@ export function FeatureToggles() {
     }
   };
 
-  const toggleTenantModule = (tenantId: string, moduleId: string, enable: boolean) => {
+  const toggleTenantModule = (
+    tenantId: string,
+    moduleId: string,
+    enable: boolean,
+  ) => {
     setTenantConfigs((prev) =>
       prev.map((config) => {
         if (config.tenantId === tenantId) {
@@ -127,7 +140,10 @@ export function FeatureToggles() {
             : config.enabledModules.filter((m) => m !== moduleId);
           const disabledModules = enable
             ? config.disabledModules.filter((m) => m !== moduleId)
-            : [...config.disabledModules.filter((m) => m !== moduleId), moduleId];
+            : [
+                ...config.disabledModules.filter((m) => m !== moduleId),
+                moduleId,
+              ];
           return {
             ...config,
             enabledModules,
@@ -136,7 +152,7 @@ export function FeatureToggles() {
           };
         }
         return config;
-      })
+      }),
     );
   };
 
@@ -156,8 +172,8 @@ export function FeatureToggles() {
               syncStatus: "synced" as const,
               version: flag.version + 1,
             }
-          : flag
-      )
+          : flag,
+      ),
     );
 
     setSyncingFlags((prev) => prev.filter((id) => id !== flagId));
@@ -172,9 +188,13 @@ export function FeatureToggles() {
     setRemoteFlags((prev) =>
       prev.map((flag) =>
         flag.syncStatus === "pending"
-          ? { ...flag, syncStatus: "synced" as const, lastSynced: new Date().toISOString() }
-          : flag
-      )
+          ? {
+              ...flag,
+              syncStatus: "synced" as const,
+              lastSynced: new Date().toISOString(),
+            }
+          : flag,
+      ),
     );
 
     setSyncingFlags([]);
@@ -200,7 +220,9 @@ export function FeatureToggles() {
       icon: Layers,
       defaultVisible: true,
       render: (config) => (
-        <Badge className={`${getTierBadge(config.subscriptionTier)} border capitalize`}>
+        <Badge
+          className={`${getTierBadge(config.subscriptionTier)} border capitalize`}
+        >
           {config.subscriptionTier}
         </Badge>
       ),
@@ -212,9 +234,13 @@ export function FeatureToggles() {
       defaultVisible: true,
       render: (config) => (
         <div className="flex items-center gap-2">
-          <span className="text-success font-medium">{config.enabledModules.length}</span>
+          <span className="text-success font-medium">
+            {config.enabledModules.length}
+          </span>
           <span className="text-muted-foreground">/</span>
-          <span className="text-muted-foreground">{availableModules.length}</span>
+          <span className="text-muted-foreground">
+            {availableModules.length}
+          </span>
         </div>
       ),
     },
@@ -238,7 +264,9 @@ export function FeatureToggles() {
       icon: Clock,
       defaultVisible: true,
       render: (config) => (
-        <span className="text-sm">{new Date(config.lastUpdated).toLocaleDateString()}</span>
+        <span className="text-sm">
+          {new Date(config.lastUpdated).toLocaleDateString()}
+        </span>
       ),
     },
   ];
@@ -296,7 +324,13 @@ export function FeatureToggles() {
                 disabled={syncingFlags.includes(flag.id)}
                 onCheckedChange={() => toggleRemoteFlag(flag.id)}
               />
-              <span className={flag.currentValue === "true" ? "text-success" : "text-muted-foreground"}>
+              <span
+                className={
+                  flag.currentValue === "true"
+                    ? "text-success"
+                    : "text-muted-foreground"
+                }
+              >
                 {flag.currentValue === "true" ? "Enabled" : "Disabled"}
               </span>
             </div>
@@ -337,7 +371,9 @@ export function FeatureToggles() {
           {syncingFlags.includes(flag.id) ? (
             <RefreshCw className="h-4 w-4 animate-spin text-primary" />
           ) : (
-            <Badge className={`${getSyncStatusBadge(flag.syncStatus)} border capitalize`}>
+            <Badge
+              className={`${getSyncStatusBadge(flag.syncStatus)} border capitalize`}
+            >
               {flag.syncStatus}
             </Badge>
           )}
@@ -405,15 +441,24 @@ export function FeatureToggles() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Feature Toggles & Remote Config</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Feature Toggles & Remote Config
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Enable/disable modules per tenant and manage remote configuration flags
+            Enable/disable modules per tenant and manage remote configuration
+            flags
           </p>
         </div>
         <div className="flex items-center gap-2">
           {stats.pendingSync > 0 && (
-            <Button variant="outline" onClick={syncAllFlags} disabled={syncingFlags.length > 0}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncingFlags.length > 0 ? "animate-spin" : ""}`} />
+            <Button
+              variant="outline"
+              onClick={syncAllFlags}
+              disabled={syncingFlags.length > 0}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${syncingFlags.length > 0 ? "animate-spin" : ""}`}
+              />
               Sync All ({stats.pendingSync})
             </Button>
           )}
@@ -491,9 +536,12 @@ export function FeatureToggles() {
         <TabsContent value="tenants" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Tenant Module Configuration</CardTitle>
+              <CardTitle className="text-lg">
+                Tenant Module Configuration
+              </CardTitle>
               <CardDescription>
-                Enable or disable modules for individual tenants. Click on a tenant to manage their modules.
+                Enable or disable modules for individual tenants. Click on a
+                tenant to manage their modules.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -530,9 +578,12 @@ export function FeatureToggles() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Remote Configuration Flags</CardTitle>
+                  <CardTitle className="text-lg">
+                    Remote Configuration Flags
+                  </CardTitle>
                   <CardDescription>
-                    Manage feature flags and configuration values. Changes are applied instantly.
+                    Manage feature flags and configuration values. Changes are
+                    applied instantly.
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -575,7 +626,9 @@ export function FeatureToggles() {
         <TabsContent value="history" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Configuration Change History</CardTitle>
+              <CardTitle className="text-lg">
+                Configuration Change History
+              </CardTitle>
               <CardDescription>
                 Audit log of all configuration changes with sync details
               </CardDescription>
@@ -610,9 +663,13 @@ export function FeatureToggles() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium capitalize">{log.action}</span>
+                        <span className="font-medium capitalize">
+                          {log.action}
+                        </span>
                         <span className="text-muted-foreground">•</span>
-                        <code className="text-sm bg-muted px-2 py-0.5 rounded">{log.configKey}</code>
+                        <code className="text-sm bg-muted px-2 py-0.5 rounded">
+                          {log.configKey}
+                        </code>
                       </div>
                       {log.previousValue && log.newValue && (
                         <div className="flex items-center gap-2 text-sm">
@@ -684,7 +741,8 @@ export function FeatureToggles() {
               {selectedTenant?.tenantName} - Module Configuration
             </DialogTitle>
             <DialogDescription>
-              Enable or disable modules for this tenant. Changes are applied instantly.
+              Enable or disable modules for this tenant. Changes are applied
+              instantly.
             </DialogDescription>
           </DialogHeader>
 
@@ -693,13 +751,19 @@ export function FeatureToggles() {
               {/* Tenant Info */}
               <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Subscription Tier</p>
-                  <Badge className={`${getTierBadge(selectedTenant.subscriptionTier)} border capitalize mt-1`}>
+                  <p className="text-sm text-muted-foreground">
+                    Subscription Tier
+                  </p>
+                  <Badge
+                    className={`${getTierBadge(selectedTenant.subscriptionTier)} border capitalize mt-1`}
+                  >
                     {selectedTenant.subscriptionTier}
                   </Badge>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Enabled Modules</p>
+                  <p className="text-sm text-muted-foreground">
+                    Enabled Modules
+                  </p>
                   <p className="text-2xl font-bold text-success">
                     {selectedTenant.enabledModules.length}
                   </p>
@@ -717,30 +781,43 @@ export function FeatureToggles() {
                 <h4 className="font-semibold">Available Modules</h4>
                 <div className="grid gap-3">
                   {availableModules.map((module) => {
-                    const isEnabled = selectedTenant.enabledModules.includes(module.id);
+                    const isEnabled = selectedTenant.enabledModules.includes(
+                      module.id,
+                    );
                     const hasOverride = selectedTenant.moduleOverrides.find(
-                      (o) => o.moduleId === module.id
+                      (o) => o.moduleId === module.id,
                     );
                     const tierAllowed =
                       module.tier === "all" ||
                       (module.tier === "pro" &&
-                        ["pro", "enterprise", "custom"].includes(selectedTenant.subscriptionTier)) ||
+                        ["pro", "enterprise", "custom"].includes(
+                          selectedTenant.subscriptionTier,
+                        )) ||
                       (module.tier === "enterprise" &&
-                        ["enterprise", "custom"].includes(selectedTenant.subscriptionTier));
+                        ["enterprise", "custom"].includes(
+                          selectedTenant.subscriptionTier,
+                        ));
 
                     return (
                       <div
                         key={module.id}
                         className={`flex items-center justify-between p-4 border rounded-lg ${
-                          isEnabled ? "border-success/30 bg-success/5" : "border-muted"
+                          isEnabled
+                            ? "border-success/30 bg-success/5"
+                            : "border-muted"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Package className={`h-5 w-5 ${isEnabled ? "text-success" : "text-muted-foreground"}`} />
+                          <Package
+                            className={`h-5 w-5 ${isEnabled ? "text-success" : "text-muted-foreground"}`}
+                          />
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-medium">{module.name}</p>
-                              <Badge variant="outline" className="text-xs capitalize">
+                              <Badge
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
                                 {module.category}
                               </Badge>
                               {hasOverride && (
@@ -750,13 +827,19 @@ export function FeatureToggles() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              Required tier: {module.tier === "all" ? "All tiers" : `${module.tier}+`}
+                              Required tier:{" "}
+                              {module.tier === "all"
+                                ? "All tiers"
+                                : `${module.tier}+`}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           {!tierAllowed && !hasOverride && (
-                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-muted-foreground"
+                            >
                               Tier upgrade required
                             </Badge>
                           )}
@@ -764,7 +847,11 @@ export function FeatureToggles() {
                             checked={isEnabled}
                             disabled={!tierAllowed && !hasOverride}
                             onCheckedChange={(checked) =>
-                              toggleTenantModule(selectedTenant.tenantId, module.id, checked)
+                              toggleTenantModule(
+                                selectedTenant.tenantId,
+                                module.id,
+                                checked,
+                              )
                             }
                           />
                         </div>
@@ -789,14 +876,23 @@ export function FeatureToggles() {
                       >
                         <div>
                           <p className="font-medium">{override.moduleName}</p>
-                          <p className="text-sm text-muted-foreground">{override.overrideReason}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {override.overrideReason}
+                          </p>
                           {override.expiresAt && (
                             <p className="text-xs text-warning mt-1">
-                              Expires: {new Date(override.expiresAt).toLocaleDateString()}
+                              Expires:{" "}
+                              {new Date(
+                                override.expiresAt,
+                              ).toLocaleDateString()}
                             </p>
                           )}
                         </div>
-                        <Button variant="ghost" size="sm" className="text-destructive">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -808,7 +904,10 @@ export function FeatureToggles() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTenantModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsTenantModalOpen(false)}
+            >
               Close
             </Button>
             <Button>
@@ -828,13 +927,17 @@ export function FeatureToggles() {
               {selectedFlag?.name}
             </DialogTitle>
             <DialogDescription>
-              <code className="text-sm bg-muted px-2 py-0.5 rounded">{selectedFlag?.key}</code>
+              <code className="text-sm bg-muted px-2 py-0.5 rounded">
+                {selectedFlag?.key}
+              </code>
             </DialogDescription>
           </DialogHeader>
 
           {selectedFlag && (
             <div className="space-y-6 py-4">
-              <p className="text-muted-foreground">{selectedFlag.description}</p>
+              <p className="text-muted-foreground">
+                {selectedFlag.description}
+              </p>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-muted/50 rounded-lg">
@@ -845,12 +948,16 @@ export function FeatureToggles() {
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">Scope</p>
-                  <Badge className={`${getScopeBadge(selectedFlag.scope).color} border-0`}>
+                  <Badge
+                    className={`${getScopeBadge(selectedFlag.scope).color} border-0`}
+                  >
                     {selectedFlag.scope}
                   </Badge>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Environment</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Environment
+                  </p>
                   <Badge variant="outline">{selectedFlag.environment}</Badge>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
@@ -861,7 +968,11 @@ export function FeatureToggles() {
 
               <div className="space-y-2">
                 <Label>Default Value</Label>
-                <Input value={selectedFlag.defaultValue} readOnly className="font-mono" />
+                <Input
+                  value={selectedFlag.defaultValue}
+                  readOnly
+                  className="font-mono"
+                />
               </div>
 
               <div className="space-y-2">
@@ -873,39 +984,57 @@ export function FeatureToggles() {
                       disabled={syncingFlags.includes(selectedFlag.id)}
                       onCheckedChange={() => toggleRemoteFlag(selectedFlag.id)}
                     />
-                    <span className={selectedFlag.currentValue === "true" ? "text-success" : ""}>
-                      {selectedFlag.currentValue === "true" ? "Enabled" : "Disabled"}
+                    <span
+                      className={
+                        selectedFlag.currentValue === "true"
+                          ? "text-success"
+                          : ""
+                      }
+                    >
+                      {selectedFlag.currentValue === "true"
+                        ? "Enabled"
+                        : "Disabled"}
                     </span>
                     {syncingFlags.includes(selectedFlag.id) && (
                       <RefreshCw className="h-4 w-4 animate-spin ml-auto" />
                     )}
                   </div>
                 ) : (
-                  <Textarea value={selectedFlag.currentValue} className="font-mono" rows={3} />
+                  <Textarea
+                    value={selectedFlag.currentValue}
+                    className="font-mono"
+                    rows={3}
+                  />
                 )}
               </div>
 
-              {selectedFlag.targetTenants && selectedFlag.targetTenants.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Target Tenants</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedFlag.targetTenants.map((tenantId) => {
-                      const tenant = tenantConfigs.find((t) => t.tenantId === tenantId);
-                      return (
-                        <Badge key={tenantId} variant="outline">
-                          {tenant?.tenantName || tenantId}
-                        </Badge>
-                      );
-                    })}
+              {selectedFlag.targetTenants &&
+                selectedFlag.targetTenants.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Target Tenants</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFlag.targetTenants.map((tenantId) => {
+                        const tenant = tenantConfigs.find(
+                          (t) => t.tenantId === tenantId,
+                        );
+                        return (
+                          <Badge key={tenantId} variant="outline">
+                            {tenant?.tenantName || tenantId}
+                          </Badge>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
                 <span className="text-muted-foreground">
-                  Last synced: {new Date(selectedFlag.lastSynced).toLocaleString()}
+                  Last synced:{" "}
+                  {new Date(selectedFlag.lastSynced).toLocaleString()}
                 </span>
-                <Badge className={`${getSyncStatusBadge(selectedFlag.syncStatus)} border`}>
+                <Badge
+                  className={`${getSyncStatusBadge(selectedFlag.syncStatus)} border`}
+                >
                   {selectedFlag.syncStatus}
                 </Badge>
               </div>
@@ -949,7 +1078,10 @@ export function FeatureToggles() {
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea placeholder="Describe what this flag controls..." rows={2} />
+              <Textarea
+                placeholder="Describe what this flag controls..."
+                rows={2}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1000,7 +1132,10 @@ export function FeatureToggles() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewFlagModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewFlagModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button>
@@ -1013,4 +1148,3 @@ export function FeatureToggles() {
     </div>
   );
 }
-

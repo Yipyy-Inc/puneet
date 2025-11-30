@@ -272,20 +272,85 @@ export const supportedCurrencies: CurrencyOption[] = [
 
 // Common Timezones
 export const timezones: TimezoneOption[] = [
-  { value: "America/New_York", label: "Eastern Time (US & Canada)", offset: "UTC-05:00", region: "Americas" },
-  { value: "America/Chicago", label: "Central Time (US & Canada)", offset: "UTC-06:00", region: "Americas" },
-  { value: "America/Denver", label: "Mountain Time (US & Canada)", offset: "UTC-07:00", region: "Americas" },
-  { value: "America/Los_Angeles", label: "Pacific Time (US & Canada)", offset: "UTC-08:00", region: "Americas" },
-  { value: "America/Toronto", label: "Eastern Time (Canada)", offset: "UTC-05:00", region: "Americas" },
-  { value: "America/Vancouver", label: "Pacific Time (Canada)", offset: "UTC-08:00", region: "Americas" },
-  { value: "America/Montreal", label: "Eastern Time (Montreal)", offset: "UTC-05:00", region: "Americas" },
-  { value: "Europe/London", label: "London", offset: "UTC+00:00", region: "Europe" },
-  { value: "Europe/Paris", label: "Paris", offset: "UTC+01:00", region: "Europe" },
-  { value: "Europe/Berlin", label: "Berlin", offset: "UTC+01:00", region: "Europe" },
+  {
+    value: "America/New_York",
+    label: "Eastern Time (US & Canada)",
+    offset: "UTC-05:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Chicago",
+    label: "Central Time (US & Canada)",
+    offset: "UTC-06:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Denver",
+    label: "Mountain Time (US & Canada)",
+    offset: "UTC-07:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Los_Angeles",
+    label: "Pacific Time (US & Canada)",
+    offset: "UTC-08:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Toronto",
+    label: "Eastern Time (Canada)",
+    offset: "UTC-05:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Vancouver",
+    label: "Pacific Time (Canada)",
+    offset: "UTC-08:00",
+    region: "Americas",
+  },
+  {
+    value: "America/Montreal",
+    label: "Eastern Time (Montreal)",
+    offset: "UTC-05:00",
+    region: "Americas",
+  },
+  {
+    value: "Europe/London",
+    label: "London",
+    offset: "UTC+00:00",
+    region: "Europe",
+  },
+  {
+    value: "Europe/Paris",
+    label: "Paris",
+    offset: "UTC+01:00",
+    region: "Europe",
+  },
+  {
+    value: "Europe/Berlin",
+    label: "Berlin",
+    offset: "UTC+01:00",
+    region: "Europe",
+  },
   { value: "Asia/Tokyo", label: "Tokyo", offset: "UTC+09:00", region: "Asia" },
-  { value: "Asia/Shanghai", label: "Shanghai", offset: "UTC+08:00", region: "Asia" },
-  { value: "Australia/Sydney", label: "Sydney", offset: "UTC+11:00", region: "Oceania" },
-  { value: "UTC", label: "Coordinated Universal Time", offset: "UTC+00:00", region: "UTC" },
+  {
+    value: "Asia/Shanghai",
+    label: "Shanghai",
+    offset: "UTC+08:00",
+    region: "Asia",
+  },
+  {
+    value: "Australia/Sydney",
+    label: "Sydney",
+    offset: "UTC+11:00",
+    region: "Oceania",
+  },
+  {
+    value: "UTC",
+    label: "Coordinated Universal Time",
+    offset: "UTC+00:00",
+    region: "UTC",
+  },
 ];
 
 // Date Format Options
@@ -317,11 +382,22 @@ export const systemDefaults: SystemDefaults = {
   requireMfa: false,
   allowSocialLogin: true,
   maintenanceMode: false,
-  maintenanceMessage: "The system is currently undergoing scheduled maintenance. Please check back soon.",
+  maintenanceMessage:
+    "The system is currently undergoing scheduled maintenance. Please check back soon.",
   registrationEnabled: true,
   trialPeriodDays: 30,
   maxFileSizeMb: 10,
-  allowedFileTypes: ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx", "xls", "xlsx"],
+  allowedFileTypes: [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+  ],
   defaultPaginationSize: 25,
   enableNotifications: true,
   enableEmailNotifications: true,
@@ -416,13 +492,52 @@ export const emailTemplates: EmailTemplate[] = [
 
 // Color Presets for Branding
 export const colorPresets = [
-  { name: "Ocean Blue", primary: "#0ea5e9", secondary: "#06b6d4", accent: "#f59e0b" },
-  { name: "Royal Purple", primary: "#8b5cf6", secondary: "#a855f7", accent: "#ec4899" },
-  { name: "Forest Green", primary: "#22c55e", secondary: "#10b981", accent: "#f59e0b" },
-  { name: "Sunset Orange", primary: "#f97316", secondary: "#fb923c", accent: "#8b5cf6" },
-  { name: "Rose Pink", primary: "#ec4899", secondary: "#f472b6", accent: "#06b6d4" },
-  { name: "Slate Gray", primary: "#64748b", secondary: "#475569", accent: "#0ea5e9" },
-  { name: "Crimson Red", primary: "#ef4444", secondary: "#f87171", accent: "#fbbf24" },
-  { name: "Emerald", primary: "#10b981", secondary: "#34d399", accent: "#f59e0b" },
+  {
+    name: "Ocean Blue",
+    primary: "#0ea5e9",
+    secondary: "#06b6d4",
+    accent: "#f59e0b",
+  },
+  {
+    name: "Royal Purple",
+    primary: "#8b5cf6",
+    secondary: "#a855f7",
+    accent: "#ec4899",
+  },
+  {
+    name: "Forest Green",
+    primary: "#22c55e",
+    secondary: "#10b981",
+    accent: "#f59e0b",
+  },
+  {
+    name: "Sunset Orange",
+    primary: "#f97316",
+    secondary: "#fb923c",
+    accent: "#8b5cf6",
+  },
+  {
+    name: "Rose Pink",
+    primary: "#ec4899",
+    secondary: "#f472b6",
+    accent: "#06b6d4",
+  },
+  {
+    name: "Slate Gray",
+    primary: "#64748b",
+    secondary: "#475569",
+    accent: "#0ea5e9",
+  },
+  {
+    name: "Crimson Red",
+    primary: "#ef4444",
+    secondary: "#f87171",
+    accent: "#fbbf24",
+  },
+  {
+    name: "Emerald",
+    primary: "#10b981",
+    secondary: "#34d399",
+    accent: "#f59e0b",
+  },
 ];
-

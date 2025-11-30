@@ -79,7 +79,7 @@ export function TenantActivityLogs({
   const [selectedActivity, setSelectedActivity] =
     useState<TenantActivityLog | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<TenantAuditLog | null>(
-    null
+    null,
   );
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [auditFilter, setAuditFilter] = useState<string>("all");
@@ -89,15 +89,12 @@ export function TenantActivityLogs({
 
   const activityLogs = useMemo(
     () => getTenantActivityLogs(facilityId),
-    [facilityId]
+    [facilityId],
   );
-  const auditLogs = useMemo(
-    () => getTenantAuditLogs(facilityId),
-    [facilityId]
-  );
+  const auditLogs = useMemo(() => getTenantAuditLogs(facilityId), [facilityId]);
   const statistics = useMemo(
     () => getTenantLogStatistics(facilityId),
-    [facilityId]
+    [facilityId],
   );
 
   const filteredActivityLogs = useMemo(() => {
@@ -563,7 +560,11 @@ export function TenantActivityLogs({
                     boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                   }}
                 />
-                <Bar dataKey="actionCount" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar
+                  dataKey="actionCount"
+                  fill="#3b82f6"
+                  radius={[0, 4, 4, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -755,7 +756,9 @@ export function TenantActivityLogs({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-sm">{log.userName}</div>
+                        <div className="font-medium text-sm">
+                          {log.userName}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {log.userRole}
                         </div>
@@ -775,7 +778,9 @@ export function TenantActivityLogs({
                       <td className="px-4 py-3">
                         {getSeverityBadge(log.severity)}
                       </td>
-                      <td className="px-4 py-3">{getStatusBadge(log.status)}</td>
+                      <td className="px-4 py-3">
+                        {getStatusBadge(log.status)}
+                      </td>
                       <td className="px-4 py-3">
                         <Button
                           variant="ghost"
@@ -840,9 +845,7 @@ export function TenantActivityLogs({
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Timestamp
                   </p>
-                  <p>
-                    {new Date(selectedActivity.timestamp).toLocaleString()}
-                  </p>
+                  <p>{new Date(selectedActivity.timestamp).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -915,7 +918,9 @@ export function TenantActivityLogs({
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Action
                   </p>
-                  <p className="text-lg font-semibold">{selectedAudit.action}</p>
+                  <p className="text-lg font-semibold">
+                    {selectedAudit.action}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -957,13 +962,17 @@ export function TenantActivityLogs({
                     <p className="text-xs text-muted-foreground mb-1">
                       IP Address
                     </p>
-                    <p className="font-mono text-sm">{selectedAudit.ipAddress}</p>
+                    <p className="font-mono text-sm">
+                      {selectedAudit.ipAddress}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">
                       User Agent
                     </p>
-                    <p className="text-sm truncate">{selectedAudit.userAgent}</p>
+                    <p className="text-sm truncate">
+                      {selectedAudit.userAgent}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1048,4 +1057,3 @@ export function TenantActivityLogs({
     </div>
   );
 }
-
