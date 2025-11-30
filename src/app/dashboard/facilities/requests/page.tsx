@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Eye, Check, X, ArrowLeft } from "lucide-react";
 import { facilityRequests, FacilityRequest } from "@/data/facility-requests";
 

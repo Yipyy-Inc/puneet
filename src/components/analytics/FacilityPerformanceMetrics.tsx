@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { facilityPerformance, FacilityPerformance } from "@/data/analytics";
 import {
   TrendingUp,

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/DataTable";
+import { DataTable } from "@/components/ui/DataTable";
 import { auditLogs, auditStatistics } from "@/data/system-administration";
 import {
   Shield,

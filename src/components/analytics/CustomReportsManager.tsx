@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { customReports, CustomReport } from "@/data/analytics";
 import { LucideIcon } from "lucide-react";
 import {

@@ -5,7 +5,6 @@ import {
   Shield,
   Home,
   Wrench,
-  Layers,
   UserCog,
   Activity,
   KeyRound,
@@ -30,21 +29,22 @@ import {
 import { useTranslations } from "next-intl";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
+import Image from "next/image";
 
 function SidebarLogo() {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className="flex items-center justify-center w-10 h-10 rounded-xl shadow-sm"
-        style={{
-          background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-        }}
-      >
-        <Layers className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-center w-10 h-10">
+        <Image
+          src="/transparent-logo.svg"
+          alt="Yipyy Logo"
+          width={40}
+          height={40}
+        />
       </div>
       <div className="flex flex-col">
         <span className="text-base font-bold text-foreground tracking-tight">
-          PetCare
+          Puneet
         </span>
         <span className="text-[11px] font-medium text-muted-foreground -mt-0.5">
           Platform Admin

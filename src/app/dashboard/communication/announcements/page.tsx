@@ -30,13 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   announcements as initialAnnouncements,
   Announcement,
 } from "@/data/announcements";
 import { facilities } from "@/data/facilities";
-import { StatCard } from "@/components/StatCard";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   Megaphone,
   Plus,

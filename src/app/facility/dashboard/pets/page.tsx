@@ -6,7 +6,7 @@ import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,

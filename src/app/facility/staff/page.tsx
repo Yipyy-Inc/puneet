@@ -123,8 +123,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { StatusBadge } from "@/components/StatusBadge";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,

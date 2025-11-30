@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,

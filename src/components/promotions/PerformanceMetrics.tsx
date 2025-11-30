@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import {
   LineChart,

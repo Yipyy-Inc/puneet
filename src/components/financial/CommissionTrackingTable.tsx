@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { commissionTracking, CommissionTracking } from "@/data/revenue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

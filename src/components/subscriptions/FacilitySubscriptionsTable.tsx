@@ -6,7 +6,7 @@ import {
   facilitySubscriptions,
   getSubscriptionsByStatus,
 } from "@/data/facility-subscriptions";
-import { DataTable, ColumnDef } from "@/components/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

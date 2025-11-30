@@ -19,8 +19,11 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Pet Services Dashboard",
+  title: "Yipyy - Pet Services",
   description: "Manage your pet care business with ease",
+  icons: {
+    icon: "/transparent-logo.svg",
+  },
 };
 
 export default async function RootLayout({
