@@ -19,6 +19,7 @@ import {
   GraduationCap,
   ShoppingCart,
   Bed,
+  Tags,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -83,6 +84,12 @@ export function FacilitySidebar() {
           title: t("scheduling"),
           url: "/facility/scheduling",
           icon: Clock,
+          disabled: false,
+        },
+        {
+          title: "Services & Pricing",
+          url: "/facility/services",
+          icon: Tags,
           disabled: false,
         },
       ],
