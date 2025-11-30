@@ -646,7 +646,7 @@ export function SupportTicketing() {
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <div className="relative">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-semibold text-lg">
+                      <div className="h-12 w-12 rounded-full bg-linear-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-semibold text-lg">
                         {agent.name.charAt(0)}
                       </div>
                       <span

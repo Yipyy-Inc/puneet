@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreatePetModal } from "@/components/pets/CreatePetModal";
+import { PetModal } from "@/components/modals/PetModal";
 import { Download, Heart, User, Eye, Dog, Cat, Plus } from "lucide-react";
 
 interface Pet extends Record<string, unknown> {
@@ -350,108 +351,14 @@ export default function FacilityPetsPage() {
 
       {/* View Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
           <div className="p-6 flex-1 overflow-y-auto">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="flex items-center gap-2">
-                {selectedPet?.type === "Dog" ? (
-                  <Dog className="h-5 w-5" />
-                ) : (
-                  <Cat className="h-5 w-5" />
-                )}
-                {selectedPet?.name}
+            <DialogHeader className="mb-0">
+              <DialogTitle className="sr-only">
+                {selectedPet?.name} - Pet Details
               </DialogTitle>
             </DialogHeader>
-            {selectedPet && (
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold">
-                      Basic Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Type</p>
-                        <p className="font-medium">{selectedPet.type}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Breed</p>
-                        <p className="font-medium">{selectedPet.breed}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Age</p>
-                        <p className="font-medium">
-                          {selectedPet.age}{" "}
-                          {selectedPet.age === 1 ? "year" : "years"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Weight</p>
-                        <p className="font-medium">{selectedPet.weight} kg</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Color</p>
-                        <p className="font-medium">{selectedPet.color}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Microchip
-                        </p>
-                        <p className="font-medium font-mono text-sm">
-                          {selectedPet.microchip}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold">
-                      Medical Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Allergies</p>
-                      <p className="font-medium">{selectedPet.allergies}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Special Needs
-                      </p>
-                      <p className="font-medium">{selectedPet.specialNeeds}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold">
-                      Owner Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Name</p>
-                      <p className="font-medium">{selectedPet.owner}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{selectedPet.ownerEmail}</p>
-                    </div>
-                    {selectedPet.ownerPhone && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <p className="font-medium">{selectedPet.ownerPhone}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            {selectedPet && <PetModal pet={selectedPet} />}
           </div>
         </DialogContent>
       </Dialog>

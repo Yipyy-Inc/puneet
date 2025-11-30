@@ -241,28 +241,28 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### Customer Management
 
-- [ ] 🟢 Searchable list of customer files
+- [x] 🟢 Searchable list of customer files
 - [ ] 🟡 Merge duplicates
 - [ ] 🟡 Import CSV
-- [ ] 🟢 Customer profiles: contact info, email, phone, address
-- [ ] 🟢 Pets linked to customer
-- [ ] 🟢 Booking history
-- [ ] 🟢 Docs / agreements storage
-- [ ] 🟠 Communications log (unified view)
-- [ ] 🟠 Call history with recordings
+- [x] 🟢 Customer profiles: contact info, email, phone, address
+- [x] 🟢 Pets linked to customer
+- [x] 🟢 Booking history
+- [x] 🟢 Docs / agreements storage
+- [x] 🟠 Communications log (unified view)
+- [x] 🟠 Call history with recordings
 - [ ] 🟡 Staff interaction log (who they spoke to)
-- [ ] 🟠 Quick buttons: Book, Message, Charge, Apply Credit
+- [x] 🟠 Quick buttons: Book, Message, Charge, Apply Credit
 
 ### Pet Management
 
-- [ ] 🟢 Searchable pet profiles list
-- [ ] 🟠 Pet photo gallery
-- [ ] 🟠 Vaccinations with auto-expiry reminder (to facility AND parents)
-- [ ] 🟢 Medical / diet / behaviour info
-- [ ] 🟢 Stay history
-- [ ] 🟢 Report cards
+- [x] 🟢 Searchable pet profiles list
+- [x] 🟠 Pet photo gallery
+- [x] 🟠 Vaccinations with auto-expiry reminder (to facility AND parents)
+- [x] 🟢 Medical / diet / behaviour info
+- [x] 🟢 Stay history
+- [x] 🟢 Report cards
 - [ ] 🟡 Badge wall for pets
-- [ ] 🟢 Vaccination PDF upload & reminder push
+- [x] 🟢 Vaccination PDF upload & reminder push
 
 ### Behaviour Tags (Staff-Only, Internal)
 
