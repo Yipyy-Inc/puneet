@@ -89,9 +89,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Compliance & Data Tools**
 
-* [ ] 🟢 GDPR export/delete
-* [ ] 🟠 Data retention policies
-* [ ] 🟠 Backups + manual export
+* [x] 🟢 GDPR export/delete
+* [x] 🟠 Data retention policies
+* [x] 🟠 Backups + manual export
 * [ ] 🟡 Backup verification
 * [ ] 🟡 Point-in-time recovery
 * [ ] 🟡 Disaster recovery workflows
@@ -101,9 +101,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Support & Ticketing**
 
-* [ ] 🟢 View/assign tickets
-* [ ] 🟠 Priorities & SLAs
-* [ ] 🟠 Ticket history & timeline
+* [x] 🟢 View/assign tickets
+* [x] 🟠 Priorities & SLAs
+* [x] 🟠 Ticket history & timeline
 * [ ] 🟡 Real-time chat support
 * [ ] 🟡 Multiple concurrent chats
 * [ ] 🟡 Feature request tracking

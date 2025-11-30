@@ -27,6 +27,7 @@ import {
   CheckSquare,
   AlertTriangle,
   Globe,
+  Ticket,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -234,6 +235,12 @@ export function AppSidebar() {
           title: t("globalSettings"),
           url: "/dashboard/system-admin/global-settings",
           icon: Globe,
+          disabled: false,
+        },
+        {
+          title: t("supportTicketing"),
+          url: "/dashboard/system-admin/support-ticketing",
+          icon: Ticket,
           disabled: false,
         },
         {

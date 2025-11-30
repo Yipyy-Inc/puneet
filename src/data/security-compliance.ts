@@ -310,6 +310,33 @@ export interface AuditTrail {
   dataClassification: "Public" | "Internal" | "Confidential" | "Restricted";
 }
 
+// GDPR Data Subject Request Types
+export interface DataSubjectRequest {
+  id: string;
+  requestType: "Export" | "Deletion" | "Rectification" | "Restriction" | "Objection";
+  requesterId: string;
+  requesterName: string;
+  requesterEmail: string;
+  facilityId?: string;
+  facilityName?: string;
+  submittedAt: string;
+  deadline: string; // GDPR requires response within 30 days
+  status: "Pending" | "In Progress" | "Completed" | "Rejected" | "Extended";
+  assignedTo?: string;
+  assignedAt?: string;
+  completedAt?: string;
+  dataCategories: string[];
+  verificationStatus: "Pending" | "Verified" | "Failed";
+  verificationMethod?: string;
+  verifiedAt?: string;
+  notes?: string;
+  rejectionReason?: string;
+  extensionReason?: string;
+  exportFileUrl?: string;
+  deletionConfirmation?: boolean;
+  auditLogId?: string;
+}
+
 // Mock Data
 export const mfaSettings: MFASettings[] = [
   {
@@ -1152,3 +1179,172 @@ export const auditTrails: AuditTrail[] = [
     dataClassification: "Confidential",
   },
 ];
+
+// GDPR Data Subject Requests Mock Data
+export const dataSubjectRequests: DataSubjectRequest[] = [
+  {
+    id: "dsr-001",
+    requestType: "Export",
+    requesterId: "client-1001",
+    requesterName: "Alice Johnson",
+    requesterEmail: "alice.johnson@email.com",
+    facilityId: "fac-001",
+    facilityName: "Paws & Play Daycare",
+    submittedAt: "2025-11-28T10:30:00Z",
+    deadline: "2025-12-28T10:30:00Z",
+    status: "Pending",
+    dataCategories: ["Personal Info", "Booking History", "Payment Records", "Pet Information"],
+    verificationStatus: "Verified",
+    verificationMethod: "Email Verification",
+    verifiedAt: "2025-11-28T11:00:00Z",
+    notes: "Customer requested full data export for personal records",
+  },
+  {
+    id: "dsr-002",
+    requestType: "Deletion",
+    requesterId: "client-1002",
+    requesterName: "Bob Smith",
+    requesterEmail: "bob.smith@email.com",
+    facilityId: "fac-002",
+    facilityName: "Furry Friends Grooming",
+    submittedAt: "2025-11-25T14:15:00Z",
+    deadline: "2025-12-25T14:15:00Z",
+    status: "In Progress",
+    assignedTo: "Mike Support",
+    assignedAt: "2025-11-26T09:00:00Z",
+    dataCategories: ["Personal Info", "Account Data", "Communication History"],
+    verificationStatus: "Verified",
+    verificationMethod: "ID Document + Email",
+    verifiedAt: "2025-11-25T16:00:00Z",
+    notes: "Customer closing account, requested full data deletion",
+  },
+  {
+    id: "dsr-003",
+    requestType: "Export",
+    requesterId: "client-1003",
+    requesterName: "Carol White",
+    requesterEmail: "carol.white@email.com",
+    facilityId: "fac-001",
+    facilityName: "Paws & Play Daycare",
+    submittedAt: "2025-11-20T09:00:00Z",
+    deadline: "2025-12-20T09:00:00Z",
+    status: "Completed",
+    assignedTo: "Emily Tech",
+    assignedAt: "2025-11-20T10:30:00Z",
+    completedAt: "2025-11-22T15:45:00Z",
+    dataCategories: ["Personal Info", "Booking History", "Pet Information", "Invoices"],
+    verificationStatus: "Verified",
+    verificationMethod: "Email Verification",
+    verifiedAt: "2025-11-20T09:30:00Z",
+    exportFileUrl: "/exports/dsr-003-carol-white-export.zip",
+    auditLogId: "audit-export-003",
+  },
+  {
+    id: "dsr-004",
+    requestType: "Deletion",
+    requesterId: "client-1004",
+    requesterName: "David Brown",
+    requesterEmail: "david.brown@email.com",
+    submittedAt: "2025-11-18T11:30:00Z",
+    deadline: "2025-12-18T11:30:00Z",
+    status: "Completed",
+    assignedTo: "John Admin",
+    assignedAt: "2025-11-18T14:00:00Z",
+    completedAt: "2025-11-19T16:30:00Z",
+    dataCategories: ["Personal Info", "Account Data", "Booking History", "Payment Records"],
+    verificationStatus: "Verified",
+    verificationMethod: "ID Document + Phone Verification",
+    verifiedAt: "2025-11-18T13:00:00Z",
+    deletionConfirmation: true,
+    auditLogId: "audit-delete-004",
+    notes: "All personal data successfully deleted and anonymized where required",
+  },
+  {
+    id: "dsr-005",
+    requestType: "Rectification",
+    requesterId: "client-1005",
+    requesterName: "Eva Martinez",
+    requesterEmail: "eva.martinez@email.com",
+    facilityId: "fac-003",
+    facilityName: "Happy Tails Boarding",
+    submittedAt: "2025-11-27T16:45:00Z",
+    deadline: "2025-12-27T16:45:00Z",
+    status: "Pending",
+    dataCategories: ["Personal Info"],
+    verificationStatus: "Pending",
+    notes: "Customer requesting correction of address and phone number",
+  },
+  {
+    id: "dsr-006",
+    requestType: "Export",
+    requesterId: "client-1006",
+    requesterName: "Frank Wilson",
+    requesterEmail: "frank.wilson@email.com",
+    facilityId: "fac-001",
+    facilityName: "Paws & Play Daycare",
+    submittedAt: "2025-11-10T08:00:00Z",
+    deadline: "2025-12-10T08:00:00Z",
+    status: "Rejected",
+    assignedTo: "Sarah Manager",
+    assignedAt: "2025-11-10T09:30:00Z",
+    completedAt: "2025-11-10T14:00:00Z",
+    dataCategories: ["Personal Info", "Booking History"],
+    verificationStatus: "Failed",
+    verificationMethod: "Email Verification",
+    rejectionReason: "Unable to verify requester identity - email address does not match account",
+    notes: "Request rejected due to failed identity verification. User advised to contact support.",
+  },
+  {
+    id: "dsr-007",
+    requestType: "Deletion",
+    requesterId: "client-1007",
+    requesterName: "Grace Lee",
+    requesterEmail: "grace.lee@email.com",
+    facilityId: "fac-002",
+    facilityName: "Furry Friends Grooming",
+    submittedAt: "2025-11-15T13:20:00Z",
+    deadline: "2026-01-14T13:20:00Z",
+    status: "Extended",
+    assignedTo: "Mike Support",
+    assignedAt: "2025-11-16T10:00:00Z",
+    dataCategories: ["Personal Info", "Account Data", "Payment Records", "Communication History"],
+    verificationStatus: "Verified",
+    verificationMethod: "ID Document",
+    verifiedAt: "2025-11-15T15:00:00Z",
+    extensionReason: "Complex request involving multiple facilities and legacy systems. Extension communicated to requester.",
+    notes: "User has data across 3 facilities requiring coordinated deletion",
+  },
+];
+
+// Data Subject Request Statistics
+export interface DataSubjectRequestStats {
+  totalRequests: number;
+  pendingRequests: number;
+  inProgressRequests: number;
+  completedRequests: number;
+  rejectedRequests: number;
+  avgCompletionDays: number;
+  exportRequests: number;
+  deletionRequests: number;
+  rectificationRequests: number;
+  complianceRate: number;
+  overdueRequests: number;
+  thisMonthRequests: number;
+  lastMonthRequests: number;
+}
+
+export const dataSubjectRequestStats: DataSubjectRequestStats = {
+  totalRequests: 156,
+  pendingRequests: 8,
+  inProgressRequests: 12,
+  completedRequests: 128,
+  rejectedRequests: 8,
+  avgCompletionDays: 4.2,
+  exportRequests: 89,
+  deletionRequests: 52,
+  rectificationRequests: 15,
+  complianceRate: 98.5,
+  overdueRequests: 0,
+  thisMonthRequests: 23,
+  lastMonthRequests: 31,
+};

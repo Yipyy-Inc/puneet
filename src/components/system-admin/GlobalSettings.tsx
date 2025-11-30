@@ -644,7 +644,7 @@ export function GlobalSettings() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-8 text-center font-mono text-xs text-muted-foreground uppercase">
+                        <div className="shrink-0 w-8 text-center font-mono text-xs text-muted-foreground uppercase">
                           {lang.code}
                         </div>
                         <div>
@@ -718,7 +718,7 @@ export function GlobalSettings() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-12 h-8 flex items-center justify-center rounded bg-muted font-mono text-sm font-bold">
+                        <div className="shrink-0 w-12 h-8 flex items-center justify-center rounded bg-muted font-mono text-sm font-bold">
                           {curr.symbol}
                         </div>
                         <div>
