@@ -11,6 +11,7 @@ import {
 import { plans } from "@/data/plans";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FacilityReports } from "@/components/facility/FacilityReports";
+import { TenantActivityLogs } from "@/components/facility/TenantActivityLogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,8 @@ import {
   Puzzle,
   Edit,
   PawPrint,
+  Shield,
+  ChevronDown,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -230,8 +233,9 @@ export default function FacilityDetailPage() {
   } | null>(null);
   const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
   const [showModulesDialog, setShowModulesDialog] = useState(false);
+  const [showLogsSection, setShowLogsSection] = useState(false);
   const [enabledModules, setEnabledModules] = useState<string[]>(
-    facility.enabledModules || [],
+    facility.enabledModules || []
   );
   const [showLimitsDialog, setShowLimitsDialog] = useState(false);
   const [editableLimits, setEditableLimits] = useState({
@@ -250,14 +254,14 @@ export default function FacilityDetailPage() {
   const [selectedPlan, setSelectedPlan] = useState(facility.plan);
 
   const activeClients = facility.clients.filter(
-    (c) => c.status === "active",
+    (c) => c.status === "active"
   ).length;
   const services = facility.locationsList.flatMap((l) => l.services);
   const uniqueServices = [...new Set(services)];
 
   const totalRevenue = useMemo(
     () => revenueData.reduce((sum, d) => sum + d.revenue, 0),
-    [],
+    []
   );
 
   // Get the quoted price for a module (custom quote or base price)
@@ -278,7 +282,7 @@ export default function FacilityDetailPage() {
   const basePlanCost = planPrices[facility.plan] ?? 0;
   const modulesCost = enabledModules.reduce(
     (sum, moduleId) => sum + getModulePrice(moduleId),
-    0,
+    0
   );
   const monthlySubscriptionCost = basePlanCost + modulesCost;
 
@@ -322,7 +326,7 @@ export default function FacilityDetailPage() {
     setEnabledModules((prev) =>
       prev.includes(moduleId)
         ? prev.filter((id) => id !== moduleId)
-        : [...prev, moduleId],
+        : [...prev, moduleId]
     );
   };
 
@@ -342,7 +346,7 @@ export default function FacilityDetailPage() {
   };
 
   const handleStatusChange = (
-    newStatus: "active" | "inactive" | "suspended" | "archived",
+    newStatus: "active" | "inactive" | "suspended" | "archived"
   ) => {
     setStatusChangeModal({ newStatus });
   };
@@ -522,6 +526,37 @@ export default function FacilityDetailPage() {
 
       {/* Facility Reports Section */}
       <FacilityReports facilityId={facility.id} facilityName={facility.name} />
+
+      {/* Activity & Audit Logs Section */}
+      <Card className="border-0 shadow-card">
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg"
+          onClick={() => setShowLogsSection(!showLogsSection)}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Activity & Audit Logs
+            </CardTitle>
+            <ChevronDown
+              className={`h-5 w-5 text-muted-foreground transition-transform ${
+                showLogsSection ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground text-left">
+            Track all activities and system changes for this tenant
+          </p>
+        </CardHeader>
+        {showLogsSection && (
+          <CardContent>
+            <TenantActivityLogs
+              facilityId={facility.id}
+              facilityName={facility.name}
+            />
+          </CardContent>
+        )}
+      </Card>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">

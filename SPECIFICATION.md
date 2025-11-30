@@ -52,7 +52,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 * [ ] 🟡 Staff utilization rate
 * [ ] 🟡 Customer & reservation growth analytics
 * [ ] 🟡 Module usage breakdown
-* [ ] 🟠 Activity logs & audit logs per tenant
+* [x] 🟠 Activity logs & audit logs per tenant
 
 ---
 
@@ -80,9 +80,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Global Settings**
 
-* [ ] 🟢 Branding defaults
-* [ ] 🟢 Supported languages/currency
-* [ ] 🟢 System-wide defaults
+* [x] 🟢 Branding defaults
+* [x] 🟢 Supported languages/currency
+* [x] 🟢 System-wide defaults
 * [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
 
 ---

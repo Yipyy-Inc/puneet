@@ -26,6 +26,7 @@ import {
   Settings,
   CheckSquare,
   AlertTriangle,
+  Globe,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -229,6 +230,12 @@ export function AppSidebar() {
     {
       label: t("systemAdministration"),
       items: [
+        {
+          title: t("globalSettings"),
+          url: "/dashboard/system-admin/global-settings",
+          icon: Globe,
+          disabled: false,
+        },
         {
           title: t("auditLogs"),
           url: "/dashboard/system-admin/audit-logs",
