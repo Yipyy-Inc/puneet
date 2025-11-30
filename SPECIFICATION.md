@@ -498,29 +498,29 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **12. Grooming Module (Opt-In)**
 
-- [ ] 🟢 Grooming calendar (online booking enabled)
-- [ ] 🟢 Stylist assignment & availability
+- [x] 🟢 Grooming calendar (online booking enabled)
+- [x] 🟢 Stylist assignment & availability
 - [ ] 🟡 Style preference gallery (owner uploads reference photo)
 - [ ] 🟡 Progress tracker: Check-in → Bath → Dry → Haircut → Finish → Pick-up
 - [ ] 🟡 Real-time push + photo at each stage
-- [ ] 🟠 Before / after photo album per visit
-- [ ] 🟢 Grooming packages
-- [ ] 🟠 Product inventory
+- [x] 🟠 Before / after photo album per visit
+- [x] 🟢 Grooming packages
+- [x] 🟠 Product inventory
 
 ---
 
 ## **13. Training Module (Opt-In)**
 
-- [ ] 🟢 Class schedule & capacity
-- [ ] 🟢 Enrollment
+- [x] 🟢 Class schedule & capacity
+- [x] 🟢 Enrollment
 - [ ] 🟡 Wait-list
 - [ ] 🟡 Private session booking
-- [ ] 🟢 Trainer notes
+- [x] 🟢 Trainer notes
 - [ ] 🟡 Homework assignment
-- [ ] 🟢 Progress tracker
+- [x] 🟢 Progress tracker
 - [ ] 🟡 Skill badges
 - [ ] 🟡 Certificate auto-generation
-- [ ] 🟢 Packages
+- [x] 🟢 Packages
 - [ ] 🟡 Drop-in billing
 
 ---

@@ -117,9 +117,9 @@ export function FacilitySidebar() {
         },
         {
           title: "Training",
-          url: "/facility/dashboard/services/training",
+          url: "/facility/training",
           icon: GraduationCap,
-          disabled: true,
+          disabled: false,
         },
         {
           title: tServices("store"),
