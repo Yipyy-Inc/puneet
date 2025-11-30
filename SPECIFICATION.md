@@ -443,13 +443,13 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **10. Daycare Module (Opt-In)**
 
-- [ ] 🟢 Daycare dashboard (current count, capacity bar)
+- [x] 🟢 Daycare dashboard (current count, capacity bar)
 - [ ] 🟠 Timers
-- [ ] 🟢 Quick check-in / out with timer start / stop
+- [x] 🟢 Quick check-in / out with timer start / stop
 - [ ] 🟡 Play-group creator (size / temperament)
-- [ ] 🟢 Hourly, half-day, full-day rates
-- [ ] 🟢 Packages
-- [ ] 🟢 Daily report card auto-emailed (activities, meals, photos)
+- [x] 🟢 Hourly, half-day, full-day rates
+- [x] 🟢 Packages
+- [x] 🟢 Daily report card auto-emailed (activities, meals, photos)
 
 ---
 
@@ -457,42 +457,42 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### Core Features
 
-- [ ] 🟢 Boarding dashboard (current guests, arrivals, departures)
-- [ ] 🟢 Nightly rates
-- [ ] 🟢 Multi-night discounts
-- [ ] 🟢 Peak surcharge
-- [ ] 🟢 Per-pet feeding schedule & tracker
-- [ ] 🟠 Appetite notes on feeding (ate-all / left-some / refused)
-- [ ] 🟢 Medication schedule & tracker (dose ✓ + initials)
-- [ ] 🟠 Photo proof on medication
+- [x] 🟢 Boarding dashboard (current guests, arrivals, departures)
+- [x] 🟢 Nightly rates
+- [x] 🟢 Multi-night discounts
+- [x] 🟢 Peak surcharge
+- [x] 🟢 Per-pet feeding schedule & tracker
+- [x] 🟠 Appetite notes on feeding (ate-all / left-some / refused)
+- [x] 🟢 Medication schedule & tracker (dose ✓ + initials)
+- [x] 🟠 Photo proof on medication
 - [ ] 🟡 Kennel-clean checklist & blocker flag
-- [ ] 🟢 Stay extension wizard
-- [ ] 🟠 Early checkout wizard
+- [x] 🟢 Stay extension wizard
+- [x] 🟠 Early checkout wizard
 
 ### Daily Care Sheet
 
-- [ ] 🟡 Auto-generated at check-in; lives digitally for whole stay
-- [ ] 🟠 Tracks feedings: time, food type, portion, ate-all / left-some / refused
-- [ ] 🟠 Tracks medications: time, dose, given-by initials, photo proof toggle
-- [ ] 🟡 Tracks potty breaks: time, ✓ / accident notes
-- [ ] 🟡 Tracks walks: time, duration, staff initials
-- [ ] 🟡 Tracks playtime: group or solo, start/end, notes
-- [ ] 🟡 Staff update via phone or kiosk → timestamps locked
-- [ ] 🟡 One-click "Print Today" or "Print Stay Summary" (PDF, fits clipboard)
+- [x] 🟡 Auto-generated at check-in; lives digitally for whole stay
+- [x] 🟠 Tracks feedings: time, food type, portion, ate-all / left-some / refused
+- [x] 🟠 Tracks medications: time, dose, given-by initials, photo proof toggle
+- [x] 🟡 Tracks potty breaks: time, ✓ / accident notes
+- [x] 🟡 Tracks walks: time, duration, staff initials
+- [x] 🟡 Tracks playtime: group or solo, start/end, notes
+- [x] 🟡 Staff update via phone or kiosk → timestamps locked
+- [x] 🟡 One-click "Print Today" or "Print Stay Summary" (PDF, fits clipboard)
 
 ### Boarding Card / Kennel Card (Prints to Hang on Gate)
 
-- [ ] 🟡 Auto-generates when kennel assigned
-- [ ] 🟡 Contains: Pet photo (colour), pet name, breed, sex, weight, colour/markings
-- [ ] 🟡 Owner names + primary phone
-- [ ] 🟡 Check-in / check-out dates
-- [ ] 🟡 Allergy icon + list
-- [ ] 🟡 Medication icon + short schedule
-- [ ] 🟡 Feeding instructions (food brand, amount, times)
-- [ ] 🟡 Emergency vet contact
-- [ ] 🟡 QR code (links to full digital sheet)
+- [x] 🟡 Auto-generates when kennel assigned
+- [x] 🟡 Contains: Pet photo (colour), pet name, breed, sex, weight, colour/markings
+- [x] 🟡 Owner names + primary phone
+- [x] 🟡 Check-in / check-out dates
+- [x] 🟡 Allergy icon + list
+- [x] 🟡 Medication icon + short schedule
+- [x] 🟡 Feeding instructions (food brand, amount, times)
+- [x] 🟡 Emergency vet contact
+- [x] 🟡 QR code (links to full digital sheet)
 - [ ] 🟡 Template editor in Settings → Boarding → Kennel Card Layout
-- [ ] 🟡 Re-print anytime (replacement card or updated info)
+- [x] 🟡 Re-print anytime (replacement card or updated info)
 
 ---
 
