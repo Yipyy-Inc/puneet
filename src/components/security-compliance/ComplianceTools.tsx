@@ -621,7 +621,10 @@ export function ComplianceTools() {
 
   // Data Subject Request Status Badge
   const getDSRStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      string,
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       Pending: "secondary",
       "In Progress": "outline",
       Completed: "default",
@@ -644,7 +647,10 @@ export function ComplianceTools() {
     };
     const Icon = icons[status] || Clock;
     return (
-      <Badge variant={variants[status] || "secondary"} className={`gap-1 ${colors[status] || ""}`}>
+      <Badge
+        variant={variants[status] || "secondary"}
+        className={`gap-1 ${colors[status] || ""}`}
+      >
         <Icon className="h-3 w-3" />
         {status}
       </Badge>
@@ -688,7 +694,10 @@ export function ComplianceTools() {
     };
     const Icon = icons[status] || Clock;
     return (
-      <Badge variant={variants[status] || "secondary"} className="gap-1 text-xs">
+      <Badge
+        variant={variants[status] || "secondary"}
+        className="gap-1 text-xs"
+      >
         <Icon className="h-3 w-3" />
         {status}
       </Badge>
@@ -703,9 +712,13 @@ export function ComplianceTools() {
       render: (item: DataSubjectRequest) => (
         <div className="min-w-0">
           <div className="font-medium">{item.requesterName}</div>
-          <div className="text-xs text-muted-foreground truncate">{item.requesterEmail}</div>
+          <div className="text-xs text-muted-foreground truncate">
+            {item.requesterEmail}
+          </div>
           {item.facilityName && (
-            <div className="text-xs text-muted-foreground">{item.facilityName}</div>
+            <div className="text-xs text-muted-foreground">
+              {item.facilityName}
+            </div>
           )}
         </div>
       ),
@@ -762,7 +775,9 @@ export function ComplianceTools() {
       label: "Assigned To",
       render: (item: DataSubjectRequest) => (
         <div className="text-sm">
-          {item.assignedTo || <span className="text-muted-foreground">Unassigned</span>}
+          {item.assignedTo || (
+            <span className="text-muted-foreground">Unassigned</span>
+          )}
         </div>
       ),
     },
@@ -770,20 +785,42 @@ export function ComplianceTools() {
 
   const dataSubjectRequestActions = (item: DataSubjectRequest) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8" title="View Details">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="View Details"
+      >
         <Eye className="h-4 w-4" />
       </Button>
       {item.status === "Pending" && (
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Process Request">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Process Request"
+        >
           <Play className="h-4 w-4" />
         </Button>
       )}
-      {item.status === "Completed" && item.requestType === "Export" && item.exportFileUrl && (
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Download Export">
-          <Download className="h-4 w-4" />
-        </Button>
-      )}
-      <Button variant="ghost" size="icon" className="h-8 w-8" title="Send Notification">
+      {item.status === "Completed" &&
+        item.requestType === "Export" &&
+        item.exportFileUrl && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Download Export"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="Send Notification"
+      >
         <Mail className="h-4 w-4" />
       </Button>
     </div>
@@ -987,9 +1024,7 @@ export function ComplianceTools() {
       {/* Main Tabs */}
       <Tabs defaultValue="data-subject-requests" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="data-subject-requests">
-            GDPR Requests
-          </TabsTrigger>
+          <TabsTrigger value="data-subject-requests">GDPR Requests</TabsTrigger>
           <TabsTrigger value="data-privacy">Data Privacy</TabsTrigger>
           <TabsTrigger value="regulatory-compliance">
             Regulatory Compliance
@@ -1053,7 +1088,8 @@ export function ComplianceTools() {
                       {dataSubjectRequestStats.complianceRate}%
                     </h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Avg {dataSubjectRequestStats.avgCompletionDays} days to complete
+                      Avg {dataSubjectRequestStats.avgCompletionDays} days to
+                      complete
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
@@ -1094,8 +1130,12 @@ export function ComplianceTools() {
                     <FileOutput className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data Export Requests</p>
-                    <p className="text-xl font-bold">{dataSubjectRequestStats.exportRequests}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Data Export Requests
+                    </p>
+                    <p className="text-xl font-bold">
+                      {dataSubjectRequestStats.exportRequests}
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -1111,8 +1151,12 @@ export function ComplianceTools() {
                     <UserX className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data Deletion Requests</p>
-                    <p className="text-xl font-bold">{dataSubjectRequestStats.deletionRequests}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Data Deletion Requests
+                    </p>
+                    <p className="text-xl font-bold">
+                      {dataSubjectRequestStats.deletionRequests}
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -1128,8 +1172,12 @@ export function ComplianceTools() {
                     <Settings className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Rectification Requests</p>
-                    <p className="text-xl font-bold">{dataSubjectRequestStats.rectificationRequests}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Rectification Requests
+                    </p>
+                    <p className="text-xl font-bold">
+                      {dataSubjectRequestStats.rectificationRequests}
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -1147,7 +1195,8 @@ export function ComplianceTools() {
                 Data Subject Requests (GDPR Export/Delete)
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Manage user data export and deletion requests per GDPR requirements
+                Manage user data export and deletion requests per GDPR
+                requirements
               </p>
             </CardHeader>
             <CardContent>
@@ -1172,14 +1221,21 @@ export function ComplianceTools() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Users have the right to receive their personal data in a structured,
-                  commonly used, machine-readable format and transmit it to another controller.
-                  Requests must be fulfilled within <strong>30 days</strong>.
+                  Users have the right to receive their personal data in a
+                  structured, commonly used, machine-readable format and
+                  transmit it to another controller. Requests must be fulfilled
+                  within <strong>30 days</strong>.
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Badge variant="outline" className="text-xs">JSON Export</Badge>
-                  <Badge variant="outline" className="text-xs">CSV Export</Badge>
-                  <Badge variant="outline" className="text-xs">ZIP Archive</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    JSON Export
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    CSV Export
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    ZIP Archive
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -1193,14 +1249,21 @@ export function ComplianceTools() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Users have the right to request deletion of their personal data when
-                  it is no longer necessary, consent is withdrawn, or data was unlawfully processed.
-                  Requests must be fulfilled within <strong>30 days</strong>.
+                  Users have the right to request deletion of their personal
+                  data when it is no longer necessary, consent is withdrawn, or
+                  data was unlawfully processed. Requests must be fulfilled
+                  within <strong>30 days</strong>.
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Badge variant="outline" className="text-xs">Data Deletion</Badge>
-                  <Badge variant="outline" className="text-xs">Anonymization</Badge>
-                  <Badge variant="outline" className="text-xs">Audit Log</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Data Deletion
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Anonymization
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Audit Log
+                  </Badge>
                 </div>
               </CardContent>
             </Card>

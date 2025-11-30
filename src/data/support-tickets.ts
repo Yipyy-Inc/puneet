@@ -861,17 +861,17 @@ export const getTicketStats = () => {
   const total = supportTickets.length;
   const open = supportTickets.filter((t) => t.status === "Open").length;
   const inProgress = supportTickets.filter(
-    (t) => t.status === "In Progress"
+    (t) => t.status === "In Progress",
   ).length;
   const escalated = supportTickets.filter(
-    (t) => t.status === "Escalated"
+    (t) => t.status === "Escalated",
   ).length;
   const pending = supportTickets.filter((t) => t.status === "Pending").length;
   const resolved = supportTickets.filter(
-    (t) => t.status === "Resolved" || t.status === "Closed"
+    (t) => t.status === "Resolved" || t.status === "Closed",
   ).length;
   const breached = supportTickets.filter(
-    (t) => t.sla && t.sla.breachCount > 0
+    (t) => t.sla && t.sla.breachCount > 0,
   ).length;
 
   return { total, open, inProgress, escalated, pending, resolved, breached };

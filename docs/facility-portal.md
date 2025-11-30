@@ -175,6 +175,7 @@ Modules according to what they have opt in this can be changed by super admin
 - Online store sync (if enabled)
 
 SMS module
+
 - Calling module
 - Email marketing module
 - AI receptionist module where we train the ai model about all the details of that specific facility so the ai can pickup the calls and take bookings over the phone or make tour bookings to be able to show customers the facility
@@ -309,9 +310,11 @@ The collar length is stored per pet; software auto-chooses 12", 18", 24" or 30" 
 ## References & Additional Resources
 
 ### Documentation & UI Overview
+
 - **Overall UI and Pages**: https://wiki.moego.pet/boarding-daycare-overview/
 
 ### Boarding & Daycare Settings Videos
+
 - **Service Settings**: https://www.youtube.com/watch?v=pfEbgjmtfD8&ref=wiki.moego.pet
 - **Evaluation Settings**: https://www.youtube.com/watch?v=wUTZcwd8knw&ref=wiki.moego.pet
 - **Lodgings Settings**: https://www.youtube.com/watch?v=tZ11E_3YXG0&ref=wiki.moego.pet
@@ -319,4 +322,5 @@ The collar length is stored per pet; software auto-chooses 12", 18", 24" or 30" 
 - **Messages Settings**: https://www.youtube.com/watch?v=XBtM0fqy5rg&ref=wiki.moego.pet
 
 ### Complete Knowledge Base
+
 - **Full Documentation**: https://wiki.moego.pet/

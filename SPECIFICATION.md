@@ -48,12 +48,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Tenant Detail View**
 
-* [x] 🟠 Basic tenant profile (existing) + enhanced usage data
-* [x] 🟠 Staff count, user count, storage, subscription info
-* [ ] 🟡 Staff utilization rate
-* [ ] 🟡 Customer & reservation growth analytics
-* [ ] 🟡 Module usage breakdown
-* [x] 🟠 Activity logs & audit logs per tenant
+- [x] 🟠 Basic tenant profile (existing) + enhanced usage data
+- [x] 🟠 Staff count, user count, storage, subscription info
+- [ ] 🟡 Staff utilization rate
+- [ ] 🟡 Customer & reservation growth analytics
+- [ ] 🟡 Module usage breakdown
+- [x] 🟠 Activity logs & audit logs per tenant
 
 ---
 
@@ -81,51 +81,51 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Global Settings**
 
-* [x] 🟢 Branding defaults
-* [x] 🟢 Supported languages/currency
-* [x] 🟢 System-wide defaults
-* [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
+- [x] 🟢 Branding defaults
+- [x] 🟢 Supported languages/currency
+- [x] 🟢 System-wide defaults
+- [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
 
 ---
 
 ## **Compliance & Data Tools**
 
-* [x] 🟢 GDPR export/delete
-* [x] 🟠 Data retention policies
-* [x] 🟠 Backups + manual export
-* [ ] 🟡 Backup verification
-* [ ] 🟡 Point-in-time recovery
-* [ ] 🟡 Disaster recovery workflows
-* [ ] 🟡 Selective data restoration
+- [x] 🟢 GDPR export/delete
+- [x] 🟠 Data retention policies
+- [x] 🟠 Backups + manual export
+- [ ] 🟡 Backup verification
+- [ ] 🟡 Point-in-time recovery
+- [ ] 🟡 Disaster recovery workflows
+- [ ] 🟡 Selective data restoration
 
 ---
 
 ## **Support & Ticketing**
 
-* [x] 🟢 View/assign tickets
-* [x] 🟠 Priorities & SLAs
-* [x] 🟠 Ticket history & timeline
-* [ ] 🟡 Real-time chat support
-* [ ] 🟡 Multiple concurrent chats
-* [ ] 🟡 Feature request tracking
+- [x] 🟢 View/assign tickets
+- [x] 🟠 Priorities & SLAs
+- [x] 🟠 Ticket history & timeline
+- [ ] 🟡 Real-time chat support
+- [ ] 🟡 Multiple concurrent chats
+- [ ] 🟡 Feature request tracking
 
 ---
 
 ## **Feature Toggles / Remote Config**
 
-* [x] 🟢 Enable/disable modules per tenant
-* [x] 🟠 Remote config flags applied instantly
-* [ ] 🟡 Module upgrade/downgrade analytics
+- [x] 🟢 Enable/disable modules per tenant
+- [x] 🟠 Remote config flags applied instantly
+- [ ] 🟡 Module upgrade/downgrade analytics
 
 ---
 
 ## **Audit Logs & Security**
 
-* [x] 🟢 Log all admin actions
-* [x] 🟠 Resource-level log indexing
-* [ ] 🟡 Impersonation session logs
-* [ ] 🟡 Security event logging (failed logins, suspicious activity)
-* [ ] 🟡 Financial change audits
+- [x] 🟢 Log all admin actions
+- [x] 🟠 Resource-level log indexing
+- [ ] 🟡 Impersonation session logs
+- [ ] 🟡 Security event logging (failed logins, suspicious activity)
+- [ ] 🟡 Financial change audits
 
 ---
 
@@ -240,6 +240,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **3. Customers & Pets**
 
 ### Customer Management
+
 - [ ] 🟢 Searchable list of customer files
 - [ ] 🟡 Merge duplicates
 - [ ] 🟡 Import CSV
@@ -253,6 +254,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Quick buttons: Book, Message, Charge, Apply Credit
 
 ### Pet Management
+
 - [ ] 🟢 Searchable pet profiles list
 - [ ] 🟠 Pet photo gallery
 - [ ] 🟠 Vaccinations with auto-expiry reminder (to facility AND parents)
@@ -263,6 +265,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟢 Vaccination PDF upload & reminder push
 
 ### Behaviour Tags (Staff-Only, Internal)
+
 - [ ] 🟡 Master tag list in Settings → Pet Settings → Behaviour Tags
 - [ ] 🟡 Each tag = name + colour (hex) + icon
 - [ ] 🟡 Default starter set: Barker, Mounting, Food Aggressive, Escape Artist, Shy/Nervous, High Energy, Senior/Fragile, Medication Required
@@ -280,12 +283,14 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **4. Staff**
 
 ### 4.1 Directory
+
 - [ ] 🟢 Add / edit staff profiles
 - [ ] 🟢 Roles & certifications
 - [ ] 🟠 Document storage for staff
 - [ ] 🟡 Emergency contact info
 
 ### 4.2 Scheduling
+
 - [ ] 🟢 Calendar view (day / week / month)
 - [ ] 🟠 Shift templates & copy-paste
 - [ ] 🟢 Recurring shifts
@@ -300,6 +305,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟢 ICS feed export (Phase 2)
 
 ### 4.3 Tasks
+
 - [ ] 🟢 Task templates (boarding, daycare, cleaning, medication)
 - [ ] 🟠 Shift tasks (assigned to particular shifts, customizable)
 - [ ] 🟢 Assign to shift or pet; set priority & photo-proof flag
@@ -307,10 +313,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Completion = staff initials + ID + timestamp
 
 ### 4.4 Performance
+
 - [ ] 🟡 Shift feedback after every shift (staff → manager) with notification
 - [ ] 🟠 Task completion rate per employee
 
 ### 4.5 Training & Loyalty
+
 - [ ] 🟡 Training video library; mark complete
 - [ ] 🟡 Assign training to new employees (watch videos, read content, take exams)
 - [ ] 🟡 Employee birthday notifications (customizable recipients)
@@ -366,6 +374,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **8. Marketing**
 
 ### 8.1 Email & SMS Campaigns
+
 - [ ] 🟢 Template library
 - [ ] 🟢 Segment builder
 - [ ] 🟠 A/B testing
@@ -373,6 +382,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Track opens / clicks
 
 ### 8.2 Loyalty & Referrals
+
 - [ ] 🟢 Points per $ spent
 - [ ] 🟠 Tier rules
 - [ ] 🟢 Referral codes
@@ -380,11 +390,13 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Badge engine (customizable milestones / discounts per facility)
 
 ### 8.3 Promotions
+
 - [ ] 🟢 Create promo codes
 - [ ] 🟢 Usage limits
 - [ ] 🟠 Auto-apply rules
 
 ### 8.4 Paid-Ads Tracking
+
 - [ ] 🟡 Google / Meta pixel integration
 - [ ] 🟡 ROI dashboard
 
@@ -393,11 +405,13 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **9. Communications**
 
 ### 9.1 Messaging Hub
+
 - [ ] 🟢 Unified inbox (email, SMS, in-app)
 - [ ] 🟢 Templates & file attach
 - [ ] 🟠 Per-customer communication history view
 
 ### 9.2 Automations
+
 - [ ] 🟢 Booking confirmation
 - [ ] 🟢 24-hour reminder
 - [ ] 🟢 Check-in / out notice
@@ -406,10 +420,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟢 Grooming / training appointment reminder
 
 ### 9.3 Real-Time Pet Updates
+
 - [ ] 🟠 One-tap buttons: "Eating now", "Potty break", "Play time", "Nap time" → pushes to owner
 - [ ] 🟢 Push notifications to owner
 
 ### 9.4 AI Receptionist / Calling
+
 - [ ] 🟠 Call log
 - [ ] 🟠 Recording
 - [ ] 🟠 Voicemail
@@ -418,6 +434,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟡 AI tour booking
 
 ### 9.5 Internal Comms
+
 - [ ] 🟡 Manager announcements
 - [ ] 🟡 Shift hand-over notes
 - [ ] 🟢 @mentions
@@ -439,6 +456,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **11. Boarding Module (Opt-In)**
 
 ### Core Features
+
 - [ ] 🟢 Boarding dashboard (current guests, arrivals, departures)
 - [ ] 🟢 Nightly rates
 - [ ] 🟢 Multi-night discounts
@@ -452,6 +470,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Early checkout wizard
 
 ### Daily Care Sheet
+
 - [ ] 🟡 Auto-generated at check-in; lives digitally for whole stay
 - [ ] 🟠 Tracks feedings: time, food type, portion, ate-all / left-some / refused
 - [ ] 🟠 Tracks medications: time, dose, given-by initials, photo proof toggle
@@ -462,6 +481,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟡 One-click "Print Today" or "Print Stay Summary" (PDF, fits clipboard)
 
 ### Boarding Card / Kennel Card (Prints to Hang on Gate)
+
 - [ ] 🟡 Auto-generates when kennel assigned
 - [ ] 🟡 Contains: Pet photo (colour), pet name, breed, sex, weight, colour/markings
 - [ ] 🟡 Owner names + primary phone
@@ -530,20 +550,24 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **16. Settings**
 
 ### Business Configuration
+
 - [ ] 🟢 Business profile, hours, locations, branding
 - [ ] 🟢 Booking rules, cancel policy, deposit %, capacity limits
 - [ ] 🟠 Kennel map, types, amenities (visual map)
 - [ ] 🟢 Pet size classes, vaccination rules
 
 ### Financial
+
 - [ ] 🟢 Payment gateway, tax rates, currency
 - [ ] 🟢 Roles & permissions matrix
 - [ ] 🟠 Financial data lock-down
 
 ### Notifications
+
 - [ ] 🟢 Notification toggles & template editor
 
 ### Integrations
+
 - [ ] 🟢 SMS, email SMTP
 - [ ] 🟠 VOIP
 - [ ] 🟢 QuickBooks (Phase 2)
@@ -552,9 +576,11 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟡 Partnerships tab (pet insurance referral link / banner)
 
 ### Subscription
+
 - [ ] 🟢 Subscription & module add-ons view
 
 ### Audit
+
 - [ ] 🟢 Audit log for every setting change (who changed what, when, exportable)
 
 ---

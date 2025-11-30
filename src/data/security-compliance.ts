@@ -313,7 +313,12 @@ export interface AuditTrail {
 // GDPR Data Subject Request Types
 export interface DataSubjectRequest {
   id: string;
-  requestType: "Export" | "Deletion" | "Rectification" | "Restriction" | "Objection";
+  requestType:
+    | "Export"
+    | "Deletion"
+    | "Rectification"
+    | "Restriction"
+    | "Objection";
   requesterId: string;
   requesterName: string;
   requesterEmail: string;
@@ -1193,7 +1198,12 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     submittedAt: "2025-11-28T10:30:00Z",
     deadline: "2025-12-28T10:30:00Z",
     status: "Pending",
-    dataCategories: ["Personal Info", "Booking History", "Payment Records", "Pet Information"],
+    dataCategories: [
+      "Personal Info",
+      "Booking History",
+      "Payment Records",
+      "Pet Information",
+    ],
     verificationStatus: "Verified",
     verificationMethod: "Email Verification",
     verifiedAt: "2025-11-28T11:00:00Z",
@@ -1232,7 +1242,12 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     assignedTo: "Emily Tech",
     assignedAt: "2025-11-20T10:30:00Z",
     completedAt: "2025-11-22T15:45:00Z",
-    dataCategories: ["Personal Info", "Booking History", "Pet Information", "Invoices"],
+    dataCategories: [
+      "Personal Info",
+      "Booking History",
+      "Pet Information",
+      "Invoices",
+    ],
     verificationStatus: "Verified",
     verificationMethod: "Email Verification",
     verifiedAt: "2025-11-20T09:30:00Z",
@@ -1251,13 +1266,19 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     assignedTo: "John Admin",
     assignedAt: "2025-11-18T14:00:00Z",
     completedAt: "2025-11-19T16:30:00Z",
-    dataCategories: ["Personal Info", "Account Data", "Booking History", "Payment Records"],
+    dataCategories: [
+      "Personal Info",
+      "Account Data",
+      "Booking History",
+      "Payment Records",
+    ],
     verificationStatus: "Verified",
     verificationMethod: "ID Document + Phone Verification",
     verifiedAt: "2025-11-18T13:00:00Z",
     deletionConfirmation: true,
     auditLogId: "audit-delete-004",
-    notes: "All personal data successfully deleted and anonymized where required",
+    notes:
+      "All personal data successfully deleted and anonymized where required",
   },
   {
     id: "dsr-005",
@@ -1291,8 +1312,10 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     dataCategories: ["Personal Info", "Booking History"],
     verificationStatus: "Failed",
     verificationMethod: "Email Verification",
-    rejectionReason: "Unable to verify requester identity - email address does not match account",
-    notes: "Request rejected due to failed identity verification. User advised to contact support.",
+    rejectionReason:
+      "Unable to verify requester identity - email address does not match account",
+    notes:
+      "Request rejected due to failed identity verification. User advised to contact support.",
   },
   {
     id: "dsr-007",
@@ -1307,11 +1330,17 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     status: "Extended",
     assignedTo: "Mike Support",
     assignedAt: "2025-11-16T10:00:00Z",
-    dataCategories: ["Personal Info", "Account Data", "Payment Records", "Communication History"],
+    dataCategories: [
+      "Personal Info",
+      "Account Data",
+      "Payment Records",
+      "Communication History",
+    ],
     verificationStatus: "Verified",
     verificationMethod: "ID Document",
     verifiedAt: "2025-11-15T15:00:00Z",
-    extensionReason: "Complex request involving multiple facilities and legacy systems. Extension communicated to requester.",
+    extensionReason:
+      "Complex request involving multiple facilities and legacy systems. Extension communicated to requester.",
     notes: "User has data across 3 facilities requiring coordinated deletion",
   },
 ];

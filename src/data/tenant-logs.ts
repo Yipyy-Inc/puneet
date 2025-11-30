@@ -299,7 +299,9 @@ export function getTenantActivityLogs(facilityId: number): TenantActivityLog[] {
     ],
   };
 
-  return facilityActivityLogs[facilityId] || generateDefaultActivityLogs(facilityId);
+  return (
+    facilityActivityLogs[facilityId] || generateDefaultActivityLogs(facilityId)
+  );
 }
 
 // Generate tenant-specific audit logs
@@ -326,7 +328,8 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         severity: "Medium",
         status: "Success",
-        description: "Updated pricing and duration for premium grooming service",
+        description:
+          "Updated pricing and duration for premium grooming service",
       },
       {
         id: "audit-1-002",
@@ -382,8 +385,16 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
         entityId: "settings-001",
         entityName: "Booking Settings",
         changes: [
-          { field: "maxAdvanceBooking", oldValue: "30 days", newValue: "60 days" },
-          { field: "cancellationWindow", oldValue: "24 hours", newValue: "48 hours" },
+          {
+            field: "maxAdvanceBooking",
+            oldValue: "30 days",
+            newValue: "60 days",
+          },
+          {
+            field: "cancellationWindow",
+            oldValue: "24 hours",
+            newValue: "48 hours",
+          },
         ],
         ipAddress: "192.168.1.50",
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -463,12 +474,15 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
         entityType: "Client",
         entityId: "client-old",
         entityName: "Inactive Client - John Doe",
-        changes: [{ field: "status", oldValue: "Inactive", newValue: "Deleted" }],
+        changes: [
+          { field: "status", oldValue: "Inactive", newValue: "Deleted" },
+        ],
         ipAddress: "192.168.1.50",
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         severity: "Critical",
         status: "Success",
-        description: "Permanently deleted inactive client record per GDPR request",
+        description:
+          "Permanently deleted inactive client record per GDPR request",
       },
     ],
     2: [
@@ -547,7 +561,9 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
 }
 
 // Generate tenant-specific statistics
-export function getTenantLogStatistics(facilityId: number): TenantLogStatistics {
+export function getTenantLogStatistics(
+  facilityId: number,
+): TenantLogStatistics {
   const baseStats: Record<number, TenantLogStatistics> = {
     1: {
       facilityId: 1,
@@ -707,4 +723,3 @@ function generateDefaultStatistics(facilityId: number): TenantLogStatistics {
     criticalEvents: 0,
   };
 }
-

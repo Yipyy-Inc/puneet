@@ -57,18 +57,78 @@ export interface ConfigChangeLog {
 
 // Available modules that can be toggled
 export const availableModules = [
-  { id: "module-booking", name: "Booking & Reservation", category: "core", tier: "all" },
-  { id: "module-staff-scheduling", name: "Staff Scheduling", category: "core", tier: "pro" },
-  { id: "module-customer-management", name: "Customer Management", category: "core", tier: "all" },
-  { id: "module-financial-reporting", name: "Financial Reporting", category: "advanced", tier: "pro" },
-  { id: "module-communication", name: "Communication Hub", category: "core", tier: "all" },
-  { id: "module-training-education", name: "Training & Education", category: "premium", tier: "enterprise" },
-  { id: "module-grooming-management", name: "Grooming Management", category: "advanced", tier: "pro" },
-  { id: "module-inventory-management", name: "Inventory Management", category: "advanced", tier: "pro" },
-  { id: "module-analytics", name: "Advanced Analytics", category: "premium", tier: "enterprise" },
-  { id: "module-multi-location", name: "Multi-Location Support", category: "premium", tier: "enterprise" },
-  { id: "module-api-access", name: "API Access", category: "advanced", tier: "pro" },
-  { id: "module-white-label", name: "White Label Branding", category: "premium", tier: "enterprise" },
+  {
+    id: "module-booking",
+    name: "Booking & Reservation",
+    category: "core",
+    tier: "all",
+  },
+  {
+    id: "module-staff-scheduling",
+    name: "Staff Scheduling",
+    category: "core",
+    tier: "pro",
+  },
+  {
+    id: "module-customer-management",
+    name: "Customer Management",
+    category: "core",
+    tier: "all",
+  },
+  {
+    id: "module-financial-reporting",
+    name: "Financial Reporting",
+    category: "advanced",
+    tier: "pro",
+  },
+  {
+    id: "module-communication",
+    name: "Communication Hub",
+    category: "core",
+    tier: "all",
+  },
+  {
+    id: "module-training-education",
+    name: "Training & Education",
+    category: "premium",
+    tier: "enterprise",
+  },
+  {
+    id: "module-grooming-management",
+    name: "Grooming Management",
+    category: "advanced",
+    tier: "pro",
+  },
+  {
+    id: "module-inventory-management",
+    name: "Inventory Management",
+    category: "advanced",
+    tier: "pro",
+  },
+  {
+    id: "module-analytics",
+    name: "Advanced Analytics",
+    category: "premium",
+    tier: "enterprise",
+  },
+  {
+    id: "module-multi-location",
+    name: "Multi-Location Support",
+    category: "premium",
+    tier: "enterprise",
+  },
+  {
+    id: "module-api-access",
+    name: "API Access",
+    category: "advanced",
+    tier: "pro",
+  },
+  {
+    id: "module-white-label",
+    name: "White Label Branding",
+    category: "premium",
+    tier: "enterprise",
+  },
 ];
 
 // Mock tenant configurations
@@ -84,7 +144,11 @@ export const tenantModuleConfigs: TenantModuleConfig[] = [
       "module-communication",
       "module-grooming-management",
     ],
-    disabledModules: ["module-financial-reporting", "module-inventory-management", "module-api-access"],
+    disabledModules: [
+      "module-financial-reporting",
+      "module-inventory-management",
+      "module-api-access",
+    ],
     moduleOverrides: [
       {
         moduleId: "module-analytics",
@@ -126,7 +190,11 @@ export const tenantModuleConfigs: TenantModuleConfig[] = [
     tenantId: "fac-003",
     tenantName: "Bark & Play Center",
     subscriptionTier: "beginner",
-    enabledModules: ["module-booking", "module-customer-management", "module-communication"],
+    enabledModules: [
+      "module-booking",
+      "module-customer-management",
+      "module-communication",
+    ],
     disabledModules: [],
     moduleOverrides: [
       {
@@ -206,7 +274,8 @@ export const remoteConfigFlags: RemoteConfigFlag[] = [
     id: "rc-002",
     key: "feature.ai_recommendations",
     name: "AI Service Recommendations",
-    description: "Enable AI-powered service recommendations based on pet history",
+    description:
+      "Enable AI-powered service recommendations based on pet history",
     type: "boolean",
     defaultValue: "false",
     currentValue: "false",
@@ -225,7 +294,8 @@ export const remoteConfigFlags: RemoteConfigFlag[] = [
     id: "rc-003",
     key: "config.max_concurrent_bookings",
     name: "Max Concurrent Bookings",
-    description: "Maximum number of bookings that can be processed simultaneously",
+    description:
+      "Maximum number of bookings that can be processed simultaneously",
     type: "number",
     defaultValue: "50",
     currentValue: "100",
@@ -426,20 +496,23 @@ export const getGlobalFlags = () =>
 
 export const getTenantFlags = (tenantId: string) =>
   remoteConfigFlags.filter(
-    (f) => f.scope === "tenant" && f.targetTenants?.includes(tenantId)
+    (f) => f.scope === "tenant" && f.targetTenants?.includes(tenantId),
   );
 
 export const getConfigStats = () => {
   const totalTenants = tenantModuleConfigs.length;
   const totalFlags = remoteConfigFlags.length;
   const activeFlags = remoteConfigFlags.filter((f) => f.isActive).length;
-  const pendingSync = remoteConfigFlags.filter((f) => f.syncStatus === "pending").length;
+  const pendingSync = remoteConfigFlags.filter(
+    (f) => f.syncStatus === "pending",
+  ).length;
   const totalOverrides = tenantModuleConfigs.reduce(
     (sum, t) => sum + t.moduleOverrides.length,
-    0
+    0,
   );
   const recentChanges = configChangeLogs.filter(
-    (log) => new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+    (log) =>
+      new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000),
   ).length;
 
   return {
@@ -451,4 +524,3 @@ export const getConfigStats = () => {
     recentChanges,
   };
 };
-

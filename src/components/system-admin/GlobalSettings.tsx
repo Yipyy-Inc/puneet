@@ -67,11 +67,15 @@ import {
 
 export function GlobalSettings() {
   const [branding, setBranding] = useState<BrandingSettings>(brandingSettings);
-  const [languages, setLanguages] = useState<LanguageOption[]>(supportedLanguages);
-  const [currencies, setCurrencies] = useState<CurrencyOption[]>(supportedCurrencies);
+  const [languages, setLanguages] =
+    useState<LanguageOption[]>(supportedLanguages);
+  const [currencies, setCurrencies] =
+    useState<CurrencyOption[]>(supportedCurrencies);
   const [defaults, setDefaults] = useState<SystemDefaults>(systemDefaults);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColorType, setSelectedColorType] = useState<"primary" | "secondary" | "accent">("primary");
+  const [selectedColorType, setSelectedColorType] = useState<
+    "primary" | "secondary" | "accent"
+  >("primary");
   const [showPreview, setShowPreview] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -92,8 +96,8 @@ export function GlobalSettings() {
   const handleLanguageToggle = (code: string) => {
     setLanguages((prev) =>
       prev.map((lang) =>
-        lang.code === code ? { ...lang, enabled: !lang.enabled } : lang
-      )
+        lang.code === code ? { ...lang, enabled: !lang.enabled } : lang,
+      ),
     );
     setUnsavedChanges(true);
   };
@@ -104,7 +108,7 @@ export function GlobalSettings() {
         ...lang,
         isDefault: lang.code === code,
         enabled: lang.code === code ? true : lang.enabled,
-      }))
+      })),
     );
     setUnsavedChanges(true);
   };
@@ -112,8 +116,8 @@ export function GlobalSettings() {
   const handleCurrencyToggle = (code: string) => {
     setCurrencies((prev) =>
       prev.map((curr) =>
-        curr.code === code ? { ...curr, enabled: !curr.enabled } : curr
-      )
+        curr.code === code ? { ...curr, enabled: !curr.enabled } : curr,
+      ),
     );
     setUnsavedChanges(true);
   };
@@ -124,7 +128,7 @@ export function GlobalSettings() {
         ...curr,
         isDefault: curr.code === code,
         enabled: curr.code === code ? true : curr.enabled,
-      }))
+      })),
     );
     setUnsavedChanges(true);
   };
@@ -134,7 +138,11 @@ export function GlobalSettings() {
     setUnsavedChanges(true);
   };
 
-  const applyColorPreset = (preset: { primary: string; secondary: string; accent: string }) => {
+  const applyColorPreset = (preset: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  }) => {
     setBranding((prev) => ({
       ...prev,
       primaryColor: preset.primary,
@@ -170,7 +178,10 @@ export function GlobalSettings() {
         </div>
         <div className="flex items-center gap-2">
           {unsavedChanges && (
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 gap-1">
+            <Badge
+              variant="secondary"
+              className="bg-yellow-100 text-yellow-700 gap-1"
+            >
               <AlertTriangle className="h-3 w-3" />
               Unsaved changes
             </Badge>
@@ -205,7 +216,8 @@ export function GlobalSettings() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  background:
+                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
                 <Languages className="h-5 w-5 text-white" />
@@ -231,7 +243,8 @@ export function GlobalSettings() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
                 <DollarSign className="h-5 w-5 text-white" />
@@ -257,7 +270,8 @@ export function GlobalSettings() {
               <div
                 className="flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
                 <Mail className="h-5 w-5 text-white" />
@@ -277,7 +291,9 @@ export function GlobalSettings() {
                   {defaults.maintenanceMode ? "Maintenance" : "Online"}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {defaults.registrationEnabled ? "Registration open" : "Registration closed"}
+                  {defaults.registrationEnabled
+                    ? "Registration open"
+                    : "Registration closed"}
                 </p>
               </div>
               <div
@@ -381,9 +397,7 @@ export function GlobalSettings() {
                     <Label>Favicon</Label>
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
                       <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-xs text-muted-foreground">
-                        32x32 PNG
-                      </p>
+                      <p className="text-xs text-muted-foreground">32x32 PNG</p>
                     </div>
                   </div>
                 </div>
@@ -687,7 +701,9 @@ export function GlobalSettings() {
                         )}
                         <Switch
                           checked={lang.enabled}
-                          onCheckedChange={() => handleLanguageToggle(lang.code)}
+                          onCheckedChange={() =>
+                            handleLanguageToggle(lang.code)
+                          }
                           disabled={lang.isDefault}
                         />
                       </div>
@@ -751,7 +767,9 @@ export function GlobalSettings() {
                         )}
                         <Switch
                           checked={curr.enabled}
-                          onCheckedChange={() => handleCurrencyToggle(curr.code)}
+                          onCheckedChange={() =>
+                            handleCurrencyToggle(curr.code)
+                          }
                           disabled={curr.isDefault}
                         />
                       </div>
@@ -871,7 +889,7 @@ export function GlobalSettings() {
                       onChange={(e) =>
                         handleDefaultsChange(
                           "sessionTimeoutMinutes",
-                          parseInt(e.target.value)
+                          parseInt(e.target.value),
                         )
                       }
                     />
@@ -884,7 +902,7 @@ export function GlobalSettings() {
                       onChange={(e) =>
                         handleDefaultsChange(
                           "maxLoginAttempts",
-                          parseInt(e.target.value)
+                          parseInt(e.target.value),
                         )
                       }
                     />
@@ -899,7 +917,7 @@ export function GlobalSettings() {
                       onChange={(e) =>
                         handleDefaultsChange(
                           "passwordExpiryDays",
-                          parseInt(e.target.value)
+                          parseInt(e.target.value),
                         )
                       }
                     />
@@ -912,7 +930,7 @@ export function GlobalSettings() {
                       onChange={(e) =>
                         handleDefaultsChange(
                           "minPasswordLength",
-                          parseInt(e.target.value)
+                          parseInt(e.target.value),
                         )
                       }
                     />
@@ -983,7 +1001,7 @@ export function GlobalSettings() {
                     onChange={(e) =>
                       handleDefaultsChange(
                         "trialPeriodDays",
-                        parseInt(e.target.value)
+                        parseInt(e.target.value),
                       )
                     }
                   />
@@ -1201,7 +1219,7 @@ export function GlobalSettings() {
                   onClick={() => {
                     handleBrandingChange(
                       `${selectedColorType}Color` as keyof BrandingSettings,
-                      color
+                      color,
                     );
                     setShowColorPicker(false);
                   }}
@@ -1216,7 +1234,7 @@ export function GlobalSettings() {
                 onChange={(e) => {
                   handleBrandingChange(
                     `${selectedColorType}Color` as keyof BrandingSettings,
-                    e.target.value
+                    e.target.value,
                   );
                 }}
               />
@@ -1307,4 +1325,3 @@ export function GlobalSettings() {
     </div>
   );
 }
-
