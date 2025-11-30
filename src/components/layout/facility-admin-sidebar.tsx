@@ -153,7 +153,7 @@ export function FacilitySidebar() {
           title: "Reports & Analytics",
           url: "/facility/dashboard/reports",
           icon: BarChart3,
-          disabled: true,
+          disabled: false,
         },
         {
           title: "Marketing",

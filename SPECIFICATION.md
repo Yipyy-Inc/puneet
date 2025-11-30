@@ -360,13 +360,13 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **7. Reports & Analytics**
 
-- [ ] 🟢 KPI tile row (bookings, occupancy %, AOV, retention)
-- [ ] 🟢 Pre-built reports: occupancy, no-show, cancellation
-- [ ] 🟠 Pre-built reports: labour cost
-- [ ] 🟢 Pre-built reports: top customers / client lifetime value
-- [ ] 🟠 Custom report builder (drag fields, filter, schedule email)
-- [ ] 🟢 Export CSV / PDF
-- [ ] 🟠 Export Excel
+- [x] 🟢 KPI tile row (bookings, occupancy %, AOV, retention)
+- [x] 🟢 Pre-built reports: occupancy, no-show, cancellation
+- [x] 🟠 Pre-built reports: labour cost
+- [x] 🟢 Pre-built reports: top customers / client lifetime value
+- [x] 🟠 Custom report builder (drag fields, filter, schedule email)
+- [x] 🟢 Export CSV / PDF
+- [x] 🟠 Export Excel
 - [ ] 🟡 Printables section (Daily Care Sheets, Boarding Cards for bulk print)
 
 ---
