@@ -112,16 +112,16 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Feature Toggles / Remote Config**
 
-* [ ] 🟢 Enable/disable modules per tenant
-* [ ] 🟠 Remote config flags applied instantly
+* [x] 🟢 Enable/disable modules per tenant
+* [x] 🟠 Remote config flags applied instantly
 * [ ] 🟡 Module upgrade/downgrade analytics
 
 ---
 
 ## **Audit Logs & Security**
 
-* [ ] 🟢 Log all admin actions
-* [ ] 🟠 Resource-level log indexing
+* [x] 🟢 Log all admin actions
+* [x] 🟠 Resource-level log indexing
 * [ ] 🟡 Impersonation session logs
 * [ ] 🟡 Security event logging (failed logins, suspicious activity)
 * [ ] 🟡 Financial change audits

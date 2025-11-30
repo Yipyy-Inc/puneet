@@ -120,6 +120,7 @@
     "createUser": "Create User",
     "activityTracking": "Activity Tracking",
     "systemAdministration": "System Administration",
+    "featureToggles": "Feature Toggles",
     "supportTicketing": "Support & Ticketing",
     "auditLogs": "Audit & Logging",
     "dataManagement": "Data Management",

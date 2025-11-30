@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Globe,
   Ticket,
+  ToggleRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -235,6 +236,12 @@ export function AppSidebar() {
           title: t("globalSettings"),
           url: "/dashboard/system-admin/global-settings",
           icon: Globe,
+          disabled: false,
+        },
+        {
+          title: t("featureToggles"),
+          url: "/dashboard/system-admin/feature-toggles",
+          icon: ToggleRight,
           disabled: false,
         },
         {
