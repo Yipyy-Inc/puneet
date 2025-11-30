@@ -217,22 +217,22 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **1. Dashboard**
 
-- [ ] 🟢 Today's arrivals & departures cards
-- [ ] 🟢 One-click Check-In / Check-Out wizard
+- [x] 🟢 Today's arrivals & departures cards
+- [x] 🟢 One-click Check-In / Check-Out wizard
 - [ ] 🟡 QR scan option from customer profile for fast check-in
 - [ ] 🟡 Prearrival check-in system (parents fill feeding, medication, items details before arrival)
-- [ ] 🟠 Quick-action bar (New Booking, New Customer, Take Payment)
-- [ ] 🟠 Universal search (booking id, email, customer name, pet name)
+- [x] 🟠 Quick-action bar (New Booking, New Customer, Take Payment)
+- [x] 🟠 Universal search (booking id, email, customer name, pet name)
 
 ---
 
 ## **2. Kennel View**
 
-- [ ] 🟠 Visual grid (colour: vacant / occupied / reserved / maintenance)
+- [x] 🟠 Visual grid (colour: vacant / occupied / reserved / maintenance)
 - [ ] 🟡 Timeline row per kennel
 - [ ] 🟡 Drag pet to move kennel
 - [ ] 🟡 Block / unblock kennels
-- [ ] 🟠 Extend / shorten stay inline with recalculation & charge
+- [x] 🟠 Extend / shorten stay inline with recalculation & charge
 - [ ] 🟡 Customizable room/feature names per facility in Settings
 
 ---
@@ -284,38 +284,38 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### 4.1 Directory
 
-- [ ] 🟢 Add / edit staff profiles
-- [ ] 🟢 Roles & certifications
-- [ ] 🟠 Document storage for staff
+- [x] 🟢 Add / edit staff profiles
+- [x] 🟢 Roles & certifications
+- [x] 🟠 Document storage for staff
 - [ ] 🟡 Emergency contact info
 
 ### 4.2 Scheduling
 
-- [ ] 🟢 Calendar view (day / week / month)
-- [ ] 🟠 Shift templates & copy-paste
-- [ ] 🟢 Recurring shifts
-- [ ] 🟢 Availability grid + time-off request flow (approve / deny)
+- [x] 🟢 Calendar view (day / week / month)
+- [x] 🟠 Shift templates & copy-paste
+- [x] 🟢 Recurring shifts
+- [x] 🟢 Availability grid + time-off request flow (approve / deny)
 - [ ] 🟡 Shift-swap request (manager approve)
 - [ ] 🟡 AI suggester: reads upcoming reservations & recommends head-count per shift
 - [ ] 🟠 Auto-scheduler: respects availability, max hours, labour budget vs revenue
-- [ ] 🟠 Staff hourly rates / salary for cost vs labour reports
+- [x] 🟠 Staff hourly rates / salary for cost vs labour reports
 - [ ] 🟠 Real-time change push (30-min reminder)
 - [ ] 🟡 Sick-alert broadcast
 - [ ] 🟡 Open-shift pickup
-- [ ] 🟢 ICS feed export (Phase 2)
+- [x] 🟢 ICS feed export (Phase 2)
 
 ### 4.3 Tasks
 
-- [ ] 🟢 Task templates (boarding, daycare, cleaning, medication)
-- [ ] 🟠 Shift tasks (assigned to particular shifts, customizable)
-- [ ] 🟢 Assign to shift or pet; set priority & photo-proof flag
-- [ ] 🟠 Repeat patterns (daily, weekly, custom)
-- [ ] 🟠 Completion = staff initials + ID + timestamp
+- [x] 🟢 Task templates (boarding, daycare, cleaning, medication)
+- [x] 🟠 Shift tasks (assigned to particular shifts, customizable)
+- [x] 🟢 Assign to shift or pet; set priority & photo-proof flag
+- [x] 🟠 Repeat patterns (daily, weekly, custom)
+- [x] 🟠 Completion = staff initials + ID + timestamp
 
 ### 4.4 Performance
 
 - [ ] 🟡 Shift feedback after every shift (staff → manager) with notification
-- [ ] 🟠 Task completion rate per employee
+- [x] 🟠 Task completion rate per employee
 
 ### 4.5 Training & Loyalty
 

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { schedules } from "@/data/schedules";
 import { users } from "@/data/users";
+import { schedules } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
+import { shiftTemplates, staffRates } from "@/data/staff-availability";
 import {
   GenericCalendar,
   CalendarItem,
@@ -362,7 +363,12 @@ import {
   Plus,
   Edit,
   Trash2,
+  Copy,
+  Repeat,
+  FileDown,
+  DollarSign,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const exportSchedulesToCSV = (scheduleData: typeof schedules) => {
   const headers = [
@@ -397,6 +403,51 @@ const exportSchedulesToCSV = (scheduleData: typeof schedules) => {
   link.setAttribute(
     "download",
     `schedules_export_${new Date().toISOString().split("T")[0]}.csv`,
+  );
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Export schedules to ICS format
+const exportSchedulesToICS = (
+  scheduleData: typeof schedules,
+  facilityName: string,
+) => {
+  const icsEvents = scheduleData
+    .map((schedule) => {
+      const startDate = schedule.date.replace(/-/g, "");
+      const startTime = schedule.startTime.replace(":", "") + "00";
+      const endTime = schedule.endTime.replace(":", "") + "00";
+
+      return `BEGIN:VEVENT
+DTSTART:${startDate}T${startTime}
+DTEND:${startDate}T${endTime}
+SUMMARY:${schedule.staffName} - ${schedule.role}
+DESCRIPTION:Shift at ${facilityName}
+STATUS:${schedule.status === "scheduled" ? "CONFIRMED" : "TENTATIVE"}
+UID:${schedule.id}-${startDate}@doggieville.com
+END:VEVENT`;
+    })
+    .join("\n");
+
+  const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Doggieville//Staff Scheduling//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:${facilityName} Staff Schedule
+${icsEvents}
+END:VCALENDAR`;
+
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `schedule_${new Date().toISOString().split("T")[0]}.ics`,
   );
   link.style.visibility = "hidden";
   document.body.appendChild(link);
@@ -462,7 +513,17 @@ export default function FacilitySchedulingPage() {
     startTime: "09:00",
     endTime: "17:00",
     status: "scheduled",
+    isRecurring: false,
+    recurringPattern: "weekly" as "daily" | "weekly" | "biweekly",
+    recurringEndDate: "",
   });
+
+  // Shift template modal
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+
+  // Copy week modal
+  const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
+  const [copyTargetDate, setCopyTargetDate] = useState("");
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -488,6 +549,9 @@ export default function FacilitySchedulingPage() {
       startTime: "09:00",
       endTime: "17:00",
       status: "scheduled",
+      isRecurring: false,
+      recurringPattern: "weekly",
+      recurringEndDate: "",
     });
     setIsAddEditModalOpen(true);
   };
@@ -500,6 +564,9 @@ export default function FacilitySchedulingPage() {
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       status: schedule.status,
+      isRecurring: false,
+      recurringPattern: "weekly",
+      recurringEndDate: "",
     });
     setIsAddEditModalOpen(true);
   };
@@ -538,6 +605,27 @@ export default function FacilitySchedulingPage() {
     return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
   }, 0);
 
+  // Calculate labour costs
+  const calculateLabourCost = () => {
+    return facilitySchedules.reduce((sum, schedule) => {
+      const rate = staffRates.find((r) => r.staffId === schedule.staffId);
+      if (!rate) return sum;
+      const start = new Date(`2000-01-01T${schedule.startTime}`);
+      const end = new Date(`2000-01-01T${schedule.endTime}`);
+      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return sum + hours * rate.hourlyRate;
+    }, 0);
+  };
+
+  const totalLabourCost = calculateLabourCost();
+
+  // Copy week schedules
+  const handleCopyWeek = () => {
+    // In a real app, this would copy all schedules from current week to target week
+    setIsCopyWeekModalOpen(false);
+    setCopyTargetDate("");
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -556,10 +644,26 @@ export default function FacilitySchedulingPage() {
           </Button>
           <Button
             variant="outline"
+            onClick={() => setIsCopyWeekModalOpen(true)}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Week
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => exportSchedulesToCSV(facilitySchedules)}
           >
             <Download className="mr-2 h-4 w-4" />
-            Export
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              exportSchedulesToICS(facilitySchedules, facility.name)
+            }
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            ICS
           </Button>
         </div>
       </div>
@@ -608,6 +712,20 @@ export default function FacilitySchedulingPage() {
               {new Set(facilitySchedules.map((s) => s.staffId)).size}
             </div>
             <p className="text-xs text-muted-foreground">Staff members</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Labour Cost</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${totalLabourCost.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Est. for scheduled shifts
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -848,7 +966,7 @@ export default function FacilitySchedulingPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="staffId">Staff Member *</Label>
+              <Label htmlFor="staffId">Staff Member</Label>
               <Select
                 value={formData.staffId}
                 onValueChange={(value) =>
@@ -861,7 +979,42 @@ export default function FacilitySchedulingPage() {
                 <SelectContent>
                   {facilityStaff.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id.toString()}>
-                      {staff.name} - {staff.role}
+                      {staff.name} ({staff.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Apply Shift Template</Label>
+              <Select
+                value={selectedTemplate}
+                onValueChange={(value) => {
+                  setSelectedTemplate(value);
+                  const template = shiftTemplates.find(
+                    (t) => t.id.toString() === value,
+                  );
+                  if (template) {
+                    setFormData({
+                      ...formData,
+                      startTime: template.startTime,
+                      endTime: template.endTime,
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shiftTemplates.map((template) => (
+                    <SelectItem
+                      key={template.id}
+                      value={template.id.toString()}
+                    >
+                      {template.name} ({template.startTime} - {template.endTime}
+                      )
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -937,11 +1090,73 @@ export default function FacilitySchedulingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {!editingSchedule && (
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isRecurring"
+                    checked={formData.isRecurring}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, isRecurring: !!checked })
+                    }
+                  />
+                  <Label
+                    htmlFor="isRecurring"
+                    className="font-normal flex items-center gap-2"
+                  >
+                    <Repeat className="h-4 w-4" />
+                    Create recurring shift
+                  </Label>
+                </div>
+
+                {formData.isRecurring && (
+                  <div className="grid grid-cols-2 gap-4 pl-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringPattern">Repeat</Label>
+                      <Select
+                        value={formData.recurringPattern}
+                        onValueChange={(
+                          value: "daily" | "weekly" | "biweekly",
+                        ) =>
+                          setFormData({ ...formData, recurringPattern: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringEndDate">Until</Label>
+                      <Input
+                        id="recurringEndDate"
+                        type="date"
+                        value={formData.recurringEndDate}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            recurringEndDate: e.target.value,
+                          })
+                        }
+                        min={formData.date}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -978,6 +1193,49 @@ export default function FacilitySchedulingPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
               Delete Shift
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Copy Week Modal */}
+      <Dialog open={isCopyWeekModalOpen} onOpenChange={setIsCopyWeekModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Copy Week Schedule</DialogTitle>
+            <DialogDescription>
+              Copy all shifts from the current week to another week.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="copyTarget">
+                Target Week Start Date (Monday)
+              </Label>
+              <Input
+                id="copyTarget"
+                type="date"
+                value={copyTargetDate}
+                onChange={(e) => setCopyTargetDate(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                All shifts from the current week will be copied to the selected
+                week.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCopyWeekModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCopyWeek}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy Shifts
             </Button>
           </DialogFooter>
         </DialogContent>
