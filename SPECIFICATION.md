@@ -329,14 +329,14 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **5. Services & Pricing**
 
-- [ ] 🟢 Service catalog (boarding, daycare, grooming, training, extras)
-- [ ] 🟢 Packages & add-ons
-- [ ] 🟢 Size-based pricing
-- [ ] 🟢 Seasonal pricing
-- [ ] 🟢 Peak-surcharge rules
-- [ ] 🟠 Dynamic pricing engine (demand & occupancy driven)
-- [ ] 🟢 Memberships & prepaid credits
-- [ ] 🟢 Discount / promo code manager
+- [x] 🟢 Service catalog (boarding, daycare, grooming, training, extras)
+- [x] 🟢 Packages & add-ons
+- [x] 🟢 Size-based pricing
+- [x] 🟢 Seasonal pricing
+- [x] 🟢 Peak-surcharge rules
+- [x] 🟠 Dynamic pricing engine (demand & occupancy driven)
+- [x] 🟢 Memberships & prepaid credits
+- [x] 🟢 Discount / promo code manager
 
 ---
 
