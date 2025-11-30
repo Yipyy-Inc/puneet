@@ -24,8 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
-import { StatCard } from "@/components/StatCard";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   tenantModuleConfigs,
   remoteConfigFlags,

@@ -29,8 +29,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTable, ColumnDef, FilterDef } from "@/components/DataTable";
-import { StatCard } from "@/components/StatCard";
+import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   supportTickets,
   supportAgents,
