@@ -176,7 +176,7 @@ export function FacilitySidebar() {
           title: t("incidents"),
           url: "/facility/dashboard/incidents",
           icon: AlertTriangle,
-          disabled: true,
+          disabled: false,
         },
         {
           title: tCommon("settings"),

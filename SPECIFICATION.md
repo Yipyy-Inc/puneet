@@ -538,12 +538,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **15. Incident Reporting**
 
-- [ ] 🟢 Create incident (type, severity, pets, staff, description, photos)
-- [ ] 🟢 Manager notification & follow-up tasks
-- [ ] 🟢 Incident history per pet
-- [ ] 🟢 Closed-loop marker
-- [ ] 🟢 Internal vs client-facing notes
-- [ ] 🟢 Severity levels & permissions
+- [x] 🟢 Create incident (type, severity, pets, staff, description, photos)
+- [x] 🟢 Manager notification & follow-up tasks
+- [x] 🟢 Incident history per pet
+- [x] 🟢 Closed-loop marker
+- [x] 🟢 Internal vs client-facing notes
+- [x] 🟢 Severity levels & permissions
 
 ---
 
