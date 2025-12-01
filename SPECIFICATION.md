@@ -527,12 +527,12 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **14. Retail / POS (Opt-In)**
 
-- [ ] 🟢 POS screen (barcode scan, cart, discounts, split tender, print / email receipt)
-- [ ] 🟢 Product catalog with variants & stock toggle
-- [ ] 🟢 Inventory dashboard (stock value, low-stock alert, movement log)
-- [ ] 🟢 Low stock push notification to manager / staff
-- [ ] 🟢 Purchase orders & supplier list
-- [ ] 🟢 Online store sync (if enabled)
+- [x] 🟢 POS screen (barcode scan, cart, discounts, split tender, print / email receipt)
+- [x] 🟢 Product catalog with variants & stock toggle
+- [x] 🟢 Inventory dashboard (stock value, low-stock alert, movement log)
+- [x] 🟢 Low stock push notification to manager / staff
+- [x] 🟢 Purchase orders & supplier list
+- [x] 🟢 Online store sync (if enabled)
 
 ---
 

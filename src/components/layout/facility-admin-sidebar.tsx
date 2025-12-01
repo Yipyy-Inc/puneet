@@ -122,8 +122,8 @@ export function FacilitySidebar() {
           disabled: false,
         },
         {
-          title: tServices("store"),
-          url: "/facility/dashboard/services/store",
+          title: "Retail / POS",
+          url: "/facility/retail",
           icon: ShoppingCart,
           disabled: false,
         },
