@@ -182,7 +182,7 @@ export function FacilitySidebar() {
           title: tCommon("settings"),
           url: "/facility/dashboard/settings",
           icon: Settings,
-          disabled: true,
+          disabled: false,
         },
       ],
     },

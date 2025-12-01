@@ -551,37 +551,37 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### Business Configuration
 
-- [ ] 🟢 Business profile, hours, locations, branding
-- [ ] 🟢 Booking rules, cancel policy, deposit %, capacity limits
-- [ ] 🟠 Kennel map, types, amenities (visual map)
-- [ ] 🟢 Pet size classes, vaccination rules
+- [x] 🟢 Business profile, hours, locations, branding
+- [x] 🟢 Booking rules, cancel policy, deposit %, capacity limits
+- [x] 🟠 Kennel map, types, amenities (visual map)
+- [x] 🟢 Pet size classes, vaccination rules
 
 ### Financial
 
-- [ ] 🟢 Payment gateway, tax rates, currency
-- [ ] 🟢 Roles & permissions matrix
-- [ ] 🟠 Financial data lock-down
+- [x] 🟢 Payment gateway, tax rates, currency
+- [x] 🟢 Roles & permissions matrix
+- [x] 🟠 Financial data lock-down
 
 ### Notifications
 
-- [ ] 🟢 Notification toggles & template editor
+- [x] 🟢 Notification toggles & template editor
 
 ### Integrations
 
-- [ ] 🟢 SMS, email SMTP
-- [ ] 🟠 VOIP
-- [ ] 🟢 QuickBooks (Phase 2)
-- [ ] 🟢 AI tools
+- [x] 🟢 SMS, email SMTP
+- [x] 🟠 VOIP
+- [x] 🟢 QuickBooks (Phase 2)
+- [x] 🟢 AI tools
 - [ ] 🟡 Ads manager (Google, Facebook)
 - [ ] 🟡 Partnerships tab (pet insurance referral link / banner)
 
 ### Subscription
 
-- [ ] 🟢 Subscription & module add-ons view
+- [x] 🟢 Subscription & module add-ons view
 
 ### Audit
 
-- [ ] 🟢 Audit log for every setting change (who changed what, when, exportable)
+- [x] 🟢 Audit log for every setting change (who changed what, when, exportable)
 
 ---
 
