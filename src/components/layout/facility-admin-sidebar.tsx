@@ -162,8 +162,8 @@ export function FacilitySidebar() {
           disabled: false,
         },
         {
-          title: t("customerReach"),
-          url: "/facility/customer-reach",
+          title: "Communications",
+          url: "/facility/dashboard/communications",
           icon: MessageSquare,
           disabled: false,
         },

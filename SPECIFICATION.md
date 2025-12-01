@@ -406,38 +406,38 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ### 9.1 Messaging Hub
 
-- [ ] 🟢 Unified inbox (email, SMS, in-app)
-- [ ] 🟢 Templates & file attach
-- [ ] 🟠 Per-customer communication history view
+- [x] 🟢 Unified inbox (email, SMS, in-app)
+- [x] 🟢 Templates & file attach
+- [x] 🟠 Per-customer communication history view
 
 ### 9.2 Automations
 
-- [ ] 🟢 Booking confirmation
-- [ ] 🟢 24-hour reminder
-- [ ] 🟢 Check-in / out notice
-- [ ] 🟢 Payment receipt
-- [ ] 🟢 Vaccination expiry
-- [ ] 🟢 Grooming / training appointment reminder
+- [x] 🟢 Booking confirmation
+- [x] 🟢 24-hour reminder
+- [x] 🟢 Check-in / out notice
+- [x] 🟢 Payment receipt
+- [x] 🟢 Vaccination expiry
+- [x] 🟢 Grooming / training appointment reminder
 
 ### 9.3 Real-Time Pet Updates
 
-- [ ] 🟠 One-tap buttons: "Eating now", "Potty break", "Play time", "Nap time" → pushes to owner
-- [ ] 🟢 Push notifications to owner
+- [x] 🟠 One-tap buttons: "Eating now", "Potty break", "Play time", "Nap time" → pushes to owner
+- [x] 🟢 Push notifications to owner
 
 ### 9.4 AI Receptionist / Calling
 
-- [ ] 🟠 Call log
-- [ ] 🟠 Recording
-- [ ] 🟠 Voicemail
-- [ ] 🟠 Routing rules
-- [ ] 🟠 AI takes bookings over phone
+- [x] 🟠 Call log
+- [x] 🟠 Recording
+- [x] 🟠 Voicemail
+- [x] 🟠 Routing rules
+- [x] 🟠 AI takes bookings over phone
 - [ ] 🟡 AI tour booking
 
 ### 9.5 Internal Comms
 
 - [ ] 🟡 Manager announcements
 - [ ] 🟡 Shift hand-over notes
-- [ ] 🟢 @mentions
+- [x] 🟢 @mentions
 
 ---
 
