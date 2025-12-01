@@ -97,6 +97,7 @@ const resourceTypeConfig: Record<
 export function AuditLogsManager() {
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedResourceType, setSelectedResourceType] = useState<
     string | null
@@ -105,6 +106,53 @@ export function AuditLogsManager() {
     null,
   );
   const [resourceSearch, setResourceSearch] = useState("");
+
+  // Export audit logs to CSV
+  const exportToCSV = () => {
+    const headers = [
+      "Timestamp",
+      "User",
+      "Role",
+      "Action",
+      "Category",
+      "Entity Type",
+      "Entity Name",
+      "Severity",
+      "Status",
+      "IP Address",
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      ...auditLogs.map((log: any) =>
+        [
+          log.timestamp,
+          `"${log.userName}"`,
+          log.userRole,
+          `"${log.action}"`,
+          log.category,
+          log.entityType,
+          `"${log.entityName}"`,
+          log.severity,
+          log.status,
+          log.ipAddress,
+        ].join(","),
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `audit_logs_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Calculate resource index data
   const resourceIndex = useMemo(() => {
@@ -353,11 +401,11 @@ export function AuditLogsManager() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setShowFilterDialog(true)}>
             <Filter className="h-4 w-4" />
             Advanced Filters
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={exportToCSV}>
             <Download className="h-4 w-4" />
             Export Report
           </Button>
@@ -1164,6 +1212,69 @@ export function AuditLogsManager() {
               </Card>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Advanced Filters Dialog */}
+      <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
+        <DialogContent className="min-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Advanced Filters</DialogTitle>
+            <DialogDescription>
+              Apply filters to narrow down audit log results
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <div className="flex gap-2">
+                  <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                  <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Severity</label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="all">All Severities</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="all">All Statuses</option>
+                  <option value="Success">Success</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Pending">Pending</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Category</label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="all">All Categories</option>
+                  <option value="Financial">Financial</option>
+                  <option value="User Access">User Access</option>
+                  <option value="Configuration">Configuration</option>
+                  <option value="Security">Security</option>
+                  <option value="Data">Data</option>
+                  <option value="System">System</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowFilterDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowFilterDialog(false)}>
+              <Filter className="h-4 w-4 mr-2" />
+              Apply Filters
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

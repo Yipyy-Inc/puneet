@@ -8,7 +8,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
-import { Bell } from "lucide-react";
+import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -39,10 +39,7 @@ export default async function DashboardLayout({
 
           <div className="flex items-center gap-3">
             {/* Notifications */}
-            <button className="relative flex items-center justify-center h-10 w-10 rounded-xl hover:bg-muted transition-colors">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary animate-pulse" />
-            </button>
+            <NotificationsDropdown />
 
             {/* Divider */}
             <div className="h-8 w-px bg-border/50" />

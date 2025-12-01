@@ -14,7 +14,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import { FacilityModal } from "@/components/modals/FacilityModal";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
@@ -34,6 +39,8 @@ import {
   TrendingUp,
   Activity,
   AlertCircle,
+  Send,
+  CheckCircle,
 } from "lucide-react";
 
 const exportToCSV = (facilities: typeof initialFacilities) => {
@@ -150,6 +157,21 @@ export default function FacilitiesPage() {
     (typeof initialFacilities)[0] | null
   >(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [notifySubject, setNotifySubject] = useState("");
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [notificationSent, setNotificationSent] = useState(false);
+
+  const handleSendNotification = () => {
+    // Simulate sending notification
+    setNotificationSent(true);
+    setTimeout(() => {
+      setNotificationSent(false);
+      setIsNotifyModalOpen(false);
+      setNotifySubject("");
+      setNotifyMessage("");
+    }, 2000);
+  };
 
   const pendingRequestsCount = facilityRequests.filter(
     (r) => r.status === "pending",
@@ -318,7 +340,7 @@ export default function FacilitiesPage() {
             <Download className="mr-2 h-4 w-4" />
             {tCommon("export")}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsNotifyModalOpen(true)}>
             <Mail className="mr-2 h-4 w-4" />
             {t("notifyAll")}
           </Button>
@@ -456,6 +478,71 @@ export default function FacilitiesPage() {
             </DialogHeader>
             {selectedFacility && <FacilityModal facility={selectedFacility} />}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notify All Modal */}
+      <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              {t("notifyAll")}
+            </DialogTitle>
+            <DialogDescription>
+              Send a notification to all {facilitiesState.length} facilities
+            </DialogDescription>
+          </DialogHeader>
+          {notificationSent ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-success" />
+              </div>
+              <h3 className="text-lg font-semibold">Notification Sent!</h3>
+              <p className="text-sm text-muted-foreground">
+                All facilities have been notified
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    placeholder="Enter notification subject"
+                    value={notifySubject}
+                    onChange={(e) => setNotifySubject(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Enter your message to all facilities..."
+                    rows={5}
+                    value={notifyMessage}
+                    onChange={(e) => setNotifyMessage(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsNotifyModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendNotification}
+                  disabled={!notifySubject || !notifyMessage}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Notification
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

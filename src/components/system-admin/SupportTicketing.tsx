@@ -92,9 +92,12 @@ export function SupportTicketing() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isSLAModalOpen, setIsSLAModalOpen] = useState(false);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const [isCreateTicketModalOpen, setIsCreateTicketModalOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("tickets");
+  const [newTicketTitle, setNewTicketTitle] = useState("");
+  const [newTicketDescription, setNewTicketDescription] = useState("");
 
   const stats = useMemo(() => getTicketStats(), []);
 
@@ -496,7 +499,7 @@ export function SupportTicketing() {
             <Settings className="h-4 w-4 mr-2" />
             SLA Settings
           </Button>
-          <Button>
+          <Button onClick={() => setIsCreateTicketModalOpen(true)}>
             <Ticket className="h-4 w-4 mr-2" />
             Create Ticket
           </Button>
@@ -1425,9 +1428,111 @@ export function SupportTicketing() {
             <Button variant="outline" onClick={() => setIsSLAModalOpen(false)}>
               Close
             </Button>
-            <Button>
+            <Button onClick={() => setIsSLAModalOpen(false)}>
               <Shield className="h-4 w-4 mr-2" />
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Ticket Modal */}
+      <Dialog open={isCreateTicketModalOpen} onOpenChange={setIsCreateTicketModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              Create New Ticket
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ticket-title">Title</Label>
+              <Input
+                id="ticket-title"
+                placeholder="Enter ticket title"
+                value={newTicketTitle}
+                onChange={(e) => setNewTicketTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ticket-description">Description</Label>
+              <Textarea
+                id="ticket-description"
+                placeholder="Describe the issue..."
+                rows={4}
+                value={newTicketDescription}
+                onChange={(e) => setNewTicketDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select defaultValue="Medium">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select defaultValue="Technical">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Billing">Billing</SelectItem>
+                    <SelectItem value="Service">Service</SelectItem>
+                    <SelectItem value="Feature Request">Feature Request</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsCreateTicketModalOpen(false);
+              setNewTicketTitle("");
+              setNewTicketDescription("");
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // Create a new ticket (showcase only)
+              const newTicket: SupportTicket = {
+                id: `TKT-${String(ticketsState.length + 1).padStart(3, '0')}`,
+                title: newTicketTitle,
+                description: newTicketDescription,
+                status: "Open",
+                priority: "Medium",
+                category: "Technical",
+                subcategory: "General",
+                facility: "New Facility",
+                facilityId: "fac-new",
+                requester: "Admin User",
+                requesterEmail: "admin@example.com",
+                assignedTo: undefined,
+                assignedAgentId: undefined,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                tags: [],
+                messages: [],
+                timeline: [],
+              };
+              setTicketsState(prev => [newTicket, ...prev]);
+              setIsCreateTicketModalOpen(false);
+              setNewTicketTitle("");
+              setNewTicketDescription("");
+            }} disabled={!newTicketTitle || !newTicketDescription}>
+              <Ticket className="h-4 w-4 mr-2" />
+              Create Ticket
             </Button>
           </DialogFooter>
         </DialogContent>

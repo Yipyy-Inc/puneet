@@ -10,6 +10,14 @@ import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,6 +26,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   MoreHorizontal,
   Eye,
@@ -26,12 +42,20 @@ import {
   RefreshCw,
   TrendingUp,
   AlertTriangle,
+  Package,
+  CheckCircle,
 } from "lucide-react";
 
 export function FacilitySubscriptionsTable() {
-  const [subscriptions] = useState<FacilitySubscription[]>(
+  const [subscriptions, setSubscriptions] = useState<FacilitySubscription[]>(
     facilitySubscriptions,
   );
+  const [selectedSubscription, setSelectedSubscription] = useState<FacilitySubscription | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showModulesModal, setShowModulesModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -209,7 +233,7 @@ export function FacilitySubscriptionsTable() {
     },
   ];
 
-  const renderActions = () => (
+  const renderActions = (item: FacilitySubscription) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -219,31 +243,57 @@ export function FacilitySubscriptionsTable() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowDetailsModal(true); }}>
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowEditModal(true); }}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Subscription
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowModulesModal(true); }}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Manage Modules
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowUpgradeModal(true); }}>
           <TrendingUp className="mr-2 h-4 w-4" />
           Upgrade Tier
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedSubscription(item); setShowCancelModal(true); }}>
           <Archive className="mr-2 h-4 w-4" />
           Cancel Subscription
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
+
+  const handleCancelSubscription = () => {
+    if (!selectedSubscription) return;
+    setSubscriptions(prev =>
+      prev.map(sub =>
+        sub.id === selectedSubscription.id
+          ? { ...sub, status: "cancelled" as const }
+          : sub
+      )
+    );
+    setShowCancelModal(false);
+    setSelectedSubscription(null);
+  };
+
+  const handleUpgrade = () => {
+    if (!selectedSubscription) return;
+    setSubscriptions(prev =>
+      prev.map(sub =>
+        sub.id === selectedSubscription.id
+          ? { ...sub, tierName: "Enterprise", tierId: "tier-enterprise" }
+          : sub
+      )
+    );
+    setShowUpgradeModal(false);
+    setSelectedSubscription(null);
+  };
 
   const activeSubscriptions = getSubscriptionsByStatus("active");
   const trialSubscriptions = getSubscriptionsByStatus("trial");
@@ -330,6 +380,230 @@ export function FacilitySubscriptionsTable() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* View Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Subscription Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSubscription?.facilityName}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSubscription && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Facility</p>
+                  <p className="font-medium">{selectedSubscription.facilityName}</p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Tier</p>
+                  <Badge variant="outline">{selectedSubscription.tierName}</Badge>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <Badge className={getStatusColor(selectedSubscription.status)}>
+                    {selectedSubscription.status}
+                  </Badge>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Billing Cycle</p>
+                  <p className="font-medium capitalize">{selectedSubscription.billingCycle}</p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Total Cost</p>
+                  <p className="font-medium">{formatCurrency(selectedSubscription.billing.totalCost, selectedSubscription.billing.currency)}</p>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">End Date</p>
+                  <p className="font-medium">{formatDate(selectedSubscription.endDate)}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">Enabled Modules ({selectedSubscription.enabledModules.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSubscription.enabledModules.map(module => (
+                    <Badge key={module} variant="outline">{module}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subscription Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Subscription
+            </DialogTitle>
+            <DialogDescription>
+              Update subscription for {selectedSubscription?.facilityName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Billing Cycle</Label>
+              <Select defaultValue={selectedSubscription?.billingCycle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="annual">Annual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select defaultValue={selectedSubscription?.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="trial">Trial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowEditModal(false)}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Modules Modal */}
+      <Dialog open={showModulesModal} onOpenChange={setShowModulesModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Manage Modules
+            </DialogTitle>
+            <DialogDescription>
+              Enable or disable modules for {selectedSubscription?.facilityName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Current modules: {selectedSubscription?.enabledModules.length || 0}
+            </p>
+            <div className="space-y-2">
+              {selectedSubscription?.enabledModules.map(module => (
+                <div key={module} className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="font-medium">{module}</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Enabled
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModulesModal(false)}>
+              Close
+            </Button>
+            <Button onClick={() => setShowModulesModal(false)}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Tier Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Upgrade Tier
+            </DialogTitle>
+            <DialogDescription>
+              Upgrade subscription tier for {selectedSubscription?.facilityName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 border rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Current Tier</p>
+              <Badge variant="outline">{selectedSubscription?.tierName}</Badge>
+            </div>
+            <div className="space-y-2">
+              <Label>Select New Tier</Label>
+              <Select defaultValue="enterprise">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpgradeModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpgrade}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Upgrade Tier
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Subscription Modal */}
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Archive className="h-5 w-5" />
+              Cancel Subscription
+            </DialogTitle>
+            <DialogDescription>
+              Cancel subscription for {selectedSubscription?.facilityName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">
+                <strong>Warning:</strong> This action will cancel the subscription. 
+                The facility will lose access to all premium features at the end of the billing period.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelModal(false)}>
+              Keep Subscription
+            </Button>
+            <Button variant="destructive" onClick={handleCancelSubscription}>
+              Cancel Subscription
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

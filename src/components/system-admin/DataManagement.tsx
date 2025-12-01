@@ -1,10 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   dataBackups,
   dataRecoveries,
@@ -23,11 +41,64 @@ import {
   Trash2,
   Settings,
   ShieldCheck,
+  Plus,
+  CheckCircle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 
 export function DataManagement() {
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [showEditPolicyModal, setShowEditPolicyModal] = useState(false);
+  const [selectedBackup, setSelectedBackup] = useState<any>(null);
+  const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
+  const [backupInProgress, setBackupInProgress] = useState(false);
+  const [backupComplete, setBackupComplete] = useState(false);
+  const [restoreInProgress, setRestoreInProgress] = useState(false);
+  const [restoreComplete, setRestoreComplete] = useState(false);
+
+  const handleCreateBackup = () => {
+    setBackupInProgress(true);
+    setTimeout(() => {
+      setBackupInProgress(false);
+      setBackupComplete(true);
+      setTimeout(() => {
+        setBackupComplete(false);
+        setShowBackupModal(false);
+      }, 2000);
+    }, 2000);
+  };
+
+  const handleRestore = () => {
+    setRestoreInProgress(true);
+    setTimeout(() => {
+      setRestoreInProgress(false);
+      setRestoreComplete(true);
+      setTimeout(() => {
+        setRestoreComplete(false);
+        setShowRestoreModal(false);
+        setSelectedBackup(null);
+      }, 2000);
+    }, 2000);
+  };
+
+  const handleDownload = (backup: any) => {
+    // Simulate download
+    const blob = new Blob([`Backup: ${backup.backupName}\nDate: ${backup.startTime}`], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${backup.backupName.replace(/\s/g, "_")}.backup`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRunPolicy = (policy: any) => {
+    // Simulate running policy
+    alert(`Policy "${policy.policyName}" execution started!`);
+  };
+
   const getBackupStatusBadge = (status: string) => {
     const variants: Record<
       string,
@@ -193,13 +264,13 @@ export function DataManagement() {
     },
   ];
 
-  const backupActions = () => (
+  const backupActions = (item: any) => (
     <div className="flex gap-2">
-      <Button variant="ghost" size="sm" className="gap-2">
+      <Button variant="ghost" size="sm" className="gap-2" onClick={() => { setSelectedBackup(item); setShowRestoreModal(true); }}>
         <RefreshCw className="h-4 w-4" />
         Restore
       </Button>
-      <Button variant="ghost" size="sm" className="gap-2">
+      <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleDownload(item)}>
         <Download className="h-4 w-4" />
         Download
       </Button>
@@ -320,13 +391,13 @@ export function DataManagement() {
     },
   ];
 
-  const policyActions = () => (
+  const policyActions = (item: any) => (
     <div className="flex gap-2">
-      <Button variant="ghost" size="sm" className="gap-2">
+      <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleRunPolicy(item)}>
         <Play className="h-4 w-4" />
         Run Now
       </Button>
-      <Button variant="ghost" size="sm" className="gap-2">
+      <Button variant="ghost" size="sm" className="gap-2" onClick={() => { setSelectedPolicy(item); setShowEditPolicyModal(true); }}>
         <Settings className="h-4 w-4" />
         Edit
       </Button>
@@ -357,7 +428,7 @@ export function DataManagement() {
             Manage backups, recovery, and data retention policies
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowBackupModal(true)}>
           <Database className="h-4 w-4" />
           Create Manual Backup
         </Button>
@@ -655,6 +726,203 @@ export function DataManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Create Backup Modal */}
+      <Dialog open={showBackupModal} onOpenChange={setShowBackupModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Create Manual Backup
+            </DialogTitle>
+            <DialogDescription>
+              Create a new backup of your system data
+            </DialogDescription>
+          </DialogHeader>
+          {backupComplete ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold">Backup Created!</h3>
+              <p className="text-sm text-muted-foreground">
+                Your backup has been created successfully
+              </p>
+            </div>
+          ) : backupInProgress ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+              </div>
+              <h3 className="text-lg font-semibold">Creating Backup...</h3>
+              <p className="text-sm text-muted-foreground">
+                Please wait while we create your backup
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Backup Name</Label>
+                  <Input placeholder="Enter backup name" defaultValue={`Manual Backup ${new Date().toLocaleDateString()}`} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Backup Type</Label>
+                  <Select defaultValue="full">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Backup</SelectItem>
+                      <SelectItem value="incremental">Incremental Backup</SelectItem>
+                      <SelectItem value="differential">Differential Backup</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Scope</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Facilities</SelectItem>
+                      <SelectItem value="system">System Only</SelectItem>
+                      <SelectItem value="users">Users & Permissions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowBackupModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateBackup}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Backup
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Backup Modal */}
+      <Dialog open={showRestoreModal} onOpenChange={setShowRestoreModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Restore Backup
+            </DialogTitle>
+            <DialogDescription>
+              Restore data from backup: {selectedBackup?.backupName}
+            </DialogDescription>
+          </DialogHeader>
+          {restoreComplete ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold">Restore Complete!</h3>
+              <p className="text-sm text-muted-foreground">
+                Data has been restored successfully
+              </p>
+            </div>
+          ) : restoreInProgress ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+              </div>
+              <h3 className="text-lg font-semibold">Restoring...</h3>
+              <p className="text-sm text-muted-foreground">
+                Please wait while we restore your data
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="py-4 space-y-4">
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Warning:</strong> Restoring this backup will replace current data. This action cannot be undone.
+                  </p>
+                </div>
+                {selectedBackup && (
+                  <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Backup Name:</span>
+                      <span className="font-medium">{selectedBackup.backupName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span>{new Date(selectedBackup.startTime).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Size:</span>
+                      <span>{selectedBackup.size >= 1024 ? `${(selectedBackup.size / 1024).toFixed(2)} GB` : `${selectedBackup.size} MB`}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowRestoreModal(false); setSelectedBackup(null); }}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleRestore}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restore Backup
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Policy Modal */}
+      <Dialog open={showEditPolicyModal} onOpenChange={setShowEditPolicyModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Edit Retention Policy
+            </DialogTitle>
+            <DialogDescription>
+              Update settings for: {selectedPolicy?.policyName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Policy Name</Label>
+              <Input defaultValue={selectedPolicy?.policyName} />
+            </div>
+            <div className="space-y-2">
+              <Label>Retention Period (days)</Label>
+              <Input type="number" defaultValue={selectedPolicy?.retentionPeriod} />
+            </div>
+            <div className="space-y-2">
+              <Label>Action After Retention</Label>
+              <Select defaultValue={selectedPolicy?.action?.toLowerCase()}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="archive">Archive</SelectItem>
+                  <SelectItem value="purge">Purge</SelectItem>
+                  <SelectItem value="anonymize">Anonymize</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowEditPolicyModal(false); setSelectedPolicy(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={() => { setShowEditPolicyModal(false); setSelectedPolicy(null); }}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
