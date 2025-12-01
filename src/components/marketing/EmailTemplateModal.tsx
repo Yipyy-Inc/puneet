@@ -148,7 +148,7 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm text-muted-foreground">From:</Label>
-                  <div className="font-medium">{{facility_name}} &lt;noreply@facility.com&gt;</div>
+                  <div className="font-medium">{'{{facility_name}}'} &lt;noreply@facility.com&gt;</div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Subject:</Label>

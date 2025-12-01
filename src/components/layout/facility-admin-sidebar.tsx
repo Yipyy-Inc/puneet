@@ -20,6 +20,9 @@ import {
   ShoppingCart,
   Bed,
   Tags,
+  Camera,
+  Lightbulb,
+  FileText,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -92,6 +95,12 @@ export function FacilitySidebar() {
           icon: Tags,
           disabled: false,
         },
+        {
+          title: "Live Pet Cams",
+          url: "/facility/dashboard/petcams",
+          icon: Camera,
+          disabled: false,
+        },
       ],
     },
     {
@@ -156,6 +165,12 @@ export function FacilitySidebar() {
           disabled: false,
         },
         {
+          title: "Smart Insights",
+          url: "/facility/dashboard/insights",
+          icon: Lightbulb,
+          disabled: false,
+        },
+        {
           title: "Marketing",
           url: "/facility/dashboard/marketing",
           icon: Megaphone,
@@ -176,6 +191,12 @@ export function FacilitySidebar() {
           title: t("incidents"),
           url: "/facility/dashboard/incidents",
           icon: AlertTriangle,
+          disabled: false,
+        },
+        {
+          title: "Digital Waivers",
+          url: "/facility/dashboard/waivers",
+          icon: FileText,
           disabled: false,
         },
         {

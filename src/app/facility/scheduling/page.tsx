@@ -11,6 +11,9 @@ import {
   CalendarItem,
   CalendarRowData,
 } from "@/components/ui/GenericCalendar";
+import { StaffConflictDetector } from "@/components/additional-features/StaffConflictDetector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, Calendar } from "lucide-react";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [
@@ -730,24 +733,38 @@ export default function FacilitySchedulingPage() {
         </Card>
       </div>
 
-      {/* View Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "calendar" ? "default" : "outline"}
-            onClick={() => setViewMode("calendar")}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            Calendar View
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            onClick={() => setViewMode("list")}
-          >
-            <Clock className="mr-2 h-4 w-4" />
-            List View
-          </Button>
-        </div>
+      {/* Tabs for Schedule and Conflicts */}
+      <Tabs defaultValue="schedule" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="schedule">
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule
+          </TabsTrigger>
+          <TabsTrigger value="conflicts">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Conflicts
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="schedule" className="space-y-4">
+          {/* View Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "calendar" ? "default" : "outline"}
+                onClick={() => setViewMode("calendar")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                Calendar View
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                onClick={() => setViewMode("list")}
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                List View
+              </Button>
+            </div>
 
         {viewMode === "calendar" && (
           <div className="flex items-center gap-1">
@@ -1240,6 +1257,13 @@ export default function FacilitySchedulingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        {/* Conflicts Tab */}
+        <TabsContent value="conflicts" className="space-y-4">
+          <StaffConflictDetector />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

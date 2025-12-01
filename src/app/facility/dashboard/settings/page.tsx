@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ import {
   Phone,
   Zap,
   Download,
+  Smartphone,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -138,7 +140,7 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="business">
             <Building2 className="h-4 w-4 mr-2" />
             Business
@@ -154,6 +156,10 @@ export default function SettingsPage() {
           <TabsTrigger value="integrations">
             <Plug className="h-4 w-4 mr-2" />
             Integrations
+          </TabsTrigger>
+          <TabsTrigger value="mobile-app">
+            <Smartphone className="h-4 w-4 mr-2" />
+            Mobile App
           </TabsTrigger>
           <TabsTrigger value="subscription">
             <CreditCard className="h-4 w-4 mr-2" />
@@ -196,7 +202,9 @@ export default function SettingsPage() {
                     id="email"
                     type="email"
                     value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, email: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -204,7 +212,9 @@ export default function SettingsPage() {
                   <Input
                     id="phone"
                     value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, phone: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -212,7 +222,9 @@ export default function SettingsPage() {
                   <Input
                     id="website"
                     value={profile.website}
-                    onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, website: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -222,7 +234,9 @@ export default function SettingsPage() {
                 <Textarea
                   id="description"
                   value={profile.description}
-                  onChange={(e) => setProfile({ ...profile, description: e.target.value })}
+                  onChange={(e) =>
+                    setProfile({ ...profile, description: e.target.value })
+                  }
                   rows={3}
                 />
               </div>
@@ -266,7 +280,10 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setProfile({
                         ...profile,
-                        address: { ...profile.address, zipCode: e.target.value },
+                        address: {
+                          ...profile.address,
+                          zipCode: e.target.value,
+                        },
                       })
                     }
                   />
@@ -282,7 +299,10 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setProfile({
                         ...profile,
-                        socialMedia: { ...profile.socialMedia, facebook: e.target.value },
+                        socialMedia: {
+                          ...profile.socialMedia,
+                          facebook: e.target.value,
+                        },
                       })
                     }
                   />
@@ -292,7 +312,10 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setProfile({
                         ...profile,
-                        socialMedia: { ...profile.socialMedia, instagram: e.target.value },
+                        socialMedia: {
+                          ...profile.socialMedia,
+                          instagram: e.target.value,
+                        },
                       })
                     }
                   />
@@ -302,7 +325,10 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setProfile({
                         ...profile,
-                        socialMedia: { ...profile.socialMedia, twitter: e.target.value },
+                        socialMedia: {
+                          ...profile.socialMedia,
+                          twitter: e.target.value,
+                        },
                       })
                     }
                   />
@@ -324,7 +350,10 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {Object.entries(hours).map(([day, schedule]) => (
-                <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={day}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div className="flex items-center gap-4 flex-1">
                     <div className="w-32 font-medium capitalize">{day}</div>
                     <Switch
@@ -395,7 +424,8 @@ export default function SettingsPage() {
                         {location.address}
                       </div>
                       <div className="text-sm mt-2">
-                        Phone: {location.phone} • Capacity: {location.capacity} pets
+                        Phone: {location.phone} • Capacity: {location.capacity}{" "}
+                        pets
                       </div>
                     </div>
                     <Button variant="outline" size="sm">
@@ -452,7 +482,10 @@ export default function SettingsPage() {
                     type="number"
                     value={rules.cancelPolicyHours}
                     onChange={(e) =>
-                      setRules({ ...rules, cancelPolicyHours: parseInt(e.target.value) })
+                      setRules({
+                        ...rules,
+                        cancelPolicyHours: parseInt(e.target.value),
+                      })
                     }
                   />
                 </div>
@@ -475,7 +508,10 @@ export default function SettingsPage() {
                     type="number"
                     value={rules.depositPercentage}
                     onChange={(e) =>
-                      setRules({ ...rules, depositPercentage: parseInt(e.target.value) })
+                      setRules({
+                        ...rules,
+                        depositPercentage: parseInt(e.target.value),
+                      })
                     }
                   />
                 </div>
@@ -485,7 +521,10 @@ export default function SettingsPage() {
                     type="number"
                     value={rules.capacityLimit}
                     onChange={(e) =>
-                      setRules({ ...rules, capacityLimit: parseInt(e.target.value) })
+                      setRules({
+                        ...rules,
+                        capacityLimit: parseInt(e.target.value),
+                      })
                     }
                   />
                 </div>
@@ -542,15 +581,23 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {kennel.amenities.map((amenity, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {amenity}
                           </Badge>
                         ))}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">${kennel.dailyRate}</div>
-                      <div className="text-xs text-muted-foreground">per night</div>
+                      <div className="text-2xl font-bold">
+                        ${kennel.dailyRate}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        per night
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -565,7 +612,10 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {petSizeClasses.map((size) => (
-                <div key={size.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={size.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div className="font-medium">{size.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {size.weightMin} - {size.weightMax} {size.unit}
@@ -596,7 +646,11 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {vax.applicableServices.map((service, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs capitalize">
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-xs capitalize"
+                          >
                             {service}
                           </Badge>
                         ))}
@@ -621,7 +675,9 @@ export default function SettingsPage() {
                 <div key={idx} className="p-4 border rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="font-semibold capitalize">{gateway.provider}</div>
+                      <div className="font-semibold capitalize">
+                        {gateway.provider}
+                      </div>
                       {gateway.isEnabled && (
                         <Badge variant="default">Active</Badge>
                       )}
@@ -635,11 +691,19 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-xs">API Key</Label>
-                        <Input type="password" value={gateway.apiKey} readOnly />
+                        <Input
+                          type="password"
+                          value={gateway.apiKey}
+                          readOnly
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Webhook Secret</Label>
-                        <Input type="password" value={gateway.webhookSecret} readOnly />
+                        <Input
+                          type="password"
+                          value={gateway.webhookSecret}
+                          readOnly
+                        />
                       </div>
                     </div>
                   )}
@@ -673,7 +737,11 @@ export default function SettingsPage() {
                       <div className="text-2xl font-bold mt-2">{tax.rate}%</div>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {tax.applicableServices.map((service, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs capitalize">
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-xs capitalize"
+                          >
                             {service}
                           </Badge>
                         ))}
@@ -721,12 +789,17 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Decimal Places</Label>
-                  <Input type="number" value={currencySettings.decimalPlaces} readOnly />
+                  <Input
+                    type="number"
+                    value={currencySettings.decimalPlaces}
+                    readOnly
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Format Preview</Label>
                   <div className="p-2 border rounded bg-muted font-mono">
-                    {currencySettings.symbol}1{currencySettings.thousandSeparator}234
+                    {currencySettings.symbol}1
+                    {currencySettings.thousandSeparator}234
                     {currencySettings.decimalSeparator}56
                   </div>
                 </div>
@@ -747,21 +820,23 @@ export default function SettingsPage() {
                 <div key={role.id} className="p-4 border rounded-lg">
                   <div className="font-semibold mb-3">{role.name}</div>
                   <div className="grid grid-cols-3 gap-2">
-                    {Object.entries(role.permissions).map(([permission, granted]) => (
-                      <div
-                        key={permission}
-                        className="flex items-center gap-2 text-sm"
-                      >
+                    {Object.entries(role.permissions).map(
+                      ([permission, granted]) => (
                         <div
-                          className={`w-3 h-3 rounded-full ${
-                            granted ? "bg-green-500" : "bg-gray-300"
-                          }`}
-                        />
-                        <span className="text-xs capitalize">
-                          {permission.replace(/([A-Z])/g, " $1").trim()}
-                        </span>
-                      </div>
-                    ))}
+                          key={permission}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              granted ? "bg-green-500" : "bg-gray-300"
+                            }`}
+                          />
+                          <span className="text-xs capitalize">
+                            {permission.replace(/([A-Z])/g, " $1").trim()}
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               ))}
@@ -805,7 +880,8 @@ export default function SettingsPage() {
                 <div>
                   <CardTitle>Notification Settings</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Configure which notifications are sent and through which channels
+                    Configure which notifications are sent and through which
+                    channels
                   </p>
                 </div>
                 <Button onClick={() => handleSave("Notifications")}>
@@ -818,7 +894,9 @@ export default function SettingsPage() {
               {/* Group by category */}
               {["client", "staff", "system"].map((category) => (
                 <div key={category} className="mb-6">
-                  <h3 className="font-semibold mb-3 capitalize">{category} Notifications</h3>
+                  <h3 className="font-semibold mb-3 capitalize">
+                    {category} Notifications
+                  </h3>
                   <div className="space-y-3">
                     {notifications
                       .filter((n) => n.category === category)
@@ -841,7 +919,9 @@ export default function SettingsPage() {
                                 onCheckedChange={(checked) =>
                                   setNotifications(
                                     notifications.map((n) =>
-                                      n.id === notif.id ? { ...n, email: checked } : n
+                                      n.id === notif.id
+                                        ? { ...n, email: checked }
+                                        : n
                                     )
                                   )
                                 }
@@ -855,7 +935,9 @@ export default function SettingsPage() {
                                 onCheckedChange={(checked) =>
                                   setNotifications(
                                     notifications.map((n) =>
-                                      n.id === notif.id ? { ...n, sms: checked } : n
+                                      n.id === notif.id
+                                        ? { ...n, sms: checked }
+                                        : n
                                     )
                                   )
                                 }
@@ -869,7 +951,9 @@ export default function SettingsPage() {
                                 onCheckedChange={(checked) =>
                                   setNotifications(
                                     notifications.map((n) =>
-                                      n.id === notif.id ? { ...n, push: checked } : n
+                                      n.id === notif.id
+                                        ? { ...n, push: checked }
+                                        : n
                                     )
                                   )
                                 }
@@ -889,13 +973,12 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Notification Template Editor</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Customize email and SMS templates (linked to Communications → Templates)
+                Customize email and SMS templates (linked to Communications →
+                Templates)
               </p>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">
-                Open Template Editor
-              </Button>
+              <Button variant="outline">Open Template Editor</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -914,7 +997,10 @@ export default function SettingsPage() {
               {integrationsData
                 .filter((i) => i.category === "communication")
                 .map((integration) => (
-                  <div key={integration.id} className="p-4 border rounded-lg space-y-3">
+                  <div
+                    key={integration.id}
+                    className="p-4 border rounded-lg space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="font-semibold">{integration.name}</div>
@@ -927,7 +1013,9 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) =>
                           setIntegrationsData(
                             integrationsData.map((i) =>
-                              i.id === integration.id ? { ...i, isEnabled: checked } : i
+                              i.id === integration.id
+                                ? { ...i, isEnabled: checked }
+                                : i
                             )
                           )
                         }
@@ -955,7 +1043,10 @@ export default function SettingsPage() {
               {integrationsData
                 .filter((i) => i.category === "phone")
                 .map((integration) => (
-                  <div key={integration.id} className="p-4 border rounded-lg space-y-3">
+                  <div
+                    key={integration.id}
+                    className="p-4 border rounded-lg space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="font-semibold">{integration.name}</div>
@@ -968,7 +1059,8 @@ export default function SettingsPage() {
                     {integration.isEnabled && (
                       <div className="space-y-2">
                         <div className="text-sm">
-                          <strong>Phone Number:</strong> {integration.config.phoneNumber}
+                          <strong>Phone Number:</strong>{" "}
+                          {integration.config.phoneNumber}
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <strong>Call Recording:</strong>
@@ -1004,7 +1096,10 @@ export default function SettingsPage() {
               {integrationsData
                 .filter((i) => i.category === "accounting")
                 .map((integration) => (
-                  <div key={integration.id} className="p-4 border rounded-lg space-y-3">
+                  <div
+                    key={integration.id}
+                    className="p-4 border rounded-lg space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="font-semibold">{integration.name}</div>
@@ -1038,7 +1133,10 @@ export default function SettingsPage() {
               {integrationsData
                 .filter((i) => i.category === "ai")
                 .map((integration) => (
-                  <div key={integration.id} className="p-4 border rounded-lg space-y-3">
+                  <div
+                    key={integration.id}
+                    className="p-4 border rounded-lg space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="font-semibold">{integration.name}</div>
@@ -1054,15 +1152,21 @@ export default function SettingsPage() {
                           <strong>Model:</strong> {integration.config.model}
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm font-medium">Enabled Features:</div>
+                          <div className="text-sm font-medium">
+                            Enabled Features:
+                          </div>
                           <div className="flex flex-wrap gap-1">
                             {Object.entries(integration.config.features).map(
                               ([feature, enabled]) =>
-                                enabled && (
-                                  <Badge key={feature} variant="outline" className="text-xs">
+                                enabled ? (
+                                  <Badge
+                                    key={feature}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
                                     {feature.replace(/([A-Z])/g, " $1").trim()}
                                   </Badge>
-                                )
+                                ) : null
                             )}
                           </div>
                         </div>
@@ -1074,6 +1178,11 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Mobile App Tab */}
+        <TabsContent value="mobile-app" className="space-y-6">
+          <MobileAppSettings />
+        </TabsContent>
+
         {/* Subscription Tab */}
         <TabsContent value="subscription" className="space-y-6">
           {/* Current Plan */}
@@ -1082,15 +1191,21 @@ export default function SettingsPage() {
               <CardTitle>Current Subscription</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start justify-between p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg">
+              <div className="flex items-start justify-between p-6 bg-linear-to-br from-blue-50 to-purple-50 rounded-lg">
                 <div>
-                  <div className="text-2xl font-bold">{subscription.planName}</div>
+                  <div className="text-2xl font-bold">
+                    {subscription.planName}
+                  </div>
                   <div className="text-muted-foreground capitalize mt-1">
                     {subscription.billingCycle} billing
                   </div>
                   <div className="mt-4">
                     <Badge
-                      variant={subscription.status === "active" ? "default" : "secondary"}
+                      variant={
+                        subscription.status === "active"
+                          ? "default"
+                          : "secondary"
+                      }
                       className="capitalize"
                     >
                       {subscription.status}
@@ -1098,12 +1213,18 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-4xl font-bold">${subscription.price}</div>
+                  <div className="text-4xl font-bold">
+                    ${subscription.price}
+                  </div>
                   <div className="text-sm text-muted-foreground">
-                    per {subscription.billingCycle === "monthly" ? "month" : "year"}
+                    per{" "}
+                    {subscription.billingCycle === "monthly" ? "month" : "year"}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    Next billing: {new Date(subscription.nextBillingDate).toLocaleDateString()}
+                    Next billing:{" "}
+                    {new Date(
+                      subscription.nextBillingDate
+                    ).toLocaleDateString()}
                   </div>
                 </div>
               </div>

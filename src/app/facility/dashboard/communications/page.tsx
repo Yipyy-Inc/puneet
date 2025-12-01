@@ -40,6 +40,7 @@ import { AutomationRuleModal } from "@/components/communications/AutomationRuleM
 import { PetUpdateModal } from "@/components/communications/PetUpdateModal";
 import { CallDetailsModal } from "@/components/communications/CallDetailsModal";
 import { RoutingRuleModal } from "@/components/communications/RoutingRuleModal";
+import { AppointmentRemindersTab } from "@/components/additional-features/AppointmentRemindersTab";
 
 export default function CommunicationsPage() {
   const [showComposeModal, setShowComposeModal] = useState(false);
@@ -419,6 +420,10 @@ export default function CommunicationsPage() {
             <PhoneForwarded className="h-4 w-4 mr-2" />
             Routing
           </TabsTrigger>
+          <TabsTrigger value="reminders">
+            <Clock className="h-4 w-4 mr-2" />
+            Appointment Reminders
+          </TabsTrigger>
           <TabsTrigger value="internal">
             <Users className="h-4 w-4 mr-2" />
             Internal
@@ -661,6 +666,11 @@ export default function CommunicationsPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Appointment Reminders Tab */}
+        <TabsContent value="reminders" className="space-y-4">
+          <AppointmentRemindersTab />
         </TabsContent>
 
         {/* Internal Communications Tab */}

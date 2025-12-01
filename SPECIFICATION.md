@@ -595,15 +595,15 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
   - Small icons: feeding schedule, meds, escape-risk, diet
   - Facility logo + phone (repeats every 6")
   - Auto-choose collar length (12", 18", 24", 30") based on stored pet size
-- [ ] 🟠 Reminder for grooming / vet appointments (separate from boarding)
+- [x] 🟠 Reminder for grooming / vet appointments (separate from boarding)
 - [ ] 🟡 Customer community forum (pet-parents board, anonymised, with moderation queue)
 - [ ] 🟡 OTA performance reviews (Google / Yelp pull-in, reply inline)
-- [ ] 🟢 Live PetCam Integration (link live camera feeds for clients to view pets)
-- [ ] 🟢 Mobile App White-Label Option
-- [ ] 🟢 Smart Insights Dashboard (AI-driven)
-- [ ] 🟢 Digital Waivers & E-Signatures
-- [ ] 🟢 AI Recommendations at checkout ("Add nail trim?" upsell)
-- [ ] 🟢 Conflict detection for double-booked staff
+- [x] 🟢 Live PetCam Integration (link live camera feeds for clients to view pets)
+- [x] 🟢 Mobile App White-Label Option
+- [x] 🟢 Smart Insights Dashboard (AI-driven)
+- [x] 🟢 Digital Waivers & E-Signatures
+- [x] 🟢 AI Recommendations at checkout ("Add nail trim?" upsell)
+- [x] 🟢 Conflict detection for double-booked staff
 
 ---
 

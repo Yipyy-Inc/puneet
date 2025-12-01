@@ -410,6 +410,14 @@ export const reportFields = {
     { key: "breed", label: "Breed", type: "text" },
     { key: "age", label: "Age", type: "number" },
   ],
+  payments: [
+    { key: "id", label: "Payment ID", type: "number" },
+    { key: "bookingId", label: "Booking ID", type: "number" },
+    { key: "amount", label: "Amount", type: "currency" },
+    { key: "paymentDate", label: "Payment Date", type: "date" },
+    { key: "paymentMethod", label: "Payment Method", type: "text" },
+    { key: "status", label: "Status", type: "text" },
+  ],
 };
 
 export interface CustomReportConfig {
