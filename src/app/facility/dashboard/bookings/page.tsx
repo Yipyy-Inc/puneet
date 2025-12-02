@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BookingModal } from "@/components/modals/BookingModal";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
-import { CreateBookingModal } from "@/components/bookings/modals/CreateBookingModal";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
@@ -38,7 +37,6 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  Plus,
   MoreVertical,
   Eye,
   Edit,
@@ -149,7 +147,6 @@ export default function FacilityBookingsPage() {
   const [refundingBooking, setRefundingBooking] = useState<Booking | null>(
     null,
   );
-  const [creatingBooking, setCreatingBooking] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
 
@@ -343,16 +340,6 @@ export default function FacilityBookingsPage() {
     }
   };
 
-  const handleCreateBooking = (newBooking: Omit<Booking, "id">) => {
-    const maxId = Math.max(...bookings.map((b) => b.id), 0);
-    const bookingWithId: Booking = {
-      ...newBooking,
-      id: maxId + 1,
-    };
-    setBookings([...bookings, bookingWithId]);
-    alert(`Booking #${bookingWithId.id} has been created successfully.`);
-  };
-
   const handleSaveBooking = (updatedBooking: Booking) => {
     setBookings(
       bookings.map((b) => (b.id === updatedBooking.id ? updatedBooking : b)),
@@ -477,10 +464,6 @@ export default function FacilityBookingsPage() {
           >
             <Download className="mr-2 h-4 w-4" />
             {tCommon("export")}
-          </Button>
-          <Button size="sm" onClick={() => setCreatingBooking(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {tBookings("newBooking")}
           </Button>
         </div>
       </div>
@@ -688,14 +671,6 @@ export default function FacilityBookingsPage() {
                   <p className="text-muted-foreground text-center max-w-md">
                     {tBookings("noBookingsMessage")}
                   </p>
-                  <Button
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setCreatingBooking(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {tBookings("newBooking")}
-                  </Button>
                 </CardContent>
               </Card>
             ) : (
@@ -817,14 +792,6 @@ export default function FacilityBookingsPage() {
           </TabsContent>
         </Tabs>
       )}
-
-      {/* Create Booking Modal */}
-      <CreateBookingModal
-        open={creatingBooking}
-        onOpenChange={setCreatingBooking}
-        onSave={handleCreateBooking}
-        facilityId={facilityId}
-      />
 
       {/* Edit Booking Modal */}
       {editingBooking && (

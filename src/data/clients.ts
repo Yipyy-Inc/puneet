@@ -6,6 +6,19 @@ export const clients = [
     phone: "123-456-7890",
     status: "active",
     facility: "Paws & Play Daycare",
+    address: {
+      street: "123 Main Street",
+      city: "Springfield",
+      state: "IL",
+      zip: "62701",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Robert Johnson",
+      relationship: "Spouse",
+      phone: "123-456-7891",
+      email: "robert.johnson@example.com",
+    },
     pets: [
       {
         id: 1,
@@ -40,6 +53,19 @@ export const clients = [
     phone: "098-765-4321",
     status: "active",
     facility: "Paws & Play Daycare",
+    address: {
+      street: "456 Oak Avenue",
+      city: "Springfield",
+      state: "IL",
+      zip: "62702",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Sarah Smith",
+      relationship: "Wife",
+      phone: "098-765-4322",
+      email: "sarah.smith@example.com",
+    },
     pets: [
       {
         id: 3,
@@ -61,6 +87,18 @@ export const clients = [
     email: "charlie@example.com",
     status: "inactive",
     facility: "Paws & Play Daycare",
+    address: {
+      street: "789 Elm Street",
+      city: "Shelbyville",
+      state: "IL",
+      zip: "62565",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Lucy Brown",
+      relationship: "Sister",
+      phone: "555-123-4567",
+    },
     pets: [],
   },
   {
@@ -70,6 +108,19 @@ export const clients = [
     phone: "111-222-3333",
     status: "active",
     facility: "Furry Friends Grooming",
+    address: {
+      street: "100 Wonder Way",
+      city: "Metropolis",
+      state: "NY",
+      zip: "10001",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Steve Trevor",
+      relationship: "Partner",
+      phone: "111-222-3334",
+      email: "steve.trevor@example.com",
+    },
     pets: [
       {
         id: 4,
@@ -91,6 +142,19 @@ export const clients = [
     email: "eve@example.com",
     status: "active",
     facility: "Furry Friends Grooming",
+    address: {
+      street: "234 Garden Lane",
+      city: "Eden",
+      state: "CA",
+      zip: "90210",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Adam Adams",
+      relationship: "Husband",
+      phone: "555-987-6543",
+      email: "adam.adams@example.com",
+    },
     pets: [
       {
         id: 5,
@@ -125,6 +189,18 @@ export const clients = [
     phone: "444-555-6666",
     status: "active",
     facility: "Happy Tails Boarding",
+    address: {
+      street: "567 Comic Street",
+      city: "Sin City",
+      state: "NV",
+      zip: "89101",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Nancy Miller",
+      relationship: "Wife",
+      phone: "444-555-6667",
+    },
     pets: [],
   },
   {
@@ -133,6 +209,19 @@ export const clients = [
     email: "grace@example.com",
     status: "inactive",
     facility: "Happy Tails Boarding",
+    address: {
+      street: "890 Harmony Road",
+      city: "Serenity",
+      state: "WA",
+      zip: "98101",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "James Lee",
+      relationship: "Brother",
+      phone: "555-246-8135",
+      email: "james.lee@example.com",
+    },
     pets: [
       {
         id: 7,
@@ -155,6 +244,18 @@ export const clients = [
     phone: "777-888-9999",
     status: "active",
     facility: "Happy Tails Boarding",
+    address: {
+      street: "321 Royal Drive",
+      city: "Windsor",
+      state: "CT",
+      zip: "06095",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Elizabeth Wilson",
+      relationship: "Mother",
+      phone: "777-888-9998",
+    },
     pets: [],
   },
   {
@@ -164,6 +265,19 @@ export const clients = [
     phone: "000-111-2222",
     status: "active",
     facility: "Pet Paradise Vet",
+    address: {
+      street: "456 Vine Street",
+      city: "Portland",
+      state: "OR",
+      zip: "97201",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "David Chen",
+      relationship: "Husband",
+      phone: "000-111-2223",
+      email: "david.chen@example.com",
+    },
     pets: [
       {
         id: 8,
@@ -185,6 +299,19 @@ export const clients = [
     email: "jack@example.com",
     status: "active",
     facility: "Pet Paradise Vet",
+    address: {
+      street: "789 Spade Avenue",
+      city: "Las Vegas",
+      state: "NV",
+      zip: "89109",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Jill Davis",
+      relationship: "Wife",
+      phone: "555-369-2580",
+      email: "jill.davis@example.com",
+    },
     pets: [],
   },
   {
@@ -194,6 +321,18 @@ export const clients = [
     phone: "333-444-5555",
     status: "inactive",
     facility: "Pet Paradise Vet",
+    address: {
+      street: "159 Manager Lane",
+      city: "Complaint City",
+      state: "TX",
+      zip: "75001",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Kevin Taylor",
+      relationship: "Husband",
+      phone: "333-444-5556",
+    },
     pets: [
       {
         id: 9,
@@ -216,6 +355,19 @@ export const clients = [
     phone: "666-777-8888",
     status: "active",
     facility: "Whisker Wonderland",
+    address: {
+      street: "753 Fiesta Boulevard",
+      city: "San Antonio",
+      state: "TX",
+      zip: "78201",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Maria Garcia",
+      relationship: "Mother",
+      phone: "666-777-8889",
+      email: "maria.garcia@example.com",
+    },
     pets: [
       {
         id: 10,
@@ -249,6 +401,18 @@ export const clients = [
     email: "mia@example.com",
     status: "active",
     facility: "Whisker Wonderland",
+    address: {
+      street: "951 Sunset Drive",
+      city: "Miami",
+      state: "FL",
+      zip: "33101",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Carlos Rodriguez",
+      relationship: "Father",
+      phone: "555-159-7530",
+    },
     pets: [
       {
         id: 12,
@@ -271,6 +435,19 @@ export const clients = [
     phone: "123-456-7890",
     status: "active",
     facility: "Example Pet Care Facility",
+    address: {
+      street: "123 Example Street",
+      city: "Anytown",
+      state: "CA",
+      zip: "90001",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "Jane Doe",
+      relationship: "Wife",
+      phone: "123-456-7891",
+      email: "jane.doe@example.com",
+    },
     pets: [
       {
         id: 13,
@@ -293,6 +470,19 @@ export const clients = [
     phone: "098-765-4321",
     status: "active",
     facility: "Example Pet Care Facility",
+    address: {
+      street: "456 Sample Avenue",
+      city: "Testville",
+      state: "CA",
+      zip: "90002",
+      country: "USA",
+    },
+    emergencyContact: {
+      name: "John Smith",
+      relationship: "Husband",
+      phone: "098-765-4320",
+      email: "john.smith@example.com",
+    },
     pets: [
       {
         id: 14,

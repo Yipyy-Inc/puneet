@@ -17,7 +17,6 @@ import {
   PhoneCall,
   CreditCard,
   MessageCircle,
-  DollarSign,
   Gift,
   Download,
   ExternalLink,
@@ -49,9 +48,6 @@ export function ClientModal({ client }: ClientModalProps) {
 
   // Calculate stats
   const totalBookings = clientBookings.length;
-  const completedBookings = clientBookings.filter(
-    (b) => b.status === "completed",
-  ).length;
   const totalSpent = clientBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + b.totalCost, 0);
@@ -101,7 +97,7 @@ export function ClientModal({ client }: ClientModalProps) {
     }
   };
 
-  const getDocumentIcon = (type: string) => {
+  const getDocumentIcon = () => {
     return <FileText className="h-4 w-4 text-muted-foreground" />;
   };
 
@@ -203,12 +199,11 @@ export function ClientModal({ client }: ClientModalProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="bookings">Bookings</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
-          <TabsTrigger value="calls">Call History</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -296,7 +291,7 @@ export function ClientModal({ client }: ClientModalProps) {
                       return (
                         <div
                           key={booking.id}
-                          className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                          className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
                         >
                           <div className="flex items-start gap-3">
                             {getStatusIcon(booking.status)}
@@ -355,10 +350,10 @@ export function ClientModal({ client }: ClientModalProps) {
                   {clientDocs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-3 flex-1">
-                        {getDocumentIcon(doc.type)}
+                        {getDocumentIcon()}
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{doc.name}</h4>
                           <div className="flex items-center gap-2 mt-1">
@@ -369,7 +364,7 @@ export function ClientModal({ client }: ClientModalProps) {
                               {doc.type}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {formatFileSize(doc.fileSize)}
+                              {formatFileSize(doc.fileSize || 0)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(doc.uploadedAt)}
@@ -411,92 +406,7 @@ export function ClientModal({ client }: ClientModalProps) {
 
         {/* Communications Tab */}
         <TabsContent value="communications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Communication Log
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {clientComms.length > 0 ? (
-                <div className="space-y-3">
-                  {clientComms
-                    .sort(
-                      (a, b) =>
-                        new Date(b.timestamp).getTime() -
-                        new Date(a.timestamp).getTime(),
-                    )
-                    .map((comm) => (
-                      <div
-                        key={comm.id}
-                        className="p-4 rounded-lg border bg-card space-y-2"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            {getCommunicationIcon(comm.type)}
-                            <div>
-                              <Badge
-                                variant="outline"
-                                className="text-xs capitalize"
-                              >
-                                {comm.type}
-                              </Badge>
-                              {comm.direction === "outbound" ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs ml-1"
-                                >
-                                  Sent
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs ml-1"
-                                >
-                                  Received
-                                </Badge>
-                              )}
-                              {comm.status && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs ml-1"
-                                >
-                                  {comm.status}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(comm.timestamp)}
-                          </span>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-sm">
-                            {comm.subject}
-                          </h4>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {comm.content}
-                          </p>
-                        </div>
-                        {comm.staffName && (
-                          <div className="text-xs text-muted-foreground pt-2 border-t">
-                            By: {comm.staffName}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No communication history
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Call History Tab */}
-        <TabsContent value="calls" className="space-y-4">
+          {/* Call History */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">
@@ -580,6 +490,90 @@ export function ClientModal({ client }: ClientModalProps) {
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   No call history
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Messages & Emails */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">
+                Messages & Emails
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {clientComms.length > 0 ? (
+                <div className="space-y-3">
+                  {clientComms
+                    .sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime(),
+                    )
+                    .map((comm) => (
+                      <div
+                        key={comm.id}
+                        className="p-4 rounded-lg border bg-card space-y-2"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            {getCommunicationIcon(comm.type)}
+                            <div>
+                              <Badge
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
+                                {comm.type}
+                              </Badge>
+                              {comm.direction === "outbound" ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs ml-1"
+                                >
+                                  Sent
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs ml-1"
+                                >
+                                  Received
+                                </Badge>
+                              )}
+                              {comm.status && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs ml-1"
+                                >
+                                  {comm.status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateTime(comm.timestamp)}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-sm">
+                            {comm.subject}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {comm.content}
+                          </p>
+                        </div>
+                        {comm.staffName && (
+                          <div className="text-xs text-muted-foreground pt-2 border-t">
+                            By: {comm.staffName}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No message history
                 </p>
               )}
             </CardContent>

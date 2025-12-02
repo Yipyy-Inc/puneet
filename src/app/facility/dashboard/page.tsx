@@ -141,9 +141,22 @@ export default function FacilityDashboard() {
       id: maxClientId + 1,
       name: newClient.name,
       email: newClient.email,
-      phone: newClient.phone,
+      phone: newClient.phone || "",
       status: newClient.status,
       facility: newClient.facility,
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        zip: "",
+        country: "",
+      },
+      emergencyContact: {
+        name: "",
+        relationship: "",
+        phone: "",
+        email: "",
+      },
       pets: petsWithIds,
     };
     setClients([...clients, clientWithId]);

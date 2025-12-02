@@ -60,12 +60,6 @@ export function FacilitySidebar() {
           icon: Users,
           disabled: false,
         },
-        {
-          title: tCommon("pets"),
-          url: "/facility/dashboard/pets",
-          icon: PawPrint,
-          disabled: false,
-        },
       ],
     },
     {

@@ -43,6 +43,19 @@ interface CreateClientModalProps {
     phone?: string;
     status: string;
     facility: string;
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      zip: string;
+    };
+    emergencyContact: {
+      name: string;
+      relationship: string;
+      phone: string;
+      email: string;
+    };
     pets: Pet[];
   }) => void;
   facilityName: string;
@@ -169,6 +182,19 @@ export function CreateClientModal({
       phone: clientData.phone.trim() || undefined,
       status: clientData.status,
       facility: facilityName,
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        country: "",
+        zip: "",
+      },
+      emergencyContact: {
+        name: "",
+        relationship: "",
+        phone: "",
+        email: "",
+      },
       pets: pets,
     };
 

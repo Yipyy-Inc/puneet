@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,13 +18,10 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  MapPin,
   Activity,
   Utensils,
-  Smile,
   Camera,
 } from "lucide-react";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { petPhotos, vaccinationRecords, reportCards } from "@/data/pet-data";
 
@@ -51,7 +48,6 @@ interface PetModalProps {
 
 export function PetModal({ pet }: PetModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   // Get pet-specific data
   const photos = petPhotos.filter((p) => p.petId === pet.id);
@@ -61,12 +57,19 @@ export function PetModal({ pet }: PetModalProps) {
 
   // Calculate stats
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
-  const upcomingVaccinations = vaccinations.filter(
-    (v) =>
-      new Date(v.expiryDate) <= new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+  const now = useMemo(() => new Date(), []);
+  const upcomingVaccinations = useMemo(
+    () =>
+      vaccinations.filter(
+        (v) =>
+          new Date(v.expiryDate) <=
+          new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000),
+      ),
+    [vaccinations, now],
   );
-  const expiredVaccinations = vaccinations.filter(
-    (v) => new Date(v.expiryDate) < new Date(),
+  const expiredVaccinations = useMemo(
+    () => vaccinations.filter((v) => new Date(v.expiryDate) < now),
+    [vaccinations, now],
   );
 
   const formatDate = (dateString: string) => {
@@ -324,7 +327,6 @@ export function PetModal({ pet }: PetModalProps) {
                     <div
                       key={photo.id}
                       className="relative group cursor-pointer"
-                      onClick={() => setSelectedPhoto(photo.url)}
                     >
                       <div className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                         <ImageIcon className="h-12 w-12 text-muted-foreground" />
@@ -485,7 +487,7 @@ export function PetModal({ pet }: PetModalProps) {
                     .map((booking) => (
                       <div
                         key={booking.id}
-                        className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div>

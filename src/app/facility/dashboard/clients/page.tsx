@@ -1,21 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ClientModal } from "@/components/modals/ClientModal";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
-import { Download, User, Mail as MailIcon, Eye, Plus } from "lucide-react";
+import {
+  Download,
+  User,
+  Mail as MailIcon,
+  Eye,
+  Plus,
+  Heart,
+} from "lucide-react";
 
 const exportClientsToCSV = (clientsData: typeof clients) => {
   const headers = ["ID", "Name", "Email", "Phone", "Status", "Pets Count"];
@@ -49,14 +50,12 @@ const exportClientsToCSV = (clientsData: typeof clients) => {
 };
 
 export default function FacilityClientsPage() {
+  const router = useRouter();
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
   const [clientsData, setClientsData] = useState(clients);
-  const [selectedClient, setSelectedClient] = useState<
-    (typeof clients)[number] | null
-  >(null);
   const [creatingClient, setCreatingClient] = useState(false);
 
   if (!facility) {
@@ -100,13 +99,28 @@ export default function FacilityClientsPage() {
       id: maxId + 1,
       name: newClient.name,
       email: newClient.email,
-      phone: newClient.phone,
+      phone: newClient.phone || "",
       status: newClient.status,
       facility: newClient.facility,
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        zip: "",
+        country: "",
+      },
+      emergencyContact: {
+        name: "",
+        relationship: "",
+        phone: "",
+        email: "",
+      },
       pets: petsWithIds,
     };
     setClientsData([...clientsData, clientWithId]);
   };
+
+  const totalPets = facilityClients.reduce((sum, c) => sum + c.pets.length, 0);
 
   const columns: ColumnDef<(typeof clients)[number]>[] = [
     {
@@ -138,7 +152,7 @@ export default function FacilityClientsPage() {
     {
       key: "pets",
       label: "Pets",
-      icon: MailIcon,
+      icon: Heart,
       defaultVisible: true,
       render: (client) => client.pets.length,
     },
@@ -209,9 +223,7 @@ export default function FacilityClientsPage() {
             <CardTitle className="text-sm font-medium">Total Pets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {facilityClients.reduce((sum, c) => sum + c.pets.length, 0)}
-            </div>
+            <div className="text-2xl font-bold">{totalPets}</div>
             <p className="text-xs text-muted-foreground">Across all clients</p>
           </CardContent>
         </Card>
@@ -224,14 +236,7 @@ export default function FacilityClientsPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {facilityClients.length > 0
-                ? Math.round(
-                    (facilityClients.reduce(
-                      (sum, c) => sum + c.pets.length,
-                      0,
-                    ) /
-                      facilityClients.length) *
-                      10,
-                  ) / 10
+                ? Math.round((totalPets / facilityClients.length) * 10) / 10
                 : 0}
             </div>
             <p className="text-xs text-muted-foreground">Per client</p>
@@ -250,7 +255,9 @@ export default function FacilityClientsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedClient(client)}
+            onClick={() =>
+              router.push(`/facility/dashboard/clients/${client.id}`)
+            }
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -264,23 +271,6 @@ export default function FacilityClientsPage() {
         onSave={handleCreateClient}
         facilityName={facility.name}
       />
-
-      {/* View Client Details Modal */}
-      <Dialog
-        open={!!selectedClient}
-        onOpenChange={() => setSelectedClient(null)}
-      >
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
-            <DialogHeader className="mb-0">
-              <DialogTitle className="sr-only">
-                {selectedClient?.name} - Client Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedClient && <ClientModal client={selectedClient} />}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

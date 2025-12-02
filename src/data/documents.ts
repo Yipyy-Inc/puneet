@@ -12,15 +12,21 @@ export interface ClientDocument {
     | "insurance"
     | "other";
   name: string;
-  fileUrl: string;
-  fileSize: number; // in bytes
-  mimeType: string;
+  fileUrl?: string; // Optional for digital agreements
+  fileSize?: number; // in bytes, optional for digital
+  mimeType?: string; // Optional for digital agreements
   uploadedBy: string;
   uploadedById: number;
   uploadedAt: string;
   expiryDate?: string;
   notes?: string;
   petId?: number; // Optional: if document is pet-specific
+  // Agreement-specific fields
+  signatureType?: "physical" | "digital"; // physical = scanned upload, digital = agreed online
+  signedAt?: string; // When the agreement was signed/accepted
+  signedByName?: string; // Name of person who signed
+  ipAddress?: string; // For digital signatures, the IP address
+  agreedToTerms?: string[]; // List of terms/policies agreed to for digital
 }
 
 export const clientDocuments: ClientDocument[] = [
@@ -37,6 +43,9 @@ export const clientDocuments: ClientDocument[] = [
     uploadedById: 1,
     uploadedAt: "2024-01-15T10:00:00Z",
     notes: "Signed service agreement for daycare and boarding services.",
+    signatureType: "physical",
+    signedAt: "2024-01-15T09:45:00Z",
+    signedByName: "Alice Johnson",
   },
   {
     id: "doc-002",
@@ -75,13 +84,19 @@ export const clientDocuments: ClientDocument[] = [
     facilityId: 11,
     type: "waiver",
     name: "Liability Waiver - Daycare Services",
-    fileUrl: "/documents/waivers/alice-johnson-waiver.pdf",
-    fileSize: 153600,
-    mimeType: "application/pdf",
-    uploadedBy: "Sarah Johnson",
-    uploadedById: 1,
+    uploadedBy: "Alice Johnson",
+    uploadedById: 15,
     uploadedAt: "2024-01-15T10:05:00Z",
-    notes: "General liability waiver for all services.",
+    notes: "Digitally agreed to liability waiver for all services.",
+    signatureType: "digital",
+    signedAt: "2024-01-15T10:05:00Z",
+    signedByName: "Alice Johnson",
+    ipAddress: "192.168.1.45",
+    agreedToTerms: [
+      "Liability Release",
+      "Emergency Medical Authorization",
+      "Photo/Video Release",
+    ],
   },
   {
     id: "doc-005",
@@ -89,12 +104,14 @@ export const clientDocuments: ClientDocument[] = [
     facilityId: 11,
     type: "agreement",
     name: "Service Agreement - 2024",
-    fileUrl: "/documents/agreements/bob-smith-2024.pdf",
-    fileSize: 250000,
-    mimeType: "application/pdf",
-    uploadedBy: "Sarah Johnson",
-    uploadedById: 1,
+    uploadedBy: "Bob Smith",
+    uploadedById: 16,
     uploadedAt: "2024-01-10T09:00:00Z",
+    signatureType: "digital",
+    signedAt: "2024-01-10T09:00:00Z",
+    signedByName: "Bob Smith",
+    ipAddress: "10.0.0.123",
+    agreedToTerms: ["Terms of Service", "Cancellation Policy", "Payment Terms"],
   },
   {
     id: "doc-006",
@@ -139,6 +156,9 @@ export const clientDocuments: ClientDocument[] = [
     uploadedBy: "Sarah Johnson",
     uploadedById: 1,
     uploadedAt: "2024-01-05T11:00:00Z",
+    signatureType: "physical",
+    signedAt: "2024-01-05T10:30:00Z",
+    signedByName: "Jane Smith",
   },
   {
     id: "doc-009",
@@ -167,6 +187,28 @@ export const clientDocuments: ClientDocument[] = [
     uploadedBy: "Sarah Johnson",
     uploadedById: 1,
     uploadedAt: "2024-01-02T14:00:00Z",
+    signatureType: "physical",
+    signedAt: "2024-01-02T13:45:00Z",
+    signedByName: "John Doe",
+  },
+  {
+    id: "doc-012",
+    clientId: 28,
+    facilityId: 11,
+    type: "waiver",
+    name: "Pet Care Waiver",
+    uploadedBy: "John Doe",
+    uploadedById: 28,
+    uploadedAt: "2024-01-02T14:10:00Z",
+    signatureType: "digital",
+    signedAt: "2024-01-02T14:10:00Z",
+    signedByName: "John Doe",
+    ipAddress: "172.16.0.55",
+    agreedToTerms: [
+      "Liability Release",
+      "Emergency Contact Authorization",
+      "Medication Administration Consent",
+    ],
   },
   {
     id: "doc-011",
