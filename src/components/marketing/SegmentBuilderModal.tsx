@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Plus, X, Users } from "lucide-react";
 
 interface SegmentBuilderModalProps {
@@ -82,7 +81,8 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
     onClose();
   };
 
-  const estimatedCount = Math.floor(Math.random() * 100) + 20; // Mock estimate
+  // Mock estimate - using stable value based on filters length
+  const estimatedCount = 50 + formData.filters.length * 10;
 
   return (
     <>

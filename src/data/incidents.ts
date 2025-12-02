@@ -1,5 +1,3 @@
-import { clients } from "./clients";
-
 export interface Incident {
   id: string;
   type:

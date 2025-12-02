@@ -23,11 +23,27 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw, AlertCircle } from "lucide-react";
 
+interface Payment {
+  id: string;
+  totalAmount: number;
+  paymentMethod: string;
+}
+
+interface Refund {
+  paymentId: string;
+  amount: number;
+  method: "original" | "credit";
+  reason: string;
+  notes?: string;
+  processedAt: string;
+  processedBy: string;
+}
+
 interface ProcessRefundModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  payment: any;
-  onSuccess?: (refund: any) => void;
+  payment: Payment | null;
+  onSuccess?: (refund: Refund) => void;
 }
 
 export function ProcessRefundModal({
@@ -58,6 +74,8 @@ export function ProcessRefundModal({
       alert("Please enter a refund reason");
       return;
     }
+
+    if (!payment) return;
 
     const refund = {
       paymentId: payment.id,
@@ -117,7 +135,7 @@ export function ProcessRefundModal({
             <Label>Refund Type</Label>
             <Select
               value={refundType}
-              onValueChange={(v) => setRefundType(v as any)}
+              onValueChange={(v) => setRefundType(v as "full" | "partial")}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -150,7 +168,7 @@ export function ProcessRefundModal({
             <Label>Refund Method</Label>
             <Select
               value={refundMethod}
-              onValueChange={(v) => setRefundMethod(v as any)}
+              onValueChange={(v) => setRefundMethod(v as "original" | "credit")}
             >
               <SelectTrigger>
                 <SelectValue />

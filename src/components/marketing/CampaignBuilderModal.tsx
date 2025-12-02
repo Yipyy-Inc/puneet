@@ -21,10 +21,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Send, Calendar, TestTube2 } from "lucide-react";
-import { emailTemplates, customerSegments } from "@/data/marketing";
+import {
+  emailTemplates,
+  customerSegments,
+  type Campaign,
+} from "@/data/marketing";
 
 interface CampaignBuilderModalProps {
-  campaign?: any;
+  campaign?: Campaign | null;
   onClose: () => void;
 }
 
@@ -42,6 +46,8 @@ export function CampaignBuilderModal({
     abTestVariantB: campaign?.abTest?.variantB || "",
     abTestSplit: campaign?.abTest?.splitPercentage || 50,
   });
+
+  const stats = campaign?.stats;
 
   const selectedTemplate = emailTemplates.find(
     (t) => t.id === formData.templateId,
@@ -89,7 +95,9 @@ export function CampaignBuilderModal({
           <Label htmlFor="type">Campaign Type *</Label>
           <Select
             value={formData.type}
-            onValueChange={(value) => setFormData({ ...formData, type: value })}
+            onValueChange={(value: "email" | "sms") =>
+              setFormData({ ...formData, type: value })
+            }
             disabled={!!campaign}
           >
             <SelectTrigger>
@@ -278,7 +286,7 @@ export function CampaignBuilderModal({
         </div>
 
         {/* Campaign Stats (if viewing existing campaign) */}
-        {campaign && (
+        {campaign && stats && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Campaign Statistics</CardTitle>
@@ -287,41 +295,27 @@ export function CampaignBuilderModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground">Sent</div>
-                  <div className="text-2xl font-bold">
-                    {campaign.stats.sent}
-                  </div>
+                  <div className="text-2xl font-bold">{stats.sent}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Delivered</div>
-                  <div className="text-2xl font-bold">
-                    {campaign.stats.delivered}
-                  </div>
+                  <div className="text-2xl font-bold">{stats.delivered}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Opened</div>
                   <div className="text-2xl font-bold">
-                    {campaign.stats.opened}
+                    {stats.opened}
                     <span className="text-sm text-muted-foreground ml-2">
-                      (
-                      {(
-                        (campaign.stats.opened / campaign.stats.sent) *
-                        100
-                      ).toFixed(1)}
-                      %)
+                      ({((stats.opened / stats.sent) * 100).toFixed(1)}%)
                     </span>
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Clicked</div>
                   <div className="text-2xl font-bold">
-                    {campaign.stats.clicked}
+                    {stats.clicked}
                     <span className="text-sm text-muted-foreground ml-2">
-                      (
-                      {(
-                        (campaign.stats.clicked / campaign.stats.opened) *
-                        100
-                      ).toFixed(1)}
-                      %)
+                      ({((stats.clicked / stats.opened) * 100).toFixed(1)}%)
                     </span>
                   </div>
                 </div>

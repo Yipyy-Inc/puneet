@@ -552,9 +552,16 @@ export interface AIRecommendation {
   estimatedValue: number;
 }
 
+interface CustomerHistory {
+  totalVisits?: number;
+  lastServices?: string[];
+  preferredServices?: string[];
+}
+
 export const generateAIRecommendations = (
   bookingServices: string[],
-  customerHistory: any,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  customerHistory?: CustomerHistory,
 ): AIRecommendation[] => {
   const recommendations: AIRecommendation[] = [];
 

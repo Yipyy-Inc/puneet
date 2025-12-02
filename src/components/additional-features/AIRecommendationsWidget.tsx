@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,15 @@ import { X, Sparkles, TrendingUp, Package, Gift } from "lucide-react";
 import { generateAIRecommendations } from "@/data/additional-features";
 import type { AIRecommendation } from "@/data/additional-features";
 
+interface CustomerHistory {
+  totalVisits?: number;
+  lastServices?: string[];
+  preferredServices?: string[];
+}
+
 interface AIRecommendationsWidgetProps {
   bookingServices: string[];
-  customerHistory?: any;
+  customerHistory?: CustomerHistory;
   onAddRecommendation?: (recommendation: AIRecommendation) => void;
 }
 
@@ -19,15 +25,12 @@ export function AIRecommendationsWidget({
   customerHistory,
   onAddRecommendation,
 }: AIRecommendationsWidgetProps) {
-  const [recommendations, setRecommendations] = useState<AIRecommendation[]>(
-    [],
-  );
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const recs = generateAIRecommendations(bookingServices, customerHistory);
-    setRecommendations(recs);
-  }, [bookingServices, customerHistory]);
+  const recommendations = useMemo(
+    () => generateAIRecommendations(bookingServices, customerHistory),
+    [bookingServices, customerHistory],
+  );
 
   const visibleRecommendations = recommendations.filter(
     (rec) => !dismissedIds.has(rec.id),
@@ -77,7 +80,7 @@ export function AIRecommendationsWidget({
   };
 
   return (
-    <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50">
+    <Card className="border-2 border-yellow-200 bg-linear-to-br from-yellow-50 to-orange-50">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-yellow-600" />

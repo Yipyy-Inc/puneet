@@ -73,7 +73,7 @@ export function ComplianceTools() {
       "Non-Compliant": "destructive",
       "In Progress": "secondary",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Compliant: CheckCircle2,
       "Partially Compliant": AlertTriangle,
       "Non-Compliant": XCircle,
@@ -120,7 +120,7 @@ export function ComplianceTools() {
       Revoked: "destructive",
       Expired: "secondary",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Active: CheckCircle2,
       Revoked: XCircle,
       Expired: Clock,
@@ -144,7 +144,7 @@ export function ComplianceTools() {
       Expired: "destructive",
       Revoked: "destructive",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Valid: CheckCircle2,
       "Expiring Soon": AlertTriangle,
       Expired: XCircle,
@@ -631,7 +631,7 @@ export function ComplianceTools() {
       Rejected: "destructive",
       Extended: "outline",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Pending: Clock,
       "In Progress": RefreshCw,
       Completed: CheckCircle2,
@@ -665,7 +665,7 @@ export function ComplianceTools() {
       Restriction: "bg-orange-100 text-orange-700",
       Objection: "bg-gray-100 text-gray-700",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Export: FileOutput,
       Deletion: Trash2,
       Rectification: Settings,
@@ -687,7 +687,7 @@ export function ComplianceTools() {
       Pending: "secondary",
       Failed: "destructive",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Verified: CheckCircle2,
       Pending: Clock,
       Failed: XCircle,
@@ -1201,9 +1201,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={dataSubjectRequestColumns as any}
-                data={dataSubjectRequests as any}
-                actions={dataSubjectRequestActions as any}
+                columns={dataSubjectRequestColumns}
+                data={dataSubjectRequests}
+                actions={dataSubjectRequestActions}
                 searchKey="requesterName"
                 searchPlaceholder="Search by name or email..."
               />
@@ -1288,9 +1288,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={gdprColumns as any}
-                data={gdprCompliance as any}
-                actions={gdprActions as any}
+                columns={gdprColumns}
+                data={gdprCompliance}
+                actions={gdprActions}
               />
             </CardContent>
           </Card>
@@ -1308,9 +1308,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={dataProtectionColumns as any}
-                data={dataProtectionSettings as any}
-                actions={dataProtectionActions as any}
+                columns={dataProtectionColumns}
+                data={dataProtectionSettings}
+                actions={dataProtectionActions}
               />
             </CardContent>
           </Card>
@@ -1328,9 +1328,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={privacyPolicyColumns as any}
-                data={privacyPolicies as any}
-                actions={privacyPolicyActions as any}
+                columns={privacyPolicyColumns}
+                data={privacyPolicies}
+                actions={privacyPolicyActions}
               />
             </CardContent>
           </Card>
@@ -1347,10 +1347,7 @@ export function ComplianceTools() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={userConsentColumns as any}
-                data={userConsents as any}
-              />
+              <DataTable columns={userConsentColumns} data={userConsents} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1397,9 +1394,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={frameworkColumns as any}
-                data={complianceFrameworks as any}
-                actions={frameworkActions as any}
+                columns={frameworkColumns}
+                data={complianceFrameworks}
+                actions={frameworkActions}
               />
             </CardContent>
           </Card>
@@ -1417,9 +1414,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={reportColumns as any}
-                data={complianceReports as any}
-                actions={reportActions as any}
+                columns={reportColumns}
+                data={complianceReports}
+                actions={reportActions}
               />
             </CardContent>
           </Card>
@@ -1437,9 +1434,9 @@ export function ComplianceTools() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={certificateColumns as any}
-                data={certificates as any}
-                actions={certificateActions as any}
+                columns={certificateColumns}
+                data={certificates}
+                actions={certificateActions}
               />
             </CardContent>
           </Card>
@@ -1456,10 +1453,7 @@ export function ComplianceTools() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={auditTrailColumns as any}
-                data={auditTrails as any}
-              />
+              <DataTable columns={auditTrailColumns} data={auditTrails} />
             </CardContent>
           </Card>
         </TabsContent>

@@ -49,9 +49,13 @@ export function CustomReportBuilder({
     },
   });
 
-  const [newFilter, setNewFilter] = useState({
+  const [newFilter, setNewFilter] = useState<{
+    field: string;
+    operator: "equals" | "contains" | "greater_than" | "less_than" | "between";
+    value: string;
+  }>({
     field: "",
-    operator: "equals" as const,
+    operator: "equals",
     value: "",
   });
 
@@ -199,7 +203,9 @@ export function CustomReportBuilder({
               <Label htmlFor="dataSource">Data Source *</Label>
               <Select
                 value={config.dataSource}
-                onValueChange={(value: any) =>
+                onValueChange={(
+                  value: "bookings" | "clients" | "pets" | "payments",
+                ) =>
                   setConfig({
                     ...config,
                     dataSource: value,
@@ -324,9 +330,14 @@ export function CustomReportBuilder({
                     <Label>Operator</Label>
                     <Select
                       value={newFilter.operator}
-                      onValueChange={(value: any) =>
-                        setNewFilter({ ...newFilter, operator: value })
-                      }
+                      onValueChange={(
+                        value:
+                          | "equals"
+                          | "contains"
+                          | "greater_than"
+                          | "less_than"
+                          | "between",
+                      ) => setNewFilter({ ...newFilter, operator: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -428,7 +439,7 @@ export function CustomReportBuilder({
                 <Label>Sort Order</Label>
                 <Select
                   value={config.sortOrder}
-                  onValueChange={(value: any) =>
+                  onValueChange={(value: "asc" | "desc") =>
                     setConfig({ ...config, sortOrder: value })
                   }
                 >
@@ -486,7 +497,7 @@ export function CustomReportBuilder({
                   </Label>
                   <Select
                     value={config.schedule.frequency}
-                    onValueChange={(value: any) =>
+                    onValueChange={(value: "daily" | "weekly" | "monthly") =>
                       setConfig({
                         ...config,
                         schedule: { ...config.schedule!, frequency: value },
@@ -564,7 +575,7 @@ export function CustomReportBuilder({
             {step > 1 && (
               <Button
                 variant="outline"
-                onClick={() => setStep((step - 1) as any)}
+                onClick={() => setStep((step - 1) as 1 | 2 | 3 | 4)}
               >
                 Previous
               </Button>
@@ -576,7 +587,7 @@ export function CustomReportBuilder({
             </Button>
             {step < 4 ? (
               <Button
-                onClick={() => setStep((step + 1) as any)}
+                onClick={() => setStep((step + 1) as 1 | 2 | 3 | 4)}
                 disabled={step === 1 && !config.name}
               >
                 Next

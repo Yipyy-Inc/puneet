@@ -1,6 +1,3 @@
-import { clients } from "./clients";
-import { bookings } from "./bookings";
-
 // ========================================
 // EMAIL & SMS CAMPAIGN DATA
 // ========================================
@@ -94,7 +91,7 @@ export interface CustomerSegment {
   filters: {
     field: string;
     operator: "equals" | "contains" | "greater_than" | "less_than" | "in_range";
-    value: any;
+    value: string | number | boolean | string[];
   }[];
   customerCount: number;
   createdAt: string;

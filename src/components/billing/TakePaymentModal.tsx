@@ -29,11 +29,36 @@ import {
   Wallet,
   Gift,
   DollarSign,
-  Plus,
   AlertCircle,
 } from "lucide-react";
 import { clients } from "@/data/clients";
 import { paymentMethods, giftCards, customerCredits } from "@/data/payments";
+
+interface PaymentResult {
+  id: string;
+  facilityId: number;
+  clientId: number;
+  bookingId?: number;
+  invoiceId?: string;
+  amount: number;
+  tipAmount?: number;
+  totalAmount: number;
+  currency: "USD";
+  paymentMethod: "card" | "cash" | "gift_card";
+  status: "completed";
+  description: string;
+  notes?: string;
+  createdAt: string;
+  processedBy: string;
+  processedById: number;
+  cardBrand?: string;
+  cardLast4?: string;
+  stripeChargeId?: string;
+  stripePaymentIntentId?: string;
+  giftCardId?: string;
+  creditUsed?: number;
+  receiptUrl: string;
+}
 
 interface TakePaymentModalProps {
   open: boolean;
@@ -44,7 +69,7 @@ interface TakePaymentModalProps {
   prefilledDescription?: string;
   bookingId?: number;
   invoiceId?: string;
-  onSuccess?: (payment: any) => void;
+  onSuccess?: (payment: PaymentResult) => void;
 }
 
 export function TakePaymentModal({
@@ -87,7 +112,6 @@ export function TakePaymentModal({
   const [creditAmount, setCreditAmount] = useState(0);
 
   const facilityClients = clients.filter((c) => c.id >= 15); // Simplified
-  const selectedClientData = clients.find((c) => c.id === selectedClient);
 
   // Get saved payment methods for selected client
   const clientPaymentMethods = paymentMethods.filter(
@@ -173,8 +197,9 @@ export function TakePaymentModal({
     }
 
     // Create payment object
-    const payment = {
-      id: `pay-${Date.now()}`,
+    const paymentId = crypto.randomUUID();
+    const payment: PaymentResult = {
+      id: `pay-${paymentId}`,
       facilityId,
       clientId: selectedClient,
       bookingId,
@@ -195,8 +220,8 @@ export function TakePaymentModal({
         useNewCard && {
           cardBrand: detectCardBrand(cardNumber),
           cardLast4: cardNumber.slice(-4),
-          stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
-          stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
+          stripeChargeId: `ch_${crypto.randomUUID().substring(0, 7)}`,
+          stripePaymentIntentId: `pi_${crypto.randomUUID().substring(0, 7)}`,
         }),
       ...(paymentMethod === "card" &&
         !useNewCard && {
@@ -206,8 +231,8 @@ export function TakePaymentModal({
           cardLast4: clientPaymentMethods.find(
             (pm) => pm.id === selectedPaymentMethod,
           )?.cardLast4,
-          stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
-          stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
+          stripeChargeId: `ch_${crypto.randomUUID().substring(0, 7)}`,
+          stripePaymentIntentId: `pi_${crypto.randomUUID().substring(0, 7)}`,
         }),
       // Gift card
       ...(paymentMethod === "gift_card" && {
@@ -217,7 +242,7 @@ export function TakePaymentModal({
       ...(creditApplied > 0 && {
         creditUsed: creditApplied,
       }),
-      receiptUrl: `/receipts/pay-${Date.now()}.pdf`,
+      receiptUrl: `/receipts/pay-${paymentId}.pdf`,
     };
 
     console.log("Payment processed:", payment);
@@ -472,7 +497,9 @@ export function TakePaymentModal({
             <CardContent>
               <Tabs
                 value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as any)}
+                onValueChange={(v) =>
+                  setPaymentMethod(v as "card" | "cash" | "gift_card")
+                }
               >
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="card">

@@ -6,9 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Mail,
-  MessageSquare,
   Users,
-  Gift,
   Tag,
   Plus,
   Send,
@@ -16,10 +14,8 @@ import {
   Trash2,
   Copy,
   Eye,
-  TrendingUp,
   Award,
   Target,
-  Sparkles,
   Settings,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
@@ -48,8 +44,12 @@ export default function MarketingPage() {
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<
+    (typeof emailTemplates)[0] | null
+  >(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<
+    (typeof campaigns)[0] | null
+  >(null);
 
   // Email Template Columns
   const templateColumns: ColumnDef<(typeof emailTemplates)[0]>[] = [
@@ -803,7 +803,7 @@ export default function MarketingPage() {
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <EmailTemplateModal
-            template={selectedTemplate}
+            template={selectedTemplate ?? undefined}
             onClose={() => {
               setShowTemplateModal(false);
               setSelectedTemplate(null);
@@ -821,7 +821,7 @@ export default function MarketingPage() {
       <Dialog open={showCampaignModal} onOpenChange={setShowCampaignModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <CampaignBuilderModal
-            campaign={selectedCampaign}
+            campaign={selectedCampaign ?? undefined}
             onClose={() => {
               setShowCampaignModal(false);
               setSelectedCampaign(null);

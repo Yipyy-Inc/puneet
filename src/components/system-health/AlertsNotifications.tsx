@@ -59,7 +59,7 @@ export function AlertsNotifications() {
       Resolved: "secondary",
       Dismissed: "secondary",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, typeof AlertCircle> = {
       New: AlertCircle,
       Acknowledged: Clock,
       Investigating: Play,
@@ -85,7 +85,7 @@ export function AlertsNotifications() {
   };
 
   const getChannelIcon = (channelType: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, typeof AlertCircle> = {
       Email: Mail,
       SMS: Smartphone,
       Slack: MessageSquare,
@@ -454,9 +454,9 @@ export function AlertsNotifications() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={alertColumns as any}
-                data={systemAlerts as any}
-                actions={alertActions as any}
+                columns={alertColumns}
+                data={systemAlerts}
+                actions={alertActions}
               />
             </CardContent>
           </Card>
@@ -480,9 +480,9 @@ export function AlertsNotifications() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={configColumns as any}
-                data={alertConfigurations as any}
-                actions={configActions as any}
+                columns={configColumns}
+                data={alertConfigurations}
+                actions={configActions}
               />
             </CardContent>
           </Card>
@@ -502,9 +502,9 @@ export function AlertsNotifications() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={channelColumns as any}
-                data={notificationChannels as any}
-                actions={channelActions as any}
+                columns={channelColumns}
+                data={notificationChannels}
+                actions={channelActions}
               />
             </CardContent>
           </Card>

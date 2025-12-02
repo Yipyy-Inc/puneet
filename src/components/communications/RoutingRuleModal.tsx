@@ -207,9 +207,13 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
           <Label htmlFor="action">Action *</Label>
           <Select
             value={formData.action}
-            onValueChange={(value: any) =>
-              setFormData({ ...formData, action: value })
-            }
+            onValueChange={(
+              value:
+                | "ai_handles"
+                | "transfer_to_staff"
+                | "voicemail"
+                | "specific_extension",
+            ) => setFormData({ ...formData, action: value })}
           >
             <SelectTrigger>
               <SelectValue />

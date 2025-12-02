@@ -15,7 +15,6 @@ import {
   Camera,
   Video,
   Volume2,
-  VolumeX,
   Maximize2,
   Settings,
   CircleDot,
@@ -123,7 +122,7 @@ export function LivePetCamGrid() {
                 {camera.isOnline ? (
                   <>
                     {/* Simulated video feed */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                       <Video className="h-16 w-16 text-slate-600" />
                       <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                         <CircleDot className="h-2 w-2 animate-pulse" />
@@ -135,7 +134,7 @@ export function LivePetCamGrid() {
                     </div>
 
                     {/* Controls Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                    <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Button

@@ -67,7 +67,7 @@ interface DataTableProps<T> {
   rowClassName?: (item: T) => string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   data,
   columns,
   filters = [],
@@ -99,7 +99,9 @@ export function DataTable<T extends Record<string, unknown>>({
   const filteredData = data.filter((item) => {
     // Search filter
     if (searchKey && searchTerm) {
-      const searchValue = String(item[searchKey]).toLowerCase();
+      const searchValue = String(
+        (item as Record<string, unknown>)[searchKey as string],
+      ).toLowerCase();
       if (!searchValue.includes(searchTerm.toLowerCase())) {
         return false;
       }
@@ -109,7 +111,9 @@ export function DataTable<T extends Record<string, unknown>>({
     for (const filter of filters) {
       const filterValue = filterValues[filter.key];
       if (filterValue && filterValue !== "all") {
-        if (String(item[filter.key]) !== filterValue) {
+        if (
+          String((item as Record<string, unknown>)[filter.key]) !== filterValue
+        ) {
           return false;
         }
       }
@@ -293,7 +297,9 @@ export function DataTable<T extends Record<string, unknown>>({
                         col.key === columns[0].key ? "font-medium" : ""
                       }
                     >
-                      {col.render ? col.render(item) : String(item[col.key])}
+                      {col.render
+                        ? col.render(item)
+                        : String((item as Record<string, unknown>)[col.key])}
                     </TableCell>
                   ))}
                   {actions && (

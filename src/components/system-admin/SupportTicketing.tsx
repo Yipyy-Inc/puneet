@@ -32,7 +32,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
@@ -44,7 +43,6 @@ import {
   getTicketStats,
   SupportTicket,
   SupportAgent,
-  SLAConfig,
   TicketTimelineEvent,
 } from "@/data/support-tickets";
 import {
@@ -76,7 +74,6 @@ import {
   ArrowRight,
   User,
   Building,
-  Mail,
   Tag,
   Calendar,
   Zap,
@@ -1000,7 +997,7 @@ export function SupportTicketing() {
                         <div className="mt-4 flex gap-2">
                           <Textarea
                             placeholder="Type your reply..."
-                            className="min-h-[80px]"
+                            className="min-h-20"
                           />
                           <Button className="shrink-0">
                             <Send className="h-4 w-4" />

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo } from "react";
@@ -33,7 +32,6 @@ import {
   Search,
   ChevronRight,
   Layers,
-  Clock,
   ArrowRight,
   X,
 } from "lucide-react";
@@ -62,7 +60,11 @@ import {
 // Resource type icons and colors
 const resourceTypeConfig: Record<
   string,
-  { icon: any; color: string; bgColor: string }
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    bgColor: string;
+  }
 > = {
   Facility: {
     icon: Building,
@@ -94,8 +96,29 @@ const resourceTypeConfig: Record<
   },
 };
 
+interface AuditLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  category: string;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  changes: { field: string; oldValue: string; newValue: string }[];
+  ipAddress: string;
+  userAgent: string;
+  facilityId?: string;
+  facilityName?: string;
+  severity: "Low" | "Medium" | "High" | "Critical";
+  status: "Success" | "Failed" | "Pending";
+  description: string;
+}
+
 export function AuditLogsManager() {
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -124,7 +147,7 @@ export function AuditLogsManager() {
 
     const csvContent = [
       headers.join(","),
-      ...auditLogs.map((log: any) =>
+      ...auditLogs.map((log: AuditLog) =>
         [
           log.timestamp,
           `"${log.userName}"`,
@@ -173,7 +196,7 @@ export function AuditLogsManager() {
       }
     > = {};
 
-    auditLogs.forEach((log: any) => {
+    auditLogs.forEach((log: AuditLog) => {
       if (!index[log.entityType]) {
         index[log.entityType] = { type: log.entityType, resources: {} };
       }
@@ -223,7 +246,7 @@ export function AuditLogsManager() {
   // Filter logs by selected resource
   const filteredLogs = useMemo(() => {
     if (!selectedResourceType && !selectedResourceId) return auditLogs;
-    return auditLogs.filter((log: any) => {
+    return auditLogs.filter((log: AuditLog) => {
       if (selectedResourceType && log.entityType !== selectedResourceType)
         return false;
       if (selectedResourceId && log.entityId !== selectedResourceId)
@@ -254,7 +277,13 @@ export function AuditLogsManager() {
   };
 
   const getSeverityBadge = (severity: string) => {
-    const variants: Record<string, { variant: any; className: string }> = {
+    const variants: Record<
+      string,
+      {
+        variant: "default" | "secondary" | "destructive" | "outline";
+        className: string;
+      }
+    > = {
       Low: { variant: "secondary", className: "bg-blue-100 text-blue-700" },
       Medium: {
         variant: "secondary",
@@ -278,7 +307,7 @@ export function AuditLogsManager() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, "default" | "secondary" | "destructive"> = {
       Success: "default",
       Failed: "destructive",
       Pending: "secondary",
@@ -313,7 +342,7 @@ export function AuditLogsManager() {
     {
       key: "timestamp",
       label: "Timestamp",
-      render: (item: any) => (
+      render: (item: AuditLog) => (
         <div className="text-sm">
           <div>{new Date(item.timestamp).toLocaleDateString()}</div>
           <div className="text-xs text-muted-foreground">
@@ -325,7 +354,7 @@ export function AuditLogsManager() {
     {
       key: "userName",
       label: "User",
-      render: (item: any) => (
+      render: (item: AuditLog) => (
         <div>
           <div className="font-medium">{item.userName}</div>
           <div className="text-xs text-muted-foreground">{item.userRole}</div>
@@ -335,17 +364,19 @@ export function AuditLogsManager() {
     {
       key: "action",
       label: "Action",
-      render: (item: any) => <div className="font-medium">{item.action}</div>,
+      render: (item: AuditLog) => (
+        <div className="font-medium">{item.action}</div>
+      ),
     },
     {
       key: "category",
       label: "Category",
-      render: (item: any) => getCategoryBadge(item.category),
+      render: (item: AuditLog) => getCategoryBadge(item.category),
     },
     {
       key: "entityName",
       label: "Entity",
-      render: (item: any) => (
+      render: (item: AuditLog) => (
         <div>
           <div className="text-sm">{item.entityName}</div>
           <div className="text-xs text-muted-foreground">{item.entityType}</div>
@@ -355,16 +386,16 @@ export function AuditLogsManager() {
     {
       key: "severity",
       label: "Severity",
-      render: (item: any) => getSeverityBadge(item.severity),
+      render: (item: AuditLog) => getSeverityBadge(item.severity),
     },
     {
       key: "status",
       label: "Status",
-      render: (item: any) => getStatusBadge(item.status),
+      render: (item: AuditLog) => getStatusBadge(item.status),
     },
   ];
 
-  const renderActions = (item: any) => (
+  const renderActions = (item: AuditLog) => (
     <Button
       variant="ghost"
       size="sm"
@@ -656,8 +687,8 @@ export function AuditLogsManager() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={(entry: any) =>
-                          `${entry.category}: ${entry.percentage}%`
+                        label={({ payload }) =>
+                          `${payload?.category}: ${payload?.percentage}%`
                         }
                         outerRadius={100}
                         fill="#8884d8"
@@ -812,7 +843,7 @@ export function AuditLogsManager() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {auditLogs.slice(0, 5).map((log: any) => (
+                {auditLogs.slice(0, 5).map((log: AuditLog) => (
                   <div
                     key={log.id}
                     className="flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
@@ -1046,9 +1077,9 @@ export function AuditLogsManager() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={columns as any}
-                data={filteredLogs as any}
-                actions={renderActions as any}
+                columns={columns}
+                data={filteredLogs}
+                actions={renderActions}
                 searchKey="action"
                 searchPlaceholder="Search by action, user, or entity..."
               />
@@ -1179,25 +1210,36 @@ export function AuditLogsManager() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {selectedLog.changes.map((change: any, index: number) => (
-                        <div
-                          key={index}
-                          className="border-l-2 border-primary pl-4"
-                        >
-                          <p className="font-medium text-sm">{change.field}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                              {change.oldValue}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              →
-                            </span>
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                              {change.newValue}
-                            </span>
+                      {selectedLog.changes.map(
+                        (
+                          change: {
+                            field: string;
+                            oldValue: string;
+                            newValue: string;
+                          },
+                          index: number,
+                        ) => (
+                          <div
+                            key={index}
+                            className="border-l-2 border-primary pl-4"
+                          >
+                            <p className="font-medium text-sm">
+                              {change.field}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                                {change.oldValue}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                →
+                              </span>
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                {change.newValue}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   </CardContent>
                 </Card>

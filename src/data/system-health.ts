@@ -160,7 +160,10 @@ export interface NotificationChannel {
     | "Webhook"
     | "Microsoft Teams";
   status: "Active" | "Inactive" | "Failed";
-  configuration: Record<string, any>;
+  configuration: Record<
+    string,
+    string | number | boolean | Record<string, string>
+  >;
   recipients: string[];
   alertsSent24h: number;
   deliveryRate: number;

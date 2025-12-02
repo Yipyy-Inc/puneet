@@ -39,7 +39,7 @@ interface CreateInvoiceModalProps {
   facilityId: number;
   prefilledClient?: number;
   bookingId?: number;
-  onSuccess?: (invoice: any) => void;
+  onSuccess?: (invoice: Record<string, unknown>) => void;
 }
 
 export function CreateInvoiceModal({
@@ -88,7 +88,11 @@ export function CreateInvoiceModal({
     }
   };
 
-  const updateItem = (id: string, field: keyof InvoiceItem, value: any) => {
+  const updateItem = (
+    id: string,
+    field: keyof InvoiceItem,
+    value: string | number | boolean,
+  ) => {
     setItems(
       items.map((item) =>
         item.id === id ? { ...item, [field]: value } : item,
@@ -123,13 +127,11 @@ export function CreateInvoiceModal({
       return;
     }
 
+    const invoiceId = crypto.randomUUID();
+    const invoiceNum = invoiceId.substring(0, 4).toUpperCase();
     const invoice = {
-      id: `inv-${Date.now()}`,
-      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(
-        Math.random() * 10000,
-      )
-        .toString()
-        .padStart(4, "0")}`,
+      id: `inv-${invoiceId}`,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${invoiceNum}`,
       facilityId,
       clientId: selectedClient,
       bookingId,
@@ -256,7 +258,7 @@ export function CreateInvoiceModal({
               </Button>
             </div>
             <div className="space-y-2">
-              {items.map((item, index) => (
+              {items.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-12 gap-3">
@@ -354,7 +356,9 @@ export function CreateInvoiceModal({
                 />
                 <Select
                   value={discountType}
-                  onValueChange={(v) => setDiscountType(v as any)}
+                  onValueChange={(v) =>
+                    setDiscountType(v as "percentage" | "fixed")
+                  }
                 >
                   <SelectTrigger className="w-32">
                     <SelectValue />
@@ -393,7 +397,11 @@ export function CreateInvoiceModal({
             {isRecurring && (
               <Select
                 value={recurringFrequency}
-                onValueChange={(v) => setRecurringFrequency(v as any)}
+                onValueChange={(v) =>
+                  setRecurringFrequency(
+                    v as "weekly" | "monthly" | "quarterly" | "yearly",
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue />

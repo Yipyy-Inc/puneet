@@ -25,12 +25,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
 import { clients } from "@/data/clients";
 
+interface CustomerCredit {
+  id: string;
+  facilityId: number;
+  clientId: number;
+  amount: number;
+  remainingAmount: number;
+  currency: "USD";
+  reason: "refund" | "promotion" | "compensation" | "prepaid" | "other";
+  status: "active";
+  description: string;
+  neverExpires: boolean;
+  expiryDate?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById: number;
+  notes?: string;
+}
+
 interface AddCustomerCreditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   facilityId: number;
   prefilledClient?: number;
-  onSuccess?: (credit: any) => void;
+  onSuccess?: (credit: CustomerCredit) => void;
 }
 
 export function AddCustomerCreditModal({
@@ -102,7 +120,7 @@ export function AddCustomerCreditModal({
             Add Customer Credit
           </DialogTitle>
           <DialogDescription>
-            Add credit to a customer's account
+            Add credit to a customer&apos;s account
           </DialogDescription>
         </DialogHeader>
 
@@ -148,7 +166,19 @@ export function AddCustomerCreditModal({
 
           <div className="space-y-2">
             <Label>Reason</Label>
-            <Select value={reason} onValueChange={(v) => setReason(v as any)}>
+            <Select
+              value={reason}
+              onValueChange={(v) =>
+                setReason(
+                  v as
+                    | "refund"
+                    | "promotion"
+                    | "compensation"
+                    | "prepaid"
+                    | "other",
+                )
+              }
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

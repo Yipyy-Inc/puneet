@@ -16,7 +16,7 @@ import { FileText, Download, Check } from "lucide-react";
 
 interface ExportReportModalProps {
   type: string;
-  data: any[];
+  data: Record<string, unknown>[];
   onClose: () => void;
 }
 
@@ -87,7 +87,7 @@ export function ExportReportModal({
       new Set(data.flatMap((item) => getAllKeys(item))),
     );
 
-    let html = `
+    const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -207,19 +207,22 @@ export function ExportReportModal({
   };
 
   // Helper function to get all keys (including nested)
-  const getAllKeys = (obj: any, prefix = ""): string[] => {
+  const getAllKeys = (obj: Record<string, unknown>, prefix = ""): string[] => {
     let keys: string[] = [];
 
     for (const key in obj) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
+      const value = obj[key];
 
       if (
-        typeof obj[key] === "object" &&
-        obj[key] !== null &&
-        !Array.isArray(obj[key])
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
       ) {
-        keys = keys.concat(getAllKeys(obj[key], fullKey));
-      } else if (!Array.isArray(obj[key])) {
+        keys = keys.concat(
+          getAllKeys(value as Record<string, unknown>, fullKey),
+        );
+      } else if (!Array.isArray(value)) {
         keys.push(fullKey);
       }
     }
@@ -228,8 +231,17 @@ export function ExportReportModal({
   };
 
   // Helper function to get nested value
-  const getNestedValue = (obj: any, path: string): any => {
-    return path.split(".").reduce((current, key) => current?.[key], obj);
+  const getNestedValue = (
+    obj: Record<string, unknown>,
+    path: string,
+  ): unknown => {
+    return path
+      .split(".")
+      .reduce(
+        (current, key) =>
+          (current as Record<string, unknown> | undefined)?.[key],
+        obj as unknown,
+      );
   };
 
   // Helper function to format key for display

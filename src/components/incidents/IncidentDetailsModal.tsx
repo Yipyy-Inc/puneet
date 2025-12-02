@@ -19,7 +19,6 @@ import {
   Clock,
   User,
   Calendar,
-  FileText,
   Image as ImageIcon,
   Eye,
   EyeOff,
@@ -37,8 +36,61 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
+interface IncidentPhoto {
+  id: string;
+  caption?: string;
+  isClientVisible: boolean;
+}
+
+interface FollowUpTask {
+  id: string;
+  title: string;
+  description: string;
+  assignedTo: string;
+  dueDate: string;
+  status: "pending" | "in_progress" | "completed";
+  completedDate?: string;
+  completedBy?: string;
+  notes?: string;
+}
+
+interface Incident {
+  id: string;
+  type:
+    | "injury"
+    | "illness"
+    | "behavioral"
+    | "accident"
+    | "escape"
+    | "fight"
+    | "other";
+  severity: "low" | "medium" | "high" | "critical";
+  status: "open" | "investigating" | "resolved" | "closed";
+  title: string;
+  description: string;
+  internalNotes: string;
+  clientFacingNotes: string;
+  petIds: number[];
+  petNames: string[];
+  staffInvolved: string[];
+  reportedBy: string;
+  incidentDate: string;
+  reportedDate: string;
+  resolvedDate?: string;
+  closedDate?: string;
+  photos: IncidentPhoto[];
+  followUpTasks: FollowUpTask[];
+  managerNotified: boolean;
+  managersNotified: string[];
+  clientNotified: boolean;
+  clientNotificationDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  closedBy?: string;
+}
+
 interface IncidentDetailsModalProps {
-  incident: any;
+  incident: Incident;
   onClose: () => void;
 }
 
@@ -46,7 +98,9 @@ export function IncidentDetailsModal({
   incident,
   onClose,
 }: IncidentDetailsModalProps) {
-  const [status, setStatus] = useState(incident.status);
+  const [status, setStatus] = useState<
+    "open" | "investigating" | "resolved" | "closed"
+  >(incident.status);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -85,7 +139,9 @@ export function IncidentDetailsModal({
     }
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = (
+    newStatus: "open" | "investigating" | "resolved" | "closed",
+  ) => {
     setStatus(newStatus);
     console.log("Status changed to:", newStatus);
     // In a real app, would save to backend
@@ -366,7 +422,7 @@ export function IncidentDetailsModal({
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This version is shared with clients when they're notified
+                  This version is shared with clients when they&apos;re notified
                 </p>
               </CardContent>
             </Card>
@@ -376,7 +432,7 @@ export function IncidentDetailsModal({
           <TabsContent value="photos" className="space-y-4">
             {incident.photos.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
-                {incident.photos.map((photo: any) => (
+                {incident.photos.map((photo) => (
                   <Card key={photo.id}>
                     <CardContent className="pt-6">
                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-3">
@@ -489,7 +545,7 @@ export function IncidentDetailsModal({
 
             {incident.followUpTasks.length > 0 ? (
               <div className="space-y-3">
-                {incident.followUpTasks.map((task: any) => (
+                {incident.followUpTasks.map((task) => (
                   <Card key={task.id}>
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between">

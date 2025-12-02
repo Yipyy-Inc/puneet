@@ -492,7 +492,7 @@ export interface CustomReportConfig {
   filters: {
     field: string;
     operator: "equals" | "contains" | "greater_than" | "less_than" | "between";
-    value: any;
+    value: string | number | boolean | string[];
   }[];
   sortBy?: string;
   sortOrder?: "asc" | "desc";

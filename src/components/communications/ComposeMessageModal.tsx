@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Send, Paperclip, X } from "lucide-react";
 import { messageTemplates } from "@/data/communications-hub";
 
@@ -87,7 +86,7 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
           <Label htmlFor="type">Message Type *</Label>
           <Select
             value={formData.type}
-            onValueChange={(value: any) =>
+            onValueChange={(value: "email" | "sms") =>
               setFormData({
                 ...formData,
                 type: value,

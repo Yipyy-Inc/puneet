@@ -21,7 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tag, Calendar } from "lucide-react";
+import { Tag } from "lucide-react";
 
 interface PromoCodeModalProps {
   onClose: () => void;
@@ -114,7 +114,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             <Label htmlFor="type">Discount Type *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value: any) =>
+              onValueChange={(value: "percentage" | "fixed" | "free_service") =>
                 setFormData({ ...formData, type: value })
               }
             >

@@ -21,7 +21,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, Camera, Plus, X, UserPlus } from "lucide-react";
+import { AlertTriangle, Camera, X, UserPlus } from "lucide-react";
 import { clients } from "@/data/clients";
 
 interface CreateIncidentModalProps {
@@ -208,9 +208,16 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             <Label htmlFor="type">Incident Type *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value: any) =>
-                setFormData({ ...formData, type: value })
-              }
+              onValueChange={(
+                value:
+                  | "injury"
+                  | "illness"
+                  | "behavioral"
+                  | "accident"
+                  | "escape"
+                  | "fight"
+                  | "other",
+              ) => setFormData({ ...formData, type: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -230,7 +237,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             <Label htmlFor="severity">Severity Level *</Label>
             <Select
               value={formData.severity}
-              onValueChange={(value: any) =>
+              onValueChange={(value: "low" | "medium" | "high" | "critical") =>
                 setFormData({ ...formData, severity: value })
               }
             >
@@ -442,8 +449,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                These notes are for internal use only and won't be shared with
-                clients
+                These notes are for internal use only and won&apos;t be shared
+                with clients
               </p>
             </div>
           </CardContent>

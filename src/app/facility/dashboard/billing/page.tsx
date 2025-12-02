@@ -41,75 +41,11 @@ import {
   Plus,
   AlertCircle,
   CheckCircle,
-  Clock,
   FileText,
   Send,
   RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-interface Transaction extends Record<string, unknown> {
-  id: number;
-  bookingId: number;
-  clientId: number;
-  clientName: string;
-  clientEmail: string;
-  petName: string;
-  service: string;
-  date: string;
-  amount: number;
-  paymentMethod: string;
-  paymentStatus: string;
-  transactionType: "payment" | "refund";
-  refundAmount?: number;
-  cancellationReason?: string;
-}
-
-const exportTransactionsToCSV = (transactionsData: Transaction[]) => {
-  const headers = [
-    "Transaction ID",
-    "Booking ID",
-    "Client Name",
-    "Pet Name",
-    "Service",
-    "Date",
-    "Amount",
-    "Payment Method",
-    "Status",
-    "Type",
-  ];
-
-  const csvContent = [
-    headers.join(","),
-    ...transactionsData.map((tx) =>
-      [
-        tx.id,
-        tx.bookingId,
-        `"${tx.clientName.replace(/"/g, '""')}"`,
-        `"${tx.petName.replace(/"/g, '""')}"`,
-        tx.service,
-        tx.date,
-        tx.amount,
-        tx.paymentMethod,
-        tx.paymentStatus,
-        tx.transactionType,
-      ].join(","),
-    ),
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `transactions_export_${new Date().toISOString().split("T")[0]}.csv`,
-  );
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
 
 const exportPaymentsToCSV = (paymentsData: typeof payments) => {
   const headers = [
@@ -387,7 +323,11 @@ export default function FacilityBillingPage() {
         return (
           <Badge
             variant={
-              statusColors[inv.status as keyof typeof statusColors] as any
+              statusColors[inv.status as keyof typeof statusColors] as
+                | "default"
+                | "destructive"
+                | "outline"
+                | "secondary"
             }
           >
             {inv.status}
@@ -551,8 +491,7 @@ export default function FacilityBillingPage() {
                 ${refundedAmount.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {facilityPayments.filter((p) => p.status === "refunded")
-                  .length}{" "}
+                {facilityPayments.filter((p) => p.status === "refunded").length}{" "}
                 refunds
               </p>
             </CardContent>
@@ -752,9 +691,6 @@ export default function FacilityBillingPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {facilityGiftCards.map((gc) => {
-              const purchaser = gc.purchasedByClientId
-                ? clients.find((c) => c.id === gc.purchasedByClientId)
-                : null;
               return (
                 <Card key={gc.id}>
                   <CardHeader>
@@ -1654,7 +1590,7 @@ export default function FacilityBillingPage() {
                             Message
                           </p>
                           <p className="text-sm italic">
-                            "{selectedGiftCard.message}"
+                            &quot;{selectedGiftCard.message}&quot;
                           </p>
                         </div>
                       )}

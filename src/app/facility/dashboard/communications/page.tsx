@@ -7,19 +7,16 @@ import { Button } from "@/components/ui/button";
 import {
   Mail,
   MessageSquare,
-  Send,
   Phone,
   Bell,
   Settings,
   Plus,
   Play,
-  Download,
   Zap,
   Users,
   Clock,
   CheckCircle2,
   AlertCircle,
-  Voicemail,
   PhoneForwarded,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
@@ -27,7 +24,6 @@ import type { ColumnDef } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import {
   messages,
-  messageTemplates,
   automationRules,
   petUpdates,
   callLogs,
@@ -48,8 +44,12 @@ export default function CommunicationsPage() {
   const [showPetUpdateModal, setShowPetUpdateModal] = useState(false);
   const [showCallDetailsModal, setShowCallDetailsModal] = useState(false);
   const [showRoutingModal, setShowRoutingModal] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<any>(null);
-  const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [selectedAutomationRule, setSelectedAutomationRule] = useState<
+    (typeof automationRules)[0] | null
+  >(null);
+  const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(
+    null,
+  );
 
   // Message Columns
   const messageColumns: ColumnDef<(typeof messages)[0]>[] = [
@@ -200,7 +200,7 @@ export default function CommunicationsPage() {
           variant="ghost"
           size="sm"
           onClick={() => {
-            setSelectedMessage(row.original);
+            setSelectedAutomationRule(row.original);
             setShowAutomationModal(true);
           }}
         >
@@ -797,10 +797,10 @@ export default function CommunicationsPage() {
       <Dialog open={showAutomationModal} onOpenChange={setShowAutomationModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <AutomationRuleModal
-            rule={selectedMessage}
+            rule={selectedAutomationRule ?? undefined}
             onClose={() => {
               setShowAutomationModal(false);
-              setSelectedMessage(null);
+              setSelectedAutomationRule(null);
             }}
           />
         </DialogContent>

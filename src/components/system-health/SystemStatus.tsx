@@ -63,7 +63,7 @@ export function SystemStatus() {
       Degraded: "outline",
       Maintenance: "secondary",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Online: CheckCircle2,
       Offline: XCircle,
       Degraded: AlertCircle,
@@ -127,7 +127,7 @@ export function SystemStatus() {
   };
 
   const getTrendIcon = (trend: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Increasing: ArrowUp,
       Decreasing: ArrowDown,
       Stable: Minus,
@@ -635,10 +635,7 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={serverColumns as any}
-                data={serverStatuses as any}
-              />
+              <DataTable columns={serverColumns} data={serverStatuses} />
             </CardContent>
           </Card>
 
@@ -654,8 +651,8 @@ export function SystemStatus() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={resourceColumns as any}
-                data={resourceUtilizations as any}
+                columns={resourceColumns}
+                data={resourceUtilizations}
               />
             </CardContent>
           </Card>
@@ -674,10 +671,7 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={databaseColumns as any}
-                data={databaseMetrics as any}
-              />
+              <DataTable columns={databaseColumns} data={databaseMetrics} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -695,10 +689,7 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={apiColumns as any}
-                data={apiEndpoints as any}
-              />
+              <DataTable columns={apiColumns} data={apiEndpoints} />
             </CardContent>
           </Card>
 
@@ -714,8 +705,8 @@ export function SystemStatus() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={performanceColumns as any}
-                data={performanceMetrics as any}
+                columns={performanceColumns}
+                data={performanceMetrics}
               />
             </CardContent>
           </Card>
@@ -734,10 +725,7 @@ export function SystemStatus() {
               </p>
             </CardHeader>
             <CardContent>
-              <DataTable
-                columns={serviceColumns as any}
-                data={serviceUptimes as any}
-              />
+              <DataTable columns={serviceColumns} data={serviceUptimes} />
             </CardContent>
           </Card>
         </TabsContent>

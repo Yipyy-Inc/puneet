@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
-  TrendingUp,
   Calendar,
   DollarSign,
   Users,
@@ -20,7 +19,7 @@ import {
   Settings,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
-import type { ColumnDef, FilterDef } from "@/components/ui/data-table";
+import type { ColumnDef } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import {
   calculateOccupancyRate,
@@ -53,7 +52,7 @@ export default function ReportsPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportData, setExportData] = useState<{
     type: string;
-    data: any[];
+    data: Record<string, unknown>[];
   } | null>(null);
 
   const facilityId = 1; // Mock facility ID
@@ -271,7 +270,7 @@ export default function ReportsPage() {
     },
   ];
 
-  const handleExport = (type: string, data: any[]) => {
+  const handleExport = (type: string, data: Record<string, unknown>[]) => {
     setExportData({ type, data });
     setShowExportModal(true);
   };
@@ -418,7 +417,12 @@ export default function ReportsPage() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => handleExport("occupancy", occupancyData)}
+                  onClick={() =>
+                    handleExport(
+                      "occupancy",
+                      occupancyData as unknown as Record<string, unknown>[],
+                    )
+                  }
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export
@@ -444,7 +448,7 @@ export default function ReportsPage() {
                 <div>
                   <CardTitle>No-Show Report</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Clients who didn't show up for appointments
+                    Clients who didn&apos;t show up for appointments
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -459,7 +463,14 @@ export default function ReportsPage() {
                         .toFixed(2)}
                     </span>
                   </div>
-                  <Button onClick={() => handleExport("no-show", noShowData)}>
+                  <Button
+                    onClick={() =>
+                      handleExport(
+                        "no-show",
+                        noShowData as unknown as Record<string, unknown>[],
+                      )
+                    }
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
@@ -502,7 +513,13 @@ export default function ReportsPage() {
                   </div>
                   <Button
                     onClick={() =>
-                      handleExport("cancellation", cancellationData)
+                      handleExport(
+                        "cancellation",
+                        cancellationData as unknown as Record<
+                          string,
+                          unknown
+                        >[],
+                      )
                     }
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -601,7 +618,13 @@ export default function ReportsPage() {
                 </div>
                 <Button
                   onClick={() =>
-                    handleExport("labour", labourData.staffBreakdown)
+                    handleExport(
+                      "labour",
+                      labourData.staffBreakdown as unknown as Record<
+                        string,
+                        unknown
+                      >[],
+                    )
                   }
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -650,7 +673,10 @@ export default function ReportsPage() {
                 </div>
                 <Button
                   onClick={() =>
-                    handleExport("top-customers", topCustomersData)
+                    handleExport(
+                      "top-customers",
+                      topCustomersData as unknown as Record<string, unknown>[],
+                    )
                   }
                 >
                   <Download className="h-4 w-4 mr-2" />

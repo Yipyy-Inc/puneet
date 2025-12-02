@@ -1058,7 +1058,7 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <div className="text-sm">
                           <strong>Phone Number:</strong>{" "}
-                          {integration.config.phoneNumber}
+                          {String(integration.config.phoneNumber)}
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <strong>Call Recording:</strong>
@@ -1162,7 +1162,8 @@ export default function SettingsPage() {
                     {integration.isEnabled && (
                       <div className="space-y-2">
                         <div className="text-sm">
-                          <strong>Model:</strong> {integration.config.model}
+                          <strong>Model:</strong>{" "}
+                          {String(integration.config.model)}
                         </div>
                         <div className="space-y-1">
                           <div className="text-sm font-medium">

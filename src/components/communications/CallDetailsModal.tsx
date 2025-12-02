@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DialogHeader,
   DialogTitle,
@@ -7,21 +8,21 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
-  Play,
   Download,
   Phone,
   Zap,
   User,
   Clock,
   FileText,
+  Play,
 } from "lucide-react";
+import { type CallLog } from "@/data/communications-hub";
 
 interface CallDetailsModalProps {
-  call: any;
+  call: CallLog;
   onClose: () => void;
 }
 

@@ -64,7 +64,7 @@ export function SecurityManagement() {
       Inactive: "secondary",
       "Pending Setup": "outline",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Active: CheckCircle2,
       Inactive: XCircle,
       "Pending Setup": Clock,
@@ -84,7 +84,7 @@ export function SecurityManagement() {
       Inactive: "secondary",
       Blocked: "destructive",
     };
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Active: CheckCircle2,
       Inactive: XCircle,
       Blocked: Ban,
@@ -134,7 +134,7 @@ export function SecurityManagement() {
   };
 
   const getDeviceIcon = (deviceType: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       Desktop: Monitor,
       Mobile: Smartphone,
       Tablet: Tablet,
@@ -675,9 +675,9 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={mfaColumns as any}
-                data={mfaSettings as any}
-                actions={mfaActions as any}
+                columns={mfaColumns}
+                data={mfaSettings}
+                actions={mfaActions}
               />
             </CardContent>
           </Card>
@@ -695,9 +695,9 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={ipColumns as any}
-                data={ipWhitelist as any}
-                actions={ipActions as any}
+                columns={ipColumns}
+                data={ipWhitelist}
+                actions={ipActions}
               />
             </CardContent>
           </Card>
@@ -715,9 +715,9 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={sessionColumns as any}
-                data={activeSessions as any}
-                actions={sessionActions as any}
+                columns={sessionColumns}
+                data={activeSessions}
+                actions={sessionActions}
               />
             </CardContent>
           </Card>
@@ -735,9 +735,9 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={policyColumns as any}
-                data={passwordPolicies as any}
-                actions={policyActions as any}
+                columns={policyColumns}
+                data={passwordPolicies}
+                actions={policyActions}
               />
             </CardContent>
           </Card>
@@ -898,8 +898,8 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={failedLoginColumns as any}
-                data={failedLoginAttempts as any}
+                columns={failedLoginColumns}
+                data={failedLoginAttempts}
               />
             </CardContent>
           </Card>
@@ -917,9 +917,9 @@ export function SecurityManagement() {
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={alertColumns as any}
-                data={securityAlerts as any}
-                actions={alertActions as any}
+                columns={alertColumns}
+                data={securityAlerts}
+                actions={alertActions}
               />
             </CardContent>
           </Card>

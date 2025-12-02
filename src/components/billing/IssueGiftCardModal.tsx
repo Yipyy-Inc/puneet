@@ -25,11 +25,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Gift } from "lucide-react";
 import { clients } from "@/data/clients";
 
+interface GiftCardTransaction {
+  id: string;
+  giftCardId: string;
+  type: "purchase";
+  amount: number;
+  balanceAfter: number;
+  timestamp: string;
+}
+
+interface GiftCard {
+  id: string;
+  facilityId: number;
+  code: string;
+  type: "online" | "physical";
+  initialAmount: number;
+  currentBalance: number;
+  currency: "USD";
+  status: "active";
+  purchasedBy?: string;
+  purchasedByClientId?: number;
+  purchaseDate: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  message?: string;
+  neverExpires: boolean;
+  expiryDate?: string;
+  createdAt: string;
+  transactionHistory: GiftCardTransaction[];
+}
+
 interface IssueGiftCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   facilityId: number;
-  onSuccess?: (giftCard: any) => void;
+  onSuccess?: (giftCard: GiftCard) => void;
 }
 
 export function IssueGiftCardModal({
@@ -117,7 +147,10 @@ export function IssueGiftCardModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type</Label>
-              <Select value={type} onValueChange={(v) => setType(v as any)}>
+              <Select
+                value={type}
+                onValueChange={(v) => setType(v as "online" | "physical")}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

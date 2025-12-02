@@ -3,12 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  ShoppingCart,
-  Package,
-  Warehouse,
-  ClipboardList,
-} from "lucide-react";
+import { ShoppingCart, Package, Warehouse, ClipboardList } from "lucide-react";
 
 const retailTabs = [
   {

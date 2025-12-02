@@ -22,8 +22,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Eye } from "lucide-react";
 
+interface EmailTemplate {
+  name?: string;
+  type?: string;
+  subject?: string;
+  body?: string;
+  variables?: string[];
+  category?: string;
+}
+
 interface EmailTemplateModalProps {
-  template?: any;
+  template?: EmailTemplate;
   onClose: () => void;
 }
 

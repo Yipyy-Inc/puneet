@@ -19,11 +19,14 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, CheckCircle2 } from "lucide-react";
-import { messageTemplates } from "@/data/communications-hub";
+import { Zap } from "lucide-react";
+import {
+  messageTemplates,
+  type AutomationRule,
+} from "@/data/communications-hub";
 
 interface AutomationRuleModalProps {
-  rule?: any;
+  rule?: AutomationRule | null;
   onClose: () => void;
 }
 
@@ -112,9 +115,16 @@ export function AutomationRuleModal({
           <Label htmlFor="trigger">Trigger Event *</Label>
           <Select
             value={formData.trigger}
-            onValueChange={(value) =>
-              setFormData({ ...formData, trigger: value })
-            }
+            onValueChange={(
+              value:
+                | "booking_created"
+                | "24h_before"
+                | "check_in"
+                | "check_out"
+                | "payment_received"
+                | "vaccination_expiry"
+                | "appointment_reminder",
+            ) => setFormData({ ...formData, trigger: value })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -144,7 +154,7 @@ export function AutomationRuleModal({
           <Label htmlFor="messageType">Message Type *</Label>
           <Select
             value={formData.messageType}
-            onValueChange={(value: any) =>
+            onValueChange={(value: "email" | "sms" | "both") =>
               setFormData({ ...formData, messageType: value })
             }
           >
@@ -256,7 +266,7 @@ export function AutomationRuleModal({
         </div>
 
         {/* Stats (if viewing existing rule) */}
-        {rule && (
+        {rule && rule.stats && (
           <Card>
             <CardContent className="pt-6">
               <Label className="text-base mb-4 block">Statistics</Label>

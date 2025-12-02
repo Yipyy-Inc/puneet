@@ -11,7 +11,6 @@ import {
   Box,
   Eye,
   EyeOff,
-  ImageIcon,
   Upload,
   X,
 } from "lucide-react";
@@ -64,7 +63,7 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [formData, setFormData] = useState({
@@ -234,7 +233,7 @@ export default function ProductsPage() {
       render: (item) => {
         const stockStatus = getStockStatus(
           item.stock as number,
-          item.minStock as number
+          item.minStock as number,
         );
         return (
           <div className="flex items-center gap-2">
@@ -527,7 +526,7 @@ export default function ProductsPage() {
                           {product.variants.map((variant) => {
                             const variantStockStatus = getStockStatus(
                               variant.stock,
-                              variant.minStock
+                              variant.minStock,
                             );
                             return (
                               <div
@@ -663,6 +662,7 @@ export default function ProductsPage() {
                 {formData.imageUrl && (
                   <div className="relative">
                     <div className="h-20 w-20 rounded-lg border overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={formData.imageUrl}
                         alt="Product preview"
@@ -713,7 +713,7 @@ export default function ProductsPage() {
                 <Select
                   value={formData.status}
                   onValueChange={(
-                    value: "active" | "inactive" | "discontinued"
+                    value: "active" | "inactive" | "discontinued",
                   ) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>

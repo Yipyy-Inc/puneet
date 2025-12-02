@@ -453,7 +453,7 @@ export interface Integration {
   category: "communication" | "accounting" | "ai" | "phone";
   isEnabled: boolean;
   config: {
-    [key: string]: any;
+    [key: string]: string | number | boolean | Record<string, boolean>;
   };
 }
 

@@ -32,7 +32,7 @@ interface DataTableProps<T> {
   itemsPerPage?: number;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T extends object>({
   data,
   columns,
   searchColumn,
@@ -42,8 +42,14 @@ export function DataTable<T extends Record<string, any>>({
   const [searchTerm, setSearchTerm] = useState("");
 
   // Get nested value from object
-  const getNestedValue = (obj: any, path: string): any => {
-    return path.split(".").reduce((current, key) => current?.[key], obj);
+  const getNestedValue = (obj: object, path: string): unknown => {
+    return path
+      .split(".")
+      .reduce(
+        (current, key) =>
+          (current as Record<string, unknown> | undefined)?.[key],
+        obj as unknown,
+      );
   };
 
   const filteredData = data.filter((item) => {

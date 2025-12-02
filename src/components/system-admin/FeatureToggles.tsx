@@ -35,12 +35,11 @@ import { StatCard } from "@/components/ui/StatCard";
 import {
   tenantModuleConfigs,
   remoteConfigFlags,
-  configChangeLogs,
   availableModules,
   getConfigStats,
+  configChangeLogs,
   TenantModuleConfig,
   RemoteConfigFlag,
-  ConfigChangeLog,
 } from "@/data/feature-toggles";
 import {
   Flag,
@@ -48,23 +47,15 @@ import {
   Settings,
   Zap,
   Clock,
-  CheckCircle,
-  AlertCircle,
   RefreshCw,
   History,
   Plus,
   Edit,
   Eye,
-  ToggleLeft,
   ToggleRight,
   Globe,
   User,
-  Users,
   Package,
-  Search,
-  Filter,
-  Play,
-  Pause,
   Copy,
   Trash2,
   ArrowRight,
@@ -73,7 +64,6 @@ import {
   Shield,
   Layers,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 
 export function FeatureToggles() {
   const [activeTab, setActiveTab] = useState("tenants");
