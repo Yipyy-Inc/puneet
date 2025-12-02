@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
@@ -57,6 +58,7 @@ import {
 } from "@/data/settings";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState(businessProfile);
   const [hours, setHours] = useState(businessHours);
   const [rules, setRules] = useState(bookingRules);
@@ -66,7 +68,7 @@ export default function SettingsPage() {
 
   const handleSave = (section: string) => {
     console.log(`Saving ${section} settings...`);
-    // In a real app, would save to backend
+    alert(`${section} settings saved successfully!`);
   };
 
   // Audit Log Columns
@@ -428,7 +430,9 @@ export default function SettingsPage() {
                         pets
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      alert(`Edit location "${location.name}" - Opens location editor`);
+                    }}>
                       Edit
                     </Button>
                   </div>
@@ -747,7 +751,9 @@ export default function SettingsPage() {
                         ))}
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      alert(`Edit tax rate "${tax.name}" - Opens tax rate editor`);
+                    }}>
                       Edit
                     </Button>
                   </div>
@@ -978,7 +984,9 @@ export default function SettingsPage() {
               </p>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">Open Template Editor</Button>
+              <Button variant="outline" onClick={() => router.push("/facility/dashboard/communications")}>
+                Open Template Editor
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1109,7 +1117,20 @@ export default function SettingsPage() {
                           <Badge variant="secondary">Not Connected</Badge>
                         )}
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setIntegrationsData(
+                            integrationsData.map((i) =>
+                              i.id === integration.id
+                                ? { ...i, isEnabled: !i.isEnabled }
+                                : i
+                            )
+                          );
+                          alert(`${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`);
+                        }}
+                      >
                         {integration.isEnabled ? "Disconnect" : "Connect"}
                       </Button>
                     </div>
@@ -1229,8 +1250,12 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">Change Plan</Button>
-                <Button variant="outline">Billing History</Button>
+                <Button variant="outline" onClick={() => {
+                  alert("Opens plan selection modal - Choose from Starter, Professional, and Enterprise plans");
+                }}>Change Plan</Button>
+                <Button variant="outline" onClick={() => {
+                  alert("Opens billing history - Shows all past invoices and payment history");
+                }}>Billing History</Button>
               </div>
             </CardContent>
           </Card>

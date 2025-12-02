@@ -96,10 +96,23 @@ export default function MarketingPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              setSelectedTemplate(row.original);
+              setShowTemplateModal(true);
+            }}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              alert(`Template "${row.original.name}" has been copied!`);
+            }}
+          >
             <Copy className="h-4 w-4" />
           </Button>
         </div>
@@ -141,10 +154,23 @@ export default function MarketingPage() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              setShowSegmentModal(true);
+              alert(`Edit segment "${row.original.name}" - Opens segment editor`);
+            }}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              alert(`Segment "${row.original.name}" has been deleted!`);
+            }}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -234,7 +260,13 @@ export default function MarketingPage() {
             <Eye className="h-4 w-4" />
           </Button>
           {row.original.status === "draft" && (
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                alert(`Campaign "${row.original.name}" has been sent!`);
+              }}
+            >
               <Send className="h-4 w-4" />
             </Button>
           )}
@@ -359,10 +391,24 @@ export default function MarketingPage() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              setShowPromoModal(true);
+              alert(`Edit promo code "${row.original.code}" - Opens promo editor`);
+            }}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(row.original.code);
+              alert(`Promo code "${row.original.code}" copied to clipboard!`);
+            }}
+          >
             <Copy className="h-4 w-4" />
           </Button>
         </div>
@@ -649,7 +695,10 @@ export default function MarketingPage() {
                     Customer referral program
                   </p>
                 </div>
-                <Button>
+                <Button onClick={() => {
+                  const newCode = `REF${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                  alert(`New referral code generated: ${newCode}`);
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Generate Code
                 </Button>

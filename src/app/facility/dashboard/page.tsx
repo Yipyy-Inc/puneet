@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,12 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { facilities } from "@/data/facilities";
-import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
+import { bookings as initialBookings, type Booking } from "@/data/bookings";
+import { clients as initialClients } from "@/data/clients";
+import { CreateBookingModal } from "@/components/bookings/modals/CreateBookingModal";
+import { CreateClientModal } from "@/components/clients/CreateClientModal";
+import { CreatePetModal } from "@/components/pets/CreatePetModal";
+import { TakePaymentModal } from "@/components/billing/TakePaymentModal";
 
 type CheckInOutMode = "check-in" | "check-out" | null;
 
@@ -58,6 +63,7 @@ export default function FacilityDashboard() {
   const t = useTranslations("facilityDashboard");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("status");
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<CheckInOutMode>(null);
@@ -66,6 +72,16 @@ export default function FacilityDashboard() {
   const [processedBookings, setProcessedBookings] = useState<Set<number>>(
     new Set(),
   );
+
+  // Modal states
+  const [showNewBooking, setShowNewBooking] = useState(false);
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [showNewPet, setShowNewPet] = useState(false);
+  const [showTakePayment, setShowTakePayment] = useState(false);
+
+  // Data states for local mutations
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings as Booking[]);
+  const [clients, setClients] = useState(initialClients);
 
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
@@ -153,6 +169,107 @@ export default function FacilityDashboard() {
     }
     setCheckInOutMode(null);
     setSelectedBooking(null);
+  };
+
+  // Handlers for creating new entities
+  const handleCreateBooking = (newBooking: Omit<Booking, "id">) => {
+    const maxId = Math.max(...bookings.map((b) => b.id), 0);
+    const bookingWithId: Booking = {
+      ...newBooking,
+      id: maxId + 1,
+    };
+    setBookings([...bookings, bookingWithId]);
+    setShowNewBooking(false);
+    alert(`Booking #${bookingWithId.id} has been created successfully.`);
+  };
+
+  const handleCreateClient = (newClient: {
+    name: string;
+    email: string;
+    phone?: string;
+    status: string;
+    facility: string;
+    pets: Array<{
+      name: string;
+      type: string;
+      breed: string;
+      age: number;
+      weight: number;
+      color: string;
+      microchip: string;
+      allergies: string;
+      specialNeeds: string;
+    }>;
+  }) => {
+    const maxClientId = Math.max(...clients.map((c) => c.id), 0);
+    const maxPetId = Math.max(
+      ...clients.flatMap((c) => c.pets.map((p) => p.id)),
+      0,
+    );
+
+    const petsWithIds = newClient.pets.map((pet, index) => ({
+      id: maxPetId + index + 1,
+      ...pet,
+    }));
+
+    const clientWithId = {
+      id: maxClientId + 1,
+      name: newClient.name,
+      email: newClient.email,
+      phone: newClient.phone,
+      status: newClient.status,
+      facility: newClient.facility,
+      pets: petsWithIds,
+    };
+    setClients([...clients, clientWithId]);
+    setShowNewClient(false);
+    alert(`Client "${newClient.name}" has been created successfully.`);
+  };
+
+  const handleCreatePet = (newPet: {
+    name: string;
+    type: string;
+    breed: string;
+    age: number;
+    weight: number;
+    color: string;
+    microchip: string;
+    allergies: string;
+    specialNeeds: string;
+    ownerId: number;
+  }) => {
+    const maxPetId = Math.max(
+      ...clients.flatMap((c) => c.pets.map((p) => p.id)),
+      0,
+    );
+
+    const petWithId = {
+      id: maxPetId + 1,
+      name: newPet.name,
+      type: newPet.type,
+      breed: newPet.breed,
+      age: newPet.age,
+      weight: newPet.weight,
+      color: newPet.color,
+      microchip: newPet.microchip,
+      allergies: newPet.allergies,
+      specialNeeds: newPet.specialNeeds,
+    };
+
+    // Add pet to the client
+    const updatedClients = clients.map((client) => {
+      if (client.id === newPet.ownerId) {
+        return {
+          ...client,
+          pets: [...client.pets, petWithId],
+        };
+      }
+      return client;
+    });
+
+    setClients(updatedClients);
+    setShowNewPet(false);
+    alert(`Pet "${newPet.name}" has been registered successfully.`);
   };
 
   const getServiceBadgeColor = (service: string) => {
@@ -245,15 +362,15 @@ export default function FacilityDashboard() {
 
       {/* Quick Actions Bar */}
       <div className="flex flex-wrap gap-3">
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowNewBooking(true)}>
           <Plus className="h-4 w-4" />
           New Booking
         </Button>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => setShowNewClient(true)}>
           <Users className="h-4 w-4" />
           New Customer
         </Button>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => setShowTakePayment(true)}>
           <CreditCard className="h-4 w-4" />
           Take Payment
         </Button>
@@ -471,19 +588,19 @@ export default function FacilityDashboard() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full justify-start" variant="outline">
+            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewBooking(true)}>
               <Calendar className="mr-2 h-4 w-4" />
               New Booking
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewClient(true)}>
               <Users className="mr-2 h-4 w-4" />
               Add Client
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewPet(true)}>
               <PawPrint className="mr-2 h-4 w-4" />
               Register Pet
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button className="w-full justify-start" variant="outline" onClick={() => router.push("/facility/dashboard/reports")}>
               <TrendingUp className="mr-2 h-4 w-4" />
               View Reports
             </Button>
@@ -612,6 +729,45 @@ export default function FacilityDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Booking Modal */}
+      <CreateBookingModal
+        open={showNewBooking}
+        onOpenChange={setShowNewBooking}
+        onSave={handleCreateBooking}
+        facilityId={facilityId}
+      />
+
+      {/* Create Client Modal */}
+      <CreateClientModal
+        open={showNewClient}
+        onOpenChange={setShowNewClient}
+        onSave={handleCreateClient}
+        facilityName={facility.name}
+      />
+
+      {/* Create Pet Modal */}
+      <CreatePetModal
+        open={showNewPet}
+        onOpenChange={setShowNewPet}
+        onSave={handleCreatePet}
+        clients={clients.filter(c => c.facility === facility.name).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+        }))}
+      />
+
+      {/* Take Payment Modal */}
+      <TakePaymentModal
+        open={showTakePayment}
+        onOpenChange={setShowTakePayment}
+        facilityId={facilityId}
+        onSuccess={(payment) => {
+          console.log("Payment successful:", payment);
+          alert(`Payment of $${payment.totalAmount.toFixed(2)} processed successfully!`);
+        }}
+      />
     </div>
   );
 }

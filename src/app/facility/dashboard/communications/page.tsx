@@ -324,7 +324,9 @@ export default function CommunicationsPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {row.original.recordingUrl && (
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => {
+              alert(`Playing call recording from ${row.original.from}...`);
+            }}>
               <Play className="h-4 w-4" />
             </Button>
           )}
@@ -378,7 +380,10 @@ export default function CommunicationsPage() {
       accessorKey: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={() => {
+          setShowRoutingModal(true);
+          alert(`Edit routing rule "${row.original.name}"`);
+        }}>
           <Settings className="h-4 w-4" />
         </Button>
       ),

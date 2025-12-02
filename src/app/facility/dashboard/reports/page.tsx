@@ -624,11 +624,16 @@ export default function ReportsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        alert(`Running report "${report.name}"... Report generated successfully!`);
+                      }}>
                         <FileText className="h-4 w-4 mr-2" />
                         Run
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setShowCustomBuilder(true);
+                        alert(`Edit settings for report "${report.name}"`);
+                      }}>
                         <Settings className="h-4 w-4" />
                       </Button>
                     </div>

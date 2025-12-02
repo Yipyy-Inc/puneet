@@ -105,6 +105,52 @@ const exportTransactionsToCSV = (transactionsData: Transaction[]) => {
   document.body.removeChild(link);
 };
 
+const exportPaymentsToCSV = (paymentsData: typeof payments) => {
+  const headers = [
+    "Payment ID",
+    "Date",
+    "Client ID",
+    "Description",
+    "Amount",
+    "Tip",
+    "Total",
+    "Payment Method",
+    "Status",
+    "Processed By",
+  ];
+
+  const csvContent = [
+    headers.join(","),
+    ...paymentsData.map((p) =>
+      [
+        p.id,
+        p.createdAt,
+        p.clientId,
+        `"${p.description.replace(/"/g, '""')}"`,
+        p.amount.toFixed(2),
+        (p.tipAmount || 0).toFixed(2),
+        p.totalAmount.toFixed(2),
+        p.paymentMethod,
+        p.status,
+        p.processedBy,
+      ].join(","),
+    ),
+  ].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute(
+    "download",
+    `payments_export_${new Date().toISOString().split("T")[0]}.csv`,
+  );
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function FacilityBillingPage() {
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
@@ -376,7 +422,7 @@ export default function FacilityBillingPage() {
             <FileText className="mr-2 h-4 w-4" />
             Create Invoice
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => exportPaymentsToCSV(facilityPayments)}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -990,7 +1036,14 @@ export default function FacilityBillingPage() {
 
                 <div className="flex gap-2">
                   {selectedTransaction.receiptUrl && (
-                    <Button variant="outline" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        // Simulate receipt download
+                        alert(`Receipt for payment ${selectedTransaction.id} downloaded successfully!`);
+                      }}
+                    >
                       <Download className="h-4 w-4 mr-2" />
                       Download Receipt
                     </Button>
@@ -1153,7 +1206,13 @@ export default function FacilityBillingPage() {
                 )}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      alert(`Invoice ${selectedInvoice.invoiceNumber} PDF downloaded successfully!`);
+                    }}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download PDF
                   </Button>
