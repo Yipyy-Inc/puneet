@@ -15,6 +15,7 @@ import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
+import { PermissionGuard } from "@/components/facility/PermissionGuard";
 
 export default function FacilityDashboard() {
   const tStatus = useTranslations("status");
@@ -276,10 +277,12 @@ export default function FacilityDashboard() {
 
       {/* Quick Actions Bar */}
       <div className="flex flex-wrap gap-3">
-        <Button className="gap-2" onClick={() => setShowNewBooking(true)}>
-          <Plus className="h-4 w-4" />
-          New Booking
-        </Button>
+        <PermissionGuard permission="create_booking">
+          <Button className="gap-2" onClick={() => setShowNewBooking(true)}>
+            <Plus className="h-4 w-4" />
+            New Booking
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Daycare & Boarding Check-In/Out Section */}

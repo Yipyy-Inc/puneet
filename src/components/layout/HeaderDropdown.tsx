@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,11 +14,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Globe, Settings } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
+import { FacilityRoleSwitcher } from "./FacilityRoleSwitcher";
 
 export function HeaderDropdown() {
   const [isPending, startTransition] = useTransition();
   const locale = useLocale();
+  const pathname = usePathname();
   const currentRole = getUserRole();
+
+  const isFacilityPortal = pathname?.startsWith("/facility");
 
   const switchLocale = (newLocale: string) => {
     startTransition(() => {
@@ -44,7 +49,7 @@ export function HeaderDropdown() {
           <Settings className="h-4 w-4 text-muted-foreground ml-2" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Language</DropdownMenuLabel>
         <DropdownMenuItem
           onClick={() => switchLocale("en")}
@@ -80,6 +85,8 @@ export function HeaderDropdown() {
             Switch to Super Admin
           </DropdownMenuItem>
         )}
+        {/* Show facility role switcher when in facility portal */}
+        {isFacilityPortal && <FacilityRoleSwitcher />}
       </DropdownMenuContent>
     </DropdownMenu>
   );
