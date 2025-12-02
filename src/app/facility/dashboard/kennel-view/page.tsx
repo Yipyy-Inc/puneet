@@ -38,8 +38,11 @@ import {
   CheckCircle,
   Phone,
   User,
+  List,
+  LayoutGrid,
 } from "lucide-react";
 import { clients } from "@/data/clients";
+import { KennelCalendarView } from "./kennel-calendar";
 
 type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
 
@@ -180,11 +183,14 @@ const initialKennels: Kennel[] = [
   },
 ];
 
+type ViewMode = "list" | "calendar";
+
 export default function KennelViewPage() {
   const [kennels, setKennels] = useState<Kennel[]>(initialKennels);
   const [selectedKennel, setSelectedKennel] = useState<Kennel | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // Booking/edit form state
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -379,6 +385,26 @@ export default function KennelViewPage() {
             Manage kennel occupancy and bookings
           </p>
         </div>
+        <div className="flex rounded-lg border overflow-hidden">
+          <Button
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            size="sm"
+            className="rounded-none gap-2"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4" />
+            List
+          </Button>
+          <Button
+            variant={viewMode === "calendar" ? "secondary" : "ghost"}
+            size="sm"
+            className="rounded-none gap-2"
+            onClick={() => setViewMode("calendar")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            Calendar
+          </Button>
+        </div>
       </div>
 
       {/* Status Summary */}
@@ -478,110 +504,145 @@ export default function KennelViewPage() {
         </Card>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex items-center gap-4">
-        <Select
-          value={filterStatus}
-          onValueChange={(v) => setFilterStatus(v as KennelStatus | "all")}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Kennels</SelectItem>
-            <SelectItem value="vacant">Vacant</SelectItem>
-            <SelectItem value="occupied">Occupied</SelectItem>
-            <SelectItem value="reserved">Reserved</SelectItem>
-            <SelectItem value="maintenance">Maintenance</SelectItem>
-          </SelectContent>
-        </Select>
-        {filterStatus !== "all" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setFilterStatus("all")}
-          >
-            Clear filter
-          </Button>
-        )}
-      </div>
-
-      {/* Kennel List */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Kennel</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Pet</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Check-In</TableHead>
-              <TableHead>Check-Out</TableHead>
-              <TableHead className="text-right">Rate</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredKennels.map((kennel) => (
-              <TableRow
-                key={kennel.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => openKennelDialog(kennel)}
+      {viewMode === "calendar" ? (
+        <Card className="p-4">
+          <KennelCalendarView
+            kennels={kennels}
+            onKennelClick={(kennel) => openKennelDialog(kennel)}
+            onAddBooking={(kennelId, date) => {
+              const kennel = kennels.find((k) => k.id === kennelId);
+              if (kennel && kennel.status !== "maintenance") {
+                setSelectedKennel(kennel);
+                setSelectedClientId("");
+                setSelectedPetId("");
+                setFormCheckIn(date);
+                setFormCheckOut("");
+                setDialogOpen(true);
+              }
+            }}
+            onUpdateBooking={(kennelId, checkIn, checkOut) => {
+              setKennels((prev) =>
+                prev.map((k) =>
+                  k.id === kennelId
+                    ? {
+                        ...k,
+                        checkIn,
+                        checkOut,
+                      }
+                    : k,
+                ),
+              );
+            }}
+          />
+        </Card>
+      ) : (
+        <>
+          {/* Filter Bar */}
+          <div className="flex items-center gap-4">
+            <Select
+              value={filterStatus}
+              onValueChange={(v) => setFilterStatus(v as KennelStatus | "all")}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Kennels</SelectItem>
+                <SelectItem value="vacant">Vacant</SelectItem>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
+            {filterStatus !== "all" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilterStatus("all")}
               >
-                <TableCell className="font-medium">{kennel.name}</TableCell>
-                <TableCell>{getTypeLabel(kennel.type)}</TableCell>
-                <TableCell>
-                  <Badge className={getStatusBadgeClass(kennel.status)}>
-                    {kennel.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {kennel.petName ? (
-                    <div className="flex items-center gap-2">
-                      <PawPrint className="h-4 w-4 text-muted-foreground" />
-                      {kennel.petName}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {kennel.clientName || (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {kennel.checkIn || (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {kennel.checkOut || (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  ${kennel.dailyRate}/night
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openKennelDialog(kennel);
-                    }}
+                Clear filter
+              </Button>
+            )}
+          </div>
+
+          {/* Kennel List */}
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kennel</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Pet</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Check-In</TableHead>
+                  <TableHead>Check-Out</TableHead>
+                  <TableHead className="text-right">Rate</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredKennels.map((kennel) => (
+                  <TableRow
+                    key={kennel.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => openKennelDialog(kennel)}
                   >
-                    {kennel.status === "vacant" ? "Book" : "Manage"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+                    <TableCell className="font-medium">{kennel.name}</TableCell>
+                    <TableCell>{getTypeLabel(kennel.type)}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusBadgeClass(kennel.status)}>
+                        {kennel.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {kennel.petName ? (
+                        <div className="flex items-center gap-2">
+                          <PawPrint className="h-4 w-4 text-muted-foreground" />
+                          {kennel.petName}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {kennel.clientName || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {kennel.checkIn || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {kennel.checkOut || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ${kennel.dailyRate}/night
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openKennelDialog(kennel);
+                        }}
+                      >
+                        {kennel.status === "vacant" ? "Book" : "Manage"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
+      )}
 
       {/* Unified Kennel Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
