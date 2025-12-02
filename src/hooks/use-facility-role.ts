@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import {
   type FacilityRole,
   type Permission,
@@ -24,37 +24,100 @@ import {
   canManagePermissions,
 } from "@/lib/role-utils";
 
+// Store for role state with subscription support
+let roleListeners: Array<() => void> = [];
+
+function subscribeToRole(callback: () => void) {
+  roleListeners.push(callback);
+  return () => {
+    roleListeners = roleListeners.filter((l) => l !== callback);
+  };
+}
+
+function notifyRoleListeners() {
+  roleListeners.forEach((listener) => listener());
+}
+
+function getRoleSnapshot(): FacilityRole {
+  return getFacilityRole();
+}
+
+function getRoleServerSnapshot(): FacilityRole {
+  return "owner"; // Default for SSR
+}
+
+// Store for user ID
+function getUserIdSnapshot(): string | null {
+  return getCurrentUserId();
+}
+
+function getUserIdServerSnapshot(): string | null {
+  return null;
+}
+
+// Store for custom permissions
+let permissionListeners: Array<() => void> = [];
+
+function subscribeToPermissions(callback: () => void) {
+  permissionListeners.push(callback);
+  return () => {
+    permissionListeners = permissionListeners.filter((l) => l !== callback);
+  };
+}
+
+function notifyPermissionListeners() {
+  permissionListeners.forEach((listener) => listener());
+}
+
+function getCustomPermissionsSnapshot(): Record<
+  FacilityRole,
+  Permission[]
+> | null {
+  return getCustomRolePermissions();
+}
+
+function getCustomPermissionsServerSnapshot(): Record<
+  FacilityRole,
+  Permission[]
+> | null {
+  return null;
+}
+
+function getUserOverridesSnapshot(): UserPermissionOverride[] {
+  return getUserPermissionOverrides();
+}
+
+function getUserOverridesServerSnapshot(): UserPermissionOverride[] {
+  return [];
+}
+
 export function useFacilityRole() {
-  const [role, setRole] = useState<FacilityRole>(() => getFacilityRole());
-  const [userId, setUserId] = useState<string | null>(() => getCurrentUserId());
-  const [refreshKey, setRefreshKey] = useState(0);
-  const isLoading = false;
+  const role = useSyncExternalStore(
+    subscribeToRole,
+    getRoleSnapshot,
+    getRoleServerSnapshot,
+  );
 
-  useEffect(() => {
-    if (refreshKey > 0) {
-      // Use a microtask to avoid the React strict mode warning
-      const timer = setTimeout(() => {
-        setRole(getFacilityRole());
-        setUserId(getCurrentUserId());
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [refreshKey]);
-
-  const refresh = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
-  }, []);
+  const userId = useSyncExternalStore(
+    subscribeToRole,
+    getUserIdSnapshot,
+    getUserIdServerSnapshot,
+  );
 
   const switchRole = useCallback((newRole: FacilityRole) => {
     setFacilityRole(newRole);
-    setRole(newRole);
+    notifyRoleListeners();
     // Reload to apply new role across the app
     window.location.reload();
   }, []);
 
   const setUser = useCallback((newUserId: string) => {
     setCurrentUserId(newUserId);
-    setUserId(newUserId);
+    notifyRoleListeners();
+  }, []);
+
+  const refresh = useCallback(() => {
+    notifyRoleListeners();
   }, []);
 
   const can = useCallback(
@@ -79,7 +142,7 @@ export function useFacilityRole() {
   return {
     role,
     userId,
-    isLoading,
+    isLoading: false,
     switchRole,
     setUser,
     can,
@@ -93,14 +156,17 @@ export function useFacilityRole() {
 
 // Hook for managing permissions (owner only)
 export function usePermissionManagement() {
-  const [customRolePermissions, setCustomRolePermissions] = useState<Record<
-    FacilityRole,
-    Permission[]
-  > | null>(() => getCustomRolePermissions());
-  const [userOverrides, setUserOverrides] = useState<UserPermissionOverride[]>(
-    () => getUserPermissionOverrides(),
+  const customRolePermissions = useSyncExternalStore(
+    subscribeToPermissions,
+    getCustomPermissionsSnapshot,
+    getCustomPermissionsServerSnapshot,
   );
-  const isLoading = false;
+
+  const userOverrides = useSyncExternalStore(
+    subscribeToPermissions,
+    getUserOverridesSnapshot,
+    getUserOverridesServerSnapshot,
+  );
 
   const getRolePerms = useCallback(
     (role: FacilityRole): Permission[] => {
@@ -115,33 +181,30 @@ export function usePermissionManagement() {
   const updatePermission = useCallback(
     (role: FacilityRole, permission: Permission, granted: boolean) => {
       updateRolePermission(role, permission, granted);
-      // Refresh state
-      const custom = getCustomRolePermissions();
-      setCustomRolePermissions(custom);
+      notifyPermissionListeners();
     },
     [],
   );
 
   const resetRole = useCallback((role?: FacilityRole) => {
     resetRolePermissions(role);
-    const custom = getCustomRolePermissions();
-    setCustomRolePermissions(custom);
+    notifyPermissionListeners();
   }, []);
 
   const setOverride = useCallback((override: UserPermissionOverride) => {
     setUserPermissionOverride(override);
-    setUserOverrides(getUserPermissionOverrides());
+    notifyPermissionListeners();
   }, []);
 
   const removeUserOverride = useCallback((userId: string) => {
     resetUserOverrides(userId);
-    setUserOverrides(getUserPermissionOverrides());
+    notifyPermissionListeners();
   }, []);
 
   const saveAllRolePermissions = useCallback(
     (permissions: Record<FacilityRole, Permission[]>) => {
       saveCustomRolePermissions(permissions);
-      setCustomRolePermissions(permissions);
+      notifyPermissionListeners();
     },
     [],
   );
@@ -149,7 +212,7 @@ export function usePermissionManagement() {
   const saveAllUserOverrides = useCallback(
     (overrides: UserPermissionOverride[]) => {
       saveUserPermissionOverrides(overrides);
-      setUserOverrides(overrides);
+      notifyPermissionListeners();
     },
     [],
   );
@@ -157,7 +220,7 @@ export function usePermissionManagement() {
   return {
     customRolePermissions,
     userOverrides,
-    isLoading,
+    isLoading: false,
     getRolePerms,
     updatePermission,
     resetRole,

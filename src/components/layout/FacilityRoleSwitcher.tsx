@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useSyncExternalStore, useCallback } from "react";
 import { Shield } from "lucide-react";
 import {
   DropdownMenuLabel,
@@ -21,16 +21,39 @@ import {
   type FacilityRole,
 } from "@/lib/role-utils";
 
+// Store subscription for role changes
+let listeners: Array<() => void> = [];
+
+function subscribe(callback: () => void) {
+  listeners.push(callback);
+  return () => {
+    listeners = listeners.filter((l) => l !== callback);
+  };
+}
+
+function getSnapshot(): FacilityRole {
+  return getFacilityRole();
+}
+
+function getServerSnapshot(): FacilityRole {
+  return "owner"; // Default for SSR
+}
+
 export function FacilityRoleSwitcher() {
   const [isPending, startTransition] = useTransition();
-  const currentRole = getFacilityRole();
 
-  const handleRoleChange = (newRole: string) => {
+  const currentRole = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
+  const handleRoleChange = useCallback((newRole: string) => {
     startTransition(() => {
       setFacilityRole(newRole as FacilityRole);
       window.location.reload();
     });
-  };
+  }, []);
 
   return (
     <>
