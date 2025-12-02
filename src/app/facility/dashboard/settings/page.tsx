@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
+import { RolePermissionsManager } from "@/components/facility/RolePermissionsManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Settings,
   Building2,
   DollarSign,
   Bell,
@@ -19,13 +19,12 @@ import {
   History,
   Save,
   MapPin,
-  Clock,
-  Shield,
   Mail,
   Phone,
   Zap,
   Download,
   Smartphone,
+  Shield,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -49,7 +48,6 @@ import {
   paymentGateways,
   taxRates,
   currencySettings,
-  roles,
   notificationToggles,
   integrations,
   subscription,
@@ -144,7 +142,7 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="business">
             <Building2 className="h-4 w-4 mr-2" />
             Business
@@ -152,6 +150,10 @@ export default function SettingsPage() {
           <TabsTrigger value="financial">
             <DollarSign className="h-4 w-4 mr-2" />
             Financial
+          </TabsTrigger>
+          <TabsTrigger value="permissions">
+            <Shield className="h-4 w-4 mr-2" />
+            Permissions
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
@@ -827,42 +829,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Roles & Permissions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Roles & Permissions Matrix
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {roles.map((role) => (
-                <div key={role.id} className="p-4 border rounded-lg">
-                  <div className="font-semibold mb-3">{role.name}</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Object.entries(role.permissions).map(
-                      ([permission, granted]) => (
-                        <div
-                          key={permission}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              granted ? "bg-green-500" : "bg-gray-300"
-                            }`}
-                          />
-                          <span className="text-xs capitalize">
-                            {permission.replace(/([A-Z])/g, " $1").trim()}
-                          </span>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
           {/* Financial Data Lock-down */}
           <Card>
             <CardHeader>
@@ -890,6 +856,11 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Permissions Tab */}
+        <TabsContent value="permissions" className="space-y-6">
+          <RolePermissionsManager />
         </TabsContent>
 
         {/* Notifications Tab */}
