@@ -9,6 +9,7 @@
 - Prefer to use shadcn components when available.
 - Use the DataTable component for all tables - any extra features added to DataTable must not break existing implementations unless specifically requested.
 - Prefer using absolute path with aliases unless file is in the same directory.
+- do not worry about file formatting
 
 ## Styling
 - When possible, prefer to use Tailwind data- attributes over conditional classes.
