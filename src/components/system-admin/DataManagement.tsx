@@ -85,7 +85,10 @@ export function DataManagement() {
 
   const handleDownload = (backup: any) => {
     // Simulate download
-    const blob = new Blob([`Backup: ${backup.backupName}\nDate: ${backup.startTime}`], { type: "text/plain" });
+    const blob = new Blob(
+      [`Backup: ${backup.backupName}\nDate: ${backup.startTime}`],
+      { type: "text/plain" },
+    );
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${backup.backupName.replace(/\s/g, "_")}.backup`;
@@ -266,11 +269,24 @@ export function DataManagement() {
 
   const backupActions = (item: any) => (
     <div className="flex gap-2">
-      <Button variant="ghost" size="sm" className="gap-2" onClick={() => { setSelectedBackup(item); setShowRestoreModal(true); }}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        onClick={() => {
+          setSelectedBackup(item);
+          setShowRestoreModal(true);
+        }}
+      >
         <RefreshCw className="h-4 w-4" />
         Restore
       </Button>
-      <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleDownload(item)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        onClick={() => handleDownload(item)}
+      >
         <Download className="h-4 w-4" />
         Download
       </Button>
@@ -393,11 +409,24 @@ export function DataManagement() {
 
   const policyActions = (item: any) => (
     <div className="flex gap-2">
-      <Button variant="ghost" size="sm" className="gap-2" onClick={() => handleRunPolicy(item)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        onClick={() => handleRunPolicy(item)}
+      >
         <Play className="h-4 w-4" />
         Run Now
       </Button>
-      <Button variant="ghost" size="sm" className="gap-2" onClick={() => { setSelectedPolicy(item); setShowEditPolicyModal(true); }}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        onClick={() => {
+          setSelectedPolicy(item);
+          setShowEditPolicyModal(true);
+        }}
+      >
         <Settings className="h-4 w-4" />
         Edit
       </Button>
@@ -764,7 +793,10 @@ export function DataManagement() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Backup Name</Label>
-                  <Input placeholder="Enter backup name" defaultValue={`Manual Backup ${new Date().toLocaleDateString()}`} />
+                  <Input
+                    placeholder="Enter backup name"
+                    defaultValue={`Manual Backup ${new Date().toLocaleDateString()}`}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Backup Type</Label>
@@ -774,8 +806,12 @@ export function DataManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="full">Full Backup</SelectItem>
-                      <SelectItem value="incremental">Incremental Backup</SelectItem>
-                      <SelectItem value="differential">Differential Backup</SelectItem>
+                      <SelectItem value="incremental">
+                        Incremental Backup
+                      </SelectItem>
+                      <SelectItem value="differential">
+                        Differential Backup
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -794,7 +830,10 @@ export function DataManagement() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowBackupModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBackupModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleCreateBackup}>
@@ -844,28 +883,47 @@ export function DataManagement() {
               <div className="py-4 space-y-4">
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> Restoring this backup will replace current data. This action cannot be undone.
+                    <strong>Warning:</strong> Restoring this backup will replace
+                    current data. This action cannot be undone.
                   </p>
                 </div>
                 {selectedBackup && (
                   <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Backup Name:</span>
-                      <span className="font-medium">{selectedBackup.backupName}</span>
+                      <span className="text-muted-foreground">
+                        Backup Name:
+                      </span>
+                      <span className="font-medium">
+                        {selectedBackup.backupName}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Created:</span>
-                      <span>{new Date(selectedBackup.startTime).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(
+                          selectedBackup.startTime,
+                        ).toLocaleDateString()}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Size:</span>
-                      <span>{selectedBackup.size >= 1024 ? `${(selectedBackup.size / 1024).toFixed(2)} GB` : `${selectedBackup.size} MB`}</span>
+                      <span>
+                        {selectedBackup.size >= 1024
+                          ? `${(selectedBackup.size / 1024).toFixed(2)} GB`
+                          : `${selectedBackup.size} MB`}
+                      </span>
                     </div>
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setShowRestoreModal(false); setSelectedBackup(null); }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowRestoreModal(false);
+                    setSelectedBackup(null);
+                  }}
+                >
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={handleRestore}>
@@ -897,7 +955,10 @@ export function DataManagement() {
             </div>
             <div className="space-y-2">
               <Label>Retention Period (days)</Label>
-              <Input type="number" defaultValue={selectedPolicy?.retentionPeriod} />
+              <Input
+                type="number"
+                defaultValue={selectedPolicy?.retentionPeriod}
+              />
             </div>
             <div className="space-y-2">
               <Label>Action After Retention</Label>
@@ -914,10 +975,21 @@ export function DataManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowEditPolicyModal(false); setSelectedPolicy(null); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditPolicyModal(false);
+                setSelectedPolicy(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={() => { setShowEditPolicyModal(false); setSelectedPolicy(null); }}>
+            <Button
+              onClick={() => {
+                setShowEditPolicyModal(false);
+                setSelectedPolicy(null);
+              }}
+            >
               Save Changes
             </Button>
           </DialogFooter>

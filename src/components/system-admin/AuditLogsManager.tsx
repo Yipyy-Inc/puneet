@@ -401,7 +401,11 @@ export function AuditLogsManager() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setShowFilterDialog(true)}>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setShowFilterDialog(true)}
+          >
             <Filter className="h-4 w-4" />
             Advanced Filters
           </Button>
@@ -1229,8 +1233,14 @@ export function AuditLogsManager() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date Range</label>
                 <div className="flex gap-2">
-                  <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-                  <input type="date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                  <input
+                    type="date"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="date"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
@@ -1267,7 +1277,10 @@ export function AuditLogsManager() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowFilterDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilterDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={() => setShowFilterDialog(false)}>

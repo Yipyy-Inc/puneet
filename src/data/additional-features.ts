@@ -189,7 +189,8 @@ export const mobileAppSettings: MobileAppSettings = {
   iosAppId: "com.pawcare.facility",
   androidPackageName: "com.pawcare.facility",
   appStoreUrl: "https://apps.apple.com/app/pawcare",
-  playStoreUrl: "https://play.google.com/store/apps/details?id=com.pawcare.facility",
+  playStoreUrl:
+    "https://play.google.com/store/apps/details?id=com.pawcare.facility",
   enablePushNotifications: true,
   enableInAppMessaging: true,
   enableLiveCamera: true,
@@ -218,11 +219,13 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-1",
     title: "Peak Booking Hours Identified",
-    description: "Your facility receives 65% of bookings between 9 AM - 12 PM on weekdays.",
+    description:
+      "Your facility receives 65% of bookings between 9 AM - 12 PM on weekdays.",
     category: "operations",
     priority: "medium",
     impact: "Optimize staff scheduling during peak hours",
-    recommendation: "Schedule 2 additional front desk staff between 9 AM - 12 PM on Mon-Wed.",
+    recommendation:
+      "Schedule 2 additional front desk staff between 9 AM - 12 PM on Mon-Wed.",
     dataPoints: [
       { label: "Peak Bookings", value: "65%" },
       { label: "Time Window", value: "9 AM - 12 PM" },
@@ -234,11 +237,13 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-2",
     title: "Customer Churn Risk Detected",
-    description: "12 high-value customers haven't booked in 45+ days. Average historical frequency: 2 weeks.",
+    description:
+      "12 high-value customers haven't booked in 45+ days. Average historical frequency: 2 weeks.",
     category: "customers",
     priority: "high",
     impact: "Risk of losing $8,500 in annual revenue",
-    recommendation: "Send personalized re-engagement campaign with 15% discount for next booking.",
+    recommendation:
+      "Send personalized re-engagement campaign with 15% discount for next booking.",
     dataPoints: [
       { label: "At-Risk Customers", value: 12 },
       { label: "Days Since Last Booking", value: "45+" },
@@ -250,11 +255,13 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-3",
     title: "Upsell Opportunity: Grooming Add-Ons",
-    description: "78% of boarding customers add grooming when offered at check-in. Current offer rate: 42%.",
+    description:
+      "78% of boarding customers add grooming when offered at check-in. Current offer rate: 42%.",
     category: "revenue",
     priority: "high",
     impact: "Potential monthly revenue increase of $3,200",
-    recommendation: "Train staff to offer grooming add-on to all boarding customers at check-in.",
+    recommendation:
+      "Train staff to offer grooming add-on to all boarding customers at check-in.",
     dataPoints: [
       { label: "Conversion Rate", value: "78%" },
       { label: "Current Offer Rate", value: "42%" },
@@ -266,11 +273,13 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-4",
     title: "Staff Overtime Trending Up",
-    description: "Staff overtime hours increased 35% this month. Labor cost exceeding budget by $1,800.",
+    description:
+      "Staff overtime hours increased 35% this month. Labor cost exceeding budget by $1,800.",
     category: "staff",
     priority: "high",
     impact: "Increased labor costs affecting profitability",
-    recommendation: "Review schedule efficiency and consider hiring part-time staff for peak periods.",
+    recommendation:
+      "Review schedule efficiency and consider hiring part-time staff for peak periods.",
     dataPoints: [
       { label: "Overtime Increase", value: "35%" },
       { label: "Over Budget", value: "$1,800" },
@@ -282,11 +291,13 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-5",
     title: "Email Campaign Performance",
-    description: "Your 'Spring Special' campaign has 42% open rate - 3x industry average (14%).",
+    description:
+      "Your 'Spring Special' campaign has 42% open rate - 3x industry average (14%).",
     category: "marketing",
     priority: "medium",
     impact: "Highly engaged customer base",
-    recommendation: "Replicate this campaign style for upcoming seasonal promotions.",
+    recommendation:
+      "Replicate this campaign style for upcoming seasonal promotions.",
     dataPoints: [
       { label: "Open Rate", value: "42%" },
       { label: "Industry Average", value: "14%" },
@@ -298,7 +309,8 @@ export const smartInsights: SmartInsight[] = [
   {
     id: "insight-6",
     title: "Optimal Pricing Identified",
-    description: "Daycare bookings remain stable at current $45/day. Price elasticity testing suggests you can increase to $48 without volume drop.",
+    description:
+      "Daycare bookings remain stable at current $45/day. Price elasticity testing suggests you can increase to $48 without volume drop.",
     category: "revenue",
     priority: "medium",
     impact: "Potential annual revenue increase of $15,600",
@@ -469,7 +481,8 @@ export const waiverSignatures: WaiverSignature[] = [
     clientName: "Sarah Johnson",
     petId: "pet-1",
     petName: "Max",
-    signatureData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    signatureData:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
     signedAt: "2024-02-15T14:30:00Z",
     ipAddress: "192.168.1.100",
     status: "valid",
@@ -483,7 +496,8 @@ export const waiverSignatures: WaiverSignature[] = [
     clientName: "Michael Chen",
     petId: "pet-2",
     petName: "Luna",
-    signatureData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    signatureData:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
     signedAt: "2024-03-01T10:15:00Z",
     ipAddress: "192.168.1.101",
     status: "valid",
@@ -497,7 +511,8 @@ export const waiverSignatures: WaiverSignature[] = [
     clientName: "Emma Wilson",
     petId: "pet-3",
     petName: "Bella",
-    signatureData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    signatureData:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
     signedAt: "2024-03-05T09:45:00Z",
     ipAddress: "192.168.1.102",
     status: "valid",
@@ -510,7 +525,8 @@ export const waiverSignatures: WaiverSignature[] = [
     clientName: "David Martinez",
     petId: "pet-4",
     petName: "Charlie",
-    signatureData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    signatureData:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
     signedAt: "2023-12-15T16:00:00Z",
     ipAddress: "192.168.1.103",
     status: "expired",
@@ -538,7 +554,7 @@ export interface AIRecommendation {
 
 export const generateAIRecommendations = (
   bookingServices: string[],
-  customerHistory: any
+  customerHistory: any,
 ): AIRecommendation[] => {
   const recommendations: AIRecommendation[] = [];
 
@@ -548,7 +564,8 @@ export const generateAIRecommendations = (
       id: "rec-1",
       type: "cross_sell",
       title: "Add Nail Trim Service",
-      description: "Keep your pup looking their best! 85% of boarding customers add this service.",
+      description:
+        "Keep your pup looking their best! 85% of boarding customers add this service.",
       originalService: "boarding",
       recommendedItem: {
         id: "service-nail-trim",
@@ -565,7 +582,8 @@ export const generateAIRecommendations = (
       id: "rec-2",
       type: "upsell",
       title: "Upgrade to Luxury Suite",
-      description: "Give your dog extra space and comfort with a suite upgrade - includes webcam access!",
+      description:
+        "Give your dog extra space and comfort with a suite upgrade - includes webcam access!",
       originalService: "boarding",
       recommendedItem: {
         id: "suite-luxury",
@@ -583,7 +601,8 @@ export const generateAIRecommendations = (
       id: "rec-3",
       type: "package_upgrade",
       title: "Save with 10-Day Package",
-      description: "Book 10 days of daycare and save $45 compared to daily rates.",
+      description:
+        "Book 10 days of daycare and save $45 compared to daily rates.",
       originalService: "daycare",
       recommendedItem: {
         id: "package-daycare-10",
@@ -602,7 +621,8 @@ export const generateAIRecommendations = (
       id: "rec-4",
       type: "cross_sell",
       title: "Add Teeth Cleaning",
-      description: "Professional dental cleaning promotes overall health and fresh breath.",
+      description:
+        "Professional dental cleaning promotes overall health and fresh breath.",
       originalService: "grooming",
       recommendedItem: {
         id: "service-teeth-cleaning",
@@ -623,7 +643,12 @@ export interface StaffConflict {
   id: string;
   staffId: string;
   staffName: string;
-  conflictType: "double_booking" | "overtime" | "insufficient_break" | "skill_mismatch" | "time_off_overlap";
+  conflictType:
+    | "double_booking"
+    | "overtime"
+    | "insufficient_break"
+    | "skill_mismatch"
+    | "time_off_overlap";
   severity: "critical" | "warning" | "info";
   date: string;
   timeSlot: string;
@@ -661,8 +686,10 @@ export const staffConflicts: StaffConflict[] = [
         endTime: "3:30 PM",
       },
     ],
-    description: "Emily is scheduled for two overlapping grooming appointments.",
-    recommendation: "Reassign BK-12346 to Sarah Johnson or reschedule to 3:30 PM.",
+    description:
+      "Emily is scheduled for two overlapping grooming appointments.",
+    recommendation:
+      "Reassign BK-12346 to Sarah Johnson or reschedule to 3:30 PM.",
     canAutoResolve: false,
   },
   {
@@ -673,7 +700,8 @@ export const staffConflicts: StaffConflict[] = [
     severity: "warning",
     date: "2024-03-16",
     timeSlot: "6:00 PM - 8:00 PM",
-    description: "Tom's schedule would result in 42 hours this week, exceeding the 40-hour limit.",
+    description:
+      "Tom's schedule would result in 42 hours this week, exceeding the 40-hour limit.",
     recommendation: "Reduce shift by 2 hours or approve overtime in advance.",
     canAutoResolve: false,
   },
@@ -685,8 +713,10 @@ export const staffConflicts: StaffConflict[] = [
     severity: "warning",
     date: "2024-03-14",
     timeSlot: "11:00 AM - 5:00 PM",
-    description: "Marcus has no scheduled break during a 6-hour shift (required: 30 min).",
-    recommendation: "Add 30-minute break at 2:00 PM or adjust appointment times.",
+    description:
+      "Marcus has no scheduled break during a 6-hour shift (required: 30 min).",
+    recommendation:
+      "Add 30-minute break at 2:00 PM or adjust appointment times.",
     canAutoResolve: true,
   },
   {
@@ -697,8 +727,10 @@ export const staffConflicts: StaffConflict[] = [
     severity: "critical",
     date: "2024-03-20",
     timeSlot: "9:00 AM - 5:00 PM",
-    description: "Olivia is scheduled for shifts during approved time-off period (March 20-22).",
-    recommendation: "Remove all shifts for March 20-22 and reassign appointments.",
+    description:
+      "Olivia is scheduled for shifts during approved time-off period (March 20-22).",
+    recommendation:
+      "Remove all shifts for March 20-22 and reassign appointments.",
     canAutoResolve: false,
   },
   {
@@ -717,9 +749,10 @@ export const staffConflicts: StaffConflict[] = [
         endTime: "11:30 AM",
       },
     ],
-    description: "Jake is assigned to advanced training but only has basic trainer certification.",
-    recommendation: "Reassign to certified advanced trainer or upgrade Jake's certification.",
+    description:
+      "Jake is assigned to advanced training but only has basic trainer certification.",
+    recommendation:
+      "Reassign to certified advanced trainer or upgrade Jake's certification.",
     canAutoResolve: false,
   },
 ];
-

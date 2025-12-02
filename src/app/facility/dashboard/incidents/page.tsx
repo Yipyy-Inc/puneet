@@ -45,8 +45,10 @@ export default function IncidentsPage() {
 
   // Filter incidents
   const filteredIncidents = incidents.filter((incident) => {
-    if (filterStatus !== "all" && incident.status !== filterStatus) return false;
-    if (filterSeverity !== "all" && incident.severity !== filterSeverity) return false;
+    if (filterStatus !== "all" && incident.status !== filterStatus)
+      return false;
+    if (filterSeverity !== "all" && incident.severity !== filterSeverity)
+      return false;
     return true;
   });
 
@@ -95,8 +97,13 @@ export default function IncidentsPage() {
       accessorKey: "severity",
       header: "Severity",
       cell: ({ row }) => (
-        <Badge variant={getSeverityVariant(row.original.severity)} className="capitalize">
-          {row.original.severity === "critical" && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
+        <Badge
+          variant={getSeverityVariant(row.original.severity)}
+          className="capitalize"
+        >
+          {row.original.severity === "critical" && (
+            <AlertTriangle className="h-3 w-3 mr-1 inline" />
+          )}
           {row.original.severity}
         </Badge>
       ),
@@ -240,8 +247,8 @@ export default function IncidentsPage() {
             row.original.status === "completed"
               ? "default"
               : row.original.status === "in_progress"
-              ? "secondary"
-              : "outline"
+                ? "secondary"
+                : "outline"
           }
           className="capitalize"
         >
@@ -271,7 +278,9 @@ export default function IncidentsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Incidents</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Incidents
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -281,11 +290,17 @@ export default function IncidentsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Open Incidents</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Open Incidents
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.open}</div>
-            <p className="text-xs text-muted-foreground mt-1">Require attention</p>
+            <div className="text-2xl font-bold text-destructive">
+              {stats.open}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Require attention
+            </p>
           </CardContent>
         </Card>
 
@@ -294,7 +309,9 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Critical</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
+            <div className="text-2xl font-bold text-destructive">
+              {stats.critical}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">High priority</p>
           </CardContent>
         </Card>
@@ -332,20 +349,28 @@ export default function IncidentsPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <Select
+                      value={filterStatus}
+                      onValueChange={setFilterStatus}
+                    >
                       <SelectTrigger className="w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="investigating">Investigating</SelectItem>
+                        <SelectItem value="investigating">
+                          Investigating
+                        </SelectItem>
                         <SelectItem value="resolved">Resolved</SelectItem>
                         <SelectItem value="closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
 
-                    <Select value={filterSeverity} onValueChange={setFilterSeverity}>
+                    <Select
+                      value={filterSeverity}
+                      onValueChange={setFilterSeverity}
+                    >
                       <SelectTrigger className="w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
@@ -416,4 +441,3 @@ export default function IncidentsPage() {
     </div>
   );
 }
-

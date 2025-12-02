@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +53,9 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
 
   const handleFileAttach = () => {
     // In a real app, would open file picker
-    const mockFile = new File(["content"], "document.pdf", { type: "application/pdf" });
+    const mockFile = new File(["content"], "document.pdf", {
+      type: "application/pdf",
+    });
     setAttachments([...attachments, mockFile]);
   };
 
@@ -61,7 +68,9 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
     onClose();
   };
 
-  const availableTemplates = messageTemplates.filter((t) => t.type === formData.type);
+  const availableTemplates = messageTemplates.filter(
+    (t) => t.type === formData.type,
+  );
 
   return (
     <>
@@ -78,7 +87,13 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
           <Label htmlFor="type">Message Type *</Label>
           <Select
             value={formData.type}
-            onValueChange={(value: any) => setFormData({ ...formData, type: value, subject: value === "sms" ? "" : formData.subject })}
+            onValueChange={(value: any) =>
+              setFormData({
+                ...formData,
+                type: value,
+                subject: value === "sms" ? "" : formData.subject,
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -93,7 +108,10 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
         {/* Template Selection */}
         <div className="space-y-2">
           <Label htmlFor="template">Use Template (Optional)</Label>
-          <Select value={formData.templateId} onValueChange={handleTemplateSelect}>
+          <Select
+            value={formData.templateId}
+            onValueChange={handleTemplateSelect}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a template or write from scratch" />
             </SelectTrigger>
@@ -116,7 +134,11 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
             id="to"
             value={formData.to}
             onChange={(e) => setFormData({ ...formData, to: e.target.value })}
-            placeholder={formData.type === "email" ? "recipient@example.com" : "+1234567890"}
+            placeholder={
+              formData.type === "email"
+                ? "recipient@example.com"
+                : "+1234567890"
+            }
           />
         </div>
 
@@ -127,7 +149,9 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
             <Input
               id="subject"
               value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, subject: e.target.value })
+              }
               placeholder="Enter subject line"
             />
           </div>
@@ -211,4 +235,3 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
     </>
   );
 }
-

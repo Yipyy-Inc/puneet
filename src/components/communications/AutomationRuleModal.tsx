@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +27,10 @@ interface AutomationRuleModalProps {
   onClose: () => void;
 }
 
-export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps) {
+export function AutomationRuleModal({
+  rule,
+  onClose,
+}: AutomationRuleModalProps) {
   const [formData, setFormData] = useState({
     name: rule?.name || "",
     trigger: rule?.trigger || "booking_created",
@@ -34,13 +42,33 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
   });
 
   const triggerOptions = [
-    { value: "booking_created", label: "Booking Created", desc: "When a new booking is created" },
-    { value: "24h_before", label: "24-Hour Reminder", desc: "24 hours before appointment" },
+    {
+      value: "booking_created",
+      label: "Booking Created",
+      desc: "When a new booking is created",
+    },
+    {
+      value: "24h_before",
+      label: "24-Hour Reminder",
+      desc: "24 hours before appointment",
+    },
     { value: "check_in", label: "Check-In", desc: "When pet is checked in" },
     { value: "check_out", label: "Check-Out", desc: "When pet is checked out" },
-    { value: "payment_received", label: "Payment Received", desc: "When payment is processed" },
-    { value: "vaccination_expiry", label: "Vaccination Expiry", desc: "Before vaccination expires" },
-    { value: "appointment_reminder", label: "Appointment Reminder", desc: "For grooming/training appointments" },
+    {
+      value: "payment_received",
+      label: "Payment Received",
+      desc: "When payment is processed",
+    },
+    {
+      value: "vaccination_expiry",
+      label: "Vaccination Expiry",
+      desc: "Before vaccination expires",
+    },
+    {
+      value: "appointment_reminder",
+      label: "Appointment Reminder",
+      desc: "For grooming/training appointments",
+    },
   ];
 
   const handleSave = () => {
@@ -48,8 +76,12 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
     onClose();
   };
 
-  const selectedTrigger = triggerOptions.find((t) => t.value === formData.trigger);
-  const showHoursBefore = formData.trigger === "24h_before" || formData.trigger === "appointment_reminder";
+  const selectedTrigger = triggerOptions.find(
+    (t) => t.value === formData.trigger,
+  );
+  const showHoursBefore =
+    formData.trigger === "24h_before" ||
+    formData.trigger === "appointment_reminder";
   const showDaysBeforeExpiry = formData.trigger === "vaccination_expiry";
 
   return (
@@ -80,7 +112,9 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
           <Label htmlFor="trigger">Trigger Event *</Label>
           <Select
             value={formData.trigger}
-            onValueChange={(value) => setFormData({ ...formData, trigger: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, trigger: value })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -90,14 +124,18 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
                 <SelectItem key={option.value} value={option.value}>
                   <div>
                     <div>{option.label}</div>
-                    <div className="text-xs text-muted-foreground">{option.desc}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {option.desc}
+                    </div>
                   </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {selectedTrigger && (
-            <p className="text-sm text-muted-foreground">{selectedTrigger.desc}</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedTrigger.desc}
+            </p>
           )}
         </div>
 
@@ -106,7 +144,9 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
           <Label htmlFor="messageType">Message Type *</Label>
           <Select
             value={formData.messageType}
-            onValueChange={(value: any) => setFormData({ ...formData, messageType: value })}
+            onValueChange={(value: any) =>
+              setFormData({ ...formData, messageType: value })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -124,7 +164,9 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
           <Label htmlFor="template">Message Template *</Label>
           <Select
             value={formData.templateId}
-            onValueChange={(value) => setFormData({ ...formData, templateId: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, templateId: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a template" />
@@ -147,36 +189,48 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
 
               {showHoursBefore && (
                 <div className="space-y-2">
-                  <Label htmlFor="hoursBefore">Send How Many Hours Before?</Label>
+                  <Label htmlFor="hoursBefore">
+                    Send How Many Hours Before?
+                  </Label>
                   <Input
                     id="hoursBefore"
                     type="number"
                     min="1"
                     value={formData.hoursBefore}
                     onChange={(e) =>
-                      setFormData({ ...formData, hoursBefore: parseInt(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        hoursBefore: parseInt(e.target.value),
+                      })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Message will be sent {formData.hoursBefore} hours before the appointment
+                    Message will be sent {formData.hoursBefore} hours before the
+                    appointment
                   </p>
                 </div>
               )}
 
               {showDaysBeforeExpiry && (
                 <div className="space-y-2">
-                  <Label htmlFor="daysBeforeExpiry">Send How Many Days Before Expiry?</Label>
+                  <Label htmlFor="daysBeforeExpiry">
+                    Send How Many Days Before Expiry?
+                  </Label>
                   <Input
                     id="daysBeforeExpiry"
                     type="number"
                     min="1"
                     value={formData.daysBeforeExpiry}
                     onChange={(e) =>
-                      setFormData({ ...formData, daysBeforeExpiry: parseInt(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        daysBeforeExpiry: parseInt(e.target.value),
+                      })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Warning sent {formData.daysBeforeExpiry} days before vaccination expires
+                    Warning sent {formData.daysBeforeExpiry} days before
+                    vaccination expires
                   </p>
                 </div>
               )}
@@ -189,7 +243,9 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
           <Checkbox
             id="enabled"
             checked={formData.enabled}
-            onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked as boolean })}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, enabled: checked as boolean })
+            }
           />
           <label
             htmlFor="enabled"
@@ -206,11 +262,17 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
               <Label className="text-base mb-4 block">Statistics</Label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">Total Sent</div>
-                  <div className="text-2xl font-bold">{rule.stats.totalSent}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Sent
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {rule.stats.totalSent}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Last Triggered</div>
+                  <div className="text-sm text-muted-foreground">
+                    Last Triggered
+                  </div>
                   <div className="text-sm font-medium">
                     {rule.stats.lastTriggered
                       ? new Date(rule.stats.lastTriggered).toLocaleString()
@@ -238,4 +300,3 @@ export function AutomationRuleModal({ rule, onClose }: AutomationRuleModalProps)
     </>
   );
 }
-

@@ -16,15 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
-import {
-  DollarSign,
-  Clock,
-  Edit,
-  Trash2,
-  Plus,
-  Save,
-  X,
-} from "lucide-react";
+import { DollarSign, Clock, Edit, Trash2, Plus, Save, X } from "lucide-react";
 import { daycareRates, DaycareRate } from "@/data/daycare";
 
 export default function DaycareRatesPage() {
@@ -119,9 +111,7 @@ export default function DaycareRatesPage() {
 
   const handleToggleActive = (rateId: string) => {
     setRates(
-      rates.map((r) =>
-        r.id === rateId ? { ...r, isActive: !r.isActive } : r,
-      ),
+      rates.map((r) => (r.id === rateId ? { ...r, isActive: !r.isActive } : r)),
     );
   };
 
@@ -216,7 +206,9 @@ export default function DaycareRatesPage() {
   const activeRates = rates.filter((r) => r.isActive).length;
   const avgPrice =
     rates.length > 0
-      ? Math.round(rates.reduce((acc, r) => acc + r.basePrice, 0) / rates.length)
+      ? Math.round(
+          rates.reduce((acc, r) => acc + r.basePrice, 0) / rates.length,
+        )
       : 0;
 
   return (
@@ -301,7 +293,9 @@ export default function DaycareRatesPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">${rate.basePrice}</span>
+                    <span className="text-3xl font-bold">
+                      ${rate.basePrice}
+                    </span>
                     <span className="text-muted-foreground">
                       / {rate.durationHours}h
                     </span>
@@ -316,19 +310,27 @@ export default function DaycareRatesPage() {
                     <div className="grid grid-cols-4 gap-2 text-center">
                       <div className="p-2 rounded bg-muted/50">
                         <p className="text-xs text-muted-foreground">Small</p>
-                        <p className="font-semibold">${rate.sizePricing.small}</p>
+                        <p className="font-semibold">
+                          ${rate.sizePricing.small}
+                        </p>
                       </div>
                       <div className="p-2 rounded bg-muted/50">
                         <p className="text-xs text-muted-foreground">Medium</p>
-                        <p className="font-semibold">${rate.sizePricing.medium}</p>
+                        <p className="font-semibold">
+                          ${rate.sizePricing.medium}
+                        </p>
                       </div>
                       <div className="p-2 rounded bg-muted/50">
                         <p className="text-xs text-muted-foreground">Large</p>
-                        <p className="font-semibold">${rate.sizePricing.large}</p>
+                        <p className="font-semibold">
+                          ${rate.sizePricing.large}
+                        </p>
                       </div>
                       <div className="p-2 rounded bg-muted/50">
                         <p className="text-xs text-muted-foreground">Giant</p>
-                        <p className="font-semibold">${rate.sizePricing.giant}</p>
+                        <p className="font-semibold">
+                          ${rate.sizePricing.giant}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -405,7 +407,10 @@ export default function DaycareRatesPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      type: e.target.value as "hourly" | "half-day" | "full-day",
+                      type: e.target.value as
+                        | "hourly"
+                        | "half-day"
+                        | "full-day",
                     })
                   }
                 >
@@ -480,7 +485,9 @@ export default function DaycareRatesPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Medium</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Medium
+                  </Label>
                   <Input
                     type="number"
                     value={formData.sizePricing.medium}

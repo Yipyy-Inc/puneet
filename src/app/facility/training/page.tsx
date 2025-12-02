@@ -55,9 +55,7 @@ export default function TrainingClassesPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<TrainingClass | null>(null);
   const [viewMode, setViewMode] = useState<"schedule" | "list">("schedule");
-  const [selectedDay, setSelectedDay] = useState<number>(
-    new Date().getDay()
-  );
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
 
   const [formData, setFormData] = useState({
     name: "",
@@ -187,7 +185,7 @@ export default function TrainingClassesPage() {
           <span
             className={getCapacityColor(
               item.enrolledCount as number,
-              item.capacity as number
+              item.capacity as number,
             )}
           >
             {item.enrolledCount}/{item.capacity}
@@ -213,9 +211,7 @@ export default function TrainingClassesPage() {
       label: "Status",
       defaultVisible: true,
       render: (item) => (
-        <Badge
-          variant={item.status === "active" ? "default" : "secondary"}
-        >
+        <Badge variant={item.status === "active" ? "default" : "secondary"}>
           {(item.status as string).charAt(0).toUpperCase() +
             (item.status as string).slice(1)}
         </Badge>
@@ -246,7 +242,7 @@ export default function TrainingClassesPage() {
   ];
 
   const classesByDay = trainingClasses.filter(
-    (c) => c.dayOfWeek === selectedDay && c.status === "active"
+    (c) => c.dayOfWeek === selectedDay && c.status === "active",
   );
 
   return (
@@ -255,7 +251,9 @@ export default function TrainingClassesPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Classes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Classes
+            </CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -293,7 +291,9 @@ export default function TrainingClassesPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Trainers</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Trainers
+            </CardTitle>
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -385,7 +385,9 @@ export default function TrainingClassesPage() {
                             >
                               Edit Class
                             </DropdownMenuItem>
-                            <DropdownMenuItem>View Enrollments</DropdownMenuItem>
+                            <DropdownMenuItem>
+                              View Enrollments
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive">
                               Cancel Class
                             </DropdownMenuItem>
@@ -407,7 +409,9 @@ export default function TrainingClassesPage() {
 
                       <div className="flex items-center gap-2">
                         <Badge
-                          variant={getSkillLevelVariant(trainingClass.skillLevel)}
+                          variant={getSkillLevelVariant(
+                            trainingClass.skillLevel,
+                          )}
                         >
                           {trainingClass.skillLevel.charAt(0).toUpperCase() +
                             trainingClass.skillLevel.slice(1)}
@@ -421,11 +425,13 @@ export default function TrainingClassesPage() {
 
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Capacity</span>
+                          <span className="text-muted-foreground">
+                            Capacity
+                          </span>
                           <span
                             className={getCapacityColor(
                               trainingClass.enrolledCount,
-                              trainingClass.capacity
+                              trainingClass.capacity,
                             )}
                           >
                             {trainingClass.enrolledCount} /{" "}
@@ -473,7 +479,9 @@ export default function TrainingClassesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(item as TrainingClass)}>
+                <DropdownMenuItem
+                  onClick={() => handleEdit(item as TrainingClass)}
+                >
                   Edit Class
                 </DropdownMenuItem>
                 <DropdownMenuItem>View Enrollments</DropdownMenuItem>
@@ -574,7 +582,7 @@ export default function TrainingClassesPage() {
                 <Select
                   value={formData.skillLevel}
                   onValueChange={(
-                    value: "beginner" | "intermediate" | "advanced"
+                    value: "beginner" | "intermediate" | "advanced",
                   ) => setFormData({ ...formData, skillLevel: value })}
                 >
                   <SelectTrigger>

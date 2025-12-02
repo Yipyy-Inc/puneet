@@ -42,12 +42,16 @@ export function ClientModal({ client }: ClientModalProps) {
   // Get client-specific data
   const clientBookings = bookings.filter((b) => b.clientId === client.id);
   const clientDocs = clientDocuments.filter((d) => d.clientId === client.id);
-  const clientComms = clientCommunications.filter((c) => c.clientId === client.id);
+  const clientComms = clientCommunications.filter(
+    (c) => c.clientId === client.id,
+  );
   const clientCalls = clientCallHistory.filter((c) => c.clientId === client.id);
 
   // Calculate stats
   const totalBookings = clientBookings.length;
-  const completedBookings = clientBookings.filter((b) => b.status === "completed").length;
+  const completedBookings = clientBookings.filter(
+    (b) => b.status === "completed",
+  ).length;
   const totalSpent = clientBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + b.totalCost, 0);
@@ -250,7 +254,8 @@ export function ClientModal({ client }: ClientModalProps) {
                         <div>
                           <h4 className="font-semibold text-sm">{pet.name}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {pet.type} • {pet.age} {pet.age === 1 ? "year" : "years"}
+                            {pet.type} • {pet.age}{" "}
+                            {pet.age === 1 ? "year" : "years"}
                           </p>
                         </div>
                       </div>
@@ -271,15 +276,23 @@ export function ClientModal({ client }: ClientModalProps) {
         <TabsContent value="bookings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Booking History</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Booking History
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {clientBookings.length > 0 ? (
                 <div className="space-y-3">
                   {clientBookings
-                    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.startDate).getTime() -
+                        new Date(a.startDate).getTime(),
+                    )
                     .map((booking) => {
-                      const pet = client.pets.find((p) => p.id === booking.petId);
+                      const pet = client.pets.find(
+                        (p) => p.id === booking.petId,
+                      );
                       return (
                         <div
                           key={booking.id}
@@ -304,7 +317,9 @@ export function ClientModal({ client }: ClientModalProps) {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-semibold text-sm">${booking.totalCost}</div>
+                            <div className="font-semibold text-sm">
+                              ${booking.totalCost}
+                            </div>
                             <Badge variant="outline" className="text-xs mt-1">
                               {booking.paymentStatus}
                             </Badge>
@@ -326,7 +341,9 @@ export function ClientModal({ client }: ClientModalProps) {
         <TabsContent value="documents" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Documents & Agreements</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Documents & Agreements
+              </CardTitle>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-1" />
                 Upload
@@ -345,7 +362,10 @@ export function ClientModal({ client }: ClientModalProps) {
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{doc.name}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs capitalize">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs capitalize"
+                            >
                               {doc.type}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
@@ -368,7 +388,9 @@ export function ClientModal({ client }: ClientModalProps) {
                             )}
                           </div>
                           {doc.notes && (
-                            <p className="text-xs text-muted-foreground mt-1">{doc.notes}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {doc.notes}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -391,13 +413,19 @@ export function ClientModal({ client }: ClientModalProps) {
         <TabsContent value="communications" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Communication Log</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Communication Log
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {clientComms.length > 0 ? (
                 <div className="space-y-3">
                   {clientComms
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime(),
+                    )
                     .map((comm) => (
                       <div
                         key={comm.id}
@@ -407,20 +435,32 @@ export function ClientModal({ client }: ClientModalProps) {
                           <div className="flex items-center gap-2">
                             {getCommunicationIcon(comm.type)}
                             <div>
-                              <Badge variant="outline" className="text-xs capitalize">
+                              <Badge
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
                                 {comm.type}
                               </Badge>
                               {comm.direction === "outbound" ? (
-                                <Badge variant="secondary" className="text-xs ml-1">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs ml-1"
+                                >
                                   Sent
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="text-xs ml-1">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs ml-1"
+                                >
                                   Received
                                 </Badge>
                               )}
                               {comm.status && (
-                                <Badge variant="outline" className="text-xs ml-1">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs ml-1"
+                                >
                                   {comm.status}
                                 </Badge>
                               )}
@@ -431,8 +471,12 @@ export function ClientModal({ client }: ClientModalProps) {
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-semibold text-sm">{comm.subject}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">{comm.content}</p>
+                          <h4 className="font-semibold text-sm">
+                            {comm.subject}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {comm.content}
+                          </p>
                         </div>
                         {comm.staffName && (
                           <div className="text-xs text-muted-foreground pt-2 border-t">
@@ -455,13 +499,19 @@ export function ClientModal({ client }: ClientModalProps) {
         <TabsContent value="calls" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Call History</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Call History
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {clientCalls.length > 0 ? (
                 <div className="space-y-3">
                   {clientCalls
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime(),
+                    )
                     .map((call) => (
                       <div
                         key={call.id}
@@ -472,7 +522,11 @@ export function ClientModal({ client }: ClientModalProps) {
                             <PhoneCall className="h-4 w-4" />
                             <div>
                               <Badge
-                                variant={call.direction === "inbound" ? "default" : "secondary"}
+                                variant={
+                                  call.direction === "inbound"
+                                    ? "default"
+                                    : "secondary"
+                                }
                                 className="text-xs capitalize"
                               >
                                 {call.direction}
@@ -515,7 +569,9 @@ export function ClientModal({ client }: ClientModalProps) {
                         </div>
                         {call.notes && (
                           <div className="pt-2 border-t">
-                            <p className="text-sm text-muted-foreground">{call.notes}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {call.notes}
+                            </p>
                           </div>
                         )}
                       </div>

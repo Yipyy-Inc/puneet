@@ -49,7 +49,9 @@ export function DataTable<T extends Record<string, any>>({
   const filteredData = data.filter((item) => {
     // Search filter
     if (searchColumn && searchTerm) {
-      const searchValue = String(getNestedValue(item, searchColumn)).toLowerCase();
+      const searchValue = String(
+        getNestedValue(item, searchColumn),
+      ).toLowerCase();
       if (!searchValue.includes(searchTerm.toLowerCase())) {
         return false;
       }
@@ -122,4 +124,3 @@ export function DataTable<T extends Record<string, any>>({
     </div>
   );
 }
-

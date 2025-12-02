@@ -62,9 +62,12 @@ export function PetModal({ pet }: PetModalProps) {
   // Calculate stats
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
   const upcomingVaccinations = vaccinations.filter(
-    (v) => new Date(v.expiryDate) <= new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    (v) =>
+      new Date(v.expiryDate) <= new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
   );
-  const expiredVaccinations = vaccinations.filter((v) => new Date(v.expiryDate) < new Date());
+  const expiredVaccinations = vaccinations.filter(
+    (v) => new Date(v.expiryDate) < new Date(),
+  );
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -92,9 +95,17 @@ export function PetModal({ pet }: PetModalProps) {
     );
 
     if (daysUntilExpiry < 0) {
-      return { status: "expired", color: "destructive", days: Math.abs(daysUntilExpiry) };
+      return {
+        status: "expired",
+        color: "destructive",
+        days: Math.abs(daysUntilExpiry),
+      };
     } else if (daysUntilExpiry <= 30) {
-      return { status: "expiring-soon", color: "warning", days: daysUntilExpiry };
+      return {
+        status: "expiring-soon",
+        color: "warning",
+        days: daysUntilExpiry,
+      };
     } else {
       return { status: "valid", color: "success", days: daysUntilExpiry };
     }
@@ -195,20 +206,23 @@ export function PetModal({ pet }: PetModalProps) {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
               <AlertCircle className="h-4 w-4 text-destructive" />
               <span className="text-sm font-medium text-destructive">
-                {expiredVaccinations.length} vaccination{expiredVaccinations.length > 1 ? "s" : ""}{" "}
-                expired - Update required
+                {expiredVaccinations.length} vaccination
+                {expiredVaccinations.length > 1 ? "s" : ""} expired - Update
+                required
               </span>
             </div>
           )}
-          {upcomingVaccinations.length > 0 && expiredVaccinations.length === 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              <span className="text-sm font-medium text-yellow-800">
-                {upcomingVaccinations.length} vaccination{upcomingVaccinations.length > 1 ? "s" : ""}{" "}
-                expiring within 60 days
-              </span>
-            </div>
-          )}
+          {upcomingVaccinations.length > 0 &&
+            expiredVaccinations.length === 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-800">
+                  {upcomingVaccinations.length} vaccination
+                  {upcomingVaccinations.length > 1 ? "s" : ""} expiring within
+                  60 days
+                </span>
+              </div>
+            )}
         </div>
       )}
 
@@ -226,7 +240,9 @@ export function PetModal({ pet }: PetModalProps) {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
@@ -254,7 +270,9 @@ export function PetModal({ pet }: PetModalProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Microchip</p>
-                  <p className="font-medium font-mono text-sm">{pet.microchip}</p>
+                  <p className="font-medium font-mono text-sm">
+                    {pet.microchip}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -262,17 +280,25 @@ export function PetModal({ pet }: PetModalProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Medical & Diet Information</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Medical & Diet Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Allergies</p>
-                <Badge variant={pet.allergies !== "None" ? "destructive" : "secondary"}>
+                <Badge
+                  variant={
+                    pet.allergies !== "None" ? "destructive" : "secondary"
+                  }
+                >
                   {pet.allergies}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Special Needs</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Special Needs
+                </p>
                 <p className="text-sm">{pet.specialNeeds}</p>
               </div>
             </CardContent>
@@ -283,7 +309,9 @@ export function PetModal({ pet }: PetModalProps) {
         <TabsContent value="photos" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Photo Gallery</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Photo Gallery
+              </CardTitle>
               <Button variant="outline" size="sm">
                 <Upload className="h-4 w-4 mr-1" />
                 Upload Photo
@@ -302,11 +330,15 @@ export function PetModal({ pet }: PetModalProps) {
                         <ImageIcon className="h-12 w-12 text-muted-foreground" />
                       </div>
                       {photo.isPrimary && (
-                        <Badge className="absolute top-2 right-2 text-xs">Primary</Badge>
+                        <Badge className="absolute top-2 right-2 text-xs">
+                          Primary
+                        </Badge>
                       )}
                       <div className="mt-2">
                         {photo.caption && (
-                          <p className="text-xs text-muted-foreground truncate">{photo.caption}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {photo.caption}
+                          </p>
                         )}
                         <p className="text-xs text-muted-foreground">
                           {formatDate(photo.uploadedAt)}
@@ -329,7 +361,9 @@ export function PetModal({ pet }: PetModalProps) {
         <TabsContent value="vaccinations" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Vaccination Records</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Vaccination Records
+              </CardTitle>
               <Button variant="outline" size="sm">
                 <Upload className="h-4 w-4 mr-1" />
                 Add Record
@@ -339,7 +373,11 @@ export function PetModal({ pet }: PetModalProps) {
               {vaccinations.length > 0 ? (
                 <div className="space-y-3">
                   {vaccinations
-                    .sort((a, b) => new Date(b.administeredDate).getTime() - new Date(a.administeredDate).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.administeredDate).getTime() -
+                        new Date(a.administeredDate).getTime(),
+                    )
                     .map((vacc) => {
                       const status = getVaccinationStatus(vacc);
                       return (
@@ -351,11 +389,14 @@ export function PetModal({ pet }: PetModalProps) {
                             <div className="flex items-start gap-3">
                               <Syringe className="h-4 w-4 mt-1 text-muted-foreground" />
                               <div className="flex-1">
-                                <h4 className="font-semibold text-sm">{vacc.vaccineName}</h4>
+                                <h4 className="font-semibold text-sm">
+                                  {vacc.vaccineName}
+                                </h4>
                                 {vacc.veterinarianName && (
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Dr. {vacc.veterinarianName}
-                                    {vacc.veterinaryClinic && ` • ${vacc.veterinaryClinic}`}
+                                    {vacc.veterinaryClinic &&
+                                      ` • ${vacc.veterinaryClinic}`}
                                   </p>
                                 )}
                               </div>
@@ -379,12 +420,18 @@ export function PetModal({ pet }: PetModalProps) {
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-xs">
                             <div>
-                              <p className="text-muted-foreground">Administered</p>
-                              <p className="font-medium">{formatDate(vacc.administeredDate)}</p>
+                              <p className="text-muted-foreground">
+                                Administered
+                              </p>
+                              <p className="font-medium">
+                                {formatDate(vacc.administeredDate)}
+                              </p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Expires</p>
-                              <p className="font-medium">{formatDate(vacc.expiryDate)}</p>
+                              <p className="font-medium">
+                                {formatDate(vacc.expiryDate)}
+                              </p>
                             </div>
                           </div>
                           {vacc.notes && (
@@ -393,7 +440,11 @@ export function PetModal({ pet }: PetModalProps) {
                             </p>
                           )}
                           {vacc.documentUrl && (
-                            <Button variant="ghost" size="sm" className="w-full mt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full mt-2"
+                            >
                               <Download className="h-3 w-3 mr-1" />
                               Download Certificate
                             </Button>
@@ -405,7 +456,9 @@ export function PetModal({ pet }: PetModalProps) {
               ) : (
                 <div className="text-center py-8">
                   <Syringe className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No vaccination records</p>
+                  <p className="text-sm text-muted-foreground">
+                    No vaccination records
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -416,13 +469,19 @@ export function PetModal({ pet }: PetModalProps) {
         <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Stay History</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Stay History
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {petBookings.length > 0 ? (
                 <div className="space-y-3">
                   {petBookings
-                    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.startDate).getTime() -
+                        new Date(a.startDate).getTime(),
+                    )
                     .map((booking) => (
                       <div
                         key={booking.id}
@@ -446,7 +505,9 @@ export function PetModal({ pet }: PetModalProps) {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-sm">${booking.totalCost}</p>
+                            <p className="font-semibold text-sm">
+                              ${booking.totalCost}
+                            </p>
                             <Badge variant="outline" className="text-xs mt-1">
                               {booking.paymentStatus}
                             </Badge>
@@ -463,7 +524,9 @@ export function PetModal({ pet }: PetModalProps) {
               ) : (
                 <div className="text-center py-8">
                   <History className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No stay history</p>
+                  <p className="text-sm text-muted-foreground">
+                    No stay history
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -474,7 +537,10 @@ export function PetModal({ pet }: PetModalProps) {
         <TabsContent value="reports" className="space-y-4">
           {reports.length > 0 ? (
             reports
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime(),
+              )
               .map((report) => (
                 <Card key={report.id}>
                   <CardHeader>
@@ -487,7 +553,9 @@ export function PetModal({ pet }: PetModalProps) {
                           {formatDate(report.date)} • By {report.createdBy}
                         </p>
                       </div>
-                      <Badge className={getMoodColor(report.mood)}>{report.mood}</Badge>
+                      <Badge className={getMoodColor(report.mood)}>
+                        {report.mood}
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -500,7 +568,10 @@ export function PetModal({ pet }: PetModalProps) {
                         </h4>
                         <ul className="space-y-1">
                           {report.activities.map((activity, idx) => (
-                            <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <li
+                              key={idx}
+                              className="text-sm text-muted-foreground flex items-start gap-2"
+                            >
                               <span className="text-primary mt-1">•</span>
                               {activity}
                             </li>
@@ -526,7 +597,9 @@ export function PetModal({ pet }: PetModalProps) {
                                 <p className="text-sm font-medium">
                                   {meal.time} - {meal.food}
                                 </p>
-                                <p className="text-xs text-muted-foreground">{meal.amount}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {meal.amount}
+                                </p>
                               </div>
                               <Badge variant="outline" className="capitalize">
                                 {meal.consumed}
@@ -546,7 +619,11 @@ export function PetModal({ pet }: PetModalProps) {
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {report.pottyBreaks.map((potty, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
+                            <Badge
+                              key={idx}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {potty.time} - {potty.type}
                             </Badge>
                           ))}
@@ -577,8 +654,12 @@ export function PetModal({ pet }: PetModalProps) {
                     {/* Staff Notes */}
                     {report.staffNotes && (
                       <div className="pt-3 border-t">
-                        <h4 className="text-sm font-semibold mb-1">Staff Notes</h4>
-                        <p className="text-sm text-muted-foreground">{report.staffNotes}</p>
+                        <h4 className="text-sm font-semibold mb-1">
+                          Staff Notes
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {report.staffNotes}
+                        </p>
                       </div>
                     )}
 
@@ -595,7 +676,9 @@ export function PetModal({ pet }: PetModalProps) {
             <Card>
               <CardContent className="text-center py-8">
                 <Award className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No report cards yet</p>
+                <p className="text-sm text-muted-foreground">
+                  No report cards yet
+                </p>
               </CardContent>
             </Card>
           )}
@@ -604,4 +687,3 @@ export function PetModal({ pet }: PetModalProps) {
     </div>
   );
 }
-

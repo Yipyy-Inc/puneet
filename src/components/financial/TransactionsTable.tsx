@@ -20,7 +20,13 @@ import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { transactions, Transaction } from "@/data/transactions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, RefreshCw, Eye, CheckCircle } from "lucide-react";
+import {
+  MoreHorizontal,
+  Download,
+  RefreshCw,
+  Eye,
+  CheckCircle,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +38,8 @@ import {
 
 export function TransactionsTable() {
   const [data, setData] = useState<Transaction[]>(transactions);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundComplete, setRefundComplete] = useState(false);
@@ -44,14 +51,14 @@ TRANSACTION RECEIPT
 Transaction ID: ${transaction.id}
 Date: ${new Date(transaction.transactionDate).toLocaleString()}
 Facility: ${transaction.facilityName}
-Customer: ${transaction.customerName || 'N/A'}
+Customer: ${transaction.customerName || "N/A"}
 Description: ${transaction.description}
 Amount: $${transaction.amount.toFixed(2)}
 Payment Method: ${transaction.paymentMethod}
 Provider: ${transaction.paymentProvider}
 Status: ${transaction.status.toUpperCase()}
     `.trim();
-    
+
     const blob = new Blob([receiptContent], { type: "text/plain" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -64,10 +71,12 @@ Status: ${transaction.status.toUpperCase()}
   const handleRefund = () => {
     if (!selectedTransaction) return;
     setRefundComplete(true);
-    setData(prev =>
-      prev.map(t =>
-        t.id === selectedTransaction.id ? { ...t, status: "refunded" as const } : t
-      )
+    setData((prev) =>
+      prev.map((t) =>
+        t.id === selectedTransaction.id
+          ? { ...t, status: "refunded" as const }
+          : t,
+      ),
     );
     setTimeout(() => {
       setRefundComplete(false);
@@ -78,10 +87,10 @@ Status: ${transaction.status.toUpperCase()}
 
   const handleRetry = (transaction: Transaction) => {
     // Simulate retry - change status to success
-    setData(prev =>
-      prev.map(t =>
-        t.id === transaction.id ? { ...t, status: "success" as const } : t
-      )
+    setData((prev) =>
+      prev.map((t) =>
+        t.id === transaction.id ? { ...t, status: "success" as const } : t,
+      ),
     );
   };
 
@@ -172,7 +181,12 @@ Status: ${transaction.status.toUpperCase()}
           Download Receipt
         </DropdownMenuItem>
         {item.status === "success" && (
-          <DropdownMenuItem onClick={() => { setSelectedTransaction(item); setShowRefundModal(true); }}>
+          <DropdownMenuItem
+            onClick={() => {
+              setSelectedTransaction(item);
+              setShowRefundModal(true);
+            }}
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             Process Refund
           </DropdownMenuItem>
@@ -184,7 +198,12 @@ Status: ${transaction.status.toUpperCase()}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { setSelectedTransaction(item); setShowDetailsModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedTransaction(item);
+            setShowDetailsModal(true);
+          }}
+        >
           <Eye className="mr-2 h-4 w-4" />
           View Full Details
         </DropdownMenuItem>
@@ -286,8 +305,12 @@ Status: ${transaction.status.toUpperCase()}
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Transaction ID</p>
-                  <p className="font-mono font-medium">{selectedTransaction.id}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Transaction ID
+                  </p>
+                  <p className="font-mono font-medium">
+                    {selectedTransaction.id}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Status</p>
@@ -295,37 +318,61 @@ Status: ${transaction.status.toUpperCase()}
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="text-xl font-bold">${selectedTransaction.amount.toLocaleString()}</p>
+                  <p className="text-xl font-bold">
+                    ${selectedTransaction.amount.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">{new Date(selectedTransaction.transactionDate).toLocaleString()}</p>
+                  <p className="font-medium">
+                    {new Date(
+                      selectedTransaction.transactionDate,
+                    ).toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg col-span-2">
                   <p className="text-sm text-muted-foreground">Description</p>
-                  <p className="font-medium">{selectedTransaction.description}</p>
+                  <p className="font-medium">
+                    {selectedTransaction.description}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Facility</p>
-                  <p className="font-medium">{selectedTransaction.facilityName}</p>
+                  <p className="font-medium">
+                    {selectedTransaction.facilityName}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Customer</p>
-                  <p className="font-medium">{selectedTransaction.customerName || 'N/A'}</p>
+                  <p className="font-medium">
+                    {selectedTransaction.customerName || "N/A"}
+                  </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Payment Method</p>
-                  <Badge variant="outline" className="capitalize">{selectedTransaction.paymentMethod.replace('_', ' ')}</Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method
+                  </p>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedTransaction.paymentMethod.replace("_", " ")}
+                  </Badge>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Provider</p>
-                  <p className="font-medium">{selectedTransaction.paymentProvider}</p>
+                  <p className="font-medium">
+                    {selectedTransaction.paymentProvider}
+                  </p>
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => selectedTransaction && handleDownloadReceipt(selectedTransaction)}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                selectedTransaction &&
+                handleDownloadReceipt(selectedTransaction)
+              }
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Receipt
             </Button>
@@ -352,30 +399,43 @@ Status: ${transaction.status.toUpperCase()}
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold">Refund Processed</h3>
-              <p className="text-sm text-muted-foreground">The refund has been initiated</p>
+              <p className="text-sm text-muted-foreground">
+                The refund has been initiated
+              </p>
             </div>
           ) : (
             <>
               <div className="py-4">
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
                   <p className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> This will refund the full amount of ${selectedTransaction?.amount.toLocaleString()} to the customer.
+                    <strong>Warning:</strong> This will refund the full amount
+                    of ${selectedTransaction?.amount.toLocaleString()} to the
+                    customer.
                   </p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Amount:</span>
-                    <span className="font-bold">${selectedTransaction?.amount.toLocaleString()}</span>
+                    <span className="font-bold">
+                      ${selectedTransaction?.amount.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Customer:</span>
-                    <span>{selectedTransaction?.customerName || 'N/A'}</span>
+                    <span>{selectedTransaction?.customerName || "N/A"}</span>
                   </div>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowRefundModal(false)}>Cancel</Button>
-                <Button variant="destructive" onClick={handleRefund}>Process Refund</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRefundModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleRefund}>
+                  Process Refund
+                </Button>
               </DialogFooter>
             </>
           )}

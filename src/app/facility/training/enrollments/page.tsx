@@ -42,18 +42,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Progress } from "@/components/ui/progress";
-import {
-  enrollments,
-  trainingClasses,
-  type Enrollment,
-} from "@/data/training";
+import { enrollments, trainingClasses, type Enrollment } from "@/data/training";
 
 type EnrollmentWithRecord = Enrollment & Record<string, unknown>;
 
 export default function EnrollmentsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEnrollment, setSelectedEnrollment] = useState<Enrollment | null>(null);
+  const [selectedEnrollment, setSelectedEnrollment] =
+    useState<Enrollment | null>(null);
 
   const [formData, setFormData] = useState({
     classId: "",
@@ -445,7 +442,7 @@ export default function EnrollmentsPage() {
                   <span className="font-medium">Enrolled:</span>
                   <span>
                     {new Date(
-                      selectedEnrollment.enrollmentDate
+                      selectedEnrollment.enrollmentDate,
                     ).toLocaleDateString()}
                   </span>
                 </div>

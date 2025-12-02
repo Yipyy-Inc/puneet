@@ -173,7 +173,8 @@ export const vaccinationRecords: VaccinationRecord[] = [
   {
     id: "vacc-004",
     petId: 2,
-    vaccineName: "FVRCP (Feline Viral Rhinotracheitis, Calicivirus, Panleukopenia)",
+    vaccineName:
+      "FVRCP (Feline Viral Rhinotracheitis, Calicivirus, Panleukopenia)",
     administeredDate: "2024-02-01",
     expiryDate: "2025-02-01",
     nextDueDate: "2025-02-01",
@@ -269,7 +270,10 @@ export const reportCards: ReportCard[] = [
       { time: "03:00 PM", type: "success" },
     ],
     mood: "happy",
-    photos: ["/photos/reports/buddy-daycare-1.jpg", "/photos/reports/buddy-daycare-2.jpg"],
+    photos: [
+      "/photos/reports/buddy-daycare-1.jpg",
+      "/photos/reports/buddy-daycare-2.jpg",
+    ],
     staffNotes:
       "Buddy had an amazing first day! He was very social and made lots of new friends. He especially loved playing fetch and running around in the yard. No issues at all!",
     createdBy: "Mike Davis",
@@ -409,4 +413,3 @@ export const reportCards: ReportCard[] = [
     sentAt: "2024-02-01T18:00:00Z",
   },
 ];
-

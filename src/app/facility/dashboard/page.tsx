@@ -80,7 +80,9 @@ export default function FacilityDashboard() {
   const [showTakePayment, setShowTakePayment] = useState(false);
 
   // Data states for local mutations
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings as Booking[]);
+  const [bookings, setBookings] = useState<Booking[]>(
+    initialBookings as Booking[],
+  );
   const [clients, setClients] = useState(initialClients);
 
   // Static facility ID for now (would come from user token in production)
@@ -366,11 +368,19 @@ export default function FacilityDashboard() {
           <Plus className="h-4 w-4" />
           New Booking
         </Button>
-        <Button variant="outline" className="gap-2" onClick={() => setShowNewClient(true)}>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => setShowNewClient(true)}
+        >
           <Users className="h-4 w-4" />
           New Customer
         </Button>
-        <Button variant="outline" className="gap-2" onClick={() => setShowTakePayment(true)}>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => setShowTakePayment(true)}
+        >
           <CreditCard className="h-4 w-4" />
           Take Payment
         </Button>
@@ -588,19 +598,35 @@ export default function FacilityDashboard() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewBooking(true)}>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => setShowNewBooking(true)}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               New Booking
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewClient(true)}>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => setShowNewClient(true)}
+            >
               <Users className="mr-2 h-4 w-4" />
               Add Client
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => setShowNewPet(true)}>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => setShowNewPet(true)}
+            >
               <PawPrint className="mr-2 h-4 w-4" />
               Register Pet
             </Button>
-            <Button className="w-full justify-start" variant="outline" onClick={() => router.push("/facility/dashboard/reports")}>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => router.push("/facility/dashboard/reports")}
+            >
               <TrendingUp className="mr-2 h-4 w-4" />
               View Reports
             </Button>
@@ -751,11 +777,13 @@ export default function FacilityDashboard() {
         open={showNewPet}
         onOpenChange={setShowNewPet}
         onSave={handleCreatePet}
-        clients={clients.filter(c => c.facility === facility.name).map(c => ({
-          id: c.id,
-          name: c.name,
-          email: c.email,
-        }))}
+        clients={clients
+          .filter((c) => c.facility === facility.name)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+          }))}
       />
 
       {/* Take Payment Modal */}
@@ -765,7 +793,9 @@ export default function FacilityDashboard() {
         facilityId={facilityId}
         onSuccess={(payment) => {
           console.log("Payment successful:", payment);
-          alert(`Payment of $${payment.totalAmount.toFixed(2)} processed successfully!`);
+          alert(
+            `Payment of $${payment.totalAmount.toFixed(2)} processed successfully!`,
+          );
         }}
       />
     </div>

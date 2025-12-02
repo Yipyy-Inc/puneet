@@ -42,7 +42,9 @@ export function AddCustomerCreditModal({
 }: AddCustomerCreditModalProps) {
   const [selectedClient, setSelectedClient] = useState(prefilledClient || 0);
   const [amount, setAmount] = useState(0);
-  const [reason, setReason] = useState<"refund" | "promotion" | "compensation" | "prepaid" | "other">("promotion");
+  const [reason, setReason] = useState<
+    "refund" | "promotion" | "compensation" | "prepaid" | "other"
+  >("promotion");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [neverExpires, setNeverExpires] = useState(true);
@@ -83,7 +85,7 @@ export function AddCustomerCreditModal({
     };
 
     console.log("Customer credit added:", credit);
-    
+
     if (onSuccess) {
       onSuccess(credit);
     }
@@ -151,7 +153,9 @@ export function AddCustomerCreditModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="promotion">Promotion / Welcome Bonus</SelectItem>
+                <SelectItem value="promotion">
+                  Promotion / Welcome Bonus
+                </SelectItem>
                 <SelectItem value="refund">Refund</SelectItem>
                 <SelectItem value="compensation">Compensation</SelectItem>
                 <SelectItem value="prepaid">Prepaid / Deposit</SelectItem>
@@ -209,8 +213,12 @@ export function AddCustomerCreditModal({
           <Card className="border-2 bg-green-50">
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Credit Amount</p>
-                <p className="text-3xl font-bold text-green-600">${amount.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Credit Amount
+                </p>
+                <p className="text-3xl font-bold text-green-600">
+                  ${amount.toFixed(2)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -229,4 +237,3 @@ export function AddCustomerCreditModal({
     </Dialog>
   );
 }
-

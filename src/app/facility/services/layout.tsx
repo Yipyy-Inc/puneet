@@ -42,7 +42,10 @@ export default function ServicesLayout({
 
   const isActiveTab = (href: string) => {
     if (href === "/facility/services") {
-      return pathname === "/facility/services" || pathname === "/facility/services/catalog";
+      return (
+        pathname === "/facility/services" ||
+        pathname === "/facility/services/catalog"
+      );
     }
     return pathname.startsWith(href);
   };
@@ -50,7 +53,9 @@ export default function ServicesLayout({
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Services & Pricing</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Services & Pricing
+        </h2>
       </div>
 
       <div className="border-b">
@@ -65,7 +70,7 @@ export default function ServicesLayout({
                   "group inline-flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium transition-colors",
                   isActive
                     ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
                 )}
               >
                 <tab.icon
@@ -73,7 +78,7 @@ export default function ServicesLayout({
                     "h-4 w-4",
                     isActive
                       ? "text-primary"
-                      : "text-muted-foreground group-hover:text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground",
                   )}
                 />
                 {tab.name}

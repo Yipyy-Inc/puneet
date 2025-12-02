@@ -19,7 +19,9 @@ export function AIRecommendationsWidget({
   customerHistory,
   onAddRecommendation,
 }: AIRecommendationsWidgetProps) {
-  const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<AIRecommendation[]>(
+    [],
+  );
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function AIRecommendationsWidget({
   }, [bookingServices, customerHistory]);
 
   const visibleRecommendations = recommendations.filter(
-    (rec) => !dismissedIds.has(rec.id)
+    (rec) => !dismissedIds.has(rec.id),
   );
 
   const handleDismiss = (id: string) => {
@@ -141,8 +143,7 @@ export function AIRecommendationsWidget({
                   {rec.recommendedItem.discount && (
                     <p className="text-xs text-muted-foreground line-through">
                       $
-                      {rec.recommendedItem.price +
-                        rec.recommendedItem.discount}
+                      {rec.recommendedItem.price + rec.recommendedItem.discount}
                     </p>
                   )}
                   <p className="text-lg font-bold">
@@ -171,4 +172,3 @@ export function AIRecommendationsWidget({
     </Card>
   );
 }
-

@@ -52,9 +52,13 @@ type PackageWithRecord = ServicePackage & Record<string, unknown>;
 
 export default function PackagesPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
+  const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(
+    null,
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingPackage, setDeletingPackage] = useState<ServicePackage | null>(null);
+  const [deletingPackage, setDeletingPackage] = useState<ServicePackage | null>(
+    null,
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -72,13 +76,17 @@ export default function PackagesPage() {
 
   const mainServices = services.filter((s) => !s.isAddOn);
 
-  const totalPackagesSold = servicePackages.reduce((sum, p) => sum + p.purchaseCount, 0);
+  const totalPackagesSold = servicePackages.reduce(
+    (sum, p) => sum + p.purchaseCount,
+    0,
+  );
   const totalRevenue = servicePackages.reduce(
     (sum, p) => sum + p.packagePrice * p.purchaseCount,
-    0
+    0,
   );
   const avgSavings =
-    servicePackages.reduce((sum, p) => sum + p.savingsPercentage, 0) / servicePackages.length;
+    servicePackages.reduce((sum, p) => sum + p.savingsPercentage, 0) /
+    servicePackages.length;
 
   const handleAddNew = () => {
     setEditingPackage(null);
@@ -123,7 +131,7 @@ export default function PackagesPage() {
   const addServiceToPackage = () => {
     if (!newServiceEntry.serviceId) return;
     const existingIndex = formData.services.findIndex(
-      (s) => s.serviceId === newServiceEntry.serviceId
+      (s) => s.serviceId === newServiceEntry.serviceId,
     );
     if (existingIndex >= 0) {
       const updatedServices = [...formData.services];
@@ -169,11 +177,13 @@ export default function PackagesPage() {
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
         <div className="flex flex-wrap gap-1">
-          {(item.services as { serviceId: string; quantity: number }[]).map((s) => (
-            <Badge key={s.serviceId} variant="secondary" className="text-xs">
-              {s.quantity}x {getServiceName(s.serviceId)}
-            </Badge>
-          ))}
+          {(item.services as { serviceId: string; quantity: number }[]).map(
+            (s) => (
+              <Badge key={s.serviceId} variant="secondary" className="text-xs">
+                {s.quantity}x {getServiceName(s.serviceId)}
+              </Badge>
+            ),
+          )}
         </div>
       ),
     },
@@ -183,7 +193,9 @@ export default function PackagesPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
-        <span className="text-muted-foreground">${(item.totalValue as number).toFixed(2)}</span>
+        <span className="text-muted-foreground">
+          ${(item.totalValue as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -192,7 +204,9 @@ export default function PackagesPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: PackageWithRecord) => (
-        <span className="font-medium">${(item.packagePrice as number).toFixed(2)}</span>
+        <span className="font-medium">
+          ${(item.packagePrice as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -211,7 +225,9 @@ export default function PackagesPage() {
       label: "Validity",
       icon: Calendar,
       defaultVisible: true,
-      render: (item: PackageWithRecord) => <span>{item.validDays as number} days</span>,
+      render: (item: PackageWithRecord) => (
+        <span>{item.validDays as number} days</span>
+      ),
     },
     {
       key: "purchaseCount",
@@ -231,8 +247,8 @@ export default function PackagesPage() {
           item.status === "active"
             ? "default"
             : item.status === "seasonal"
-            ? "secondary"
-            : "outline";
+              ? "secondary"
+              : "outline";
         return (
           <Badge variant={variant} className="capitalize">
             {item.status as string}
@@ -261,13 +277,16 @@ export default function PackagesPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Packages
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{servicePackages.length}</div>
             <p className="text-xs text-muted-foreground">
-              {servicePackages.filter((p) => p.status === "active").length} active
+              {servicePackages.filter((p) => p.status === "active").length}{" "}
+              active
             </p>
           </CardContent>
         </Card>
@@ -283,11 +302,15 @@ export default function PackagesPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Package Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Package Revenue
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalRevenue.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">From package sales</p>
           </CardContent>
         </Card>
@@ -313,7 +336,7 @@ export default function PackagesPage() {
 
       {/* Data Table */}
       <DataTable
-        data={servicePackages.map((p) => ({ ...p } as PackageWithRecord))}
+        data={servicePackages.map((p) => ({ ...p }) as PackageWithRecord)}
         columns={columns}
         filters={filters}
         searchKey={"name" as keyof PackageWithRecord}
@@ -326,12 +349,16 @@ export default function PackagesPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(item as unknown as ServicePackage)}>
+              <DropdownMenuItem
+                onClick={() => handleEdit(item as unknown as ServicePackage)}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => handleDeleteClick(item as unknown as ServicePackage)}
+                onClick={() =>
+                  handleDeleteClick(item as unknown as ServicePackage)
+                }
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -346,7 +373,9 @@ export default function PackagesPage() {
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPackage ? "Edit" : "Create"} Package</DialogTitle>
+            <DialogTitle>
+              {editingPackage ? "Edit" : "Create"} Package
+            </DialogTitle>
             <DialogDescription>
               {editingPackage
                 ? "Update the package details below."
@@ -360,7 +389,9 @@ export default function PackagesPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="e.g., Daycare 10-Pack"
                 />
               </div>
@@ -388,7 +419,9 @@ export default function PackagesPage() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Describe the package..."
                 rows={2}
               />
@@ -428,28 +461,42 @@ export default function PackagesPage() {
                     })
                   }
                 />
-                <Button type="button" variant="secondary" onClick={addServiceToPackage}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addServiceToPackage}
+                >
                   Add
                 </Button>
               </div>
               {formData.services.length > 0 && (
                 <div className="space-y-2 rounded-lg border p-3">
                   {formData.services.map((s) => {
-                    const service = services.find((srv) => srv.id === s.serviceId);
+                    const service = services.find(
+                      (srv) => srv.id === s.serviceId,
+                    );
                     return (
-                      <div key={s.serviceId} className="flex items-center justify-between">
+                      <div
+                        key={s.serviceId}
+                        className="flex items-center justify-between"
+                      >
                         <span>
                           {s.quantity}x {service?.name} @ ${service?.basePrice}
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">
-                            = ${((service?.basePrice || 0) * s.quantity).toFixed(2)}
+                            = $
+                            {((service?.basePrice || 0) * s.quantity).toFixed(
+                              2,
+                            )}
                           </span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeServiceFromPackage(s.serviceId)}
+                            onClick={() =>
+                              removeServiceFromPackage(s.serviceId)
+                            }
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -474,15 +521,20 @@ export default function PackagesPage() {
                   step="0.01"
                   value={formData.packagePrice}
                   onChange={(e) =>
-                    setFormData({ ...formData, packagePrice: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      packagePrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
                 {formData.packagePrice > 0 && calculateTotalValue() > 0 && (
                   <p className="text-sm text-green-600">
                     Savings: $
-                    {(calculateTotalValue() - formData.packagePrice).toFixed(2)} (
+                    {(calculateTotalValue() - formData.packagePrice).toFixed(2)}{" "}
+                    (
                     {(
-                      ((calculateTotalValue() - formData.packagePrice) / calculateTotalValue()) *
+                      ((calculateTotalValue() - formData.packagePrice) /
+                        calculateTotalValue()) *
                       100
                     ).toFixed(1)}
                     % off)
@@ -497,17 +549,25 @@ export default function PackagesPage() {
                   min="1"
                   value={formData.validDays}
                   onChange={(e) =>
-                    setFormData({ ...formData, validDays: parseInt(e.target.value) || 90 })
+                    setFormData({
+                      ...formData,
+                      validDays: parseInt(e.target.value) || 90,
+                    })
                   }
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEditModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddEditModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editingPackage ? "Save Changes" : "Create"}</Button>
+            <Button onClick={handleSave}>
+              {editingPackage ? "Save Changes" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -518,12 +578,15 @@ export default function PackagesPage() {
           <DialogHeader>
             <DialogTitle>Delete Package</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deletingPackage?.name}&quot;? This action
-              cannot be undone.
+              Are you sure you want to delete &quot;{deletingPackage?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>

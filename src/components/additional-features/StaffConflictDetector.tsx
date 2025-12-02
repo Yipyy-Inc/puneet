@@ -19,7 +19,7 @@ export function StaffConflictDetector() {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
 
   const activeConflicts = conflicts.filter(
-    (conflict) => !resolvedIds.has(conflict.id)
+    (conflict) => !resolvedIds.has(conflict.id),
   );
 
   const handleResolve = (id: string) => {
@@ -64,10 +64,10 @@ export function StaffConflictDetector() {
   };
 
   const criticalCount = activeConflicts.filter(
-    (c) => c.severity === "critical"
+    (c) => c.severity === "critical",
   ).length;
   const warningCount = activeConflicts.filter(
-    (c) => c.severity === "warning"
+    (c) => c.severity === "warning",
   ).length;
 
   return (
@@ -257,4 +257,3 @@ export function StaffConflictDetector() {
     </div>
   );
 }
-

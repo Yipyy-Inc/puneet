@@ -81,17 +81,22 @@ export function GlobalSettings() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isUpdatingRates, setIsUpdatingRates] = useState(false);
   const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof emailTemplates[0] | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<
+    (typeof emailTemplates)[0] | null
+  >(null);
 
   const handleUpdateRates = () => {
     setIsUpdatingRates(true);
     // Simulate API call
     setTimeout(() => {
-      setCurrencies(prev =>
-        prev.map(curr => ({
+      setCurrencies((prev) =>
+        prev.map((curr) => ({
           ...curr,
-          exchangeRate: curr.code === "USD" ? 1.0 : curr.exchangeRate * (0.98 + Math.random() * 0.04),
-        }))
+          exchangeRate:
+            curr.code === "USD"
+              ? 1.0
+              : curr.exchangeRate * (0.98 + Math.random() * 0.04),
+        })),
       );
       setIsUpdatingRates(false);
     }, 1500);
@@ -797,9 +802,17 @@ export function GlobalSettings() {
                   <span className="text-sm text-muted-foreground">
                     Exchange rates last updated
                   </span>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleUpdateRates} disabled={isUpdatingRates}>
-                    <RefreshCw className={`h-4 w-4 ${isUpdatingRates ? 'animate-spin' : ''}`} />
-                    {isUpdatingRates ? 'Updating...' : 'Update Rates'}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleUpdateRates}
+                    disabled={isUpdatingRates}
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${isUpdatingRates ? "animate-spin" : ""}`}
+                    />
+                    {isUpdatingRates ? "Updating..." : "Update Rates"}
                   </Button>
                 </div>
               </CardContent>
@@ -1185,7 +1198,14 @@ export function GlobalSettings() {
                         ) : (
                           <X className="h-4 w-4 text-muted-foreground" />
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedTemplate(template); setShowEditTemplateModal(true); }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setShowEditTemplateModal(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -1341,16 +1361,17 @@ export function GlobalSettings() {
       </Dialog>
 
       {/* Edit Email Template Modal */}
-      <Dialog open={showEditTemplateModal} onOpenChange={setShowEditTemplateModal}>
+      <Dialog
+        open={showEditTemplateModal}
+        onOpenChange={setShowEditTemplateModal}
+      >
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5" />
               Edit Email Template
             </DialogTitle>
-            <DialogDescription>
-              {selectedTemplate?.name}
-            </DialogDescription>
+            <DialogDescription>{selectedTemplate?.name}</DialogDescription>
           </DialogHeader>
           {selectedTemplate && (
             <div className="space-y-4 py-4">
@@ -1360,7 +1381,10 @@ export function GlobalSettings() {
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Textarea defaultValue={selectedTemplate.description} rows={2} />
+                <Textarea
+                  defaultValue={selectedTemplate.description}
+                  rows={2}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Subject Line</Label>
@@ -1369,17 +1393,30 @@ export function GlobalSettings() {
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium">Template Enabled</p>
-                  <p className="text-xs text-muted-foreground">Allow this template to be sent</p>
+                  <p className="text-xs text-muted-foreground">
+                    Allow this template to be sent
+                  </p>
                 </div>
                 <Switch defaultChecked={selectedTemplate.enabled} />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowEditTemplateModal(false); setSelectedTemplate(null); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditTemplateModal(false);
+                setSelectedTemplate(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={() => { setShowEditTemplateModal(false); setSelectedTemplate(null); }}>
+            <Button
+              onClick={() => {
+                setShowEditTemplateModal(false);
+                setSelectedTemplate(null);
+              }}
+            >
               Save Changes
             </Button>
           </DialogFooter>

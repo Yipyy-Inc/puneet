@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +45,8 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
   });
 
   const generateCode = () => {
-    const code = "PROMO" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const code =
+      "PROMO" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setFormData({ ...formData, code });
   };
 
@@ -49,7 +55,15 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
     onClose();
   };
 
-  const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  const daysOfWeek = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
 
   return (
     <>
@@ -68,7 +82,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             <Input
               id="code"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value.toUpperCase() })
+              }
               placeholder="e.g., SUMMER25"
               className="font-mono"
             />
@@ -84,7 +100,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             placeholder="Brief description of this promo..."
             rows={2}
           />
@@ -96,7 +114,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             <Label htmlFor="type">Discount Type *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value: any) => setFormData({ ...formData, type: value })}
+              onValueChange={(value: any) =>
+                setFormData({ ...formData, type: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -118,8 +138,12 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             <Input
               id="value"
               value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              placeholder={formData.type === "free_service" ? "e.g., Nail Trim" : ""}
+              onChange={(e) =>
+                setFormData({ ...formData, value: e.target.value })
+              }
+              placeholder={
+                formData.type === "free_service" ? "e.g., Nail Trim" : ""
+              }
               type={formData.type !== "free_service" ? "number" : "text"}
             />
           </div>
@@ -137,7 +161,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                   id="minPurchase"
                   type="number"
                   value={formData.minPurchase}
-                  onChange={(e) => setFormData({ ...formData, minPurchase: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minPurchase: e.target.value })
+                  }
                   placeholder="Optional"
                 />
               </div>
@@ -149,7 +175,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                     id="maxDiscount"
                     type="number"
                     value={formData.maxDiscount}
-                    onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maxDiscount: e.target.value })
+                    }
                     placeholder="Optional"
                   />
                 </div>
@@ -163,7 +191,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                   id="usageLimit"
                   type="number"
                   value={formData.usageLimit}
-                  onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, usageLimit: e.target.value })
+                  }
                   placeholder="Unlimited"
                 />
               </div>
@@ -174,7 +204,12 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                   id="perCustomerLimit"
                   type="number"
                   value={formData.perCustomerLimit}
-                  onChange={(e) => setFormData({ ...formData, perCustomerLimit: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      perCustomerLimit: e.target.value,
+                    })
+                  }
                   placeholder="Unlimited"
                 />
               </div>
@@ -190,7 +225,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               id="validFrom"
               type="date"
               value={formData.validFrom}
-              onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, validFrom: e.target.value })
+              }
             />
           </div>
 
@@ -200,7 +237,9 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               id="validUntil"
               type="date"
               value={formData.validUntil}
-              onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, validUntil: e.target.value })
+              }
             />
           </div>
         </div>
@@ -231,7 +270,10 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                 id="firstTimeCustomer"
                 checked={formData.firstTimeCustomer}
                 onCheckedChange={(checked) =>
-                  setFormData({ ...formData, firstTimeCustomer: checked as boolean })
+                  setFormData({
+                    ...formData,
+                    firstTimeCustomer: checked as boolean,
+                  })
                 }
               />
               <label
@@ -248,13 +290,19 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                 {daysOfWeek.map((day) => (
                   <Badge
                     key={day}
-                    variant={formData.specificDays.includes(day) ? "default" : "outline"}
+                    variant={
+                      formData.specificDays.includes(day)
+                        ? "default"
+                        : "outline"
+                    }
                     className="cursor-pointer capitalize"
                     onClick={() => {
                       if (formData.specificDays.includes(day)) {
                         setFormData({
                           ...formData,
-                          specificDays: formData.specificDays.filter((d) => d !== day),
+                          specificDays: formData.specificDays.filter(
+                            (d) => d !== day,
+                          ),
                         });
                       } else {
                         setFormData({
@@ -279,7 +327,12 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
         </Button>
         <Button
           onClick={handleSave}
-          disabled={!formData.code || !formData.value || !formData.validFrom || !formData.validUntil}
+          disabled={
+            !formData.code ||
+            !formData.value ||
+            !formData.validFrom ||
+            !formData.validUntil
+          }
         >
           <Tag className="h-4 w-4 mr-2" />
           Create Promo Code
@@ -288,4 +341,3 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
     </>
   );
 }
-

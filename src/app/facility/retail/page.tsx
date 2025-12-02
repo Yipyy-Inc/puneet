@@ -103,7 +103,7 @@ export default function POSPage() {
     const isVariant = "variantType" in item;
     const product = isVariant
       ? products.find((p) =>
-          p.variants.some((v) => v.id === (item as ProductVariant).id)
+          p.variants.some((v) => v.id === (item as ProductVariant).id),
         )
       : (item as Product);
 
@@ -156,7 +156,7 @@ export default function POSPage() {
           };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -182,7 +182,7 @@ export default function POSPage() {
           };
         }
         return item;
-      })
+      }),
     );
 
     setIsDiscountModalOpen(false);
@@ -218,7 +218,7 @@ export default function POSPage() {
       p.status === "active" &&
       (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.barcode.includes(searchQuery))
+        p.barcode.includes(searchQuery)),
   );
 
   return (
@@ -264,12 +264,16 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.lowStockCount}</div>
-              <p className="text-xs text-muted-foreground">Items need restock</p>
+              <p className="text-xs text-muted-foreground">
+                Items need restock
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Alerts
+              </CardTitle>
               <Badge
                 variant={stats.pendingAlerts > 0 ? "destructive" : "secondary"}
               >
@@ -676,7 +680,9 @@ export default function POSPage() {
 
             <div className="grid gap-2">
               <Label>
-                {discountForm.type === "fixed" ? "Amount ($)" : "Percentage (%)"}
+                {discountForm.type === "fixed"
+                  ? "Amount ($)"
+                  : "Percentage (%)"}
               </Label>
               <Input
                 type="number"
@@ -750,7 +756,10 @@ export default function POSPage() {
                         onValueChange={(value: PaymentMethod) => {
                           const newPayments = [...paymentForm.payments];
                           newPayments[index].method = value;
-                          setPaymentForm({ ...paymentForm, payments: newPayments });
+                          setPaymentForm({
+                            ...paymentForm,
+                            payments: newPayments,
+                          });
                         }}
                       >
                         <SelectTrigger>
@@ -773,7 +782,10 @@ export default function POSPage() {
                           const newPayments = [...paymentForm.payments];
                           newPayments[index].amount =
                             parseFloat(e.target.value) || 0;
-                          setPaymentForm({ ...paymentForm, payments: newPayments });
+                          setPaymentForm({
+                            ...paymentForm,
+                            payments: newPayments,
+                          });
                         }}
                       />
                     </div>
@@ -783,9 +795,12 @@ export default function POSPage() {
                         size="icon"
                         onClick={() => {
                           const newPayments = paymentForm.payments.filter(
-                            (_, i) => i !== index
+                            (_, i) => i !== index,
                           );
-                          setPaymentForm({ ...paymentForm, payments: newPayments });
+                          setPaymentForm({
+                            ...paymentForm,
+                            payments: newPayments,
+                          });
                         }}
                       >
                         <X className="h-4 w-4" />
@@ -796,14 +811,15 @@ export default function POSPage() {
 
                 <div className="text-sm">
                   <span>
-                    Total:{" "}
-                    $
+                    Total: $
                     {paymentForm.payments
                       .reduce((sum, p) => sum + p.amount, 0)
                       .toFixed(2)}
                   </span>
-                  {paymentForm.payments.reduce((sum, p) => sum + p.amount, 0) !==
-                    grandTotal && (
+                  {paymentForm.payments.reduce(
+                    (sum, p) => sum + p.amount,
+                    0,
+                  ) !== grandTotal && (
                     <span className="text-destructive ml-2">
                       (Must equal ${grandTotal.toFixed(2)})
                     </span>

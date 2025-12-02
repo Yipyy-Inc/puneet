@@ -57,7 +57,10 @@ export function LivePetCamGrid() {
                 <p className="text-xs font-medium text-muted-foreground mb-2">
                   Filter by Location
                 </p>
-                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <Select
+                  value={selectedLocation}
+                  onValueChange={setSelectedLocation}
+                >
                   <SelectTrigger className="w-[200px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -135,16 +138,28 @@ export function LivePetCamGrid() {
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                          >
                             <Volume2 className="h-4 w-4" />
                           </Button>
                           {camera.hasPanTilt && (
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                            >
                               <Move className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-white hover:bg-white/20">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                        >
                           <Maximize2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -197,7 +212,11 @@ export function LivePetCamGrid() {
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {camera.kennelIds.map((kennelId) => (
-                      <Badge key={kennelId} variant="secondary" className="text-xs">
+                      <Badge
+                        key={kennelId}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         {kennelId}
                       </Badge>
                     ))}
@@ -211,4 +230,3 @@ export function LivePetCamGrid() {
     </div>
   );
 }
-

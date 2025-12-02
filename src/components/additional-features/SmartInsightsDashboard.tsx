@@ -84,7 +84,9 @@ export function SmartInsightsDashboard() {
     return colors[category as keyof typeof colors] || "";
   };
 
-  const highPriorityCount = insights.filter((i) => i.priority === "high").length;
+  const highPriorityCount = insights.filter(
+    (i) => i.priority === "high",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -111,7 +113,9 @@ export function SmartInsightsDashboard() {
         {categories.map((category) => (
           <Button
             key={category.value}
-            variant={selectedCategory === category.value ? "default" : "outline"}
+            variant={
+              selectedCategory === category.value ? "default" : "outline"
+            }
             size="sm"
             onClick={() => setSelectedCategory(category.value)}
           >
@@ -177,7 +181,9 @@ export function SmartInsightsDashboard() {
                     className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border"
                   >
                     <div>
-                      <p className="text-xs text-muted-foreground">{dp.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {dp.label}
+                      </p>
                       <p className="text-lg font-bold">{dp.value}</p>
                     </div>
                   </div>
@@ -206,4 +212,3 @@ export function SmartInsightsDashboard() {
     </div>
   );
 }
-

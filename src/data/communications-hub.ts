@@ -113,7 +113,14 @@ export const messageTemplates: MessageTemplate[] = [
     subject: "Booking Confirmed - {{pet_name}}",
     body: "Hi {{client_name}},\n\nYour booking for {{pet_name}} has been confirmed!\n\nService: {{service_type}}\nDate: {{booking_date}}\nTime: {{check_in_time}}\n\nWe look forward to seeing you!\n\nBest regards,\n{{facility_name}}",
     category: "confirmation",
-    variables: ["client_name", "pet_name", "service_type", "booking_date", "check_in_time", "facility_name"],
+    variables: [
+      "client_name",
+      "pet_name",
+      "service_type",
+      "booking_date",
+      "check_in_time",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-002",
@@ -121,7 +128,13 @@ export const messageTemplates: MessageTemplate[] = [
     type: "sms",
     body: "Hi {{client_name}}! Reminder: {{pet_name}}'s {{service_type}} appointment is tomorrow at {{appointment_time}}. See you then! - {{facility_name}}",
     category: "reminder",
-    variables: ["client_name", "pet_name", "service_type", "appointment_time", "facility_name"],
+    variables: [
+      "client_name",
+      "pet_name",
+      "service_type",
+      "appointment_time",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-003",
@@ -141,7 +154,14 @@ export const messageTemplates: MessageTemplate[] = [
 export interface AutomationRule {
   id: string;
   name: string;
-  trigger: "booking_created" | "24h_before" | "check_in" | "check_out" | "payment_received" | "vaccination_expiry" | "appointment_reminder";
+  trigger:
+    | "booking_created"
+    | "24h_before"
+    | "check_in"
+    | "check_out"
+    | "payment_received"
+    | "vaccination_expiry"
+    | "appointment_reminder";
   enabled: boolean;
   messageType: "email" | "sms" | "both";
   templateId: string;
@@ -270,7 +290,14 @@ export interface PetUpdate {
   petId: number;
   petName: string;
   clientId: number;
-  updateType: "eating" | "potty" | "playtime" | "naptime" | "medication" | "grooming" | "custom";
+  updateType:
+    | "eating"
+    | "potty"
+    | "playtime"
+    | "naptime"
+    | "medication"
+    | "grooming"
+    | "custom";
   message: string;
   photo?: string;
   timestamp: string;
@@ -343,7 +370,11 @@ export interface CallLog {
   recordingUrl?: string;
   transcription?: string;
   aiHandled: boolean;
-  outcome?: "booking_created" | "question_answered" | "transferred_to_staff" | "voicemail_left";
+  outcome?:
+    | "booking_created"
+    | "question_answered"
+    | "transferred_to_staff"
+    | "voicemail_left";
   notes?: string;
 }
 
@@ -359,10 +390,12 @@ export const callLogs: CallLog[] = [
     status: "completed",
     timestamp: "2024-02-21T09:30:00Z",
     recordingUrl: "/recordings/call-001.mp3",
-    transcription: "Hi, I'd like to book a grooming appointment for my dog Buddy next Tuesday at 2 PM.",
+    transcription:
+      "Hi, I'd like to book a grooming appointment for my dog Buddy next Tuesday at 2 PM.",
     aiHandled: true,
     outcome: "booking_created",
-    notes: "AI successfully created booking for grooming on Tuesday 2/27 at 2:00 PM",
+    notes:
+      "AI successfully created booking for grooming on Tuesday 2/27 at 2:00 PM",
   },
   {
     id: "call-002",
@@ -418,7 +451,8 @@ export interface VoicemailSettings {
 }
 
 export const voicemailSettings: VoicemailSettings = {
-  greeting: "Thank you for calling PawCare Facility. We're unable to take your call right now. Please leave a message and we'll get back to you as soon as possible.",
+  greeting:
+    "Thank you for calling PawCare Facility. We're unable to take your call right now. Please leave a message and we'll get back to you as soon as possible.",
   emailNotifications: true,
   smsNotifications: true,
   transcription: true,
@@ -435,7 +469,11 @@ export interface RoutingRule {
     dayOfWeek?: string[];
     keywords?: string[];
   };
-  action: "ai_handles" | "transfer_to_staff" | "voicemail" | "specific_extension";
+  action:
+    | "ai_handles"
+    | "transfer_to_staff"
+    | "voicemail"
+    | "specific_extension";
   destination?: string;
 }
 
@@ -527,4 +565,3 @@ export const internalMessages: InternalMessage[] = [
     hasRead: ["Emily Brown", "Sarah Johnson"],
   },
 ];
-

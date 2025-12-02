@@ -91,7 +91,8 @@ export const businessProfile: BusinessProfile = {
     country: "United States",
   },
   logo: "/images/logo.png",
-  description: "Premium pet care facility offering boarding, daycare, grooming, and training services.",
+  description:
+    "Premium pet care facility offering boarding, daycare, grooming, and training services.",
   socialMedia: {
     facebook: "https://facebook.com/pawcare",
     instagram: "https://instagram.com/pawcare",
@@ -164,7 +165,12 @@ export const kennelTypes: KennelType[] = [
     name: "Deluxe Large",
     size: "large",
     dimensions: "6' x 8' x 6'",
-    amenities: ["Indoor/Outdoor Access", "Climate Control", "Premium Bedding", "TV"],
+    amenities: [
+      "Indoor/Outdoor Access",
+      "Climate Control",
+      "Premium Bedding",
+      "TV",
+    ],
     dailyRate: 65,
     quantity: 8,
   },
@@ -173,18 +179,37 @@ export const kennelTypes: KennelType[] = [
     name: "Luxury Suite",
     size: "xlarge",
     dimensions: "8' x 10' x 8'",
-    amenities: ["Indoor/Outdoor Access", "Climate Control", "Premium Bedding", "TV", "Webcam", "Private Yard"],
+    amenities: [
+      "Indoor/Outdoor Access",
+      "Climate Control",
+      "Premium Bedding",
+      "TV",
+      "Webcam",
+      "Private Yard",
+    ],
     dailyRate: 95,
     quantity: 5,
   },
 ];
 
 export const petSizeClasses: PetSizeClass[] = [
-  { id: "size-001", name: "Extra Small (Toy)", weightMin: 0, weightMax: 10, unit: "lbs" },
+  {
+    id: "size-001",
+    name: "Extra Small (Toy)",
+    weightMin: 0,
+    weightMax: 10,
+    unit: "lbs",
+  },
   { id: "size-002", name: "Small", weightMin: 11, weightMax: 25, unit: "lbs" },
   { id: "size-003", name: "Medium", weightMin: 26, weightMax: 50, unit: "lbs" },
   { id: "size-004", name: "Large", weightMin: 51, weightMax: 100, unit: "lbs" },
-  { id: "size-005", name: "Extra Large (Giant)", weightMin: 101, weightMax: 200, unit: "lbs" },
+  {
+    id: "size-005",
+    name: "Extra Large (Giant)",
+    weightMin: 101,
+    weightMax: 200,
+    unit: "lbs",
+  },
 ];
 
 export const vaccinationRules: VaccinationRule[] = [
@@ -670,4 +695,3 @@ export const auditLog: AuditLogEntry[] = [
     ipAddress: "192.168.1.100",
   },
 ];
-

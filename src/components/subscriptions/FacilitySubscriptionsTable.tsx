@@ -50,7 +50,8 @@ export function FacilitySubscriptionsTable() {
   const [subscriptions, setSubscriptions] = useState<FacilitySubscription[]>(
     facilitySubscriptions,
   );
-  const [selectedSubscription, setSelectedSubscription] = useState<FacilitySubscription | null>(null);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<FacilitySubscription | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showModulesModal, setShowModulesModal] = useState(false);
@@ -243,25 +244,51 @@ export function FacilitySubscriptionsTable() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowDetailsModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedSubscription(item);
+            setShowDetailsModal(true);
+          }}
+        >
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowEditModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedSubscription(item);
+            setShowEditModal(true);
+          }}
+        >
           <Edit className="mr-2 h-4 w-4" />
           Edit Subscription
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowModulesModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedSubscription(item);
+            setShowModulesModal(true);
+          }}
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
           Manage Modules
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { setSelectedSubscription(item); setShowUpgradeModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedSubscription(item);
+            setShowUpgradeModal(true);
+          }}
+        >
           <TrendingUp className="mr-2 h-4 w-4" />
           Upgrade Tier
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedSubscription(item); setShowCancelModal(true); }}>
+        <DropdownMenuItem
+          className="text-destructive"
+          onClick={() => {
+            setSelectedSubscription(item);
+            setShowCancelModal(true);
+          }}
+        >
           <Archive className="mr-2 h-4 w-4" />
           Cancel Subscription
         </DropdownMenuItem>
@@ -271,12 +298,12 @@ export function FacilitySubscriptionsTable() {
 
   const handleCancelSubscription = () => {
     if (!selectedSubscription) return;
-    setSubscriptions(prev =>
-      prev.map(sub =>
+    setSubscriptions((prev) =>
+      prev.map((sub) =>
         sub.id === selectedSubscription.id
           ? { ...sub, status: "cancelled" as const }
-          : sub
-      )
+          : sub,
+      ),
     );
     setShowCancelModal(false);
     setSelectedSubscription(null);
@@ -284,12 +311,12 @@ export function FacilitySubscriptionsTable() {
 
   const handleUpgrade = () => {
     if (!selectedSubscription) return;
-    setSubscriptions(prev =>
-      prev.map(sub =>
+    setSubscriptions((prev) =>
+      prev.map((sub) =>
         sub.id === selectedSubscription.id
           ? { ...sub, tierName: "Enterprise", tierId: "tier-enterprise" }
-          : sub
-      )
+          : sub,
+      ),
     );
     setShowUpgradeModal(false);
     setSelectedSubscription(null);
@@ -398,43 +425,69 @@ export function FacilitySubscriptionsTable() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">Facility</p>
-                  <p className="font-medium">{selectedSubscription.facilityName}</p>
+                  <p className="font-medium">
+                    {selectedSubscription.facilityName}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">Tier</p>
-                  <Badge variant="outline">{selectedSubscription.tierName}</Badge>
+                  <Badge variant="outline">
+                    {selectedSubscription.tierName}
+                  </Badge>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <Badge className={getStatusColor(selectedSubscription.status)}>
+                  <Badge
+                    className={getStatusColor(selectedSubscription.status)}
+                  >
                     {selectedSubscription.status}
                   </Badge>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Billing Cycle</p>
-                  <p className="font-medium capitalize">{selectedSubscription.billingCycle}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Billing Cycle
+                  </p>
+                  <p className="font-medium capitalize">
+                    {selectedSubscription.billingCycle}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Total Cost</p>
-                  <p className="font-medium">{formatCurrency(selectedSubscription.billing.totalCost, selectedSubscription.billing.currency)}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Total Cost
+                  </p>
+                  <p className="font-medium">
+                    {formatCurrency(
+                      selectedSubscription.billing.totalCost,
+                      selectedSubscription.billing.currency,
+                    )}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">End Date</p>
-                  <p className="font-medium">{formatDate(selectedSubscription.endDate)}</p>
+                  <p className="font-medium">
+                    {formatDate(selectedSubscription.endDate)}
+                  </p>
                 </div>
               </div>
               <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">Enabled Modules ({selectedSubscription.enabledModules.length})</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Enabled Modules ({selectedSubscription.enabledModules.length})
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {selectedSubscription.enabledModules.map(module => (
-                    <Badge key={module} variant="outline">{module}</Badge>
+                  {selectedSubscription.enabledModules.map((module) => (
+                    <Badge key={module} variant="outline">
+                      {module}
+                    </Badge>
                   ))}
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailsModal(false)}
+            >
               Close
             </Button>
           </DialogFooter>
@@ -506,13 +559,20 @@ export function FacilitySubscriptionsTable() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Current modules: {selectedSubscription?.enabledModules.length || 0}
+              Current modules:{" "}
+              {selectedSubscription?.enabledModules.length || 0}
             </p>
             <div className="space-y-2">
-              {selectedSubscription?.enabledModules.map(module => (
-                <div key={module} className="flex items-center justify-between p-3 border rounded-lg">
+              {selectedSubscription?.enabledModules.map((module) => (
+                <div
+                  key={module}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <span className="font-medium">{module}</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-700"
+                  >
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Enabled
                   </Badge>
@@ -521,7 +581,10 @@ export function FacilitySubscriptionsTable() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowModulesModal(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowModulesModal(false)}
+            >
               Close
             </Button>
             <Button onClick={() => setShowModulesModal(false)}>
@@ -563,7 +626,10 @@ export function FacilitySubscriptionsTable() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUpgradeModal(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowUpgradeModal(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleUpgrade}>
@@ -589,8 +655,9 @@ export function FacilitySubscriptionsTable() {
           <div className="py-4">
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-800">
-                <strong>Warning:</strong> This action will cancel the subscription. 
-                The facility will lose access to all premium features at the end of the billing period.
+                <strong>Warning:</strong> This action will cancel the
+                subscription. The facility will lose access to all premium
+                features at the end of the billing period.
               </p>
             </div>
           </div>

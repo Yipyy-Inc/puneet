@@ -1,11 +1,24 @@
 "use client";
 
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Play, Download, Phone, Zap, User, Clock, FileText } from "lucide-react";
+import {
+  Play,
+  Download,
+  Phone,
+  Zap,
+  User,
+  Clock,
+  FileText,
+} from "lucide-react";
 
 interface CallDetailsModalProps {
   call: any;
@@ -36,7 +49,9 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                 <Label className="text-sm text-muted-foreground">Type</Label>
                 <div className="flex items-center gap-2 mt-1">
                   <Phone className="h-4 w-4" />
-                  <Badge variant={call.type === "inbound" ? "default" : "outline"}>
+                  <Badge
+                    variant={call.type === "inbound" ? "default" : "outline"}
+                  >
                     {call.type === "inbound" ? "↓ Inbound" : "↑ Outbound"}
                   </Badge>
                 </div>
@@ -47,9 +62,11 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                 <div className="mt-1">
                   <Badge
                     variant={
-                      call.status === "completed" ? "default" :
-                      call.status === "missed" ? "destructive" :
-                      "secondary"
+                      call.status === "completed"
+                        ? "default"
+                        : call.status === "missed"
+                          ? "destructive"
+                          : "secondary"
                     }
                     className="capitalize"
                   >
@@ -62,7 +79,9 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                 <Label className="text-sm text-muted-foreground">From</Label>
                 <div className="font-medium mt-1">{call.from}</div>
                 {call.clientName && (
-                  <div className="text-sm text-muted-foreground">{call.clientName}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {call.clientName}
+                  </div>
                 )}
               </div>
 
@@ -72,17 +91,22 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">Duration</Label>
+                <Label className="text-sm text-muted-foreground">
+                  Duration
+                </Label>
                 <div className="flex items-center gap-2 mt-1">
                   <Clock className="h-4 w-4" />
                   <span className="font-medium">
-                    {duration.minutes}:{duration.seconds.toString().padStart(2, "0")}
+                    {duration.minutes}:
+                    {duration.seconds.toString().padStart(2, "0")}
                   </span>
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">Handled By</Label>
+                <Label className="text-sm text-muted-foreground">
+                  Handled By
+                </Label>
                 <div className="mt-1">
                   <Badge variant={call.aiHandled ? "default" : "outline"}>
                     {call.aiHandled ? (
@@ -122,7 +146,9 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                     {call.outcome.replace(/_/g, " ")}
                   </div>
                   {call.notes && (
-                    <div className="text-sm text-muted-foreground">{call.notes}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {call.notes}
+                    </div>
                   )}
                 </div>
               </div>
@@ -155,11 +181,15 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                     <Play className="h-4 w-4" />
                   </Button>
                   <div className="flex-1 h-2 bg-background rounded-full">
-                    <div className="h-2 bg-primary rounded-full" style={{ width: "30%" }} />
+                    <div
+                      className="h-2 bg-primary rounded-full"
+                      style={{ width: "30%" }}
+                    />
                   </div>
                   <span className="text-sm text-muted-foreground">
                     0:{duration.seconds.toString().padStart(2, "0")} /{" "}
-                    {duration.minutes}:{duration.seconds.toString().padStart(2, "0")}
+                    {duration.minutes}:
+                    {duration.seconds.toString().padStart(2, "0")}
                   </span>
                 </div>
               </div>
@@ -180,7 +210,9 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm whitespace-pre-wrap">{call.transcription}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {call.transcription}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -207,4 +239,3 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
     </>
   );
 }
-

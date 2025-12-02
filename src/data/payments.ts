@@ -29,7 +29,12 @@ export interface Payment extends Record<string, unknown> {
   totalAmount: number;
   currency: "USD" | "CAD";
   paymentMethod: "card" | "cash" | "gift_card" | "credit" | "bank_transfer";
-  status: "pending" | "completed" | "failed" | "refunded" | "partially_refunded";
+  status:
+    | "pending"
+    | "completed"
+    | "failed"
+    | "refunded"
+    | "partially_refunded";
   // Card payment details
   cardBrand?: string;
   cardLast4?: string;
@@ -716,4 +721,3 @@ export const customerCredits: CustomerCredit[] = [
     notes: "Customer was very understanding",
   },
 ];
-

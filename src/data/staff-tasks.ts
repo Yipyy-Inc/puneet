@@ -2,7 +2,13 @@
 export interface TaskTemplate {
   id: number;
   name: string;
-  category: "boarding" | "daycare" | "cleaning" | "medication" | "grooming" | "general";
+  category:
+    | "boarding"
+    | "daycare"
+    | "cleaning"
+    | "medication"
+    | "grooming"
+    | "general";
   description: string;
   estimatedMinutes: number;
   requiresPhoto: boolean;
@@ -15,7 +21,8 @@ export const taskTemplates: TaskTemplate[] = [
     id: 1,
     name: "Morning Feeding",
     category: "boarding",
-    description: "Feed all boarded pets according to their dietary requirements",
+    description:
+      "Feed all boarded pets according to their dietary requirements",
     estimatedMinutes: 30,
     requiresPhoto: false,
     priority: "high",
@@ -171,7 +178,8 @@ export const staffTasks: StaffTask[] = [
     templateId: 1,
     templateName: "Morning Feeding",
     category: "boarding",
-    description: "Feed all boarded pets according to their dietary requirements",
+    description:
+      "Feed all boarded pets according to their dietary requirements",
     assignedTo: 3,
     assignedToName: "Mike Chen",
     priority: "high",
@@ -350,7 +358,8 @@ export const staffTasks: StaffTask[] = [
     templateId: 1,
     templateName: "Morning Feeding",
     category: "boarding",
-    description: "Feed all boarded pets according to their dietary requirements",
+    description:
+      "Feed all boarded pets according to their dietary requirements",
     assignedTo: 3,
     assignedToName: "Mike Chen",
     priority: "high",

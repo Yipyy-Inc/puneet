@@ -910,7 +910,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.firstResponseDue
+                                selectedTicket.sla.firstResponseDue,
                               ).toLocaleTimeString()}
                             </p>
                           </div>
@@ -928,7 +928,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.escalationDue
+                                selectedTicket.sla.escalationDue,
                               ).toLocaleTimeString()}
                             </p>
                           </div>
@@ -944,7 +944,7 @@ export function SupportTicketing() {
                             <p className="text-xs text-muted-foreground">
                               Due:{" "}
                               {new Date(
-                                selectedTicket.sla.resolutionDue
+                                selectedTicket.sla.resolutionDue,
                               ).toLocaleString()}
                             </p>
                           </div>
@@ -1028,7 +1028,7 @@ export function SupportTicketing() {
                           </span>
                           <span>
                             {new Date(
-                              selectedTicket.resolution.resolvedAt
+                              selectedTicket.resolution.resolvedAt,
                             ).toLocaleString()}
                           </span>
                         </div>
@@ -1253,7 +1253,7 @@ export function SupportTicketing() {
               <div className="p-3 bg-muted/50 rounded-lg">
                 {(() => {
                   const agent = supportAgents.find(
-                    (a) => a.id === selectedAgentId
+                    (a) => a.id === selectedAgentId,
                   );
                   return agent ? (
                     <div className="space-y-2">
@@ -1437,7 +1437,10 @@ export function SupportTicketing() {
       </Dialog>
 
       {/* Create Ticket Modal */}
-      <Dialog open={isCreateTicketModalOpen} onOpenChange={setIsCreateTicketModalOpen}>
+      <Dialog
+        open={isCreateTicketModalOpen}
+        onOpenChange={setIsCreateTicketModalOpen}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1490,47 +1493,55 @@ export function SupportTicketing() {
                     <SelectItem value="Technical">Technical</SelectItem>
                     <SelectItem value="Billing">Billing</SelectItem>
                     <SelectItem value="Service">Service</SelectItem>
-                    <SelectItem value="Feature Request">Feature Request</SelectItem>
+                    <SelectItem value="Feature Request">
+                      Feature Request
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsCreateTicketModalOpen(false);
-              setNewTicketTitle("");
-              setNewTicketDescription("");
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreateTicketModalOpen(false);
+                setNewTicketTitle("");
+                setNewTicketDescription("");
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={() => {
-              // Create a new ticket (showcase only)
-              const newTicket: SupportTicket = {
-                id: `TKT-${String(ticketsState.length + 1).padStart(3, '0')}`,
-                title: newTicketTitle,
-                description: newTicketDescription,
-                status: "Open",
-                priority: "Medium",
-                category: "Technical",
-                subcategory: "General",
-                facility: "New Facility",
-                facilityId: "fac-new",
-                requester: "Admin User",
-                requesterEmail: "admin@example.com",
-                assignedTo: undefined,
-                assignedAgentId: undefined,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                tags: [],
-                messages: [],
-                timeline: [],
-              };
-              setTicketsState(prev => [newTicket, ...prev]);
-              setIsCreateTicketModalOpen(false);
-              setNewTicketTitle("");
-              setNewTicketDescription("");
-            }} disabled={!newTicketTitle || !newTicketDescription}>
+            <Button
+              onClick={() => {
+                // Create a new ticket (showcase only)
+                const newTicket: SupportTicket = {
+                  id: `TKT-${String(ticketsState.length + 1).padStart(3, "0")}`,
+                  title: newTicketTitle,
+                  description: newTicketDescription,
+                  status: "Open",
+                  priority: "Medium",
+                  category: "Technical",
+                  subcategory: "General",
+                  facility: "New Facility",
+                  facilityId: "fac-new",
+                  requester: "Admin User",
+                  requesterEmail: "admin@example.com",
+                  assignedTo: undefined,
+                  assignedAgentId: undefined,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  tags: [],
+                  messages: [],
+                  timeline: [],
+                };
+                setTicketsState((prev) => [newTicket, ...prev]);
+                setIsCreateTicketModalOpen(false);
+                setNewTicketTitle("");
+                setNewTicketDescription("");
+              }}
+              disabled={!newTicketTitle || !newTicketDescription}
+            >
               <Ticket className="h-4 w-4 mr-2" />
               Create Ticket
             </Button>

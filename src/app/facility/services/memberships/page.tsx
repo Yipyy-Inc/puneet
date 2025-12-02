@@ -113,11 +113,16 @@ export default function MembershipsPage() {
     item: MembershipPlan | Membership | PrepaidCredits;
   } | null>(null);
 
-  const totalSubscribers = memberships.filter((m) => m.status === "active").length;
+  const totalSubscribers = memberships.filter(
+    (m) => m.status === "active",
+  ).length;
   const monthlyRevenue = memberships
     .filter((m) => m.status === "active")
     .reduce((sum, m) => sum + m.monthlyPrice, 0);
-  const totalCreditsOutstanding = prepaidCredits.reduce((sum, c) => sum + c.balance, 0);
+  const totalCreditsOutstanding = prepaidCredits.reduce(
+    (sum, c) => sum + c.balance,
+    0,
+  );
 
   // Plan handlers
   const handleAddPlan = () => {
@@ -204,7 +209,7 @@ export default function MembershipsPage() {
 
   const handleDelete = (
     type: "plan" | "subscription" | "credits",
-    item: MembershipPlan | Membership | PrepaidCredits
+    item: MembershipPlan | Membership | PrepaidCredits,
   ) => {
     setDeletingItem({ type, item });
     setIsDeleteModalOpen(true);
@@ -255,7 +260,9 @@ export default function MembershipsPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: PlanWithRecord) => (
-        <span className="font-medium">${(item.monthlyPrice as number).toFixed(2)}</span>
+        <span className="font-medium">
+          ${(item.monthlyPrice as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -272,7 +279,9 @@ export default function MembershipsPage() {
       label: "Discount",
       defaultVisible: true,
       render: (item: PlanWithRecord) => (
-        <Badge variant="outline">{item.discountPercentage as number}% off</Badge>
+        <Badge variant="outline">
+          {item.discountPercentage as number}% off
+        </Badge>
       ),
     },
     {
@@ -280,7 +289,9 @@ export default function MembershipsPage() {
       label: "Subscribers",
       icon: Users,
       defaultVisible: true,
-      render: (item: PlanWithRecord) => <span>{item.subscriberCount as number}</span>,
+      render: (item: PlanWithRecord) => (
+        <span>{item.subscriberCount as number}</span>
+      ),
     },
     {
       key: "isActive",
@@ -304,7 +315,9 @@ export default function MembershipsPage() {
       render: (item: MembershipWithRecord) => (
         <div>
           <div className="font-medium">{item.customerName as string}</div>
-          <div className="text-xs text-muted-foreground">{item.customerEmail as string}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.customerEmail as string}
+          </div>
         </div>
       ),
     },
@@ -328,7 +341,9 @@ export default function MembershipsPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: MembershipWithRecord) => (
-        <span className="font-medium">${(item.monthlyPrice as number).toFixed(2)}/mo</span>
+        <span className="font-medium">
+          ${(item.monthlyPrice as number).toFixed(2)}/mo
+        </span>
       ),
     },
     {
@@ -357,7 +372,10 @@ export default function MembershipsPage() {
       label: "Status",
       defaultVisible: true,
       render: (item: MembershipWithRecord) => (
-        <Badge variant={getStatusVariant(item.status as MembershipStatus)} className="capitalize">
+        <Badge
+          variant={getStatusVariant(item.status as MembershipStatus)}
+          className="capitalize"
+        >
           {item.status as string}
         </Badge>
       ),
@@ -378,7 +396,9 @@ export default function MembershipsPage() {
       icon: Wallet,
       defaultVisible: true,
       render: (item: CreditsWithRecord) => (
-        <span className="font-medium text-green-600">${(item.balance as number).toFixed(2)}</span>
+        <span className="font-medium text-green-600">
+          ${(item.balance as number).toFixed(2)}
+        </span>
       ),
     },
     {
@@ -386,13 +406,17 @@ export default function MembershipsPage() {
       label: "Total Purchased",
       icon: DollarSign,
       defaultVisible: true,
-      render: (item: CreditsWithRecord) => <span>${(item.totalPurchased as number).toFixed(2)}</span>,
+      render: (item: CreditsWithRecord) => (
+        <span>${(item.totalPurchased as number).toFixed(2)}</span>
+      ),
     },
     {
       key: "totalUsed",
       label: "Total Used",
       defaultVisible: true,
-      render: (item: CreditsWithRecord) => <span>${(item.totalUsed as number).toFixed(2)}</span>,
+      render: (item: CreditsWithRecord) => (
+        <span>${(item.totalUsed as number).toFixed(2)}</span>
+      ),
     },
     {
       key: "expiresAt",
@@ -401,7 +425,8 @@ export default function MembershipsPage() {
       defaultVisible: true,
       render: (item: CreditsWithRecord) => {
         const expires = item.expiresAt as string | undefined;
-        if (!expires) return <span className="text-muted-foreground">Never</span>;
+        if (!expires)
+          return <span className="text-muted-foreground">Never</span>;
         const isExpired = new Date(expires) < new Date();
         return (
           <span className={isExpired ? "text-destructive" : ""}>
@@ -417,7 +442,11 @@ export default function MembershipsPage() {
       defaultVisible: true,
       render: (item: CreditsWithRecord) => {
         const lastUsed = item.lastUsedAt as string | undefined;
-        return lastUsed ? <span>{lastUsed}</span> : <span className="text-muted-foreground">Never</span>;
+        return lastUsed ? (
+          <span>{lastUsed}</span>
+        ) : (
+          <span className="text-muted-foreground">Never</span>
+        );
       },
     },
   ];
@@ -446,7 +475,12 @@ export default function MembershipsPage() {
     },
   ];
 
-  const categories: ServiceCategory[] = ["boarding", "daycare", "grooming", "training"];
+  const categories: ServiceCategory[] = [
+    "boarding",
+    "daycare",
+    "grooming",
+    "training",
+  ];
 
   return (
     <div className="space-y-6 pt-4">
@@ -454,7 +488,9 @@ export default function MembershipsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Membership Plans</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Membership Plans
+            </CardTitle>
             <Crown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -466,7 +502,9 @@ export default function MembershipsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Subscribers</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Subscribers
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -478,21 +516,29 @@ export default function MembershipsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Monthly Revenue
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${monthlyRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              ${monthlyRevenue.toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground">From memberships</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prepaid Credits</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Prepaid Credits
+            </CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCreditsOutstanding.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              ${totalCreditsOutstanding.toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground">Outstanding balance</p>
           </CardContent>
         </Card>
@@ -526,14 +572,14 @@ export default function MembershipsPage() {
             {activeTab === "plans"
               ? "Add Plan"
               : activeTab === "subscriptions"
-              ? "Add Subscription"
-              : "Add Credits"}
+                ? "Add Subscription"
+                : "Add Credits"}
           </Button>
         </div>
 
         <TabsContent value="plans" className="mt-4">
           <DataTable
-            data={membershipPlans.map((p) => ({ ...p } as PlanWithRecord))}
+            data={membershipPlans.map((p) => ({ ...p }) as PlanWithRecord)}
             columns={planColumns}
             searchKey={"name" as keyof PlanWithRecord}
             searchPlaceholder="Search plans..."
@@ -546,13 +592,17 @@ export default function MembershipsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => handleEditPlan(item as unknown as MembershipPlan)}
+                    onClick={() =>
+                      handleEditPlan(item as unknown as MembershipPlan)
+                    }
                   >
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleDelete("plan", item as unknown as MembershipPlan)}
+                    onClick={() =>
+                      handleDelete("plan", item as unknown as MembershipPlan)
+                    }
                     className="text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -566,7 +616,7 @@ export default function MembershipsPage() {
 
         <TabsContent value="subscriptions" className="mt-4">
           <DataTable
-            data={memberships.map((m) => ({ ...m } as MembershipWithRecord))}
+            data={memberships.map((m) => ({ ...m }) as MembershipWithRecord)}
             columns={subscriptionColumns}
             filters={subscriptionFilters}
             searchKey={"customerName" as keyof MembershipWithRecord}
@@ -596,7 +646,12 @@ export default function MembershipsPage() {
                     Send Reminder
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleDelete("subscription", item as unknown as Membership)}
+                    onClick={() =>
+                      handleDelete(
+                        "subscription",
+                        item as unknown as Membership,
+                      )
+                    }
                     className="text-destructive"
                   >
                     <X className="mr-2 h-4 w-4" />
@@ -610,7 +665,7 @@ export default function MembershipsPage() {
 
         <TabsContent value="credits" className="mt-4">
           <DataTable
-            data={prepaidCredits.map((c) => ({ ...c } as CreditsWithRecord))}
+            data={prepaidCredits.map((c) => ({ ...c }) as CreditsWithRecord)}
             columns={creditsColumns}
             searchKey={"customerName" as keyof CreditsWithRecord}
             searchPlaceholder="Search credits..."
@@ -631,7 +686,9 @@ export default function MembershipsPage() {
                     Refund
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleDelete("credits", item as unknown as PrepaidCredits)}
+                    onClick={() =>
+                      handleDelete("credits", item as unknown as PrepaidCredits)
+                    }
                     className="text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -648,7 +705,9 @@ export default function MembershipsPage() {
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPlan ? "Edit" : "Create"} Membership Plan</DialogTitle>
+            <DialogTitle>
+              {editingPlan ? "Edit" : "Create"} Membership Plan
+            </DialogTitle>
             <DialogDescription>
               {editingPlan
                 ? "Update the membership plan details."
@@ -662,7 +721,9 @@ export default function MembershipsPage() {
                 <Input
                   id="planName"
                   value={planForm.name}
-                  onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setPlanForm({ ...planForm, name: e.target.value })
+                  }
                   placeholder="e.g., Daycare Plus"
                 />
               </div>
@@ -675,7 +736,10 @@ export default function MembershipsPage() {
                   max="100"
                   value={planForm.discountPercentage}
                   onChange={(e) =>
-                    setPlanForm({ ...planForm, discountPercentage: parseInt(e.target.value) || 0 })
+                    setPlanForm({
+                      ...planForm,
+                      discountPercentage: parseInt(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -685,7 +749,9 @@ export default function MembershipsPage() {
               <Textarea
                 id="planDesc"
                 value={planForm.description}
-                onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                onChange={(e) =>
+                  setPlanForm({ ...planForm, description: e.target.value })
+                }
                 rows={2}
               />
             </div>
@@ -699,7 +765,10 @@ export default function MembershipsPage() {
                   step="0.01"
                   value={planForm.monthlyPrice}
                   onChange={(e) =>
-                    setPlanForm({ ...planForm, monthlyPrice: parseFloat(e.target.value) || 0 })
+                    setPlanForm({
+                      ...planForm,
+                      monthlyPrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -712,7 +781,10 @@ export default function MembershipsPage() {
                   step="0.01"
                   value={planForm.quarterlyPrice}
                   onChange={(e) =>
-                    setPlanForm({ ...planForm, quarterlyPrice: parseFloat(e.target.value) || 0 })
+                    setPlanForm({
+                      ...planForm,
+                      quarterlyPrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -725,20 +797,28 @@ export default function MembershipsPage() {
                   step="0.01"
                   value={planForm.annualPrice}
                   onChange={(e) =>
-                    setPlanForm({ ...planForm, annualPrice: parseFloat(e.target.value) || 0 })
+                    setPlanForm({
+                      ...planForm,
+                      annualPrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="credits">Credits per Month (-1 for unlimited)</Label>
+              <Label htmlFor="credits">
+                Credits per Month (-1 for unlimited)
+              </Label>
               <Input
                 id="credits"
                 type="number"
                 min="-1"
                 value={planForm.credits}
                 onChange={(e) =>
-                  setPlanForm({ ...planForm, credits: parseInt(e.target.value) || 0 })
+                  setPlanForm({
+                    ...planForm,
+                    credits: parseInt(e.target.value) || 0,
+                  })
                 }
               />
             </div>
@@ -749,7 +829,11 @@ export default function MembershipsPage() {
                   <Button
                     key={cat}
                     type="button"
-                    variant={planForm.applicableServices.includes(cat) ? "default" : "outline"}
+                    variant={
+                      planForm.applicableServices.includes(cat)
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => toggleService(cat)}
                     className="capitalize"
@@ -799,7 +883,9 @@ export default function MembershipsPage() {
                 <Switch
                   id="popular"
                   checked={planForm.isPopular}
-                  onCheckedChange={(checked) => setPlanForm({ ...planForm, isPopular: checked })}
+                  onCheckedChange={(checked) =>
+                    setPlanForm({ ...planForm, isPopular: checked })
+                  }
                 />
                 <Label htmlFor="popular">Mark as Popular</Label>
               </div>
@@ -807,7 +893,9 @@ export default function MembershipsPage() {
                 <Switch
                   id="planActive"
                   checked={planForm.isActive}
-                  onCheckedChange={(checked) => setPlanForm({ ...planForm, isActive: checked })}
+                  onCheckedChange={(checked) =>
+                    setPlanForm({ ...planForm, isActive: checked })
+                  }
                 />
                 <Label htmlFor="planActive">Active</Label>
               </div>
@@ -825,7 +913,10 @@ export default function MembershipsPage() {
       </Dialog>
 
       {/* Subscription Modal */}
-      <Dialog open={isSubscriptionModalOpen} onOpenChange={setIsSubscriptionModalOpen}>
+      <Dialog
+        open={isSubscriptionModalOpen}
+        onOpenChange={setIsSubscriptionModalOpen}
+      >
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Create Subscription</DialogTitle>
@@ -840,7 +931,10 @@ export default function MembershipsPage() {
                 id="custName"
                 value={subscriptionForm.customerName}
                 onChange={(e) =>
-                  setSubscriptionForm({ ...subscriptionForm, customerName: e.target.value })
+                  setSubscriptionForm({
+                    ...subscriptionForm,
+                    customerName: e.target.value,
+                  })
                 }
                 placeholder="John Doe"
               />
@@ -852,7 +946,10 @@ export default function MembershipsPage() {
                 type="email"
                 value={subscriptionForm.customerEmail}
                 onChange={(e) =>
-                  setSubscriptionForm({ ...subscriptionForm, customerEmail: e.target.value })
+                  setSubscriptionForm({
+                    ...subscriptionForm,
+                    customerEmail: e.target.value,
+                  })
                 }
                 placeholder="john@example.com"
               />
@@ -884,7 +981,10 @@ export default function MembershipsPage() {
               <Select
                 value={subscriptionForm.billingCycle}
                 onValueChange={(value: MembershipBillingCycle) =>
-                  setSubscriptionForm({ ...subscriptionForm, billingCycle: value })
+                  setSubscriptionForm({
+                    ...subscriptionForm,
+                    billingCycle: value,
+                  })
                 }
               >
                 <SelectTrigger>
@@ -902,17 +1002,25 @@ export default function MembershipsPage() {
                 id="autoRenew"
                 checked={subscriptionForm.autoRenew}
                 onCheckedChange={(checked) =>
-                  setSubscriptionForm({ ...subscriptionForm, autoRenew: checked })
+                  setSubscriptionForm({
+                    ...subscriptionForm,
+                    autoRenew: checked,
+                  })
                 }
               />
               <Label htmlFor="autoRenew">Auto-Renew</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSubscriptionModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsSubscriptionModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setIsSubscriptionModalOpen(false)}>Create Subscription</Button>
+            <Button onClick={() => setIsSubscriptionModalOpen(false)}>
+              Create Subscription
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -922,7 +1030,9 @@ export default function MembershipsPage() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle>Add Prepaid Credits</DialogTitle>
-            <DialogDescription>Add prepaid credits to a customer account.</DialogDescription>
+            <DialogDescription>
+              Add prepaid credits to a customer account.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -930,7 +1040,12 @@ export default function MembershipsPage() {
               <Input
                 id="creditCust"
                 value={creditsForm.customerName}
-                onChange={(e) => setCreditsForm({ ...creditsForm, customerName: e.target.value })}
+                onChange={(e) =>
+                  setCreditsForm({
+                    ...creditsForm,
+                    customerName: e.target.value,
+                  })
+                }
                 placeholder="John Doe"
               />
             </div>
@@ -943,7 +1058,10 @@ export default function MembershipsPage() {
                 step="0.01"
                 value={creditsForm.amount}
                 onChange={(e) =>
-                  setCreditsForm({ ...creditsForm, amount: parseFloat(e.target.value) || 0 })
+                  setCreditsForm({
+                    ...creditsForm,
+                    amount: parseFloat(e.target.value) || 0,
+                  })
                 }
               />
             </div>
@@ -953,15 +1071,22 @@ export default function MembershipsPage() {
                 id="expires"
                 type="date"
                 value={creditsForm.expiresAt}
-                onChange={(e) => setCreditsForm({ ...creditsForm, expiresAt: e.target.value })}
+                onChange={(e) =>
+                  setCreditsForm({ ...creditsForm, expiresAt: e.target.value })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreditsModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreditsModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setIsCreditsModalOpen(false)}>Add Credits</Button>
+            <Button onClick={() => setIsCreditsModalOpen(false)}>
+              Add Credits
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -974,14 +1099,15 @@ export default function MembershipsPage() {
               {deletingItem?.type === "plan"
                 ? "Delete Plan"
                 : deletingItem?.type === "subscription"
-                ? "Cancel Subscription"
-                : "Delete Credits"}
+                  ? "Cancel Subscription"
+                  : "Delete Credits"}
             </DialogTitle>
             <DialogDescription>
               {deletingItem?.type === "plan" && (
                 <>
                   Are you sure you want to delete &quot;
-                  {(deletingItem?.item as MembershipPlan)?.name}&quot;? This action cannot be undone.
+                  {(deletingItem?.item as MembershipPlan)?.name}&quot;? This
+                  action cannot be undone.
                 </>
               )}
               {deletingItem?.type === "subscription" && (
@@ -999,11 +1125,16 @@ export default function MembershipsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
-              {deletingItem?.type === "subscription" ? "Cancel Subscription" : "Delete"}
+              {deletingItem?.type === "subscription"
+                ? "Cancel Subscription"
+                : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

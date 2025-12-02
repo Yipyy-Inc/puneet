@@ -137,9 +137,7 @@ export default function DaycarePackagesPage() {
 
   const handleTogglePopular = (pkgId: string) => {
     setPackages(
-      packages.map((p) =>
-        p.id === pkgId ? { ...p, popular: !p.popular } : p,
-      ),
+      packages.map((p) => (p.id === pkgId ? { ...p, popular: !p.popular } : p)),
     );
   };
 
@@ -197,9 +195,7 @@ export default function DaycarePackagesPage() {
       label: "Price",
       icon: DollarSign,
       defaultVisible: true,
-      render: (item) => (
-        <span className="font-semibold">${item.price}</span>
-      ),
+      render: (item) => <span className="font-semibold">${item.price}</span>,
     },
     {
       key: "savings",
@@ -347,7 +343,9 @@ export default function DaycarePackagesPage() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Valid for:</span>
-                      <span className="font-medium">{pkg.validityDays} days</span>
+                      <span className="font-medium">
+                        {pkg.validityDays} days
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Rate type:</span>

@@ -2,7 +2,11 @@
 
 export type PetSize = "small" | "medium" | "large" | "giant";
 export type AppetiteStatus = "ate-all" | "left-some" | "refused";
-export type BoardingStatus = "checked-in" | "checked-out" | "scheduled" | "cancelled";
+export type BoardingStatus =
+  | "checked-in"
+  | "checked-out"
+  | "scheduled"
+  | "cancelled";
 
 export interface BoardingGuest {
   [key: string]: unknown;
@@ -204,7 +208,8 @@ export const boardingRates: BoardingRate[] = [
   {
     id: "rate-001",
     name: "Standard Kennel",
-    description: "Comfortable private kennel with bedding, 2 meals daily, and outdoor time.",
+    description:
+      "Comfortable private kennel with bedding, 2 meals daily, and outdoor time.",
     basePrice: 45,
     isActive: true,
     sizePricing: {
@@ -217,7 +222,8 @@ export const boardingRates: BoardingRate[] = [
   {
     id: "rate-002",
     name: "Premium Suite",
-    description: "Spacious suite with elevated bed, 3 meals daily, extra playtime, and webcam access.",
+    description:
+      "Spacious suite with elevated bed, 3 meals daily, extra playtime, and webcam access.",
     basePrice: 65,
     isActive: true,
     sizePricing: {
@@ -230,7 +236,8 @@ export const boardingRates: BoardingRate[] = [
   {
     id: "rate-003",
     name: "Luxury Suite",
-    description: "Our best accommodation with private play area, gourmet meals, and 24/7 webcam.",
+    description:
+      "Our best accommodation with private play area, gourmet meals, and 24/7 webcam.",
     basePrice: 95,
     isActive: true,
     sizePricing: {
@@ -760,7 +767,11 @@ export function getUpcomingArrivals(days: number = 7): BoardingGuest[] {
 
   return boardingGuests.filter((g) => {
     const checkInDate = new Date(g.checkInDate);
-    return checkInDate > today && checkInDate <= futureDate && g.status === "scheduled";
+    return (
+      checkInDate > today &&
+      checkInDate <= futureDate &&
+      g.status === "scheduled"
+    );
   });
 }
 
@@ -768,7 +779,7 @@ export function calculateBoardingPrice(
   nightlyRate: number,
   nights: number,
   discountPercent: number,
-  surchargePercent: number
+  surchargePercent: number,
 ): number {
   const baseTotal = nightlyRate * nights;
   const discount = baseTotal * (discountPercent / 100);
@@ -776,45 +787,66 @@ export function calculateBoardingPrice(
   return baseTotal - discount + surcharge;
 }
 
-export function getApplicableDiscount(nights: number): MultiNightDiscount | null {
-  return multiNightDiscounts.find((d) => {
-    if (!d.isActive) return false;
-    if (nights < d.minNights) return false;
-    if (d.maxNights !== null && nights > d.maxNights) return false;
-    return true;
-  }) || null;
+export function getApplicableDiscount(
+  nights: number,
+): MultiNightDiscount | null {
+  return (
+    multiNightDiscounts.find((d) => {
+      if (!d.isActive) return false;
+      if (nights < d.minNights) return false;
+      if (d.maxNights !== null && nights > d.maxNights) return false;
+      return true;
+    }) || null
+  );
 }
 
-export function getApplicableSurcharge(checkInDate: string, checkOutDate: string): PeakSurcharge | null {
+export function getApplicableSurcharge(
+  checkInDate: string,
+  checkOutDate: string,
+): PeakSurcharge | null {
   const checkIn = new Date(checkInDate);
   const checkOut = new Date(checkOutDate);
 
-  return peakSurcharges.find((s) => {
-    if (!s.isActive) return false;
-    const peakStart = new Date(s.startDate);
-    const peakEnd = new Date(s.endDate);
-    // Check if stay overlaps with peak period
-    return checkIn <= peakEnd && checkOut >= peakStart;
-  }) || null;
+  return (
+    peakSurcharges.find((s) => {
+      if (!s.isActive) return false;
+      const peakStart = new Date(s.startDate);
+      const peakEnd = new Date(s.endDate);
+      // Check if stay overlaps with peak period
+      return checkIn <= peakEnd && checkOut >= peakStart;
+    }) || null
+  );
 }
 
-export function getGuestCareSheet(guestId: string, date: string): DailyCareSheet | undefined {
-  return dailyCareSheets.find((cs) => cs.guestId === guestId && cs.date === date);
+export function getGuestCareSheet(
+  guestId: string,
+  date: string,
+): DailyCareSheet | undefined {
+  return dailyCareSheets.find(
+    (cs) => cs.guestId === guestId && cs.date === date,
+  );
 }
 
 export function getKennelCard(guestId: string): KennelCardData | undefined {
   return kennelCards.find((kc) => kc.guestId === guestId);
 }
 
-export function getOccupancyStats(): { current: number; percentage: number; byType: Record<string, number> } {
+export function getOccupancyStats(): {
+  current: number;
+  percentage: number;
+  byType: Record<string, number>;
+} {
   const currentGuests = getCurrentGuests();
   const current = currentGuests.length;
   const percentage = Math.round((current / boardingCapacity.total) * 100);
 
   const byType = {
-    standard: currentGuests.filter((g) => g.packageType === "Standard Kennel").length,
-    premium: currentGuests.filter((g) => g.packageType === "Premium Suite").length,
-    luxury: currentGuests.filter((g) => g.packageType === "Luxury Suite").length,
+    standard: currentGuests.filter((g) => g.packageType === "Standard Kennel")
+      .length,
+    premium: currentGuests.filter((g) => g.packageType === "Premium Suite")
+      .length,
+    luxury: currentGuests.filter((g) => g.packageType === "Luxury Suite")
+      .length,
   };
 
   return { current, percentage, byType };

@@ -1,6 +1,11 @@
 // Services & Pricing Data
 
-export type ServiceCategory = "boarding" | "daycare" | "grooming" | "training" | "retail";
+export type ServiceCategory =
+  | "boarding"
+  | "daycare"
+  | "grooming"
+  | "training"
+  | "retail";
 export type PetSize = "small" | "medium" | "large" | "giant";
 export type ServiceStatus = "active" | "inactive" | "seasonal";
 export type PricingType = "flat" | "per_hour" | "per_day" | "per_session";
@@ -199,7 +204,8 @@ export const services: Service[] = [
     id: "srv-002",
     name: "Luxury Suite Boarding",
     category: "boarding",
-    description: "Premium private suite with webcam, premium bedding, and extra playtime",
+    description:
+      "Premium private suite with webcam, premium bedding, and extra playtime",
     basePrice: 75,
     pricingType: "per_day",
     status: "active",
@@ -241,7 +247,8 @@ export const services: Service[] = [
     id: "srv-004",
     name: "Half Day Daycare",
     category: "daycare",
-    description: "Half day of supervised play and socialization (up to 5 hours)",
+    description:
+      "Half day of supervised play and socialization (up to 5 hours)",
     basePrice: 22,
     pricingType: "per_session",
     duration: 300,
@@ -284,7 +291,8 @@ export const services: Service[] = [
     id: "srv-006",
     name: "Full Groom",
     category: "grooming",
-    description: "Complete grooming including haircut, bath, styling, and all basics",
+    description:
+      "Complete grooming including haircut, bath, styling, and all basics",
     basePrice: 65,
     pricingType: "per_session",
     duration: 120,
@@ -305,7 +313,8 @@ export const services: Service[] = [
     id: "srv-007",
     name: "Basic Obedience Training",
     category: "training",
-    description: "6-week basic obedience course covering sit, stay, come, leash walking",
+    description:
+      "6-week basic obedience course covering sit, stay, come, leash walking",
     basePrice: 250,
     pricingType: "per_session",
     duration: 60,
@@ -322,7 +331,8 @@ export const services: Service[] = [
     id: "srv-008",
     name: "Private Training Session",
     category: "training",
-    description: "One-on-one training session tailored to your dog's specific needs",
+    description:
+      "One-on-one training session tailored to your dog's specific needs",
     basePrice: 85,
     pricingType: "per_hour",
     duration: 60,
@@ -653,7 +663,8 @@ export const peakSurcharges: PeakSurcharge[] = [
     name: "Holiday Surcharge",
     description: "Major holiday surcharge",
     triggerType: "holiday",
-    triggerValue: "christmas,thanksgiving,new_years,independence_day,memorial_day,labor_day",
+    triggerValue:
+      "christmas,thanksgiving,new_years,independence_day,memorial_day,labor_day",
     surchargeAmount: 15,
     surchargeType: "flat",
     applicableServices: [],
@@ -722,7 +733,11 @@ export const membershipPlans: MembershipPlan[] = [
     annualPrice: 999,
     credits: 4,
     discountPercentage: 10,
-    perks: ["10% off all services", "4 daycare credits/month", "Priority booking"],
+    perks: [
+      "10% off all services",
+      "4 daycare credits/month",
+      "Priority booking",
+    ],
     applicableServices: ["daycare"],
     isPopular: false,
     isActive: true,
@@ -1106,7 +1121,8 @@ export const promoCodes: PromoCode[] = [
 export const servicesPricingStats = {
   totalServices: services.filter((s) => !s.isAddOn).length,
   totalAddOns: services.filter((s) => s.isAddOn).length,
-  activeServices: services.filter((s) => s.status === "active" && !s.isAddOn).length,
+  activeServices: services.filter((s) => s.status === "active" && !s.isAddOn)
+    .length,
   totalPackages: servicePackages.length,
   activePackages: servicePackages.filter((p) => p.status === "active").length,
   packagesSold: servicePackages.reduce((sum, p) => sum + p.purchaseCount, 0),
@@ -1116,5 +1132,8 @@ export const servicesPricingStats = {
     .reduce((sum, m) => sum + m.monthlyPrice, 0),
   activePromoCodes: promoCodes.filter((p) => p.isActive).length,
   totalPromoRedemptions: promoCodes.reduce((sum, p) => sum + p.usedCount, 0),
-  prepaidCreditsOutstanding: prepaidCredits.reduce((sum, c) => sum + c.balance, 0),
+  prepaidCreditsOutstanding: prepaidCredits.reduce(
+    (sum, c) => sum + c.balance,
+    0,
+  ),
 };

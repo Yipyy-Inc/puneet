@@ -94,7 +94,7 @@ export function IssueGiftCardModal({
     };
 
     console.log("Gift card issued:", giftCard);
-    
+
     if (onSuccess) {
       onSuccess(giftCard);
     }
@@ -110,9 +110,7 @@ export function IssueGiftCardModal({
             <Gift className="h-5 w-5" />
             Issue Gift Card
           </DialogTitle>
-          <DialogDescription>
-            Create a new gift card
-          </DialogDescription>
+          <DialogDescription>Create a new gift card</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -178,7 +176,9 @@ export function IssueGiftCardModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="recipient-email">Recipient Email (Optional)</Label>
+              <Label htmlFor="recipient-email">
+                Recipient Email (Optional)
+              </Label>
               <Input
                 id="recipient-email"
                 type="email"
@@ -226,8 +226,12 @@ export function IssueGiftCardModal({
           <Card className="border-2 bg-green-50">
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Gift Card Value</p>
-                <p className="text-3xl font-bold text-green-600">${amount.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Gift Card Value
+                </p>
+                <p className="text-3xl font-bold text-green-600">
+                  ${amount.toFixed(2)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -246,4 +250,3 @@ export function IssueGiftCardModal({
     </Dialog>
   );
 }
-

@@ -41,16 +41,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Switch } from "@/components/ui/switch";
-import {
-  trainingPackages,
-  type TrainingPackage,
-} from "@/data/training";
+import { trainingPackages, type TrainingPackage } from "@/data/training";
 
 type TrainingPackageWithRecord = TrainingPackage & Record<string, unknown>;
 
 export default function PackagesPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<TrainingPackage | null>(null);
+  const [editingPackage, setEditingPackage] = useState<TrainingPackage | null>(
+    null,
+  );
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
 
   const [formData, setFormData] = useState({
@@ -240,7 +239,9 @@ export default function PackagesPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Packages
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -267,7 +268,9 @@ export default function PackagesPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Popular Packages</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Popular Packages
+            </CardTitle>
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -492,7 +495,7 @@ export default function PackagesPage() {
                 <Select
                   value={formData.skillLevel}
                   onValueChange={(
-                    value: "beginner" | "intermediate" | "advanced"
+                    value: "beginner" | "intermediate" | "advanced",
                   ) => setFormData({ ...formData, skillLevel: value })}
                 >
                   <SelectTrigger>

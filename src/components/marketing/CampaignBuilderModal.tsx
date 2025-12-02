@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +28,10 @@ interface CampaignBuilderModalProps {
   onClose: () => void;
 }
 
-export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModalProps) {
+export function CampaignBuilderModal({
+  campaign,
+  onClose,
+}: CampaignBuilderModalProps) {
   const [formData, setFormData] = useState({
     name: campaign?.name || "",
     type: campaign?.type || "email",
@@ -35,8 +43,12 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
     abTestSplit: campaign?.abTest?.splitPercentage || 50,
   });
 
-  const selectedTemplate = emailTemplates.find((t) => t.id === formData.templateId);
-  const selectedSegment = customerSegments.find((s) => s.id === formData.segmentId);
+  const selectedTemplate = emailTemplates.find(
+    (t) => t.id === formData.templateId,
+  );
+  const selectedSegment = customerSegments.find(
+    (s) => s.id === formData.segmentId,
+  );
 
   const handleSave = () => {
     console.log("Saving campaign:", formData);
@@ -95,7 +107,9 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
           <Label htmlFor="template">Email Template *</Label>
           <Select
             value={formData.templateId}
-            onValueChange={(value) => setFormData({ ...formData, templateId: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, templateId: value })
+            }
             disabled={!!campaign}
           >
             <SelectTrigger>
@@ -121,7 +135,9 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
           <Label htmlFor="segment">Customer Segment *</Label>
           <Select
             value={formData.segmentId}
-            onValueChange={(value) => setFormData({ ...formData, segmentId: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, segmentId: value })
+            }
             disabled={!!campaign}
           >
             <SelectTrigger>
@@ -148,7 +164,9 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
             <CardHeader>
               <div className="flex items-center gap-2">
                 <TestTube2 className="h-5 w-5" />
-                <CardTitle className="text-base">A/B Testing (Optional)</CardTitle>
+                <CardTitle className="text-base">
+                  A/B Testing (Optional)
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -157,7 +175,10 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
                   id="abTest"
                   checked={formData.abTestEnabled}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, abTestEnabled: checked as boolean })
+                    setFormData({
+                      ...formData,
+                      abTestEnabled: checked as boolean,
+                    })
                   }
                 />
                 <label
@@ -203,7 +224,10 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Split Percentage: {formData.abTestSplit}% / {100 - formData.abTestSplit}%</Label>
+                    <Label>
+                      Split Percentage: {formData.abTestSplit}% /{" "}
+                      {100 - formData.abTestSplit}%
+                    </Label>
                     <input
                       type="range"
                       min="10"
@@ -211,7 +235,10 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
                       step="10"
                       value={formData.abTestSplit}
                       onChange={(e) =>
-                        setFormData({ ...formData, abTestSplit: parseInt(e.target.value) })
+                        setFormData({
+                          ...formData,
+                          abTestSplit: parseInt(e.target.value),
+                        })
                       }
                       className="w-full"
                     />
@@ -235,8 +262,14 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
           <Input
             id="schedule"
             type="datetime-local"
-            value={formData.scheduledAt ? new Date(formData.scheduledAt).toISOString().slice(0, 16) : ""}
-            onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+            value={
+              formData.scheduledAt
+                ? new Date(formData.scheduledAt).toISOString().slice(0, 16)
+                : ""
+            }
+            onChange={(e) =>
+              setFormData({ ...formData, scheduledAt: e.target.value })
+            }
             disabled={!!campaign}
           />
           <p className="text-sm text-muted-foreground">
@@ -254,18 +287,27 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground">Sent</div>
-                  <div className="text-2xl font-bold">{campaign.stats.sent}</div>
+                  <div className="text-2xl font-bold">
+                    {campaign.stats.sent}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Delivered</div>
-                  <div className="text-2xl font-bold">{campaign.stats.delivered}</div>
+                  <div className="text-2xl font-bold">
+                    {campaign.stats.delivered}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Opened</div>
                   <div className="text-2xl font-bold">
                     {campaign.stats.opened}
                     <span className="text-sm text-muted-foreground ml-2">
-                      ({((campaign.stats.opened / campaign.stats.sent) * 100).toFixed(1)}%)
+                      (
+                      {(
+                        (campaign.stats.opened / campaign.stats.sent) *
+                        100
+                      ).toFixed(1)}
+                      %)
                     </span>
                   </div>
                 </div>
@@ -274,7 +316,12 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
                   <div className="text-2xl font-bold">
                     {campaign.stats.clicked}
                     <span className="text-sm text-muted-foreground ml-2">
-                      ({((campaign.stats.clicked / campaign.stats.opened) * 100).toFixed(1)}%)
+                      (
+                      {(
+                        (campaign.stats.clicked / campaign.stats.opened) *
+                        100
+                      ).toFixed(1)}
+                      %)
                     </span>
                   </div>
                 </div>
@@ -300,7 +347,9 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
             {formData.scheduledAt ? (
               <Button
                 onClick={handleSave}
-                disabled={!formData.name || !formData.templateId || !formData.segmentId}
+                disabled={
+                  !formData.name || !formData.templateId || !formData.segmentId
+                }
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Schedule Campaign
@@ -308,7 +357,9 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
             ) : (
               <Button
                 onClick={handleSend}
-                disabled={!formData.name || !formData.templateId || !formData.segmentId}
+                disabled={
+                  !formData.name || !formData.templateId || !formData.segmentId
+                }
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send Now
@@ -320,4 +371,3 @@ export function CampaignBuilderModal({ campaign, onClose }: CampaignBuilderModal
     </>
   );
 }
-

@@ -59,7 +59,9 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground">{row.original.subject}</div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.subject}
+          </div>
         </div>
       ),
     },
@@ -96,8 +98,8 @@ export default function MarketingPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               setSelectedTemplate(row.original);
@@ -106,8 +108,8 @@ export default function MarketingPage() {
           >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               alert(`Template "${row.original.name}" has been copied!`);
@@ -128,7 +130,9 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground">{row.original.description}</div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.description}
+          </div>
         </div>
       ),
     },
@@ -136,7 +140,9 @@ export default function MarketingPage() {
       accessorKey: "customerCount",
       header: "Customers",
       cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.customerCount} customers</Badge>
+        <Badge variant="secondary">
+          {row.original.customerCount} customers
+        </Badge>
       ),
     },
     {
@@ -154,18 +160,20 @@ export default function MarketingPage() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               setShowSegmentModal(true);
-              alert(`Edit segment "${row.original.name}" - Opens segment editor`);
+              alert(
+                `Edit segment "${row.original.name}" - Opens segment editor`,
+              );
             }}
           >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               alert(`Segment "${row.original.name}" has been deleted!`);
@@ -204,7 +212,10 @@ export default function MarketingPage() {
           paused: "destructive",
         } as const;
         return (
-          <Badge variant={statusColors[row.original.status]} className="capitalize">
+          <Badge
+            variant={statusColors[row.original.status]}
+            className="capitalize"
+          >
             {row.original.status}
           </Badge>
         );
@@ -218,9 +229,13 @@ export default function MarketingPage() {
       accessorKey: "stats.opened",
       header: "Opened",
       cell: ({ row }) => {
-        const rate = row.original.stats.sent > 0
-          ? ((row.original.stats.opened / row.original.stats.sent) * 100).toFixed(1)
-          : "0";
+        const rate =
+          row.original.stats.sent > 0
+            ? (
+                (row.original.stats.opened / row.original.stats.sent) *
+                100
+              ).toFixed(1)
+            : "0";
         return (
           <div>
             <div>{row.original.stats.opened}</div>
@@ -233,9 +248,13 @@ export default function MarketingPage() {
       accessorKey: "stats.clicked",
       header: "Clicked",
       cell: ({ row }) => {
-        const rate = row.original.stats.opened > 0
-          ? ((row.original.stats.clicked / row.original.stats.opened) * 100).toFixed(1)
-          : "0";
+        const rate =
+          row.original.stats.opened > 0
+            ? (
+                (row.original.stats.clicked / row.original.stats.opened) *
+                100
+              ).toFixed(1)
+            : "0";
         return (
           <div>
             <div>{row.original.stats.clicked}</div>
@@ -260,8 +279,8 @@ export default function MarketingPage() {
             <Eye className="h-4 w-4" />
           </Button>
           {row.original.status === "draft" && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => {
                 alert(`Campaign "${row.original.name}" has been sent!`);
@@ -332,7 +351,9 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-mono font-semibold">{row.original.code}</div>
-          <div className="text-sm text-muted-foreground">{row.original.description}</div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.description}
+          </div>
         </div>
       ),
     },
@@ -391,18 +412,20 @@ export default function MarketingPage() {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               setShowPromoModal(true);
-              alert(`Edit promo code "${row.original.code}" - Opens promo editor`);
+              alert(
+                `Edit promo code "${row.original.code}" - Opens promo editor`,
+              );
             }}
           >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => {
               navigator.clipboard.writeText(row.original.code);
@@ -547,7 +570,9 @@ export default function MarketingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Points Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Points Rate
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -561,35 +586,52 @@ export default function MarketingPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active Tiers</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Active Tiers
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loyaltySettings.tiers.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Loyalty tiers</p>
+                <div className="text-2xl font-bold">
+                  {loyaltySettings.tiers.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Loyalty tiers
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Members</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Members
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {customerLoyaltyData.length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Enrolled customers</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enrolled customers
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Points Issued</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Points Issued
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {customerLoyaltyData.reduce((sum, c) => sum + c.lifetimePoints, 0)}
+                  {customerLoyaltyData.reduce(
+                    (sum, c) => sum + c.lifetimePoints,
+                    0,
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Lifetime points</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lifetime points
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -625,7 +667,9 @@ export default function MarketingPage() {
                           style={{ backgroundColor: tier.color }}
                         />
                         <div>
-                          <div className="font-semibold text-lg">{tier.name}</div>
+                          <div className="font-semibold text-lg">
+                            {tier.name}
+                          </div>
                           <div className="text-sm text-muted-foreground">
                             {tier.minPoints}+ points required
                           </div>
@@ -643,7 +687,9 @@ export default function MarketingPage() {
                       <div className="text-2xl font-bold text-primary">
                         {tier.discountPercentage}%
                       </div>
-                      <div className="text-sm text-muted-foreground">Discount</div>
+                      <div className="text-sm text-muted-foreground">
+                        Discount
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -662,7 +708,10 @@ export default function MarketingPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {badges.map((badge) => (
-                  <div key={badge.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                  <div
+                    key={badge.id}
+                    className="flex items-start gap-4 p-4 border rounded-lg"
+                  >
                     <div className="text-4xl">{badge.icon}</div>
                     <div className="flex-1">
                       <div className="font-semibold">{badge.name}</div>
@@ -671,9 +720,13 @@ export default function MarketingPage() {
                       </div>
                       {badge.reward && (
                         <Badge variant="secondary" className="mt-2">
-                          Reward: {badge.reward.type === "discount" && `${badge.reward.value}% off`}
-                          {badge.reward.type === "points" && `${badge.reward.value} points`}
-                          {badge.reward.type === "freebie" && badge.reward.value}
+                          Reward:{" "}
+                          {badge.reward.type === "discount" &&
+                            `${badge.reward.value}% off`}
+                          {badge.reward.type === "points" &&
+                            `${badge.reward.value} points`}
+                          {badge.reward.type === "freebie" &&
+                            badge.reward.value}
                         </Badge>
                       )}
                     </div>
@@ -695,10 +748,12 @@ export default function MarketingPage() {
                     Customer referral program
                   </p>
                 </div>
-                <Button onClick={() => {
-                  const newCode = `REF${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-                  alert(`New referral code generated: ${newCode}`);
-                }}>
+                <Button
+                  onClick={() => {
+                    const newCode = `REF${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                    alert(`New referral code generated: ${newCode}`);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Generate Code
                 </Button>
@@ -789,4 +844,3 @@ export default function MarketingPage() {
     </div>
   );
 }
-

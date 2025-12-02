@@ -390,7 +390,10 @@ export function MobileAppSettings() {
                 id="termsUrl"
                 value={settings.termsOfServiceUrl}
                 onChange={(e) =>
-                  setSettings({ ...settings, termsOfServiceUrl: e.target.value })
+                  setSettings({
+                    ...settings,
+                    termsOfServiceUrl: e.target.value,
+                  })
                 }
               />
             </div>
@@ -426,4 +429,3 @@ export function MobileAppSettings() {
     </div>
   );
 }
-

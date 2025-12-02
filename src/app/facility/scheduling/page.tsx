@@ -766,497 +766,510 @@ export default function FacilitySchedulingPage() {
               </Button>
             </div>
 
-        {viewMode === "calendar" && (
-          <div className="flex items-center gap-1">
-            <Button
-              variant={calendarView === "week" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCalendarView("week")}
-            >
-              Week
-            </Button>
-            <Button
-              variant={calendarView === "month" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCalendarView("month")}
-            >
-              Month
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Calendar View - Week/Month */}
-      {viewMode === "calendar" && (
-        <GenericCalendar<(typeof facilitySchedules)[0] & CalendarItem>
-          items={facilitySchedules}
-          config={{
-            title:
-              calendarView === "week" ? "Weekly Schedule" : "Monthly Calendar",
-            onItemClick: handleEdit,
-            onAddClick: handleAddNew,
-            showAddButton: true,
-            rowData:
-              calendarView === "week"
-                ? facilityStaff.map(
-                    (staff) =>
-                      ({
-                        id: staff.id,
-                        name: staff.name,
-                        role: staff.role,
-                      }) as CalendarRowData,
-                  )
-                : undefined,
-            getItemsForDateAndRow:
-              calendarView === "week"
-                ? (date, staffId) => {
-                    return getScheduleForDateAndStaff(date, Number(staffId))
-                      ? [getScheduleForDateAndStaff(date, Number(staffId))!]
-                      : [];
-                  }
-                : undefined,
-            renderRowHeader:
-              calendarView === "week"
-                ? (row) => (
-                    <div>
-                      <div>{row.name}</div>
-                      <Badge variant="outline" className="text-xs">
-                        {String(row.role || "")}
-                      </Badge>
-                    </div>
-                  )
-                : undefined,
-            renderWeekCell:
-              calendarView === "week"
-                ? ({ items, date }) => (
-                    <>
-                      {items.length > 0 ? (
-                        items.map((schedule) => (
-                          <div key={schedule.id} className="group relative">
-                            <Badge
-                              variant="secondary"
-                              className="cursor-pointer hover:bg-secondary/80"
-                              onClick={() => handleEdit(schedule)}
-                            >
-                              {schedule.startTime} - {schedule.endTime}
-                            </Badge>
-                            <div className="absolute hidden group-hover:flex gap-1 top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 px-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(schedule);
-                                }}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 px-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteClick(schedule);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-full text-xs"
-                          onClick={() => handleAddNew(formatDate(date))}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </>
-                  )
-                : ({ items }) => (
-                    <>
-                      {items.slice(0, 3).map((schedule) => (
-                        <div
-                          key={schedule.id}
-                          className="group relative text-xs bg-secondary/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-secondary/80"
-                          onClick={() => handleEdit(schedule)}
-                        >
-                          <div className="font-medium truncate">
-                            {schedule.staffName}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {schedule.startTime}-{schedule.endTime}
-                          </div>
-                        </div>
-                      ))}
-                      {items.length > 3 && (
-                        <div className="text-[10px] text-muted-foreground text-center">
-                          +{items.length - 3} more
-                        </div>
-                      )}
-                    </>
-                  ),
-          }}
-          view={calendarView}
-          initialDate={currentWeekStart}
-        />
-      )}
-
-      {/* List View */}
-      {viewMode === "list" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>All Schedules</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Staff Name</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead>End Time</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {facilitySchedules.map((schedule) => (
-                  <TableRow key={schedule.id}>
-                    <TableCell className="font-medium">
-                      {schedule.staffName}
-                    </TableCell>
-                    <TableCell>{schedule.date}</TableCell>
-                    <TableCell>{schedule.startTime}</TableCell>
-                    <TableCell>{schedule.endTime}</TableCell>
-                    <TableCell>
-                      <StatusBadge type="role" value={schedule.role} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge type="status" value={schedule.status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(schedule)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteClick(schedule)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Add/Edit Schedule Modal */}
-      <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingSchedule ? "Edit Shift" : "Add New Shift"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingSchedule
-                ? "Update shift details for staff member."
-                : "Schedule a new shift for a staff member."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="staffId">Staff Member</Label>
-              <Select
-                value={formData.staffId}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, staffId: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {facilityStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id.toString()}>
-                      {staff.name} ({staff.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Apply Shift Template</Label>
-              <Select
-                value={selectedTemplate}
-                onValueChange={(value) => {
-                  setSelectedTemplate(value);
-                  const template = shiftTemplates.find(
-                    (t) => t.id.toString() === value,
-                  );
-                  if (template) {
-                    setFormData({
-                      ...formData,
-                      startTime: template.startTime,
-                      endTime: template.endTime,
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {shiftTemplates.map((template) => (
-                    <SelectItem
-                      key={template.id}
-                      value={template.id.toString()}
-                    >
-                      {template.name} ({template.startTime} - {template.endTime}
-                      )
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time *</Label>
-                <Select
-                  value={formData.startTime}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, startTime: value })
-                  }
+            {viewMode === "calendar" && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={calendarView === "week" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCalendarView("week")}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="endTime">End Time *</Label>
-                <Select
-                  value={formData.endTime}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, endTime: value })
-                  }
+                  Week
+                </Button>
+                <Button
+                  variant={calendarView === "month" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCalendarView("month")}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {!editingSchedule && (
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isRecurring"
-                    checked={formData.isRecurring}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, isRecurring: !!checked })
-                    }
-                  />
-                  <Label
-                    htmlFor="isRecurring"
-                    className="font-normal flex items-center gap-2"
-                  >
-                    <Repeat className="h-4 w-4" />
-                    Create recurring shift
-                  </Label>
-                </div>
-
-                {formData.isRecurring && (
-                  <div className="grid grid-cols-2 gap-4 pl-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringPattern">Repeat</Label>
-                      <Select
-                        value={formData.recurringPattern}
-                        onValueChange={(
-                          value: "daily" | "weekly" | "biweekly",
-                        ) =>
-                          setFormData({ ...formData, recurringPattern: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringEndDate">Until</Label>
-                      <Input
-                        id="recurringEndDate"
-                        type="date"
-                        value={formData.recurringEndDate}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            recurringEndDate: e.target.value,
-                          })
-                        }
-                        min={formData.date}
-                      />
-                    </div>
-                  </div>
-                )}
+                  Month
+                </Button>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddEditModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSaveSchedule}>
-              {editingSchedule ? "Update Shift" : "Add Shift"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Calendar View - Week/Month */}
+          {viewMode === "calendar" && (
+            <GenericCalendar<(typeof facilitySchedules)[0] & CalendarItem>
+              items={facilitySchedules}
+              config={{
+                title:
+                  calendarView === "week"
+                    ? "Weekly Schedule"
+                    : "Monthly Calendar",
+                onItemClick: handleEdit,
+                onAddClick: handleAddNew,
+                showAddButton: true,
+                rowData:
+                  calendarView === "week"
+                    ? facilityStaff.map(
+                        (staff) =>
+                          ({
+                            id: staff.id,
+                            name: staff.name,
+                            role: staff.role,
+                          }) as CalendarRowData,
+                      )
+                    : undefined,
+                getItemsForDateAndRow:
+                  calendarView === "week"
+                    ? (date, staffId) => {
+                        return getScheduleForDateAndStaff(date, Number(staffId))
+                          ? [getScheduleForDateAndStaff(date, Number(staffId))!]
+                          : [];
+                      }
+                    : undefined,
+                renderRowHeader:
+                  calendarView === "week"
+                    ? (row) => (
+                        <div>
+                          <div>{row.name}</div>
+                          <Badge variant="outline" className="text-xs">
+                            {String(row.role || "")}
+                          </Badge>
+                        </div>
+                      )
+                    : undefined,
+                renderWeekCell:
+                  calendarView === "week"
+                    ? ({ items, date }) => (
+                        <>
+                          {items.length > 0 ? (
+                            items.map((schedule) => (
+                              <div key={schedule.id} className="group relative">
+                                <Badge
+                                  variant="secondary"
+                                  className="cursor-pointer hover:bg-secondary/80"
+                                  onClick={() => handleEdit(schedule)}
+                                >
+                                  {schedule.startTime} - {schedule.endTime}
+                                </Badge>
+                                <div className="absolute hidden group-hover:flex gap-1 top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(schedule);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick(schedule);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-full text-xs"
+                              onClick={() => handleAddNew(formatDate(date))}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </>
+                      )
+                    : ({ items }) => (
+                        <>
+                          {items.slice(0, 3).map((schedule) => (
+                            <div
+                              key={schedule.id}
+                              className="group relative text-xs bg-secondary/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-secondary/80"
+                              onClick={() => handleEdit(schedule)}
+                            >
+                              <div className="font-medium truncate">
+                                {schedule.staffName}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {schedule.startTime}-{schedule.endTime}
+                              </div>
+                            </div>
+                          ))}
+                          {items.length > 3 && (
+                            <div className="text-[10px] text-muted-foreground text-center">
+                              +{items.length - 3} more
+                            </div>
+                          )}
+                        </>
+                      ),
+              }}
+              view={calendarView}
+              initialDate={currentWeekStart}
+            />
+          )}
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this shift for{" "}
-              {deletingSchedule?.staffName} on {deletingSchedule?.date}? This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete Shift
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* List View */}
+          {viewMode === "list" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>All Schedules</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff Name</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Start Time</TableHead>
+                      <TableHead>End Time</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facilitySchedules.map((schedule) => (
+                      <TableRow key={schedule.id}>
+                        <TableCell className="font-medium">
+                          {schedule.staffName}
+                        </TableCell>
+                        <TableCell>{schedule.date}</TableCell>
+                        <TableCell>{schedule.startTime}</TableCell>
+                        <TableCell>{schedule.endTime}</TableCell>
+                        <TableCell>
+                          <StatusBadge type="role" value={schedule.role} />
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge type="status" value={schedule.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(schedule)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteClick(schedule)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Copy Week Modal */}
-      <Dialog open={isCopyWeekModalOpen} onOpenChange={setIsCopyWeekModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Copy Week Schedule</DialogTitle>
-            <DialogDescription>
-              Copy all shifts from the current week to another week.
-            </DialogDescription>
-          </DialogHeader>
+          {/* Add/Edit Schedule Modal */}
+          <Dialog
+            open={isAddEditModalOpen}
+            onOpenChange={setIsAddEditModalOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingSchedule ? "Edit Shift" : "Add New Shift"}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingSchedule
+                    ? "Update shift details for staff member."
+                    : "Schedule a new shift for a staff member."}
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="copyTarget">
-                Target Week Start Date (Monday)
-              </Label>
-              <Input
-                id="copyTarget"
-                type="date"
-                value={copyTargetDate}
-                onChange={(e) => setCopyTargetDate(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                All shifts from the current week will be copied to the selected
-                week.
-              </p>
-            </div>
-          </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="staffId">Staff Member</Label>
+                  <Select
+                    value={formData.staffId}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, staffId: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select staff member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facilityStaff.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id.toString()}>
+                          {staff.name} ({staff.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCopyWeekModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCopyWeek}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy Shifts
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <div className="space-y-2">
+                  <Label>Apply Shift Template</Label>
+                  <Select
+                    value={selectedTemplate}
+                    onValueChange={(value) => {
+                      setSelectedTemplate(value);
+                      const template = shiftTemplates.find(
+                        (t) => t.id.toString() === value,
+                      );
+                      if (template) {
+                        setFormData({
+                          ...formData,
+                          startTime: template.startTime,
+                          endTime: template.endTime,
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a template (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shiftTemplates.map((template) => (
+                        <SelectItem
+                          key={template.id}
+                          value={template.id.toString()}
+                        >
+                          {template.name} ({template.startTime} -{" "}
+                          {template.endTime})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime">Start Time *</Label>
+                    <Select
+                      value={formData.startTime}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, startTime: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeSlots.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End Time *</Label>
+                    <Select
+                      value={formData.endTime}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, endTime: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeSlots.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {!editingSchedule && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isRecurring"
+                        checked={formData.isRecurring}
+                        onCheckedChange={(checked) =>
+                          setFormData({ ...formData, isRecurring: !!checked })
+                        }
+                      />
+                      <Label
+                        htmlFor="isRecurring"
+                        className="font-normal flex items-center gap-2"
+                      >
+                        <Repeat className="h-4 w-4" />
+                        Create recurring shift
+                      </Label>
+                    </div>
+
+                    {formData.isRecurring && (
+                      <div className="grid grid-cols-2 gap-4 pl-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="recurringPattern">Repeat</Label>
+                          <Select
+                            value={formData.recurringPattern}
+                            onValueChange={(
+                              value: "daily" | "weekly" | "biweekly",
+                            ) =>
+                              setFormData({
+                                ...formData,
+                                recurringPattern: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="biweekly">
+                                Bi-weekly
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="recurringEndDate">Until</Label>
+                          <Input
+                            id="recurringEndDate"
+                            type="date"
+                            value={formData.recurringEndDate}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                recurringEndDate: e.target.value,
+                              })
+                            }
+                            min={formData.date}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddEditModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveSchedule}>
+                  {editingSchedule ? "Update Shift" : "Add Shift"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Modal */}
+          <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this shift for{" "}
+                  {deletingSchedule?.staffName} on {deletingSchedule?.date}?
+                  This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteConfirm}>
+                  Delete Shift
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Copy Week Modal */}
+          <Dialog
+            open={isCopyWeekModalOpen}
+            onOpenChange={setIsCopyWeekModalOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Copy Week Schedule</DialogTitle>
+                <DialogDescription>
+                  Copy all shifts from the current week to another week.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="copyTarget">
+                    Target Week Start Date (Monday)
+                  </Label>
+                  <Input
+                    id="copyTarget"
+                    type="date"
+                    value={copyTargetDate}
+                    onChange={(e) => setCopyTargetDate(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    All shifts from the current week will be copied to the
+                    selected week.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCopyWeekModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCopyWeek}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Shifts
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Conflicts Tab */}

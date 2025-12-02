@@ -124,7 +124,8 @@ export const clientDocuments: ClientDocument[] = [
     uploadedById: 16,
     uploadedAt: "2024-02-15T13:00:00Z",
     petId: 3,
-    notes: "Veterinary report on hip dysplasia condition and care recommendations.",
+    notes:
+      "Veterinary report on hip dysplasia condition and care recommendations.",
   },
   {
     id: "doc-008",
@@ -183,4 +184,3 @@ export const clientDocuments: ClientDocument[] = [
     petId: 13,
   },
 ];
-

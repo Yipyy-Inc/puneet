@@ -2,10 +2,20 @@
 
 export type ProductStatus = "active" | "inactive" | "discontinued";
 export type VariantType = "size" | "color" | "flavor" | "weight";
-export type OrderStatus = "pending" | "ordered" | "shipped" | "received" | "cancelled";
+export type OrderStatus =
+  | "pending"
+  | "ordered"
+  | "shipped"
+  | "received"
+  | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
 export type PaymentMethod = "cash" | "credit" | "debit" | "split";
-export type MovementType = "sale" | "purchase" | "adjustment" | "return" | "transfer";
+export type MovementType =
+  | "sale"
+  | "purchase"
+  | "adjustment"
+  | "return"
+  | "transfer";
 
 export interface ProductVariant {
   id: string;
@@ -1397,7 +1407,9 @@ export function getActiveProducts(): Product[] {
   return products.filter((p) => p.status === "active");
 }
 
-export function getProductByBarcode(barcode: string): Product | ProductVariant | null {
+export function getProductByBarcode(
+  barcode: string,
+): Product | ProductVariant | null {
   for (const product of products) {
     if (product.barcode === barcode) {
       return product;
@@ -1459,7 +1471,9 @@ export function getActiveSuppliers(): Supplier[] {
 }
 
 export function getPendingOrders(): PurchaseOrder[] {
-  return purchaseOrders.filter((o) => o.status === "pending" || o.status === "ordered");
+  return purchaseOrders.filter(
+    (o) => o.status === "pending" || o.status === "ordered",
+  );
 }
 
 export function getTodayTransactions(): Transaction[] {
@@ -1469,14 +1483,16 @@ export function getTodayTransactions(): Transaction[] {
 
 export function getTransactionStats() {
   const todayTransactions = getTodayTransactions();
-  const completedToday = todayTransactions.filter((t) => t.status === "completed");
+  const completedToday = todayTransactions.filter(
+    (t) => t.status === "completed",
+  );
 
   return {
     todayTransactions: completedToday.length,
     todayRevenue: completedToday.reduce((sum, t) => sum + t.total, 0),
     todayItems: completedToday.reduce(
       (sum, t) => sum + t.items.reduce((s, i) => s + i.quantity, 0),
-      0
+      0,
     ),
     pendingAlerts: lowStockAlerts.filter((a) => a.status === "pending").length,
   };

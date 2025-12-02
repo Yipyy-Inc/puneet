@@ -35,7 +35,13 @@ export const emailTemplates: EmailTemplate[] = [
     subject: "Reminder: {{pet_name}}'s appointment tomorrow",
     body: `Hi {{client_name}},\n\nThis is a friendly reminder that {{pet_name}} has a {{service_type}} appointment tomorrow at {{appointment_time}}.\n\nSee you soon!\n\nThe {{facility_name}} Team`,
     category: "reminder",
-    variables: ["client_name", "pet_name", "service_type", "appointment_time", "facility_name"],
+    variables: [
+      "client_name",
+      "pet_name",
+      "service_type",
+      "appointment_time",
+      "facility_name",
+    ],
     createdAt: "2024-01-10T09:00:00Z",
     updatedAt: "2024-02-05T14:00:00Z",
     timesUsed: 234,
@@ -46,7 +52,13 @@ export const emailTemplates: EmailTemplate[] = [
     subject: "{{pet_name}}'s vaccinations need updating",
     body: `Hi {{client_name}},\n\nOur records show that {{pet_name}}'s {{vaccine_name}} vaccination expires on {{expiry_date}}.\n\nPlease update their vaccination records to continue using our services.\n\nThank you,\n{{facility_name}}`,
     category: "reminder",
-    variables: ["client_name", "pet_name", "vaccine_name", "expiry_date", "facility_name"],
+    variables: [
+      "client_name",
+      "pet_name",
+      "vaccine_name",
+      "expiry_date",
+      "facility_name",
+    ],
     createdAt: "2024-01-20T11:00:00Z",
     updatedAt: "2024-01-20T11:00:00Z",
     timesUsed: 67,
@@ -118,9 +130,7 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-003",
     name: "First-Time Customers",
     description: "Customers with only 1 booking",
-    filters: [
-      { field: "totalBookings", operator: "equals", value: 1 },
-    ],
+    filters: [{ field: "totalBookings", operator: "equals", value: 1 }],
     customerCount: 34,
     createdAt: "2024-01-20T13:00:00Z",
     updatedAt: "2024-02-10T10:00:00Z",
@@ -129,9 +139,7 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-004",
     name: "Dog Owners",
     description: "Customers with at least one dog",
-    filters: [
-      { field: "petType", operator: "contains", value: "dog" },
-    ],
+    filters: [{ field: "petType", operator: "contains", value: "dog" }],
     customerCount: 156,
     createdAt: "2024-02-01T09:00:00Z",
     updatedAt: "2024-02-01T09:00:00Z",
@@ -273,7 +281,11 @@ export const loyaltySettings: LoyaltySettings = {
       id: "tier-silver",
       name: "Silver",
       minPoints: 500,
-      benefits: ["Earn 1.25 points per $1 spent", "Priority booking", "Birthday bonus"],
+      benefits: [
+        "Earn 1.25 points per $1 spent",
+        "Priority booking",
+        "Birthday bonus",
+      ],
       discountPercentage: 5,
       color: "#C0C0C0",
     },
@@ -281,7 +293,12 @@ export const loyaltySettings: LoyaltySettings = {
       id: "tier-gold",
       name: "Gold",
       minPoints: 1500,
-      benefits: ["Earn 1.5 points per $1 spent", "Priority booking", "Free add-ons", "Birthday bonus"],
+      benefits: [
+        "Earn 1.5 points per $1 spent",
+        "Priority booking",
+        "Free add-ons",
+        "Birthday bonus",
+      ],
       discountPercentage: 10,
       color: "#FFD700",
     },
@@ -289,7 +306,12 @@ export const loyaltySettings: LoyaltySettings = {
       id: "tier-platinum",
       name: "Platinum",
       minPoints: 3000,
-      benefits: ["Earn 2 points per $1 spent", "VIP treatment", "Free grooming monthly", "Birthday bonus"],
+      benefits: [
+        "Earn 2 points per $1 spent",
+        "VIP treatment",
+        "Free grooming monthly",
+        "Birthday bonus",
+      ],
       discountPercentage: 15,
       color: "#E5E4E2",
     },
@@ -382,7 +404,12 @@ export interface Badge {
   description: string;
   icon: string; // emoji or icon name
   criteria: {
-    type: "bookings_count" | "total_spent" | "consecutive_months" | "referrals" | "reviews";
+    type:
+      | "bookings_count"
+      | "total_spent"
+      | "consecutive_months"
+      | "referrals"
+      | "reviews";
     threshold: number;
   };
   reward?: {
@@ -540,4 +567,3 @@ export const promoCodes: PromoCode[] = [
     createdAt: "2024-01-05T09:00:00Z",
   },
 ];
-

@@ -1,7 +1,15 @@
 // Training module mock data
 
-export type TrainingClassStatus = "scheduled" | "in-progress" | "completed" | "cancelled";
-export type EnrollmentStatus = "enrolled" | "completed" | "dropped" | "waitlisted";
+export type TrainingClassStatus =
+  | "scheduled"
+  | "in-progress"
+  | "completed"
+  | "cancelled";
+export type EnrollmentStatus =
+  | "enrolled"
+  | "completed"
+  | "dropped"
+  | "waitlisted";
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
 export type ClassType = "group" | "private";
 
@@ -160,7 +168,11 @@ export const trainers: Trainer[] = [
     email: "sophie.martinez@doggieville.com",
     phone: "(514) 555-0202",
     photoUrl: "/trainers/sophie.jpg",
-    specializations: ["Behavior Modification", "Reactive Dog Training", "Fear-Free Training"],
+    specializations: [
+      "Behavior Modification",
+      "Reactive Dog Training",
+      "Fear-Free Training",
+    ],
     certifications: ["CAAB", "CPDT-KA", "Fear-Free Certified"],
     yearsExperience: 12,
     status: "active",
@@ -175,7 +187,11 @@ export const trainers: Trainer[] = [
     email: "jake.wilson@doggieville.com",
     phone: "(514) 555-0203",
     photoUrl: "/trainers/jake.jpg",
-    specializations: ["Puppy Socialization", "Basic Obedience", "Trick Training"],
+    specializations: [
+      "Puppy Socialization",
+      "Basic Obedience",
+      "Trick Training",
+    ],
     certifications: ["CPDT-KA"],
     yearsExperience: 4,
     status: "active",
@@ -205,7 +221,8 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-001",
     name: "Puppy Kindergarten",
-    description: "Basic socialization and foundation training for puppies 8-16 weeks old.",
+    description:
+      "Basic socialization and foundation training for puppies 8-16 weeks old.",
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     classType: "group",
@@ -226,7 +243,8 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-002",
     name: "Basic Obedience",
-    description: "Essential commands and manners for dogs of all ages. Covers sit, stay, come, heel, and more.",
+    description:
+      "Essential commands and manners for dogs of all ages. Covers sit, stay, come, heel, and more.",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     classType: "group",
@@ -247,7 +265,8 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-003",
     name: "Advanced Obedience",
-    description: "Off-leash reliability, distance commands, and complex behaviors.",
+    description:
+      "Off-leash reliability, distance commands, and complex behaviors.",
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     classType: "group",
@@ -331,7 +350,8 @@ export const trainingClasses: TrainingClass[] = [
   {
     id: "class-007",
     name: "Trick Training",
-    description: "Fun tricks to impress your friends and mentally stimulate your dog.",
+    description:
+      "Fun tricks to impress your friends and mentally stimulate your dog.",
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     classType: "group",
@@ -754,12 +774,42 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     skills: [
-      { skillName: "Sit", level: 80, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Down", level: 70, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Stay", level: 40, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Come", level: 50, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Socialization", level: 75, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Handling", level: 60, status: "in-progress", lastPracticed: "2024-03-09" },
+      {
+        skillName: "Sit",
+        level: 80,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Down",
+        level: 70,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Stay",
+        level: 40,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Come",
+        level: 50,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Socialization",
+        level: 75,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Handling",
+        level: 60,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
     ],
     overallProgress: 63,
     lastUpdated: "2024-03-09",
@@ -776,12 +826,42 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     skills: [
-      { skillName: "Sit", level: 100, status: "mastered", lastPracticed: "2024-03-12" },
-      { skillName: "Down", level: 100, status: "mastered", lastPracticed: "2024-03-12" },
-      { skillName: "Stay", level: 85, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Come", level: 95, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Heel", level: 70, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Leave It", level: 80, status: "in-progress", lastPracticed: "2024-03-12" },
+      {
+        skillName: "Sit",
+        level: 100,
+        status: "mastered",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Down",
+        level: 100,
+        status: "mastered",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Stay",
+        level: 85,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Come",
+        level: 95,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Heel",
+        level: 70,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Leave It",
+        level: 80,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
     ],
     overallProgress: 88,
     lastUpdated: "2024-03-12",
@@ -798,12 +878,42 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-001",
     trainerName: "Marcus Chen",
     skills: [
-      { skillName: "Sit", level: 90, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Down", level: 85, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Stay", level: 45, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Come", level: 75, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Heel", level: 60, status: "in-progress", lastPracticed: "2024-03-12" },
-      { skillName: "Leave It", level: 55, status: "in-progress", lastPracticed: "2024-03-12" },
+      {
+        skillName: "Sit",
+        level: 90,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Down",
+        level: 85,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Stay",
+        level: 45,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Come",
+        level: 75,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Heel",
+        level: 60,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
+      {
+        skillName: "Leave It",
+        level: 55,
+        status: "in-progress",
+        lastPracticed: "2024-03-12",
+      },
     ],
     overallProgress: 68,
     lastUpdated: "2024-03-12",
@@ -820,13 +930,48 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-004",
     trainerName: "Elena Kowalski",
     skills: [
-      { skillName: "Jumps", level: 95, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Tunnels", level: 90, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Weave Poles", level: 85, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "A-Frame", level: 80, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Dog Walk", level: 75, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Teeter", level: 70, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Handling Cues", level: 85, status: "in-progress", lastPracticed: "2024-03-09" },
+      {
+        skillName: "Jumps",
+        level: 95,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Tunnels",
+        level: 90,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Weave Poles",
+        level: 85,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "A-Frame",
+        level: 80,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Dog Walk",
+        level: 75,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Teeter",
+        level: 70,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Handling Cues",
+        level: 85,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
     ],
     overallProgress: 83,
     lastUpdated: "2024-03-09",
@@ -843,11 +988,36 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-002",
     trainerName: "Sophie Martinez",
     skills: [
-      { skillName: "Threshold Distance", level: 65, status: "in-progress", lastPracticed: "2024-03-10" },
-      { skillName: "Look at Me", level: 80, status: "in-progress", lastPracticed: "2024-03-10" },
-      { skillName: "Emergency U-Turn", level: 90, status: "in-progress", lastPracticed: "2024-03-10" },
-      { skillName: "Calm Settle", level: 55, status: "in-progress", lastPracticed: "2024-03-10" },
-      { skillName: "Trigger Desensitization", level: 50, status: "in-progress", lastPracticed: "2024-03-10" },
+      {
+        skillName: "Threshold Distance",
+        level: 65,
+        status: "in-progress",
+        lastPracticed: "2024-03-10",
+      },
+      {
+        skillName: "Look at Me",
+        level: 80,
+        status: "in-progress",
+        lastPracticed: "2024-03-10",
+      },
+      {
+        skillName: "Emergency U-Turn",
+        level: 90,
+        status: "in-progress",
+        lastPracticed: "2024-03-10",
+      },
+      {
+        skillName: "Calm Settle",
+        level: 55,
+        status: "in-progress",
+        lastPracticed: "2024-03-10",
+      },
+      {
+        skillName: "Trigger Desensitization",
+        level: 50,
+        status: "in-progress",
+        lastPracticed: "2024-03-10",
+      },
     ],
     overallProgress: 68,
     lastUpdated: "2024-03-10",
@@ -864,12 +1034,42 @@ export const progressRecords: ProgressRecord[] = [
     trainerId: "trainer-003",
     trainerName: "Jake Wilson",
     skills: [
-      { skillName: "Sit", level: 60, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Down", level: 45, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Stay", level: 30, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Come", level: 35, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Socialization", level: 55, status: "in-progress", lastPracticed: "2024-03-09" },
-      { skillName: "Handling", level: 50, status: "in-progress", lastPracticed: "2024-03-09" },
+      {
+        skillName: "Sit",
+        level: 60,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Down",
+        level: 45,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Stay",
+        level: 30,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Come",
+        level: 35,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Socialization",
+        level: 55,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
+      {
+        skillName: "Handling",
+        level: 50,
+        status: "in-progress",
+        lastPracticed: "2024-03-09",
+      },
     ],
     overallProgress: 46,
     lastUpdated: "2024-03-09",
@@ -881,7 +1081,8 @@ export const trainingPackages: TrainingPackage[] = [
   {
     id: "pkg-001",
     name: "Puppy Starter Pack",
-    description: "Perfect for new puppy owners. Includes socialization and basic commands.",
+    description:
+      "Perfect for new puppy owners. Includes socialization and basic commands.",
     classType: "group",
     skillLevel: "beginner",
     sessions: 6,
@@ -920,7 +1121,8 @@ export const trainingPackages: TrainingPackage[] = [
   {
     id: "pkg-003",
     name: "Advanced Training Package",
-    description: "Take your dog's skills to the next level with off-leash reliability.",
+    description:
+      "Take your dog's skills to the next level with off-leash reliability.",
     classType: "group",
     skillLevel: "advanced",
     sessions: 8,
@@ -1042,7 +1244,9 @@ export function getClassesByTrainer(trainerId: string): TrainingClass[] {
 }
 
 export function getClassesByDay(dayOfWeek: number): TrainingClass[] {
-  return trainingClasses.filter((c) => c.dayOfWeek === dayOfWeek && c.status === "active");
+  return trainingClasses.filter(
+    (c) => c.dayOfWeek === dayOfWeek && c.status === "active",
+  );
 }
 
 export function getEnrollmentsByClass(classId: string): Enrollment[] {
@@ -1061,7 +1265,9 @@ export function getNotesByPet(petId: number): TrainerNote[] {
   return trainerNotes.filter((n) => n.petId === petId);
 }
 
-export function getProgressByEnrollment(enrollmentId: string): ProgressRecord | undefined {
+export function getProgressByEnrollment(
+  enrollmentId: string,
+): ProgressRecord | undefined {
   return progressRecords.find((p) => p.enrollmentId === enrollmentId);
 }
 
@@ -1079,16 +1285,22 @@ export function getActivePackages(): TrainingPackage[] {
 
 export function getTrainingStats() {
   const activeClasses = getActiveClasses();
-  const totalEnrollments = enrollments.filter((e) => e.status === "enrolled").length;
+  const totalEnrollments = enrollments.filter(
+    (e) => e.status === "enrolled",
+  ).length;
   const totalCapacity = activeClasses.reduce((sum, c) => sum + c.capacity, 0);
-  const currentEnrolled = activeClasses.reduce((sum, c) => sum + c.enrolledCount, 0);
+  const currentEnrolled = activeClasses.reduce(
+    (sum, c) => sum + c.enrolledCount,
+    0,
+  );
 
   return {
     activeClasses: activeClasses.length,
     totalEnrollments,
     activeTrainers: getActiveTrainers().length,
     capacityUtilization: Math.round((currentEnrolled / totalCapacity) * 100),
-    upcomingSessions: trainingSessions.filter((s) => s.status === "scheduled").length,
+    upcomingSessions: trainingSessions.filter((s) => s.status === "scheduled")
+      .length,
     packagesAvailable: getActivePackages().length,
   };
 }
@@ -1100,8 +1312,20 @@ export function getUpcomingSessions(days: number = 7): TrainingSession[] {
 
   return trainingSessions.filter((s) => {
     const sessionDate = new Date(s.date);
-    return sessionDate >= today && sessionDate <= futureDate && s.status === "scheduled";
+    return (
+      sessionDate >= today &&
+      sessionDate <= futureDate &&
+      s.status === "scheduled"
+    );
   });
 }
 
-export const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const dayNames = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];

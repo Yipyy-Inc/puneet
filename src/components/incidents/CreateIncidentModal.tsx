@@ -30,7 +30,15 @@ interface CreateIncidentModalProps {
 
 export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
   const [formData, setFormData] = useState({
-    type: "" as "injury" | "illness" | "behavioral" | "accident" | "escape" | "fight" | "other" | "",
+    type: "" as
+      | "injury"
+      | "illness"
+      | "behavioral"
+      | "accident"
+      | "escape"
+      | "fight"
+      | "other"
+      | "",
     severity: "" as "low" | "medium" | "high" | "critical" | "",
     title: "",
     description: "",
@@ -57,7 +65,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
       type: pet.type,
       breed: pet.breed,
       clientName: client.name,
-    }))
+    })),
   );
 
   const staffMembers = [
@@ -166,8 +174,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
   const handlePhotoVisibilityToggle = (photoId: string) => {
     setPhotos(
       photos.map((p) =>
-        p.id === photoId ? { ...p, isClientVisible: !p.isClientVisible } : p
-      )
+        p.id === photoId ? { ...p, isClientVisible: !p.isClientVisible } : p,
+      ),
     );
   };
 
@@ -176,7 +184,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
     onClose();
   };
 
-  const selectedSeverity = severityLevels.find((s) => s.value === formData.severity);
+  const selectedSeverity = severityLevels.find(
+    (s) => s.value === formData.severity,
+  );
 
   return (
     <>
@@ -186,7 +196,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
           Report New Incident
         </DialogTitle>
         <DialogDescription>
-          Document incidents with full details, photos, and automatic notifications
+          Document incidents with full details, photos, and automatic
+          notifications
         </DialogDescription>
       </DialogHeader>
 
@@ -197,7 +208,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             <Label htmlFor="type">Incident Type *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value: any) => setFormData({ ...formData, type: value })}
+              onValueChange={(value: any) =>
+                setFormData({ ...formData, type: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -217,7 +230,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             <Label htmlFor="severity">Severity Level *</Label>
             <Select
               value={formData.severity}
-              onValueChange={(value: any) => setFormData({ ...formData, severity: value })}
+              onValueChange={(value: any) =>
+                setFormData({ ...formData, severity: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select severity" />
@@ -226,15 +241,21 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 {severityLevels.map((level) => (
                   <SelectItem key={level.value} value={level.value}>
                     <div>
-                      <div className={`font-semibold ${level.color}`}>{level.label}</div>
-                      <div className="text-xs text-muted-foreground">{level.desc}</div>
+                      <div className={`font-semibold ${level.color}`}>
+                        {level.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {level.desc}
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {selectedSeverity && (
-              <p className={`text-xs ${selectedSeverity.color}`}>{selectedSeverity.desc}</p>
+              <p className={`text-xs ${selectedSeverity.color}`}>
+                {selectedSeverity.desc}
+              </p>
             )}
           </div>
         </div>
@@ -246,7 +267,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             id="incidentDate"
             type="datetime-local"
             value={formData.incidentDate}
-            onChange={(e) => setFormData({ ...formData, incidentDate: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, incidentDate: e.target.value })
+            }
           />
         </div>
 
@@ -256,7 +279,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
           <Input
             id="title"
             value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, title: e.target.value })
+            }
             placeholder="Brief description of the incident"
           />
         </div>
@@ -273,7 +298,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 <SelectContent>
                   {allPets.map((pet) => (
                     <SelectItem key={pet.id} value={pet.id.toString()}>
-                      {pet.name} ({pet.type} - {pet.breed}) - Owner: {pet.clientName}
+                      {pet.name} ({pet.type} - {pet.breed}) - Owner:{" "}
+                      {pet.clientName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -283,7 +309,11 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             {formData.selectedPets.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {formData.selectedPets.map((pet) => (
-                  <Badge key={pet.id} variant="default" className="text-sm py-1 px-3">
+                  <Badge
+                    key={pet.id}
+                    variant="default"
+                    className="text-sm py-1 px-3"
+                  >
                     {pet.name} ({pet.clientName})
                     <button
                       className="ml-2"
@@ -337,7 +367,11 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             {formData.staffInvolved.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {formData.staffInvolved.map((staff) => (
-                  <Badge key={staff} variant="secondary" className="text-sm py-1 px-3">
+                  <Badge
+                    key={staff}
+                    variant="secondary"
+                    className="text-sm py-1 px-3"
+                  >
                     {staff}
                     <button
                       className="ml-2"
@@ -357,7 +391,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
           <Label htmlFor="reportedBy">Reported By *</Label>
           <Select
             value={formData.reportedBy}
-            onValueChange={(value) => setFormData({ ...formData, reportedBy: value })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, reportedBy: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select reporter" />
@@ -378,7 +414,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             placeholder="Detailed description of what happened..."
             rows={4}
           />
@@ -404,7 +442,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                These notes are for internal use only and won't be shared with clients
+                These notes are for internal use only and won't be shared with
+                clients
               </p>
             </div>
           </CardContent>
@@ -424,13 +463,17 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 id="clientFacingNotes"
                 value={formData.clientFacingNotes}
                 onChange={(e) =>
-                  setFormData({ ...formData, clientFacingNotes: e.target.value })
+                  setFormData({
+                    ...formData,
+                    clientFacingNotes: e.target.value,
+                  })
                 }
                 placeholder="What to communicate to the pet owner..."
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                This version will be shared with clients if you choose to notify them
+                This version will be shared with clients if you choose to notify
+                them
               </p>
             </div>
           </CardContent>
@@ -450,7 +493,10 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             {photos.length > 0 && (
               <div className="space-y-3">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="p-3 border rounded-lg space-y-2">
+                  <div
+                    key={photo.id}
+                    className="p-3 border rounded-lg space-y-2"
+                  >
                     <div className="flex items-start justify-between">
                       <div className="text-sm font-medium">{photo.url}</div>
                       <Button
@@ -467,8 +513,10 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                       onChange={(e) =>
                         setPhotos(
                           photos.map((p) =>
-                            p.id === photo.id ? { ...p, caption: e.target.value } : p
-                          )
+                            p.id === photo.id
+                              ? { ...p, caption: e.target.value }
+                              : p,
+                          ),
                         )
                       }
                     />
@@ -476,7 +524,9 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                       <Checkbox
                         id={`visible-${photo.id}`}
                         checked={photo.isClientVisible}
-                        onCheckedChange={() => handlePhotoVisibilityToggle(photo.id)}
+                        onCheckedChange={() =>
+                          handlePhotoVisibilityToggle(photo.id)
+                        }
                       />
                       <label
                         htmlFor={`visible-${photo.id}`}
@@ -502,12 +552,19 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                   id="notifyManager"
                   checked={formData.notifyManager}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, notifyManager: checked as boolean })
+                    setFormData({
+                      ...formData,
+                      notifyManager: checked as boolean,
+                    })
                   }
                 />
-                <label htmlFor="notifyManager" className="text-sm cursor-pointer">
+                <label
+                  htmlFor="notifyManager"
+                  className="text-sm cursor-pointer"
+                >
                   Notify Manager immediately
-                  {formData.severity === "critical" || formData.severity === "high" ? (
+                  {formData.severity === "critical" ||
+                  formData.severity === "high" ? (
                     <Badge variant="destructive" className="ml-2">
                       Required for {formData.severity} severity
                     </Badge>
@@ -520,10 +577,16 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                   id="notifyClient"
                   checked={formData.notifyClient}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, notifyClient: checked as boolean })
+                    setFormData({
+                      ...formData,
+                      notifyClient: checked as boolean,
+                    })
                   }
                 />
-                <label htmlFor="notifyClient" className="text-sm cursor-pointer">
+                <label
+                  htmlFor="notifyClient"
+                  className="text-sm cursor-pointer"
+                >
                   Notify pet owner(s) now
                 </label>
               </div>
@@ -554,4 +617,3 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
     </>
   );
 }
-

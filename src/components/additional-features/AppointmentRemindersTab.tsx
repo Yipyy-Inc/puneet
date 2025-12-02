@@ -31,7 +31,9 @@ export function AppointmentRemindersTab() {
     (reminder) =>
       reminder.petName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       reminder.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reminder.appointmentType.toLowerCase().includes(searchQuery.toLowerCase())
+      reminder.appointmentType
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()),
   );
 
   const getStatusBadge = (status: string) => {
@@ -186,7 +188,9 @@ export function AppointmentRemindersTab() {
                     {reminder.lastReminderDate ? (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <CheckCircle className="h-3 w-3 text-green-600" />
-                        {new Date(reminder.lastReminderDate).toLocaleDateString()}
+                        {new Date(
+                          reminder.lastReminderDate,
+                        ).toLocaleDateString()}
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -217,4 +221,3 @@ export function AppointmentRemindersTab() {
     </div>
   );
 }
-

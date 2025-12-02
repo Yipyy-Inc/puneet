@@ -439,12 +439,14 @@ export default function BoardingDashboardPage() {
                     )}
 
                     <div className="mt-3 pt-3 border-t">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="w-full"
                         onClick={() => {
-                          alert(`Guest Details:\n\nPet: ${guest.petName}\nBreed: ${guest.petBreed}\nOwner: ${guest.ownerName}\nPhone: ${guest.ownerPhone}\n\nKennel: ${guest.kennelName}\nPackage: ${guest.packageType}\nTotal Price: $${guest.totalPrice}\n\nMedications: ${guest.medications.length > 0 ? guest.medications.join(", ") : "None"}\nAllergies: ${guest.allergies.length > 0 ? guest.allergies.join(", ") : "None"}`);
+                          alert(
+                            `Guest Details:\n\nPet: ${guest.petName}\nBreed: ${guest.petBreed}\nOwner: ${guest.ownerName}\nPhone: ${guest.ownerPhone}\n\nKennel: ${guest.kennelName}\nPackage: ${guest.packageType}\nTotal Price: $${guest.totalPrice}\n\nMedications: ${guest.medications.length > 0 ? guest.medications.join(", ") : "None"}\nAllergies: ${guest.allergies.length > 0 ? guest.allergies.join(", ") : "None"}`,
+                          );
                         }}
                       >
                         View Details

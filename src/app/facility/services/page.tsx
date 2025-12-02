@@ -192,8 +192,8 @@ export default function ServicesCatalogPage() {
           item.status === "active"
             ? "default"
             : item.status === "seasonal"
-            ? "secondary"
-            : "outline";
+              ? "secondary"
+              : "outline";
         return (
           <Badge variant={variant} className="capitalize">
             {item.status}
@@ -235,11 +235,15 @@ export default function ServicesCatalogPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Services
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{servicesPricingStats.totalServices}</div>
+            <div className="text-2xl font-bold">
+              {servicesPricingStats.totalServices}
+            </div>
             <p className="text-xs text-muted-foreground">
               {servicesPricingStats.activeServices} active
             </p>
@@ -251,7 +255,9 @@ export default function ServicesCatalogPage() {
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{servicesPricingStats.totalAddOns}</div>
+            <div className="text-2xl font-bold">
+              {servicesPricingStats.totalAddOns}
+            </div>
             <p className="text-xs text-muted-foreground">Available extras</p>
           </CardContent>
         </Card>
@@ -261,17 +267,23 @@ export default function ServicesCatalogPage() {
             <Tag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{servicesPricingStats.packagesSold}</div>
+            <div className="text-2xl font-bold">
+              {servicesPricingStats.packagesSold}
+            </div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Promo Codes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Promo Codes
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{servicesPricingStats.activePromoCodes}</div>
+            <div className="text-2xl font-bold">
+              {servicesPricingStats.activePromoCodes}
+            </div>
             <p className="text-xs text-muted-foreground">
               {servicesPricingStats.totalPromoRedemptions} redemptions
             </p>
@@ -305,7 +317,7 @@ export default function ServicesCatalogPage() {
 
       {/* Data Table */}
       <DataTable
-        data={currentData.map((s) => ({ ...s } as ServiceWithRecord))}
+        data={currentData.map((s) => ({ ...s }) as ServiceWithRecord)}
         columns={columns}
         filters={filters}
         searchKey={"name" as keyof ServiceWithRecord}
@@ -339,7 +351,8 @@ export default function ServicesCatalogPage() {
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingService ? "Edit" : "Add"} {formData.isAddOn ? "Add-On" : "Service"}
+              {editingService ? "Edit" : "Add"}{" "}
+              {formData.isAddOn ? "Add-On" : "Service"}
             </DialogTitle>
             <DialogDescription>
               {editingService
@@ -354,7 +367,9 @@ export default function ServicesCatalogPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Service name"
                 />
               </div>
@@ -384,7 +399,9 @@ export default function ServicesCatalogPage() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Describe the service..."
                 rows={3}
               />
@@ -399,7 +416,10 @@ export default function ServicesCatalogPage() {
                   step="0.01"
                   value={formData.basePrice}
                   onChange={(e) =>
-                    setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      basePrice: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -430,7 +450,10 @@ export default function ServicesCatalogPage() {
                   min="0"
                   value={formData.duration}
                   onChange={(e) =>
-                    setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      duration: parseInt(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -462,7 +485,10 @@ export default function ServicesCatalogPage() {
                   min="1"
                   value={formData.maxPetsPerSlot}
                   onChange={(e) =>
-                    setFormData({ ...formData, maxPetsPerSlot: parseInt(e.target.value) || 1 })
+                    setFormData({
+                      ...formData,
+                      maxPetsPerSlot: parseInt(e.target.value) || 1,
+                    })
                   }
                 />
               </div>
@@ -472,7 +498,10 @@ export default function ServicesCatalogPage() {
                 <Label>Size-Based Pricing Adjustments ($)</Label>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-1">
-                    <Label htmlFor="sizeSmall" className="text-xs text-muted-foreground">
+                    <Label
+                      htmlFor="sizeSmall"
+                      className="text-xs text-muted-foreground"
+                    >
                       Small
                     </Label>
                     <Input
@@ -492,7 +521,10 @@ export default function ServicesCatalogPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="sizeMedium" className="text-xs text-muted-foreground">
+                    <Label
+                      htmlFor="sizeMedium"
+                      className="text-xs text-muted-foreground"
+                    >
                       Medium
                     </Label>
                     <Input
@@ -512,7 +544,10 @@ export default function ServicesCatalogPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="sizeLarge" className="text-xs text-muted-foreground">
+                    <Label
+                      htmlFor="sizeLarge"
+                      className="text-xs text-muted-foreground"
+                    >
                       Large
                     </Label>
                     <Input
@@ -532,7 +567,10 @@ export default function ServicesCatalogPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="sizeGiant" className="text-xs text-muted-foreground">
+                    <Label
+                      htmlFor="sizeGiant"
+                      className="text-xs text-muted-foreground"
+                    >
                       Giant
                     </Label>
                     <Input
@@ -566,10 +604,15 @@ export default function ServicesCatalogPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEditModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddEditModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editingService ? "Save Changes" : "Create"}</Button>
+            <Button onClick={handleSave}>
+              {editingService ? "Save Changes" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -580,12 +623,15 @@ export default function ServicesCatalogPage() {
           <DialogHeader>
             <DialogTitle>Delete Service</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deletingService?.name}&quot;? This action
-              cannot be undone.
+              Are you sure you want to delete &quot;{deletingService?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>

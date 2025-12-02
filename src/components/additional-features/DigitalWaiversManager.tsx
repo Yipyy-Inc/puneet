@@ -56,7 +56,7 @@ export function DigitalWaiversManager() {
     (sig) =>
       sig.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sig.waiverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sig.petName?.toLowerCase().includes(searchQuery.toLowerCase())
+      sig.petName?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const stats = {
@@ -321,4 +321,3 @@ export function DigitalWaiversManager() {
     </div>
   );
 }
-

@@ -95,8 +95,8 @@ export default function SettingsPage() {
             row.original.action === "created"
               ? "default"
               : row.original.action === "updated"
-              ? "secondary"
-              : "destructive"
+                ? "secondary"
+                : "destructive"
           }
           className="capitalize"
         >
@@ -122,7 +122,9 @@ export default function SettingsPage() {
               <s>{row.original.oldValue}</s>
             </div>
           )}
-          <div className="text-green-600 font-medium">{row.original.newValue}</div>
+          <div className="text-green-600 font-medium">
+            {row.original.newValue}
+          </div>
         </div>
       ),
     },
@@ -430,9 +432,15 @@ export default function SettingsPage() {
                         pets
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      alert(`Edit location "${location.name}" - Opens location editor`);
-                    }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        alert(
+                          `Edit location "${location.name}" - Opens location editor`,
+                        );
+                      }}
+                    >
                       Edit
                     </Button>
                   </div>
@@ -751,9 +759,15 @@ export default function SettingsPage() {
                         ))}
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      alert(`Edit tax rate "${tax.name}" - Opens tax rate editor`);
-                    }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        alert(
+                          `Edit tax rate "${tax.name}" - Opens tax rate editor`,
+                        );
+                      }}
+                    >
                       Edit
                     </Button>
                   </div>
@@ -841,7 +855,7 @@ export default function SettingsPage() {
                             {permission.replace(/([A-Z])/g, " $1").trim()}
                           </span>
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 </div>
@@ -927,8 +941,8 @@ export default function SettingsPage() {
                                     notifications.map((n) =>
                                       n.id === notif.id
                                         ? { ...n, email: checked }
-                                        : n
-                                    )
+                                        : n,
+                                    ),
                                   )
                                 }
                               />
@@ -943,8 +957,8 @@ export default function SettingsPage() {
                                     notifications.map((n) =>
                                       n.id === notif.id
                                         ? { ...n, sms: checked }
-                                        : n
-                                    )
+                                        : n,
+                                    ),
                                   )
                                 }
                               />
@@ -959,8 +973,8 @@ export default function SettingsPage() {
                                     notifications.map((n) =>
                                       n.id === notif.id
                                         ? { ...n, push: checked }
-                                        : n
-                                    )
+                                        : n,
+                                    ),
                                   )
                                 }
                               />
@@ -984,7 +998,12 @@ export default function SettingsPage() {
               </p>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => router.push("/facility/dashboard/communications")}>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  router.push("/facility/dashboard/communications")
+                }
+              >
                 Open Template Editor
               </Button>
             </CardContent>
@@ -1023,8 +1042,8 @@ export default function SettingsPage() {
                             integrationsData.map((i) =>
                               i.id === integration.id
                                 ? { ...i, isEnabled: checked }
-                                : i
-                            )
+                                : i,
+                            ),
                           )
                         }
                       />
@@ -1117,18 +1136,20 @@ export default function SettingsPage() {
                           <Badge variant="secondary">Not Connected</Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => {
                           setIntegrationsData(
                             integrationsData.map((i) =>
                               i.id === integration.id
                                 ? { ...i, isEnabled: !i.isEnabled }
-                                : i
-                            )
+                                : i,
+                            ),
                           );
-                          alert(`${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`);
+                          alert(
+                            `${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`,
+                          );
                         }}
                       >
                         {integration.isEnabled ? "Disconnect" : "Connect"}
@@ -1187,7 +1208,7 @@ export default function SettingsPage() {
                                   >
                                     {feature.replace(/([A-Z])/g, " $1").trim()}
                                   </Badge>
-                                ) : null
+                                ) : null,
                             )}
                           </div>
                         </div>
@@ -1244,18 +1265,32 @@ export default function SettingsPage() {
                   <div className="text-xs text-muted-foreground mt-2">
                     Next billing:{" "}
                     {new Date(
-                      subscription.nextBillingDate
+                      subscription.nextBillingDate,
                     ).toLocaleDateString()}
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => {
-                  alert("Opens plan selection modal - Choose from Starter, Professional, and Enterprise plans");
-                }}>Change Plan</Button>
-                <Button variant="outline" onClick={() => {
-                  alert("Opens billing history - Shows all past invoices and payment history");
-                }}>Billing History</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    alert(
+                      "Opens plan selection modal - Choose from Starter, Professional, and Enterprise plans",
+                    );
+                  }}
+                >
+                  Change Plan
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    alert(
+                      "Opens billing history - Shows all past invoices and payment history",
+                    );
+                  }}
+                >
+                  Billing History
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -1297,8 +1332,10 @@ export default function SettingsPage() {
                       onCheckedChange={(checked) =>
                         setAddons(
                           addons.map((a) =>
-                            a.id === addon.id ? { ...a, isEnabled: checked } : a
-                          )
+                            a.id === addon.id
+                              ? { ...a, isEnabled: checked }
+                              : a,
+                          ),
                         )
                       }
                     />
@@ -1340,4 +1377,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

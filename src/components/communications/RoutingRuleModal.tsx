@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +35,23 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
     timeStart: "",
     timeEnd: "",
     selectedDays: [] as string[],
-    action: "ai_handles" as "ai_handles" | "transfer_to_staff" | "voicemail" | "specific_extension",
+    action: "ai_handles" as
+      | "ai_handles"
+      | "transfer_to_staff"
+      | "voicemail"
+      | "specific_extension",
     destination: "",
   });
 
-  const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  const daysOfWeek = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
 
   const handleSave = () => {
     console.log("Saving routing rule:", formData);
@@ -84,10 +101,13 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
             type="number"
             min="1"
             value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+            onChange={(e) =>
+              setFormData({ ...formData, priority: parseInt(e.target.value) })
+            }
           />
           <p className="text-xs text-muted-foreground">
-            Lower numbers = higher priority. Rules are evaluated in priority order.
+            Lower numbers = higher priority. Rules are evaluated in priority
+            order.
           </p>
         </div>
 
@@ -104,7 +124,9 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
               <Label htmlFor="callerType">Caller Type (Optional)</Label>
               <Select
                 value={formData.callerType}
-                onValueChange={(value) => setFormData({ ...formData, callerType: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, callerType: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Any caller type" />
@@ -123,25 +145,35 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
               <Label>Time of Day (Optional)</Label>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="timeStart" className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="timeStart"
+                    className="text-xs text-muted-foreground"
+                  >
                     Start Time
                   </Label>
                   <Input
                     id="timeStart"
                     type="time"
                     value={formData.timeStart}
-                    onChange={(e) => setFormData({ ...formData, timeStart: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, timeStart: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="timeEnd" className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="timeEnd"
+                    className="text-xs text-muted-foreground"
+                  >
                     End Time
                   </Label>
                   <Input
                     id="timeEnd"
                     type="time"
                     value={formData.timeEnd}
-                    onChange={(e) => setFormData({ ...formData, timeEnd: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, timeEnd: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -154,7 +186,11 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
                 {daysOfWeek.map((day) => (
                   <Badge
                     key={day}
-                    variant={formData.selectedDays.includes(day) ? "default" : "outline"}
+                    variant={
+                      formData.selectedDays.includes(day)
+                        ? "default"
+                        : "outline"
+                    }
                     className="cursor-pointer capitalize"
                     onClick={() => toggleDay(day)}
                   >
@@ -171,30 +207,42 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
           <Label htmlFor="action">Action *</Label>
           <Select
             value={formData.action}
-            onValueChange={(value: any) => setFormData({ ...formData, action: value })}
+            onValueChange={(value: any) =>
+              setFormData({ ...formData, action: value })
+            }
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ai_handles">AI Handles Call</SelectItem>
-              <SelectItem value="transfer_to_staff">Transfer to Staff</SelectItem>
+              <SelectItem value="transfer_to_staff">
+                Transfer to Staff
+              </SelectItem>
               <SelectItem value="voicemail">Send to Voicemail</SelectItem>
-              <SelectItem value="specific_extension">Specific Extension</SelectItem>
+              <SelectItem value="specific_extension">
+                Specific Extension
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Destination (if transfer) */}
-        {(formData.action === "transfer_to_staff" || formData.action === "specific_extension") && (
+        {(formData.action === "transfer_to_staff" ||
+          formData.action === "specific_extension") && (
           <div className="space-y-2">
             <Label htmlFor="destination">
-              {formData.action === "transfer_to_staff" ? "Staff Member" : "Extension Number"} *
+              {formData.action === "transfer_to_staff"
+                ? "Staff Member"
+                : "Extension Number"}{" "}
+              *
             </Label>
             {formData.action === "transfer_to_staff" ? (
               <Select
                 value={formData.destination}
-                onValueChange={(value) => setFormData({ ...formData, destination: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, destination: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select staff member" />
@@ -209,7 +257,9 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
               <Input
                 id="destination"
                 value={formData.destination}
-                onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, destination: e.target.value })
+                }
                 placeholder="e.g., 101"
               />
             )}
@@ -221,7 +271,9 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
           <Checkbox
             id="enabled"
             checked={formData.enabled}
-            onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked as boolean })}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, enabled: checked as boolean })
+            }
           />
           <label
             htmlFor="enabled"
@@ -240,23 +292,39 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
                 <strong>If:</strong>
                 <ul className="ml-4 mt-1 space-y-1">
                   {formData.callerType && (
-                    <li>• Caller is: <Badge variant="outline" className="ml-1 capitalize">{formData.callerType}</Badge></li>
+                    <li>
+                      • Caller is:{" "}
+                      <Badge variant="outline" className="ml-1 capitalize">
+                        {formData.callerType}
+                      </Badge>
+                    </li>
                   )}
                   {formData.timeStart && formData.timeEnd && (
-                    <li>• Time between: {formData.timeStart} - {formData.timeEnd}</li>
+                    <li>
+                      • Time between: {formData.timeStart} - {formData.timeEnd}
+                    </li>
                   )}
                   {formData.selectedDays.length > 0 && (
-                    <li>• On days: {formData.selectedDays.map((d) => d.slice(0, 3)).join(", ")}</li>
+                    <li>
+                      • On days:{" "}
+                      {formData.selectedDays
+                        .map((d) => d.slice(0, 3))
+                        .join(", ")}
+                    </li>
                   )}
-                  {!formData.callerType && !formData.timeStart && formData.selectedDays.length === 0 && (
-                    <li>• Any call (no conditions set)</li>
-                  )}
+                  {!formData.callerType &&
+                    !formData.timeStart &&
+                    formData.selectedDays.length === 0 && (
+                      <li>• Any call (no conditions set)</li>
+                    )}
                 </ul>
               </div>
               <div>
                 <strong>Then:</strong>
                 <div className="ml-4 mt-1">
-                  • {formData.action.replace(/_/g, " ").charAt(0).toUpperCase() + formData.action.replace(/_/g, " ").slice(1)}
+                  •{" "}
+                  {formData.action.replace(/_/g, " ").charAt(0).toUpperCase() +
+                    formData.action.replace(/_/g, " ").slice(1)}
                   {formData.destination && ` → ${formData.destination}`}
                 </div>
               </div>
@@ -277,4 +345,3 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
     </>
   );
 }
-

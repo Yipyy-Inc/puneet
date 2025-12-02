@@ -38,14 +38,19 @@ export function ProcessRefundModal({
 }: ProcessRefundModalProps) {
   const [refundType, setRefundType] = useState<"full" | "partial">("full");
   const [refundAmount, setRefundAmount] = useState(payment?.totalAmount || 0);
-  const [refundMethod, setRefundMethod] = useState<"original" | "credit">("original");
+  const [refundMethod, setRefundMethod] = useState<"original" | "credit">(
+    "original",
+  );
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
 
   const maxRefundable = payment?.totalAmount || 0;
 
   const handleSubmit = () => {
-    if (refundType === "partial" && (refundAmount <= 0 || refundAmount > maxRefundable)) {
+    if (
+      refundType === "partial" &&
+      (refundAmount <= 0 || refundAmount > maxRefundable)
+    ) {
       alert("Please enter a valid refund amount");
       return;
     }
@@ -65,7 +70,7 @@ export function ProcessRefundModal({
     };
 
     console.log("Refund processed:", refund);
-    
+
     if (onSuccess) {
       onSuccess(refund);
     }
@@ -81,9 +86,7 @@ export function ProcessRefundModal({
             <RefreshCw className="h-5 w-5" />
             Process Refund
           </DialogTitle>
-          <DialogDescription>
-            Refund payment #{payment?.id}
-          </DialogDescription>
+          <DialogDescription>Refund payment #{payment?.id}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -91,12 +94,20 @@ export function ProcessRefundModal({
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">Original Payment</p>
-                  <p className="text-2xl font-bold">${maxRefundable.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Original Payment
+                  </p>
+                  <p className="text-2xl font-bold">
+                    ${maxRefundable.toFixed(2)}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Payment Method</p>
-                  <p className="font-medium capitalize">{payment?.paymentMethod?.replace("_", " ")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method
+                  </p>
+                  <p className="font-medium capitalize">
+                    {payment?.paymentMethod?.replace("_", " ")}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -104,7 +115,10 @@ export function ProcessRefundModal({
 
           <div className="space-y-2">
             <Label>Refund Type</Label>
-            <Select value={refundType} onValueChange={(v) => setRefundType(v as any)}>
+            <Select
+              value={refundType}
+              onValueChange={(v) => setRefundType(v as any)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -125,19 +139,26 @@ export function ProcessRefundModal({
                 max={maxRefundable}
                 step="0.01"
                 value={refundAmount}
-                onChange={(e) => setRefundAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  setRefundAmount(parseFloat(e.target.value) || 0)
+                }
               />
             </div>
           )}
 
           <div className="space-y-2">
             <Label>Refund Method</Label>
-            <Select value={refundMethod} onValueChange={(v) => setRefundMethod(v as any)}>
+            <Select
+              value={refundMethod}
+              onValueChange={(v) => setRefundMethod(v as any)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="original">Original Payment Method</SelectItem>
+                <SelectItem value="original">
+                  Original Payment Method
+                </SelectItem>
                 <SelectItem value="credit">Store Credit</SelectItem>
               </SelectContent>
             </Select>
@@ -185,11 +206,11 @@ export function ProcessRefundModal({
           </Button>
           <Button onClick={handleSubmit} variant="destructive">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Process Refund ${(refundType === "full" ? maxRefundable : refundAmount).toFixed(2)}
+            Process Refund $
+            {(refundType === "full" ? maxRefundable : refundAmount).toFixed(2)}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-

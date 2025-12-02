@@ -61,10 +61,14 @@ type InventoryMovementWithRecord = InventoryMovement & Record<string, unknown>;
 type LowStockAlertWithRecord = LowStockAlert & Record<string, unknown>;
 
 export default function InventoryPage() {
-  const [selectedTab, setSelectedTab] = useState<"overview" | "movements" | "alerts">("overview");
+  const [selectedTab, setSelectedTab] = useState<
+    "overview" | "movements" | "alerts"
+  >("overview");
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isAlertDetailModalOpen, setIsAlertDetailModalOpen] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<LowStockAlert | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<LowStockAlert | null>(
+    null,
+  );
 
   const [adjustmentForm, setAdjustmentForm] = useState({
     productId: "",
@@ -149,9 +153,7 @@ export default function InventoryPage() {
         const date = new Date(item.createdAt as string);
         return (
           <div>
-            <div className="font-medium">
-              {date.toLocaleDateString()}
-            </div>
+            <div className="font-medium">{date.toLocaleDateString()}</div>
             <div className="text-xs text-muted-foreground">
               {date.toLocaleTimeString()}
             </div>
@@ -186,7 +188,13 @@ export default function InventoryPage() {
       defaultVisible: true,
       render: (item) => (
         <Badge
-          variant={getMovementTypeVariant(item.movementType as string) as "default" | "secondary" | "destructive" | "outline"}
+          variant={
+            getMovementTypeVariant(item.movementType as string) as
+              | "default"
+              | "secondary"
+              | "destructive"
+              | "outline"
+          }
           className="gap-1"
         >
           {getMovementTypeIcon(item.movementType as string)}
@@ -204,7 +212,9 @@ export default function InventoryPage() {
         return (
           <span
             className={
-              qty > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"
+              qty > 0
+                ? "text-green-600 font-medium"
+                : "text-red-600 font-medium"
             }
           >
             {qty > 0 ? `+${qty}` : qty}
@@ -285,8 +295,8 @@ export default function InventoryPage() {
             item.status === "pending"
               ? "destructive"
               : item.status === "acknowledged"
-              ? "secondary"
-              : "default"
+                ? "secondary"
+                : "default"
           }
           className="gap-1"
         >
@@ -388,7 +398,9 @@ export default function InventoryPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Low Stock Items
+            </CardTitle>
             <Badge
               variant={lowStockItems.length > 0 ? "destructive" : "secondary"}
             >
@@ -402,7 +414,9 @@ export default function InventoryPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Alerts
+            </CardTitle>
             <Badge
               variant={pendingAlerts.length > 0 ? "destructive" : "secondary"}
             >
@@ -439,7 +453,10 @@ export default function InventoryPage() {
               <AlertTriangle className="h-4 w-4" />
               Alerts
               {pendingAlerts.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 text-xs">
+                <Badge
+                  variant="destructive"
+                  className="ml-1 h-5 w-5 p-0 text-xs"
+                >
                   {pendingAlerts.length}
                 </Badge>
               )}
@@ -475,8 +492,8 @@ export default function InventoryPage() {
                       const product = isVariant
                         ? products.find((p) =>
                             p.variants.some(
-                              (v) => v.id === (item as ProductVariant).id
-                            )
+                              (v) => v.id === (item as ProductVariant).id,
+                            ),
                           )
                         : (item as Product);
 
@@ -625,7 +642,9 @@ export default function InventoryPage() {
                   </DropdownMenuItem>
                   {item.status === "pending" && (
                     <DropdownMenuItem
-                      onClick={() => handleAcknowledgeAlert(item as LowStockAlert)}
+                      onClick={() =>
+                        handleAcknowledgeAlert(item as LowStockAlert)
+                      }
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Acknowledge
@@ -784,8 +803,8 @@ export default function InventoryPage() {
                       selectedAlert.status === "pending"
                         ? "destructive"
                         : selectedAlert.status === "acknowledged"
-                        ? "secondary"
-                        : "default"
+                          ? "secondary"
+                          : "default"
                     }
                   >
                     {selectedAlert.status.charAt(0).toUpperCase() +
@@ -796,7 +815,9 @@ export default function InventoryPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Acknowledged:</span>
                     <span>
-                      {new Date(selectedAlert.acknowledgedAt).toLocaleDateString()}{" "}
+                      {new Date(
+                        selectedAlert.acknowledgedAt,
+                      ).toLocaleDateString()}{" "}
                       by {selectedAlert.acknowledgedBy}
                     </span>
                   </div>

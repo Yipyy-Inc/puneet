@@ -59,22 +59,42 @@ export default function ReportsPage() {
   const facilityId = 1; // Mock facility ID
 
   // Calculate KPIs
-  const occupancy = calculateOccupancyRate(facilityId, dateRange.start, dateRange.end);
+  const occupancy = calculateOccupancyRate(
+    facilityId,
+    dateRange.start,
+    dateRange.end,
+  );
   const aov = calculateAOV(facilityId, dateRange.start, dateRange.end);
   const retention = calculateRetentionRate(facilityId, 3);
   const totalBookings = bookings.filter(
     (b) =>
       b.facilityId === facilityId &&
       new Date(b.startDate) >= new Date(dateRange.start) &&
-      new Date(b.startDate) <= new Date(dateRange.end)
+      new Date(b.startDate) <= new Date(dateRange.end),
   ).length;
 
   // Pre-built reports data
-  const occupancyData = generateOccupancyReport(facilityId, dateRange.start, dateRange.end);
-  const noShowData = generateNoShowReport(facilityId, dateRange.start, dateRange.end);
-  const cancellationData = generateCancellationReport(facilityId, dateRange.start, dateRange.end);
+  const occupancyData = generateOccupancyReport(
+    facilityId,
+    dateRange.start,
+    dateRange.end,
+  );
+  const noShowData = generateNoShowReport(
+    facilityId,
+    dateRange.start,
+    dateRange.end,
+  );
+  const cancellationData = generateCancellationReport(
+    facilityId,
+    dateRange.start,
+    dateRange.end,
+  );
   const topCustomersData = getTopCustomers(facilityId, 10);
-  const labourData = calculateLabourCost(facilityId, dateRange.start, dateRange.end);
+  const labourData = calculateLabourCost(
+    facilityId,
+    dateRange.start,
+    dateRange.end,
+  );
 
   // Occupancy Report Columns
   const occupancyColumns: ColumnDef<OccupancyReportData>[] = [
@@ -101,7 +121,8 @@ export default function ReportsPage() {
     {
       accessorKey: "occupiedKennels",
       header: "Occupied",
-      cell: ({ row }) => `${row.original.occupiedKennels} / ${row.original.totalKennels}`,
+      cell: ({ row }) =>
+        `${row.original.occupiedKennels} / ${row.original.totalKennels}`,
     },
     {
       accessorKey: "revenue",
@@ -186,7 +207,9 @@ export default function ReportsPage() {
       accessorKey: "reason",
       header: "Reason",
       cell: ({ row }) => (
-        <div className="max-w-xs truncate">{row.original.reason || "No reason provided"}</div>
+        <div className="max-w-xs truncate">
+          {row.original.reason || "No reason provided"}
+        </div>
       ),
     },
     {
@@ -204,7 +227,9 @@ export default function ReportsPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.client.name}</div>
-          <div className="text-sm text-muted-foreground">{row.original.client.email}</div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.client.email}
+          </div>
         </div>
       ),
     },
@@ -265,14 +290,18 @@ export default function ReportsPage() {
           <input
             type="date"
             value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+            onChange={(e) =>
+              setDateRange({ ...dateRange, start: e.target.value })
+            }
             className="px-3 py-2 border rounded-md"
           />
           <span className="text-muted-foreground">to</span>
           <input
             type="date"
             value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+            onChange={(e) =>
+              setDateRange({ ...dateRange, end: e.target.value })
+            }
             className="px-3 py-2 border rounded-md"
           />
         </div>
@@ -282,22 +311,30 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Bookings
+            </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-xs text-muted-foreground mt-1">For selected period</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              For selected period
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Occupancy Rate
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{occupancy.rate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {occupancy.rate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               {occupancy.occupiedDays} / {occupancy.totalCapacity} kennel-days
             </p>
@@ -306,7 +343,9 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Order Value</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Order Value
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -319,13 +358,18 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Retention Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Retention Rate
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{retention.rate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {retention.rate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {retention.returningClients} / {retention.totalClients} clients returning
+              {retention.returningClients} / {retention.totalClients} clients
+              returning
             </p>
           </CardContent>
         </Card>
@@ -373,7 +417,9 @@ export default function ReportsPage() {
                     Daily kennel occupancy rates and revenue
                   </p>
                 </div>
-                <Button onClick={() => handleExport("occupancy", occupancyData)}>
+                <Button
+                  onClick={() => handleExport("occupancy", occupancyData)}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -403,9 +449,14 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-sm">
-                    <span className="text-muted-foreground">Total Lost Revenue:</span>
+                    <span className="text-muted-foreground">
+                      Total Lost Revenue:
+                    </span>
                     <span className="ml-2 font-semibold text-destructive">
-                      ${noShowData.reduce((sum, d) => sum + d.revenue, 0).toFixed(2)}
+                      $
+                      {noShowData
+                        .reduce((sum, d) => sum + d.revenue, 0)
+                        .toFixed(2)}
                     </span>
                   </div>
                   <Button onClick={() => handleExport("no-show", noShowData)}>
@@ -439,12 +490,21 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-sm">
-                    <span className="text-muted-foreground">Total Refunds:</span>
+                    <span className="text-muted-foreground">
+                      Total Refunds:
+                    </span>
                     <span className="ml-2 font-semibold text-destructive">
-                      ${cancellationData.reduce((sum, d) => sum + d.refundAmount, 0).toFixed(2)}
+                      $
+                      {cancellationData
+                        .reduce((sum, d) => sum + d.refundAmount, 0)
+                        .toFixed(2)}
                     </span>
                   </div>
-                  <Button onClick={() => handleExport("cancellation", cancellationData)}>
+                  <Button
+                    onClick={() =>
+                      handleExport("cancellation", cancellationData)
+                    }
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
@@ -467,10 +527,14 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Labour Cost</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Labour Cost
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${labourData.totalCost.toFixed(2)}</div>
+                <div className="text-2xl font-bold">
+                  ${labourData.totalCost.toFixed(2)}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {labourData.totalHours} hours worked
                 </p>
@@ -479,31 +543,49 @@ export default function ReportsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Labour Percentage</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Labour Percentage
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{labourData.labourPercentage.toFixed(1)}%</div>
-                <p className="text-xs text-muted-foreground mt-1">Of total revenue</p>
+                <div className="text-2xl font-bold">
+                  {labourData.labourPercentage.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Of total revenue
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Avg Hourly Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg Hourly Rate
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${labourData.avgHourlyRate.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Across all staff</p>
+                <div className="text-2xl font-bold">
+                  ${labourData.avgHourlyRate.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across all staff
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Period Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Period Revenue
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${labourData.revenue.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Total period revenue</p>
+                <div className="text-2xl font-bold">
+                  ${labourData.revenue.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total period revenue
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -517,7 +599,11 @@ export default function ReportsPage() {
                     Individual staff labour costs
                   </p>
                 </div>
-                <Button onClick={() => handleExport("labour", labourData.staffBreakdown)}>
+                <Button
+                  onClick={() =>
+                    handleExport("labour", labourData.staffBreakdown)
+                  }
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -526,13 +612,20 @@ export default function ReportsPage() {
             <CardContent>
               <div className="space-y-3">
                 {labourData.staffBreakdown.map((staff, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
                     <div>
                       <div className="font-medium">{staff.staffName}</div>
-                      <div className="text-sm text-muted-foreground">{staff.role}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {staff.role}
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold">${staff.totalCost.toFixed(2)}</div>
+                      <div className="font-semibold">
+                        ${staff.totalCost.toFixed(2)}
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {staff.hoursWorked}h × ${staff.hourlyRate}/h
                       </div>
@@ -555,7 +648,11 @@ export default function ReportsPage() {
                     Your most valuable customers and their spending patterns
                   </p>
                 </div>
-                <Button onClick={() => handleExport("top-customers", topCustomersData)}>
+                <Button
+                  onClick={() =>
+                    handleExport("top-customers", topCustomersData)
+                  }
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
@@ -580,7 +677,8 @@ export default function ReportsPage() {
                 <div>
                   <CardTitle>Custom Reports</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Create and manage custom reports with your own fields and filters
+                    Create and manage custom reports with your own fields and
+                    filters
                   </p>
                 </div>
                 <Button onClick={() => setShowCustomBuilder(true)}>
@@ -592,7 +690,10 @@ export default function ReportsPage() {
             <CardContent>
               <div className="space-y-3">
                 {savedCustomReports.map((report) => (
-                  <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div
+                    key={report.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-muted-foreground" />
@@ -611,10 +712,12 @@ export default function ReportsPage() {
                           </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Fields:</span> {report.selectedFields.length}
+                          <span className="font-medium">Fields:</span>{" "}
+                          {report.selectedFields.length}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Filters:</span> {report.filters.length}
+                          <span className="font-medium">Filters:</span>{" "}
+                          {report.filters.length}
                         </div>
                         {report.schedule?.enabled && (
                           <Badge variant="secondary" className="text-xs">
@@ -624,16 +727,26 @@ export default function ReportsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => {
-                        alert(`Running report "${report.name}"... Report generated successfully!`);
-                      }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          alert(
+                            `Running report "${report.name}"... Report generated successfully!`,
+                          );
+                        }}
+                      >
                         <FileText className="h-4 w-4 mr-2" />
                         Run
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        setShowCustomBuilder(true);
-                        alert(`Edit settings for report "${report.name}"`);
-                      }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowCustomBuilder(true);
+                          alert(`Edit settings for report "${report.name}"`);
+                        }}
+                      >
                         <Settings className="h-4 w-4" />
                       </Button>
                     </div>
@@ -670,4 +783,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-

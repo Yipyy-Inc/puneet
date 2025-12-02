@@ -58,13 +58,15 @@ export function TakePaymentModal({
   invoiceId,
   onSuccess,
 }: TakePaymentModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash" | "gift_card">("card");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "card" | "cash" | "gift_card"
+  >("card");
   const [selectedClient, setSelectedClient] = useState(prefilledClient || 0);
   const [amount, setAmount] = useState(prefilledAmount || 0);
   const [tipAmount, setTipAmount] = useState(0);
   const [description, setDescription] = useState(prefilledDescription || "");
   const [notes, setNotes] = useState("");
-  
+
   // Card payment
   const [useNewCard, setUseNewCard] = useState(true);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
@@ -76,7 +78,9 @@ export function TakePaymentModal({
 
   // Gift card
   const [giftCardCode, setGiftCardCode] = useState("");
-  const [selectedGiftCard, setSelectedGiftCard] = useState<typeof giftCards[0] | null>(null);
+  const [selectedGiftCard, setSelectedGiftCard] = useState<
+    (typeof giftCards)[0] | null
+  >(null);
 
   // Credits
   const [applyCredit, setApplyCredit] = useState(false);
@@ -84,29 +88,44 @@ export function TakePaymentModal({
 
   const facilityClients = clients.filter((c) => c.id >= 15); // Simplified
   const selectedClientData = clients.find((c) => c.id === selectedClient);
-  
+
   // Get saved payment methods for selected client
-  const clientPaymentMethods = paymentMethods.filter((pm) => pm.clientId === selectedClient);
-  
+  const clientPaymentMethods = paymentMethods.filter(
+    (pm) => pm.clientId === selectedClient,
+  );
+
   // Get available credits for selected client
   const clientCredits = customerCredits.filter(
-    (c) => c.clientId === selectedClient && c.facilityId === facilityId && c.status === "active"
+    (c) =>
+      c.clientId === selectedClient &&
+      c.facilityId === facilityId &&
+      c.status === "active",
   );
-  const totalAvailableCredit = clientCredits.reduce((sum, c) => sum + c.remainingAmount, 0);
+  const totalAvailableCredit = clientCredits.reduce(
+    (sum, c) => sum + c.remainingAmount,
+    0,
+  );
 
   // Calculate totals
   const subtotal = amount;
-  const creditApplied = applyCredit ? Math.min(creditAmount, totalAvailableCredit, subtotal + tipAmount) : 0;
+  const creditApplied = applyCredit
+    ? Math.min(creditAmount, totalAvailableCredit, subtotal + tipAmount)
+    : 0;
   const total = subtotal + tipAmount - creditApplied;
 
   const handleGiftCardLookup = () => {
     const gc = giftCards.find(
-      (g) => g.code === giftCardCode && g.facilityId === facilityId && g.status === "active"
+      (g) =>
+        g.code === giftCardCode &&
+        g.facilityId === facilityId &&
+        g.status === "active",
     );
     if (gc) {
       setSelectedGiftCard(gc);
       if (gc.currentBalance < total) {
-        alert(`Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total amount`);
+        alert(
+          `Gift card balance ($${gc.currentBalance.toFixed(2)}) is less than total amount`,
+        );
       }
     } else {
       alert("Gift card not found or inactive");
@@ -172,18 +191,24 @@ export function TakePaymentModal({
       processedBy: "Current User", // Would come from auth
       processedById: 1,
       // Card details
-      ...(paymentMethod === "card" && useNewCard && {
-        cardBrand: detectCardBrand(cardNumber),
-        cardLast4: cardNumber.slice(-4),
-        stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
-        stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
-      }),
-      ...(paymentMethod === "card" && !useNewCard && {
-        cardBrand: clientPaymentMethods.find((pm) => pm.id === selectedPaymentMethod)?.cardBrand,
-        cardLast4: clientPaymentMethods.find((pm) => pm.id === selectedPaymentMethod)?.cardLast4,
-        stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
-        stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
-      }),
+      ...(paymentMethod === "card" &&
+        useNewCard && {
+          cardBrand: detectCardBrand(cardNumber),
+          cardLast4: cardNumber.slice(-4),
+          stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
+          stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
+        }),
+      ...(paymentMethod === "card" &&
+        !useNewCard && {
+          cardBrand: clientPaymentMethods.find(
+            (pm) => pm.id === selectedPaymentMethod,
+          )?.cardBrand,
+          cardLast4: clientPaymentMethods.find(
+            (pm) => pm.id === selectedPaymentMethod,
+          )?.cardLast4,
+          stripeChargeId: `ch_${Math.random().toString(36).substring(7)}`,
+          stripePaymentIntentId: `pi_${Math.random().toString(36).substring(7)}`,
+        }),
       // Gift card
       ...(paymentMethod === "gift_card" && {
         giftCardId: selectedGiftCard?.id,
@@ -196,7 +221,7 @@ export function TakePaymentModal({
     };
 
     console.log("Payment processed:", payment);
-    
+
     if (onSuccess) {
       onSuccess(payment);
     }
@@ -264,7 +289,9 @@ export function TakePaymentModal({
           {/* Client & Amount Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Payment Details</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Payment Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -274,7 +301,9 @@ export function TakePaymentModal({
                   </Label>
                   <Select
                     value={selectedClient.toString()}
-                    onValueChange={(value) => setSelectedClient(parseInt(value))}
+                    onValueChange={(value) =>
+                      setSelectedClient(parseInt(value))
+                    }
                     disabled={!!prefilledClient}
                   >
                     <SelectTrigger>
@@ -282,7 +311,10 @@ export function TakePaymentModal({
                     </SelectTrigger>
                     <SelectContent>
                       {facilityClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id.toString()}>
+                        <SelectItem
+                          key={client.id}
+                          value={client.id.toString()}
+                        >
                           {client.name} - {client.email}
                         </SelectItem>
                       ))}
@@ -302,7 +334,9 @@ export function TakePaymentModal({
                       min="0"
                       step="0.01"
                       value={amount || ""}
-                      onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setAmount(parseFloat(e.target.value) || 0)
+                      }
                       className="pl-9"
                       placeholder="0.00"
                       disabled={!!prefilledAmount}
@@ -335,7 +369,9 @@ export function TakePaymentModal({
                       min="0"
                       step="0.01"
                       value={tipAmount || ""}
-                      onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setTipAmount(parseFloat(e.target.value) || 0)
+                      }
                       className="pl-9"
                       placeholder="0.00"
                     />
@@ -350,7 +386,7 @@ export function TakePaymentModal({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setTipAmount(amount * 0.20)}
+                    onClick={() => setTipAmount(amount * 0.2)}
                   >
                     20%
                   </Button>
@@ -368,13 +404,21 @@ export function TakePaymentModal({
                         onCheckedChange={(checked) => {
                           setApplyCredit(!!checked);
                           if (checked) {
-                            setCreditAmount(Math.min(totalAvailableCredit, subtotal + tipAmount));
+                            setCreditAmount(
+                              Math.min(
+                                totalAvailableCredit,
+                                subtotal + tipAmount,
+                              ),
+                            );
                           } else {
                             setCreditAmount(0);
                           }
                         }}
                       />
-                      <Label htmlFor="apply-credit" className="text-sm font-medium">
+                      <Label
+                        htmlFor="apply-credit"
+                        className="text-sm font-medium"
+                      >
                         Apply Customer Credit
                       </Label>
                     </div>
@@ -393,7 +437,10 @@ export function TakePaymentModal({
                           id="credit-amount"
                           type="number"
                           min="0"
-                          max={Math.min(totalAvailableCredit, subtotal + tipAmount)}
+                          max={Math.min(
+                            totalAvailableCredit,
+                            subtotal + tipAmount,
+                          )}
                           step="0.01"
                           value={creditAmount || ""}
                           onChange={(e) =>
@@ -401,8 +448,8 @@ export function TakePaymentModal({
                               Math.min(
                                 parseFloat(e.target.value) || 0,
                                 totalAvailableCredit,
-                                subtotal + tipAmount
-                              )
+                                subtotal + tipAmount,
+                              ),
                             )
                           }
                           className="pl-9"
@@ -418,10 +465,15 @@ export function TakePaymentModal({
           {/* Payment Method Selection */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Payment Method</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Payment Method
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+              <Tabs
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as any)}
+              >
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="card">
                     <CreditCard className="h-4 w-4 mr-2" />
@@ -477,12 +529,16 @@ export function TakePaymentModal({
                               <SelectItem key={pm.id} value={pm.id}>
                                 <div className="flex items-center gap-2">
                                   <CreditCard className="h-4 w-4" />
-                                  <span className="uppercase">{pm.cardBrand}</span>
+                                  <span className="uppercase">
+                                    {pm.cardBrand}
+                                  </span>
                                   <span>•••• {pm.cardLast4}</span>
                                   <span className="text-muted-foreground text-xs">
                                     {pm.cardExpMonth}/{pm.cardExpYear}
                                   </span>
-                                  {pm.isDefault && <Badge variant="outline">Default</Badge>}
+                                  {pm.isDefault && (
+                                    <Badge variant="outline">Default</Badge>
+                                  )}
                                 </div>
                               </SelectItem>
                             ))}
@@ -500,7 +556,9 @@ export function TakePaymentModal({
                           id="card-number"
                           placeholder="1234 5678 9012 3456"
                           value={formatCardNumber(cardNumber)}
-                          onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, ""))}
+                          onChange={(e) =>
+                            setCardNumber(e.target.value.replace(/\s/g, ""))
+                          }
                           maxLength={19}
                         />
                       </div>
@@ -512,7 +570,9 @@ export function TakePaymentModal({
                             id="expiry"
                             placeholder="MM/YY"
                             value={formatExpiry(cardExpiry)}
-                            onChange={(e) => setCardExpiry(e.target.value.replace(/\D/g, ""))}
+                            onChange={(e) =>
+                              setCardExpiry(e.target.value.replace(/\D/g, ""))
+                            }
                             maxLength={5}
                           />
                         </div>
@@ -522,7 +582,9 @@ export function TakePaymentModal({
                             id="cvc"
                             placeholder="123"
                             value={cardCvc}
-                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, ""))}
+                            onChange={(e) =>
+                              setCardCvc(e.target.value.replace(/\D/g, ""))
+                            }
                             maxLength={4}
                             type="password"
                           />
@@ -553,7 +615,8 @@ export function TakePaymentModal({
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
                         <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
                         <p className="text-xs text-blue-800">
-                          Payments are securely processed through Stripe. Card details are never stored on our servers.
+                          Payments are securely processed through Stripe. Card
+                          details are never stored on our servers.
                         </p>
                       </div>
                     </div>
@@ -581,7 +644,9 @@ export function TakePaymentModal({
                           id="gift-card-code"
                           placeholder="GIFT-PAWS-2024-001"
                           value={giftCardCode}
-                          onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                          onChange={(e) =>
+                            setGiftCardCode(e.target.value.toUpperCase())
+                          }
                         />
                         <Button type="button" onClick={handleGiftCardLookup}>
                           Lookup
@@ -593,7 +658,9 @@ export function TakePaymentModal({
                       <div className="p-4 rounded-lg border bg-green-50 border-green-200">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <h4 className="font-semibold">{selectedGiftCard.code}</h4>
+                            <h4 className="font-semibold">
+                              {selectedGiftCard.code}
+                            </h4>
                             <Badge variant="outline" className="mt-1">
                               {selectedGiftCard.type}
                             </Badge>
@@ -602,7 +669,9 @@ export function TakePaymentModal({
                             <p className="text-2xl font-bold text-green-600">
                               ${selectedGiftCard.currentBalance.toFixed(2)}
                             </p>
-                            <p className="text-xs text-muted-foreground">Available Balance</p>
+                            <p className="text-xs text-muted-foreground">
+                              Available Balance
+                            </p>
                           </div>
                         </div>
                         {selectedGiftCard.recipientName && (
@@ -613,7 +682,8 @@ export function TakePaymentModal({
                         {selectedGiftCard.currentBalance < total && (
                           <div className="mt-3 p-2 rounded bg-red-50 border border-red-200">
                             <p className="text-sm text-red-800">
-                              ⚠️ Insufficient balance. This gift card cannot cover the full amount.
+                              ⚠️ Insufficient balance. This gift card cannot
+                              cover the full amount.
                             </p>
                           </div>
                         )}
@@ -648,13 +718,17 @@ export function TakePaymentModal({
                 {tipAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-sm">Tip:</span>
-                    <span className="font-medium">+${tipAmount.toFixed(2)}</span>
+                    <span className="font-medium">
+                      +${tipAmount.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {creditApplied > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span className="text-sm">Credit Applied:</span>
-                    <span className="font-medium">-${creditApplied.toFixed(2)}</span>
+                    <span className="font-medium">
+                      -${creditApplied.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t">
@@ -669,7 +743,11 @@ export function TakePaymentModal({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit}>
@@ -681,4 +759,3 @@ export function TakePaymentModal({
     </Dialog>
   );
 }
-

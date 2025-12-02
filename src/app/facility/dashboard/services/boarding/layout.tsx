@@ -81,7 +81,7 @@ export default function BoardingLayout({
                   "hover:bg-muted/50",
                   isActive
                     ? "bg-background border-b-2 border-primary text-primary"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />

@@ -101,11 +101,7 @@ export default function OnlineStorePage() {
         </div>
         <div className="flex items-center gap-2">
           {settings.apiConnected && (
-            <Button
-              variant="outline"
-              onClick={handleSync}
-              disabled={isSyncing}
-            >
+            <Button variant="outline" onClick={handleSync} disabled={isSyncing}>
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`}
               />
@@ -485,8 +481,9 @@ export default function OnlineStorePage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              You can find your API credentials in your online store&apos;s admin
-              settings under &quot;API Access&quot; or &quot;Integrations&quot;.
+              You can find your API credentials in your online store&apos;s
+              admin settings under &quot;API Access&quot; or
+              &quot;Integrations&quot;.
             </p>
           </div>
 

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +29,10 @@ interface CustomReportBuilderProps {
   existingReport?: CustomReportConfig;
 }
 
-export function CustomReportBuilder({ onClose, existingReport }: CustomReportBuilderProps) {
+export function CustomReportBuilder({
+  onClose,
+  existingReport,
+}: CustomReportBuilderProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [config, setConfig] = useState<Partial<CustomReportConfig>>({
     name: existingReport?.name || "",
@@ -121,7 +129,8 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
           {existingReport ? "Edit Custom Report" : "Create Custom Report"}
         </DialogTitle>
         <DialogDescription>
-          Build a custom report with your own fields, filters, and scheduling options.
+          Build a custom report with your own fields, filters, and scheduling
+          options.
         </DialogDescription>
       </DialogHeader>
 
@@ -145,7 +154,9 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                 >
                   {s.num}
                 </div>
-                <div className="text-xs mt-1 text-muted-foreground">{s.label}</div>
+                <div className="text-xs mt-1 text-muted-foreground">
+                  {s.label}
+                </div>
               </div>
               {idx < 3 && (
                 <div
@@ -176,7 +187,9 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
               <Textarea
                 id="description"
                 value={config.description}
-                onChange={(e) => setConfig({ ...config, description: e.target.value })}
+                onChange={(e) =>
+                  setConfig({ ...config, description: e.target.value })
+                }
                 placeholder="Brief description of what this report shows..."
                 rows={3}
               />
@@ -187,7 +200,11 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
               <Select
                 value={config.dataSource}
                 onValueChange={(value: any) =>
-                  setConfig({ ...config, dataSource: value, selectedFields: [] })
+                  setConfig({
+                    ...config,
+                    dataSource: value,
+                    selectedFields: [],
+                  })
                 }
               >
                 <SelectTrigger>
@@ -218,10 +235,15 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
               <CardContent className="pt-6">
                 <div className="grid grid-cols-2 gap-4">
                   {availableFields.map((field) => (
-                    <div key={field.key} className="flex items-center space-x-2">
+                    <div
+                      key={field.key}
+                      className="flex items-center space-x-2"
+                    >
                       <Checkbox
                         id={field.key}
-                        checked={(config.selectedFields || []).includes(field.key)}
+                        checked={(config.selectedFields || []).includes(
+                          field.key,
+                        )}
                         onCheckedChange={() => handleFieldToggle(field.key)}
                       />
                       <label
@@ -241,10 +263,14 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
 
             {config.selectedFields && config.selectedFields.length > 0 && (
               <div>
-                <Label className="text-sm">Selected Fields ({config.selectedFields.length})</Label>
+                <Label className="text-sm">
+                  Selected Fields ({config.selectedFields.length})
+                </Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {config.selectedFields.map((fieldKey) => {
-                    const field = availableFields.find((f) => f.key === fieldKey);
+                    const field = availableFields.find(
+                      (f) => f.key === fieldKey,
+                    );
                     return (
                       <Badge key={fieldKey} variant="secondary">
                         {field?.label}
@@ -308,7 +334,9 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                       <SelectContent>
                         <SelectItem value="equals">Equals</SelectItem>
                         <SelectItem value="contains">Contains</SelectItem>
-                        <SelectItem value="greater_than">Greater Than</SelectItem>
+                        <SelectItem value="greater_than">
+                          Greater Than
+                        </SelectItem>
                         <SelectItem value="less_than">Less Than</SelectItem>
                         <SelectItem value="between">Between</SelectItem>
                       </SelectContent>
@@ -325,7 +353,11 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                         }
                         placeholder="Enter value..."
                       />
-                      <Button onClick={handleAddFilter} size="icon" variant="outline">
+                      <Button
+                        onClick={handleAddFilter}
+                        size="icon"
+                        variant="outline"
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -336,10 +368,14 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
 
             {config.filters && config.filters.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Active Filters ({config.filters.length})</Label>
+                <Label className="text-sm">
+                  Active Filters ({config.filters.length})
+                </Label>
                 <div className="space-y-2">
                   {config.filters.map((filter, idx) => {
-                    const field = availableFields.find((f) => f.key === filter.field);
+                    const field = availableFields.find(
+                      (f) => f.key === filter.field,
+                    );
                     return (
                       <div
                         key={idx}
@@ -371,7 +407,9 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                 <Label>Sort By</Label>
                 <Select
                   value={config.sortBy}
-                  onValueChange={(value) => setConfig({ ...config, sortBy: value })}
+                  onValueChange={(value) =>
+                    setConfig({ ...config, sortBy: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select field" />
@@ -461,7 +499,9 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                     <SelectContent>
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="weekly">Weekly (Monday)</SelectItem>
-                      <SelectItem value="monthly">Monthly (1st of month)</SelectItem>
+                      <SelectItem value="monthly">
+                        Monthly (1st of month)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -493,7 +533,11 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
                   {config.schedule.recipients.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {config.schedule.recipients.map((email) => (
-                        <Badge key={email} variant="secondary" className="pl-3 pr-1">
+                        <Badge
+                          key={email}
+                          variant="secondary"
+                          className="pl-3 pr-1"
+                        >
                           {email}
                           <Button
                             variant="ghost"
@@ -518,7 +562,10 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
         <div className="flex items-center justify-between w-full">
           <div>
             {step > 1 && (
-              <Button variant="outline" onClick={() => setStep((step - 1) as any)}>
+              <Button
+                variant="outline"
+                onClick={() => setStep((step - 1) as any)}
+              >
                 Previous
               </Button>
             )}
@@ -548,4 +595,3 @@ export function CustomReportBuilder({ onClose, existingReport }: CustomReportBui
     </>
   );
 }
-

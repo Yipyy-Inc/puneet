@@ -58,9 +58,15 @@ export default function CommunicationsPage() {
       header: "Type",
       cell: ({ row }) => (
         <Badge variant="outline" className="capitalize">
-          {row.original.type === "email" && <Mail className="h-3 w-3 mr-1 inline" />}
-          {row.original.type === "sms" && <MessageSquare className="h-3 w-3 mr-1 inline" />}
-          {row.original.type === "in-app" && <Bell className="h-3 w-3 mr-1 inline" />}
+          {row.original.type === "email" && (
+            <Mail className="h-3 w-3 mr-1 inline" />
+          )}
+          {row.original.type === "sms" && (
+            <MessageSquare className="h-3 w-3 mr-1 inline" />
+          )}
+          {row.original.type === "in-app" && (
+            <Bell className="h-3 w-3 mr-1 inline" />
+          )}
           {row.original.type}
         </Badge>
       ),
@@ -69,7 +75,11 @@ export default function CommunicationsPage() {
       accessorKey: "direction",
       header: "Direction",
       cell: ({ row }) => (
-        <Badge variant={row.original.direction === "inbound" ? "default" : "secondary"}>
+        <Badge
+          variant={
+            row.original.direction === "inbound" ? "default" : "secondary"
+          }
+        >
           {row.original.direction === "inbound" ? "↓ In" : "↑ Out"}
         </Badge>
       ),
@@ -113,9 +123,13 @@ export default function CommunicationsPage() {
       cell: ({ row }) => (
         <Badge
           variant={
-            row.original.status === "read" ? "outline" :
-            row.original.status === "delivered" ? "default" :
-            row.original.status === "sent" ? "secondary" : "destructive"
+            row.original.status === "read"
+              ? "outline"
+              : row.original.status === "delivered"
+                ? "default"
+                : row.original.status === "sent"
+                  ? "secondary"
+                  : "destructive"
           }
         >
           {row.original.status}
@@ -243,7 +257,9 @@ export default function CommunicationsPage() {
       accessorKey: "notificationSent",
       header: "Notified",
       cell: ({ row }) => (
-        <Badge variant={row.original.notificationSent ? "default" : "secondary"}>
+        <Badge
+          variant={row.original.notificationSent ? "default" : "secondary"}
+        >
           {row.original.notificationSent ? "Sent" : "Pending"}
         </Badge>
       ),
@@ -256,7 +272,9 @@ export default function CommunicationsPage() {
       accessorKey: "type",
       header: "Type",
       cell: ({ row }) => (
-        <Badge variant={row.original.type === "inbound" ? "default" : "outline"}>
+        <Badge
+          variant={row.original.type === "inbound" ? "default" : "outline"}
+        >
           {row.original.type === "inbound" ? "↓ Inbound" : "↑ Outbound"}
         </Badge>
       ),
@@ -267,7 +285,9 @@ export default function CommunicationsPage() {
       cell: ({ row }) => (
         <div>
           <div>{row.original.clientName || "Unknown"}</div>
-          <div className="text-sm text-muted-foreground">{row.original.from}</div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.from}
+          </div>
         </div>
       ),
     },
@@ -324,9 +344,13 @@ export default function CommunicationsPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {row.original.recordingUrl && (
-            <Button variant="ghost" size="sm" onClick={() => {
-              alert(`Playing call recording from ${row.original.from}...`);
-            }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                alert(`Playing call recording from ${row.original.from}...`);
+              }}
+            >
               <Play className="h-4 w-4" />
             </Button>
           )}
@@ -380,10 +404,14 @@ export default function CommunicationsPage() {
       accessorKey: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" onClick={() => {
-          setShowRoutingModal(true);
-          alert(`Edit routing rule "${row.original.name}"`);
-        }}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setShowRoutingModal(true);
+            alert(`Edit routing rule "${row.original.name}"`);
+          }}
+        >
           <Settings className="h-4 w-4" />
         </Button>
       ),
@@ -469,7 +497,9 @@ export default function CommunicationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active Automations</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Active Automations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -483,11 +513,16 @@ export default function CommunicationsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Sent
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {automationRules.reduce((sum, r) => sum + r.stats.totalSent, 0)}
+                  {automationRules.reduce(
+                    (sum, r) => sum + r.stats.totalSent,
+                    0,
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">All time</p>
               </CardContent>
@@ -495,25 +530,39 @@ export default function CommunicationsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Email Automations</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Email Automations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {automationRules.filter((r) => r.messageType === "email").length}
+                  {
+                    automationRules.filter((r) => r.messageType === "email")
+                      .length
+                  }
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Active rules</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Active rules
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">SMS Automations</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  SMS Automations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {automationRules.filter((r) => r.messageType === "sms").length}
+                  {
+                    automationRules.filter((r) => r.messageType === "sms")
+                      .length
+                  }
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Active rules</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Active rules
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -578,7 +627,9 @@ export default function CommunicationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Calls
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{callLogs.length}</div>
@@ -588,21 +639,30 @@ export default function CommunicationsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">AI Handled</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  AI Handled
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {callLogs.filter((c) => c.aiHandled).length}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {((callLogs.filter((c) => c.aiHandled).length / callLogs.length) * 100).toFixed(0)}% of total
+                  {(
+                    (callLogs.filter((c) => c.aiHandled).length /
+                      callLogs.length) *
+                    100
+                  ).toFixed(0)}
+                  % of total
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Voicemails</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Voicemails
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -614,13 +674,18 @@ export default function CommunicationsPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg Duration
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {Math.floor(
-                    callLogs.reduce((sum, c) => sum + c.duration, 0) / callLogs.length / 60
-                  )}m
+                    callLogs.reduce((sum, c) => sum + c.duration, 0) /
+                      callLogs.length /
+                      60,
+                  )}
+                  m
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Per call</p>
               </CardContent>
@@ -747,7 +812,10 @@ export default function CommunicationsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCallDetailsModal} onOpenChange={setShowCallDetailsModal}>
+      <Dialog
+        open={showCallDetailsModal}
+        onOpenChange={setShowCallDetailsModal}
+      >
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           {selectedCall && (
             <CallDetailsModal
@@ -769,4 +837,3 @@ export default function CommunicationsPage() {
     </div>
   );
 }
-

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,7 +111,9 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             placeholder="Brief description of this segment..."
             rows={3}
           />
@@ -121,7 +128,9 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
                 <Label>Field</Label>
                 <Select
                   value={newFilter.field}
-                  onValueChange={(value) => setNewFilter({ ...newFilter, field: value })}
+                  onValueChange={(value) =>
+                    setNewFilter({ ...newFilter, field: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select field" />
@@ -140,7 +149,9 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
                 <Label>Operator</Label>
                 <Select
                   value={newFilter.operator}
-                  onValueChange={(value) => setNewFilter({ ...newFilter, operator: value })}
+                  onValueChange={(value) =>
+                    setNewFilter({ ...newFilter, operator: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -160,10 +171,16 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
                 <div className="flex gap-2">
                   <Input
                     value={newFilter.value}
-                    onChange={(e) => setNewFilter({ ...newFilter, value: e.target.value })}
+                    onChange={(e) =>
+                      setNewFilter({ ...newFilter, value: e.target.value })
+                    }
                     placeholder="Enter value..."
                   />
-                  <Button onClick={handleAddFilter} size="icon" variant="outline">
+                  <Button
+                    onClick={handleAddFilter}
+                    size="icon"
+                    variant="outline"
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -175,11 +192,17 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
         {/* Active Filters */}
         {formData.filters.length > 0 && (
           <div className="space-y-2">
-            <Label className="text-sm">Active Filters ({formData.filters.length})</Label>
+            <Label className="text-sm">
+              Active Filters ({formData.filters.length})
+            </Label>
             <div className="space-y-2">
               {formData.filters.map((filter, idx) => {
-                const fieldLabel = filterFields.find((f) => f.value === filter.field)?.label;
-                const operatorLabel = operators.find((o) => o.value === filter.operator)?.label;
+                const fieldLabel = filterFields.find(
+                  (f) => f.value === filter.field,
+                )?.label;
+                const operatorLabel = operators.find(
+                  (o) => o.value === filter.operator,
+                )?.label;
                 return (
                   <div
                     key={idx}
@@ -187,7 +210,9 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
                   >
                     <div className="text-sm">
                       <span className="font-medium">{fieldLabel}</span>
-                      <span className="mx-2 text-muted-foreground">{operatorLabel}</span>
+                      <span className="mx-2 text-muted-foreground">
+                        {operatorLabel}
+                      </span>
                       <span className="font-medium">{filter.value}</span>
                     </div>
                     <Button
@@ -210,8 +235,12 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm text-muted-foreground">Estimated Customers</Label>
-                  <div className="text-2xl font-bold mt-1">{estimatedCount}</div>
+                  <Label className="text-sm text-muted-foreground">
+                    Estimated Customers
+                  </Label>
+                  <div className="text-2xl font-bold mt-1">
+                    {estimatedCount}
+                  </div>
                 </div>
                 <Users className="h-12 w-12 text-muted-foreground opacity-20" />
               </div>
@@ -235,4 +264,3 @@ export function SegmentBuilderModal({ onClose }: SegmentBuilderModalProps) {
     </>
   );
 }
-

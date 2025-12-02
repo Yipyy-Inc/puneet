@@ -6,7 +6,7 @@ import { facilities } from "./facilities";
 export const calculateOccupancyRate = (
   facilityId: number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ) => {
   const facility = facilities.find((f) => f.id === facilityId);
   if (!facility) return { rate: 0, occupiedDays: 0, totalCapacity: 0 };
@@ -15,12 +15,13 @@ export const calculateOccupancyRate = (
     (b) =>
       b.facilityId === facilityId &&
       b.service === "boarding" &&
-      b.status !== "cancelled"
+      b.status !== "cancelled",
   );
 
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const daysDiff =
+    Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   // Assuming 20 kennels capacity
   const totalCapacity = daysDiff * 20;
@@ -32,7 +33,7 @@ export const calculateOccupancyRate = (
 
     // Count nights between dates
     const nights = Math.ceil(
-      (bookingEnd.getTime() - bookingStart.getTime()) / (1000 * 60 * 60 * 24)
+      (bookingEnd.getTime() - bookingStart.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     // Check if booking overlaps with our date range
@@ -50,16 +51,22 @@ export const calculateOccupancyRate = (
   };
 };
 
-export const calculateNoShowRate = (facilityId: number, startDate: string, endDate: string) => {
+export const calculateNoShowRate = (
+  facilityId: number,
+  startDate: string,
+  endDate: string,
+) => {
   const facilityBookings = bookings.filter(
     (b) =>
       b.facilityId === facilityId &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
 
   // In real app, would track actual no-shows. For now, simulate with cancelled bookings
-  const noShows = facilityBookings.filter((b) => b.status === "cancelled").length;
+  const noShows = facilityBookings.filter(
+    (b) => b.status === "cancelled",
+  ).length;
   const total = facilityBookings.length;
 
   return {
@@ -72,16 +79,18 @@ export const calculateNoShowRate = (facilityId: number, startDate: string, endDa
 export const calculateCancellationRate = (
   facilityId: number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ) => {
   const facilityBookings = bookings.filter(
     (b) =>
       b.facilityId === facilityId &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
 
-  const cancellations = facilityBookings.filter((b) => b.status === "cancelled").length;
+  const cancellations = facilityBookings.filter(
+    (b) => b.status === "cancelled",
+  ).length;
   const total = facilityBookings.length;
 
   return {
@@ -91,16 +100,23 @@ export const calculateCancellationRate = (
   };
 };
 
-export const calculateAOV = (facilityId: number, startDate: string, endDate: string) => {
+export const calculateAOV = (
+  facilityId: number,
+  startDate: string,
+  endDate: string,
+) => {
   const facilityBookings = bookings.filter(
     (b) =>
       b.facilityId === facilityId &&
       b.paymentStatus === "paid" &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
 
-  const totalRevenue = facilityBookings.reduce((sum, b) => sum + b.totalCost, 0);
+  const totalRevenue = facilityBookings.reduce(
+    (sum, b) => sum + b.totalCost,
+    0,
+  );
   const orderCount = facilityBookings.length;
 
   return {
@@ -110,10 +126,13 @@ export const calculateAOV = (facilityId: number, startDate: string, endDate: str
   };
 };
 
-export const calculateRetentionRate = (facilityId: number, months: number = 3) => {
+export const calculateRetentionRate = (
+  facilityId: number,
+  months: number = 3,
+) => {
   const facilityClients = clients.filter((c) => {
     const clientBookings = bookings.filter(
-      (b) => b.facilityId === facilityId && b.clientId === c.id
+      (b) => b.facilityId === facilityId && b.clientId === c.id,
     );
     return clientBookings.length > 0;
   });
@@ -126,13 +145,16 @@ export const calculateRetentionRate = (facilityId: number, months: number = 3) =
       (b) =>
         b.facilityId === facilityId &&
         b.clientId === client.id &&
-        new Date(b.startDate) >= threeMonthsAgo
+        new Date(b.startDate) >= threeMonthsAgo,
     );
     return clientBookings.length > 1; // Has multiple bookings
   });
 
   return {
-    rate: facilityClients.length > 0 ? (returningClients.length / facilityClients.length) * 100 : 0,
+    rate:
+      facilityClients.length > 0
+        ? (returningClients.length / facilityClients.length) * 100
+        : 0,
     returningClients: returningClients.length,
     totalClients: facilityClients.length,
   };
@@ -140,23 +162,27 @@ export const calculateRetentionRate = (facilityId: number, months: number = 3) =
 
 export const getTopCustomers = (facilityId: number, limit: number = 10) => {
   const facilityClients = clients.filter((c) => {
-    const clientBookings = bookings.filter((b) => b.facilityId === facilityId && b.clientId === c.id);
+    const clientBookings = bookings.filter(
+      (b) => b.facilityId === facilityId && b.clientId === c.id,
+    );
     return clientBookings.length > 0;
   });
 
   const clientStats = facilityClients.map((client) => {
     const clientBookings = bookings.filter(
-      (b) => b.facilityId === facilityId && b.clientId === client.id
+      (b) => b.facilityId === facilityId && b.clientId === client.id,
     );
     const totalSpent = clientBookings
       .filter((b) => b.paymentStatus === "paid")
       .reduce((sum, b) => sum + b.totalCost, 0);
     const totalBookings = clientBookings.length;
     const firstBooking = clientBookings.sort(
-      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )[0];
     const lastBooking = clientBookings.sort(
-      (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     )[0];
 
     // Calculate Customer Lifetime Value (CLV)
@@ -164,7 +190,8 @@ export const getTopCustomers = (facilityId: number, limit: number = 10) => {
       ? (new Date().getTime() - new Date(firstBooking.startDate).getTime()) /
         (1000 * 60 * 60 * 24 * 30)
       : 1;
-    const avgMonthlySpend = monthsSinceFirst > 0 ? totalSpent / monthsSinceFirst : totalSpent;
+    const avgMonthlySpend =
+      monthsSinceFirst > 0 ? totalSpent / monthsSinceFirst : totalSpent;
     const estimatedLifetimeMonths = 24; // Assume 2 year avg customer lifetime
     const clv = avgMonthlySpend * estimatedLifetimeMonths;
 
@@ -180,19 +207,48 @@ export const getTopCustomers = (facilityId: number, limit: number = 10) => {
     };
   });
 
-  return clientStats.sort((a, b) => b.totalSpent - a.totalSpent).slice(0, limit);
+  return clientStats
+    .sort((a, b) => b.totalSpent - a.totalSpent)
+    .slice(0, limit);
 };
 
-export const calculateLabourCost = (facilityId: number, startDate: string, endDate: string) => {
+export const calculateLabourCost = (
+  facilityId: number,
+  startDate: string,
+  endDate: string,
+) => {
   // Mock staff hourly rates and hours worked
   const staffHours = [
-    { staffName: "Sarah Johnson", role: "Manager", hourlyRate: 25, hoursWorked: 160 },
-    { staffName: "Mike Davis", role: "Staff", hourlyRate: 18, hoursWorked: 140 },
-    { staffName: "Emily Brown", role: "Groomer", hourlyRate: 22, hoursWorked: 120 },
-    { staffName: "Tom Wilson", role: "Front Desk", hourlyRate: 16, hoursWorked: 80 },
+    {
+      staffName: "Sarah Johnson",
+      role: "Manager",
+      hourlyRate: 25,
+      hoursWorked: 160,
+    },
+    {
+      staffName: "Mike Davis",
+      role: "Staff",
+      hourlyRate: 18,
+      hoursWorked: 140,
+    },
+    {
+      staffName: "Emily Brown",
+      role: "Groomer",
+      hourlyRate: 22,
+      hoursWorked: 120,
+    },
+    {
+      staffName: "Tom Wilson",
+      role: "Front Desk",
+      hourlyRate: 16,
+      hoursWorked: 80,
+    },
   ];
 
-  const totalCost = staffHours.reduce((sum, s) => sum + s.hourlyRate * s.hoursWorked, 0);
+  const totalCost = staffHours.reduce(
+    (sum, s) => sum + s.hourlyRate * s.hoursWorked,
+    0,
+  );
   const totalHours = staffHours.reduce((sum, s) => sum + s.hoursWorked, 0);
 
   // Calculate revenue for the period
@@ -201,7 +257,7 @@ export const calculateLabourCost = (facilityId: number, startDate: string, endDa
       b.facilityId === facilityId &&
       b.paymentStatus === "paid" &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
   const revenue = facilityBookings.reduce((sum, b) => sum + b.totalCost, 0);
 
@@ -286,7 +342,7 @@ export const reportTemplates = {
 export const generateOccupancyReport = (
   facilityId: number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): OccupancyReportData[] => {
   const data: OccupancyReportData[] = [];
   const start = new Date(startDate);
@@ -300,13 +356,20 @@ export const generateOccupancyReport = (
         b.service === "boarding" &&
         b.status !== "cancelled" &&
         new Date(b.startDate) <= d &&
-        new Date(b.endDate) >= d
+        new Date(b.endDate) >= d,
     );
 
     const occupiedKennels = dayBookings.length;
     const totalKennels = 20; // Mock capacity
     const occupancyRate = (occupiedKennels / totalKennels) * 100;
-    const revenue = dayBookings.reduce((sum, b) => sum + b.totalCost / ((new Date(b.endDate).getTime() - new Date(b.startDate).getTime()) / (1000 * 60 * 60 * 24) || 1), 0);
+    const revenue = dayBookings.reduce(
+      (sum, b) =>
+        sum +
+        b.totalCost /
+          ((new Date(b.endDate).getTime() - new Date(b.startDate).getTime()) /
+            (1000 * 60 * 60 * 24) || 1),
+      0,
+    );
 
     data.push({
       date: dateStr,
@@ -324,7 +387,7 @@ export const generateOccupancyReport = (
 export const generateNoShowReport = (
   facilityId: number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): NoShowReportData[] => {
   // In a real app, would track actual no-shows
   // For now, use cancelled bookings as proxy
@@ -333,7 +396,7 @@ export const generateNoShowReport = (
       b.facilityId === facilityId &&
       b.status === "cancelled" &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
 
   return cancelled.map((booking) => {
@@ -356,14 +419,14 @@ export const generateNoShowReport = (
 export const generateCancellationReport = (
   facilityId: number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): CancellationReportData[] => {
   const cancelled = bookings.filter(
     (b) =>
       b.facilityId === facilityId &&
       b.status === "cancelled" &&
       new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate)
+      new Date(b.startDate) <= new Date(endDate),
   );
 
   return cancelled.map((booking) => {
@@ -485,4 +548,3 @@ export const savedCustomReports: CustomReportConfig[] = [
     createdBy: "Mike Davis",
   },
 ];
-

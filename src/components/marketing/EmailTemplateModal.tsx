@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +27,10 @@ interface EmailTemplateModalProps {
   onClose: () => void;
 }
 
-export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProps) {
+export function EmailTemplateModal({
+  template,
+  onClose,
+}: EmailTemplateModalProps) {
   const [formData, setFormData] = useState({
     name: template?.name || "",
     subject: template?.subject || "",
@@ -73,7 +81,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., Welcome New Client"
               />
             </div>
@@ -83,7 +93,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, category: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -103,7 +115,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <Input
                 id="subject"
                 value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, subject: e.target.value })
+                }
                 placeholder="e.g., Welcome to {{facility_name}}!"
               />
             </div>
@@ -114,7 +128,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <Textarea
                 id="body"
                 value={formData.body}
-                onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, body: e.target.value })
+                }
                 placeholder="Enter your email content here..."
                 rows={10}
               />
@@ -123,7 +139,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
             {/* Available Variables */}
             <Card>
               <CardContent className="pt-6">
-                <Label className="text-sm font-medium">Available Variables</Label>
+                <Label className="text-sm font-medium">
+                  Available Variables
+                </Label>
                 <p className="text-sm text-muted-foreground mt-1 mb-3">
                   Click to insert into email body
                 </p>
@@ -148,10 +166,14 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm text-muted-foreground">From:</Label>
-                  <div className="font-medium">{'{{facility_name}}'} &lt;noreply@facility.com&gt;</div>
+                  <div className="font-medium">
+                    {"{{facility_name}}"} &lt;noreply@facility.com&gt;
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Subject:</Label>
+                  <Label className="text-sm text-muted-foreground">
+                    Subject:
+                  </Label>
                   <div className="font-medium">{formData.subject}</div>
                 </div>
                 <div className="border-t pt-4">
@@ -176,7 +198,10 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!formData.name || !formData.subject || !formData.body}>
+            <Button
+              onClick={handleSave}
+              disabled={!formData.name || !formData.subject || !formData.body}
+            >
               <Mail className="h-4 w-4 mr-2" />
               Save Template
             </Button>
@@ -186,4 +211,3 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
     </>
   );
 }
-

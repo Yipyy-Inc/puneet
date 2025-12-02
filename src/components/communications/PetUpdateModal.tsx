@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,19 +37,53 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
 
   // One-tap update types
   const quickUpdates = [
-    { type: "eating", emoji: "🍽️", label: "Eating Now", defaultMessage: "{{pet_name}} is enjoying their meal!" },
-    { type: "potty", emoji: "🚽", label: "Potty Break", defaultMessage: "{{pet_name}} just had a potty break - all good!" },
-    { type: "playtime", emoji: "🎾", label: "Play Time", defaultMessage: "{{pet_name}} is having fun playing!" },
-    { type: "naptime", emoji: "😴", label: "Nap Time", defaultMessage: "{{pet_name}} is taking a nice nap." },
-    { type: "medication", emoji: "💊", label: "Medication", defaultMessage: "{{pet_name}} received their medication." },
-    { type: "grooming", emoji: "✂️", label: "Grooming", defaultMessage: "{{pet_name}} is getting groomed." },
+    {
+      type: "eating",
+      emoji: "🍽️",
+      label: "Eating Now",
+      defaultMessage: "{{pet_name}} is enjoying their meal!",
+    },
+    {
+      type: "potty",
+      emoji: "🚽",
+      label: "Potty Break",
+      defaultMessage: "{{pet_name}} just had a potty break - all good!",
+    },
+    {
+      type: "playtime",
+      emoji: "🎾",
+      label: "Play Time",
+      defaultMessage: "{{pet_name}} is having fun playing!",
+    },
+    {
+      type: "naptime",
+      emoji: "😴",
+      label: "Nap Time",
+      defaultMessage: "{{pet_name}} is taking a nice nap.",
+    },
+    {
+      type: "medication",
+      emoji: "💊",
+      label: "Medication",
+      defaultMessage: "{{pet_name}} received their medication.",
+    },
+    {
+      type: "grooming",
+      emoji: "✂️",
+      label: "Grooming",
+      defaultMessage: "{{pet_name}} is getting groomed.",
+    },
   ];
 
   const handleQuickUpdate = (type: string, defaultMessage: string) => {
-    const selectedClient = clients.find((c) => c.id.toString() === formData.clientId);
-    const selectedPet = selectedClient?.pets.find((p) => p.id.toString() === formData.petId);
-    
-    const message = selectedPet 
+    const selectedClient = clients.find(
+      (c) => c.id.toString() === formData.clientId,
+    );
+    const selectedPet = selectedClient?.pets.find(
+      (p) => p.id.toString() === formData.petId,
+    );
+
+    const message = selectedPet
       ? defaultMessage.replace("{{pet_name}}", selectedPet.name)
       : defaultMessage;
 
@@ -61,11 +100,18 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
   };
 
   const handleSend = () => {
-    console.log("Sending pet update:", formData, "Photo attached:", photoAttached);
+    console.log(
+      "Sending pet update:",
+      formData,
+      "Photo attached:",
+      photoAttached,
+    );
     onClose();
   };
 
-  const selectedClient = clients.find((c) => c.id.toString() === formData.clientId);
+  const selectedClient = clients.find(
+    (c) => c.id.toString() === formData.clientId,
+  );
   const pets = selectedClient?.pets || [];
 
   return (
@@ -73,7 +119,8 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
       <DialogHeader>
         <DialogTitle>Send Pet Update</DialogTitle>
         <DialogDescription>
-          Quick updates with one-tap buttons - notifies owner via push notification
+          Quick updates with one-tap buttons - notifies owner via push
+          notification
         </DialogDescription>
       </DialogHeader>
 
@@ -83,7 +130,9 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
           <Label htmlFor="client">Select Client *</Label>
           <Select
             value={formData.clientId}
-            onValueChange={(value) => setFormData({ ...formData, clientId: value, petId: "" })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, clientId: value, petId: "" })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a client" />
@@ -104,7 +153,9 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
             <Label htmlFor="pet">Select Pet *</Label>
             <Select
               value={formData.petId}
-              onValueChange={(value) => setFormData({ ...formData, petId: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, petId: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a pet" />
@@ -132,9 +183,15 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                 {quickUpdates.map((update) => (
                   <Button
                     key={update.type}
-                    variant={formData.updateType === update.type ? "default" : "outline"}
+                    variant={
+                      formData.updateType === update.type
+                        ? "default"
+                        : "outline"
+                    }
                     className="h-20 flex-col gap-2"
-                    onClick={() => handleQuickUpdate(update.type, update.defaultMessage)}
+                    onClick={() =>
+                      handleQuickUpdate(update.type, update.defaultMessage)
+                    }
                   >
                     <span className="text-2xl">{update.emoji}</span>
                     <span className="text-sm">{update.label}</span>
@@ -153,7 +210,9 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
               <Textarea
                 id="message"
                 value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, message: e.target.value })
+                }
                 placeholder="Enter update message..."
                 rows={4}
               />
@@ -186,14 +245,22 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
             {/* Notification Preview */}
             <Card>
               <CardContent className="pt-6">
-                <Label className="text-base mb-3 block">Push Notification Preview</Label>
+                <Label className="text-base mb-3 block">
+                  Push Notification Preview
+                </Label>
                 <div className="p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
                     <Bell className="h-4 w-4" />
                     <span className="font-semibold">PawCare Facility</span>
                   </div>
                   <div className="text-sm">
-                    <strong>{pets.find((p) => p.id.toString() === formData.petId)?.name} Update:</strong>{" "}
+                    <strong>
+                      {
+                        pets.find((p) => p.id.toString() === formData.petId)
+                          ?.name
+                      }{" "}
+                      Update:
+                    </strong>{" "}
                     {formData.message}
                   </div>
                   <div className="text-xs text-muted-foreground">Just now</div>
@@ -219,4 +286,3 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
     </>
   );
 }
-

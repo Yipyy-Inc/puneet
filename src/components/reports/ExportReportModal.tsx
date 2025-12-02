@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,10 +20,14 @@ interface ExportReportModalProps {
   onClose: () => void;
 }
 
-export function ExportReportModal({ type, data, onClose }: ExportReportModalProps) {
+export function ExportReportModal({
+  type,
+  data,
+  onClose,
+}: ExportReportModalProps) {
   const [format, setFormat] = useState<"csv" | "pdf" | "excel">("csv");
   const [fileName, setFileName] = useState(
-    `${type}-report-${new Date().toISOString().split("T")[0]}`
+    `${type}-report-${new Date().toISOString().split("T")[0]}`,
   );
   const [includeHeaders, setIncludeHeaders] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -29,7 +38,7 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
 
     // Get all unique keys from the data
     const allKeys = Array.from(
-      new Set(data.flatMap((item) => getAllKeys(item)))
+      new Set(data.flatMap((item) => getAllKeys(item))),
     );
 
     // Create CSV content
@@ -45,7 +54,10 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
       const row = allKeys.map((key) => {
         const value = getNestedValue(item, key);
         // Escape values that contain commas or quotes
-        if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
+        if (
+          typeof value === "string" &&
+          (value.includes(",") || value.includes('"'))
+        ) {
           return `"${value.replace(/"/g, '""')}"`;
         }
         return value ?? "";
@@ -72,7 +84,7 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
     if (!printWindow) return;
 
     const allKeys = Array.from(
-      new Set(data.flatMap((item) => getAllKeys(item)))
+      new Set(data.flatMap((item) => getAllKeys(item))),
     );
 
     let html = `
@@ -109,8 +121,10 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
                 .map(
                   (item) =>
                     `<tr>${allKeys
-                      .map((key) => `<td>${getNestedValue(item, key) ?? ""}</td>`)
-                      .join("")}</tr>`
+                      .map(
+                        (key) => `<td>${getNestedValue(item, key) ?? ""}</td>`,
+                      )
+                      .join("")}</tr>`,
                 )
                 .join("")}
             </tbody>
@@ -134,7 +148,7 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
     if (data.length === 0) return;
 
     const allKeys = Array.from(
-      new Set(data.flatMap((item) => getAllKeys(item)))
+      new Set(data.flatMap((item) => getAllKeys(item))),
     );
 
     let tsv = "";
@@ -199,7 +213,11 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
     for (const key in obj) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
-      if (typeof obj[key] === "object" && obj[key] !== null && !Array.isArray(obj[key])) {
+      if (
+        typeof obj[key] === "object" &&
+        obj[key] !== null &&
+        !Array.isArray(obj[key])
+      ) {
         keys = keys.concat(getAllKeys(obj[key], fullKey));
       } else if (!Array.isArray(obj[key])) {
         keys.push(fullKey);
@@ -224,7 +242,7 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
           .trim()
           .split(" ")
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ")
+          .join(" "),
       )
       .join(" > ");
   };
@@ -240,7 +258,8 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
             Export Complete
           </DialogTitle>
           <DialogDescription>
-            Your report has been successfully exported as {format.toUpperCase()}.
+            Your report has been successfully exported as {format.toUpperCase()}
+            .
           </DialogDescription>
         </DialogHeader>
         <div className="py-6 text-center">
@@ -278,7 +297,9 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
               >
                 <CardContent className="pt-6 text-center">
                   <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <div className="font-medium capitalize">{fmt.toUpperCase()}</div>
+                  <div className="font-medium capitalize">
+                    {fmt.toUpperCase()}
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {fmt === "csv" && "Comma-separated values"}
                     {fmt === "pdf" && "Portable document"}
@@ -314,7 +335,9 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
               <Checkbox
                 id="includeHeaders"
                 checked={includeHeaders}
-                onCheckedChange={(checked) => setIncludeHeaders(checked as boolean)}
+                onCheckedChange={(checked) =>
+                  setIncludeHeaders(checked as boolean)
+                }
               />
               <label
                 htmlFor="includeHeaders"
@@ -332,7 +355,9 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Report Type:</span>
-                <span className="font-medium capitalize">{type.replace(/-/g, " ")}</span>
+                <span className="font-medium capitalize">
+                  {type.replace(/-/g, " ")}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Records:</span>
@@ -376,4 +401,3 @@ export function ExportReportModal({ type, data, onClose }: ExportReportModalProp
     </>
   );
 }
-

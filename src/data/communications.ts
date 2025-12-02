@@ -59,7 +59,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Buddy's Daily Update",
-    content: "Buddy had a great day! He played with 5 other dogs and took a nice nap.",
+    content:
+      "Buddy had a great day! He played with 5 other dogs and took a nice nap.",
     direction: "outbound",
     timestamp: "2024-03-08T15:30:00Z",
     staffName: "Mike Davis",
@@ -72,7 +73,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "note",
     subject: "Customer Inquiry",
-    content: "Called to ask about grooming services. Interested in full package.",
+    content:
+      "Called to ask about grooming services. Interested in full package.",
     direction: "inbound",
     timestamp: "2024-03-07T11:20:00Z",
     staffName: "Sarah Johnson",
@@ -84,7 +86,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "email",
     subject: "Vaccination Reminder for Max",
-    content: "Max's rabies vaccination is due to expire on April 15th. Please update records.",
+    content:
+      "Max's rabies vaccination is due to expire on April 15th. Please update records.",
     direction: "outbound",
     timestamp: "2024-03-05T09:00:00Z",
     staffName: "Sarah Johnson",
@@ -97,7 +100,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "call",
     subject: "Booking Discussion",
-    content: "Discussed upcoming boarding dates and special dietary requirements.",
+    content:
+      "Discussed upcoming boarding dates and special dietary requirements.",
     direction: "inbound",
     timestamp: "2024-02-28T14:30:00Z",
     staffName: "Mike Davis",
@@ -120,7 +124,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "email",
     subject: "Welcome to Paws & Play!",
-    content: "Thank you for choosing Paws & Play Daycare. We're excited to meet Rex!",
+    content:
+      "Thank you for choosing Paws & Play Daycare. We're excited to meet Rex!",
     direction: "outbound",
     timestamp: "2024-01-15T10:00:00Z",
     staffName: "Sarah Johnson",
@@ -139,7 +144,8 @@ export const clientCallHistory: CallRecord[] = [
     timestamp: "2024-03-08T10:15:00Z",
     staffName: "Sarah Johnson",
     staffId: 1,
-    notes: "Asked about availability for boarding next month. Booked March 12-15.",
+    notes:
+      "Asked about availability for boarding next month. Booked March 12-15.",
     status: "completed",
     recordingUrl: "/recordings/call-001.mp3",
   },
@@ -203,9 +209,9 @@ export const clientCallHistory: CallRecord[] = [
     timestamp: "2024-01-15T09:30:00Z",
     staffName: "Sarah Johnson",
     staffId: 1,
-    notes: "Initial inquiry call. Discussed services and pricing. Signed up for daycare.",
+    notes:
+      "Initial inquiry call. Discussed services and pricing. Signed up for daycare.",
     status: "completed",
     recordingUrl: "/recordings/call-006.mp3",
   },
 ];
-

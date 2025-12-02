@@ -71,7 +71,7 @@ export default function RetailLayout({
                   "group inline-flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium transition-colors",
                   isActive
                     ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
                 )}
               >
                 <tab.icon
@@ -79,7 +79,7 @@ export default function RetailLayout({
                     "h-4 w-4",
                     isActive
                       ? "text-primary"
-                      : "text-muted-foreground group-hover:text-foreground"
+                      : "text-muted-foreground group-hover:text-foreground",
                   )}
                 />
                 {tab.name}

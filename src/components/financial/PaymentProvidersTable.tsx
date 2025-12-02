@@ -23,7 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Settings, TrendingUp, Eye, Building } from "lucide-react";
+import {
+  MoreHorizontal,
+  Settings,
+  TrendingUp,
+  Eye,
+  Building,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,16 +41,17 @@ import {
 
 export function PaymentProvidersTable() {
   const [data, setData] = useState<PaymentProvider[]>(paymentProviders);
-  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider | null>(null);
+  const [selectedProvider, setSelectedProvider] =
+    useState<PaymentProvider | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showFacilitiesModal, setShowFacilitiesModal] = useState(false);
 
   const toggleProviderStatus = (providerId: string) => {
-    setData(prev =>
-      prev.map(p =>
-        p.id === providerId ? { ...p, isActive: !p.isActive } : p
-      )
+    setData((prev) =>
+      prev.map((p) =>
+        p.id === providerId ? { ...p, isActive: !p.isActive } : p,
+      ),
     );
   };
 
@@ -135,25 +142,45 @@ export function PaymentProvidersTable() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => { setSelectedProvider(item); setShowConfigModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedProvider(item);
+            setShowConfigModal(true);
+          }}
+        >
           <Settings className="mr-2 h-4 w-4" />
           Configure Provider
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { setSelectedProvider(item); setShowStatsModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedProvider(item);
+            setShowStatsModal(true);
+          }}
+        >
           <Eye className="mr-2 h-4 w-4" />
           View Statistics
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { setSelectedProvider(item); setShowFacilitiesModal(true); }}>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedProvider(item);
+            setShowFacilitiesModal(true);
+          }}
+        >
           <Building className="mr-2 h-4 w-4" />
           Manage Facilities
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {item.isActive ? (
-          <DropdownMenuItem className="text-red-600" onClick={() => toggleProviderStatus(item.id)}>
+          <DropdownMenuItem
+            className="text-red-600"
+            onClick={() => toggleProviderStatus(item.id)}
+          >
             Deactivate
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem onClick={() => toggleProviderStatus(item.id)}>Activate</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => toggleProviderStatus(item.id)}>
+            Activate
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -252,24 +279,43 @@ export function PaymentProvidersTable() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Processing Fee (%)</Label>
-                <Input type="number" step="0.01" defaultValue={selectedProvider.processingFeePercentage} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedProvider.processingFeePercentage}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Fixed Fee ($)</Label>
-                <Input type="number" step="0.01" defaultValue={selectedProvider.fixedFee} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedProvider.fixedFee}
+                />
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="font-medium">Provider Active</p>
-                  <p className="text-sm text-muted-foreground">Enable or disable this provider</p>
+                  <p className="text-sm text-muted-foreground">
+                    Enable or disable this provider
+                  </p>
                 </div>
-                <Switch checked={selectedProvider.isActive} onCheckedChange={() => toggleProviderStatus(selectedProvider.id)} />
+                <Switch
+                  checked={selectedProvider.isActive}
+                  onCheckedChange={() =>
+                    toggleProviderStatus(selectedProvider.id)
+                  }
+                />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfigModal(false)}>Cancel</Button>
-            <Button onClick={() => setShowConfigModal(false)}>Save Changes</Button>
+            <Button variant="outline" onClick={() => setShowConfigModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowConfigModal(false)}>
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -287,26 +333,41 @@ export function PaymentProvidersTable() {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-muted/50 rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">Total Transactions</p>
-                  <p className="text-2xl font-bold">{selectedProvider.statistics.totalTransactions.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Transactions
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {selectedProvider.statistics.totalTransactions.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Total Volume</p>
-                  <p className="text-2xl font-bold">${selectedProvider.statistics.totalVolume.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">
+                    ${selectedProvider.statistics.totalVolume.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Successful</p>
-                  <p className="text-2xl font-bold text-green-600">{selectedProvider.statistics.successfulTransactions.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {selectedProvider.statistics.successfulTransactions.toLocaleString()}
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Failed</p>
-                  <p className="text-2xl font-bold text-red-600">{selectedProvider.statistics.failedTransactions.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {selectedProvider.statistics.failedTransactions.toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div className="p-4 bg-muted/50 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Success Rate</p>
                 <p className="text-3xl font-bold">
-                  {((selectedProvider.statistics.successfulTransactions / selectedProvider.statistics.totalTransactions) * 100).toFixed(1)}%
+                  {(
+                    (selectedProvider.statistics.successfulTransactions /
+                      selectedProvider.statistics.totalTransactions) *
+                    100
+                  ).toFixed(1)}
+                  %
                 </p>
               </div>
             </div>
@@ -332,9 +393,17 @@ export function PaymentProvidersTable() {
           {selectedProvider && (
             <div className="space-y-2 py-4 max-h-[300px] overflow-y-auto">
               {selectedProvider.facilities.map((facility, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <span className="font-medium">{facility}</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-700">Connected</Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-700"
+                  >
+                    Connected
+                  </Badge>
                 </div>
               ))}
             </div>

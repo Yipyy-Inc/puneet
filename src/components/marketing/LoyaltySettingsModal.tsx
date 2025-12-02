@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +68,9 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="pointsPerDollar">Points Per Dollar Spent</Label>
+                    <Label htmlFor="pointsPerDollar">
+                      Points Per Dollar Spent
+                    </Label>
                     <Input
                       id="pointsPerDollar"
                       type="number"
@@ -71,7 +78,10 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
                       step="0.1"
                       value={formData.pointsPerDollar}
                       onChange={(e) =>
-                        setFormData({ ...formData, pointsPerDollar: parseFloat(e.target.value) })
+                        setFormData({
+                          ...formData,
+                          pointsPerDollar: parseFloat(e.target.value),
+                        })
                       }
                     />
                     <p className="text-xs text-muted-foreground">
@@ -87,7 +97,10 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
                       min="1"
                       value={formData.pointsValue}
                       onChange={(e) =>
-                        setFormData({ ...formData, pointsValue: parseFloat(e.target.value) })
+                        setFormData({
+                          ...formData,
+                          pointsValue: parseFloat(e.target.value),
+                        })
                       }
                     />
                     <p className="text-xs text-muted-foreground">
@@ -104,7 +117,10 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
                     min="1"
                     value={formData.expirationMonths}
                     onChange={(e) =>
-                      setFormData({ ...formData, expirationMonths: parseInt(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        expirationMonths: parseInt(e.target.value),
+                      })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
@@ -127,11 +143,15 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <span className="text-sm">Customer has 100 points</span>
-                    <span className="font-semibold">Worth ${formData.pointsValue}</span>
+                    <span className="font-semibold">
+                      Worth ${formData.pointsValue}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <span className="text-sm">Points expire after</span>
-                    <span className="font-semibold">{formData.expirationMonths} months</span>
+                    <span className="font-semibold">
+                      {formData.expirationMonths} months
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -142,7 +162,8 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
               <CardContent className="pt-6">
                 <Label className="text-base mb-2 block">Loyalty Tiers</Label>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Current tiers: {loyaltySettings.tiers.length} (Bronze, Silver, Gold, Platinum)
+                  Current tiers: {loyaltySettings.tiers.length} (Bronze, Silver,
+                  Gold, Platinum)
                 </p>
                 <div className="space-y-2">
                   {loyaltySettings.tiers.map((tier) => (
@@ -180,8 +201,8 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
                   <div>
                     <Label className="text-base">Auto-Reward</Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Points are automatically earned with each paid booking. Customers can redeem
-                      points at checkout for discounts.
+                      Points are automatically earned with each paid booking.
+                      Customers can redeem points at checkout for discounts.
                     </p>
                   </div>
                 </div>
@@ -203,4 +224,3 @@ export function LoyaltySettingsModal({ onClose }: LoyaltySettingsModalProps) {
     </>
   );
 }
-
