@@ -11,6 +11,9 @@ import {
   Box,
   Eye,
   EyeOff,
+  ImageIcon,
+  Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +64,7 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
 
   const [formData, setFormData] = useState({
@@ -82,6 +85,7 @@ export default function ProductsPage() {
     taxRate: 0,
     onlineVisible: true,
     tags: [] as string[],
+    imageUrl: "",
   });
 
   const [newTag, setNewTag] = useState("");
@@ -108,6 +112,7 @@ export default function ProductsPage() {
       taxRate: 0,
       onlineVisible: true,
       tags: [],
+      imageUrl: "",
     });
     setIsAddEditModalOpen(true);
   };
@@ -132,6 +137,7 @@ export default function ProductsPage() {
       taxRate: product.taxRate,
       onlineVisible: product.onlineVisible,
       tags: [...product.tags],
+      imageUrl: product.imageUrl || "",
     });
     setIsAddEditModalOpen(true);
   };
@@ -228,7 +234,7 @@ export default function ProductsPage() {
       render: (item) => {
         const stockStatus = getStockStatus(
           item.stock as number,
-          item.minStock as number,
+          item.minStock as number
         );
         return (
           <div className="flex items-center gap-2">
@@ -521,7 +527,7 @@ export default function ProductsPage() {
                           {product.variants.map((variant) => {
                             const variantStockStatus = getStockStatus(
                               variant.stock,
-                              variant.minStock,
+                              variant.minStock
                             );
                             return (
                               <div
@@ -614,6 +620,73 @@ export default function ProductsPage() {
               />
             </div>
 
+            <div className="grid gap-2">
+              <Label>Product Image</Label>
+              <div className="flex gap-4 items-start">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() =>
+                        document.getElementById("imageUpload")?.click()
+                      }
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload Image
+                    </Button>
+                    <input
+                      id="imageUpload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData({
+                              ...formData,
+                              imageUrl: reader.result as string,
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: JPG, PNG, GIF, WebP (max 5MB)
+                  </p>
+                </div>
+                {formData.imageUrl && (
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-lg border overflow-hidden">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Product preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect fill="%23f0f0f0" width="80" height="80"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-size="10">No image</text></svg>';
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={() => setFormData({ ...formData, imageUrl: "" })}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
@@ -640,7 +713,7 @@ export default function ProductsPage() {
                 <Select
                   value={formData.status}
                   onValueChange={(
-                    value: "active" | "inactive" | "discontinued",
+                    value: "active" | "inactive" | "discontinued"
                   ) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>

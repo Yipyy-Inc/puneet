@@ -8,7 +8,6 @@ import {
   Package,
   Warehouse,
   ClipboardList,
-  Globe,
 } from "lucide-react";
 
 const retailTabs = [
@@ -31,11 +30,6 @@ const retailTabs = [
     name: "Orders",
     href: "/facility/retail/orders",
     icon: ClipboardList,
-  },
-  {
-    name: "Online Store",
-    href: "/facility/retail/online-store",
-    icon: Globe,
   },
 ];
 
