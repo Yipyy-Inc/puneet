@@ -1,3 +1,296 @@
+// Shift Tasks - Tasks assigned to a shift (can be assigned to personnel or just to the shift itself)
+export interface ShiftTask {
+  id: number;
+  shiftId?: number; // Optional - if assigned to a specific shift
+  scheduleDate: string; // The date of the shift
+  shiftStartTime?: string; // Optional shift time slot
+  shiftEndTime?: string;
+  taskName: string;
+  description: string;
+  category:
+    | "feeding"
+    | "cleaning"
+    | "medication"
+    | "exercise"
+    | "grooming"
+    | "admin"
+    | "other";
+  priority: "low" | "medium" | "high" | "urgent";
+  assignedToStaffId?: number | null; // null = unassigned (anyone on shift can do it)
+  assignedToStaffName?: string | null;
+  status: "pending" | "in_progress" | "completed" | "skipped";
+  completedAt?: string;
+  completedByStaffId?: number;
+  completedByStaffName?: string;
+  notes?: string;
+  requiresPhoto: boolean;
+  photoUrl?: string;
+  facility: string;
+}
+
+export const shiftTasks: ShiftTask[] = [
+  {
+    id: 1,
+    scheduleDate: "2025-11-15",
+    shiftStartTime: "06:00",
+    shiftEndTime: "14:00",
+    taskName: "Morning Feeding - All Kennels",
+    description:
+      "Feed all boarded pets according to their dietary requirements",
+    category: "feeding",
+    priority: "high",
+    assignedToStaffId: null, // Anyone on shift
+    assignedToStaffName: null,
+    status: "completed",
+    completedAt: "2025-11-15T07:30:00",
+    completedByStaffId: 7,
+    completedByStaffName: "David Wilson",
+    requiresPhoto: false,
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 2,
+    scheduleDate: "2025-11-15",
+    shiftStartTime: "06:00",
+    shiftEndTime: "14:00",
+    taskName: "Kennel Deep Clean - Section A",
+    description: "Deep clean and sanitize kennels A1-A10",
+    category: "cleaning",
+    priority: "high",
+    assignedToStaffId: 7,
+    assignedToStaffName: "David Wilson",
+    status: "completed",
+    completedAt: "2025-11-15T10:00:00",
+    completedByStaffId: 7,
+    completedByStaffName: "David Wilson",
+    requiresPhoto: true,
+    photoUrl: "/uploads/cleaning-a-section.jpg",
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 3,
+    scheduleDate: "2025-11-15",
+    shiftStartTime: "08:00",
+    shiftEndTime: "16:00",
+    taskName: "Medication - Bella (K-5)",
+    description: "Administer heart medication to Bella - 1 tablet with food",
+    category: "medication",
+    priority: "urgent",
+    assignedToStaffId: 2,
+    assignedToStaffName: "Manager One",
+    status: "completed",
+    completedAt: "2025-11-15T08:45:00",
+    completedByStaffId: 2,
+    completedByStaffName: "Manager One",
+    requiresPhoto: true,
+    photoUrl: "/uploads/bella-med.jpg",
+    notes: "Bella took medication well with breakfast",
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 4,
+    scheduleDate: "2025-11-15",
+    shiftStartTime: "10:00",
+    shiftEndTime: "18:00",
+    taskName: "Afternoon Play Session",
+    description: "Supervised group play for daycare dogs - Group B",
+    category: "exercise",
+    priority: "medium",
+    assignedToStaffId: null,
+    assignedToStaffName: null,
+    status: "pending",
+    requiresPhoto: true,
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 5,
+    scheduleDate: "2025-11-15",
+    shiftStartTime: "14:00",
+    shiftEndTime: "22:00",
+    taskName: "Evening Feeding",
+    description: "Feed all boarded pets their evening meal",
+    category: "feeding",
+    priority: "high",
+    assignedToStaffId: null,
+    assignedToStaffName: null,
+    status: "pending",
+    requiresPhoto: false,
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 6,
+    scheduleDate: "2025-11-16",
+    shiftStartTime: "08:00",
+    shiftEndTime: "16:00",
+    taskName: "Inventory Check",
+    description: "Check and document food and supply levels",
+    category: "admin",
+    priority: "low",
+    assignedToStaffId: 6,
+    assignedToStaffName: "Emily Davis",
+    status: "pending",
+    requiresPhoto: false,
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 7,
+    scheduleDate: "2025-11-16",
+    shiftStartTime: "08:00",
+    shiftEndTime: "16:00",
+    taskName: "Grooming - Max (K-3)",
+    description: "Basic grooming - brush and nail trim for Max",
+    category: "grooming",
+    priority: "medium",
+    assignedToStaffId: null,
+    assignedToStaffName: null,
+    status: "pending",
+    requiresPhoto: true,
+    facility: "Paws & Play Daycare",
+  },
+];
+
+// Shift Swap Requests
+export interface ShiftSwapRequest {
+  id: number;
+  requestingStaffId: number;
+  requestingStaffName: string;
+  requestingShiftId: number;
+  requestingShiftDate: string;
+  requestingShiftTime: string; // e.g., "08:00 - 16:00"
+  targetStaffId?: number; // Optional - if requesting swap with specific person
+  targetStaffName?: string;
+  targetShiftId?: number;
+  targetShiftDate?: string;
+  targetShiftTime?: string;
+  reason: string;
+  status: "pending" | "approved" | "denied" | "cancelled";
+  requestedAt: string;
+  reviewedByStaffId?: number;
+  reviewedByStaffName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  facility: string;
+}
+
+export const shiftSwapRequests: ShiftSwapRequest[] = [
+  {
+    id: 1,
+    requestingStaffId: 5,
+    requestingStaffName: "Mike Chen",
+    requestingShiftId: 20,
+    requestingShiftDate: "2025-11-15",
+    requestingShiftTime: "09:00 - 17:00",
+    targetStaffId: 6,
+    targetStaffName: "Emily Davis",
+    targetShiftId: 26,
+    targetShiftDate: "2025-11-15",
+    targetShiftTime: "08:00 - 16:00",
+    reason: "Have a doctor's appointment in the afternoon",
+    status: "approved",
+    requestedAt: "2025-11-13T10:00:00",
+    reviewedByStaffId: 2,
+    reviewedByStaffName: "Manager One",
+    reviewedAt: "2025-11-13T14:30:00",
+    reviewNotes: "Both parties agreed. Swap confirmed.",
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 2,
+    requestingStaffId: 7,
+    requestingStaffName: "David Wilson",
+    requestingShiftId: 31,
+    requestingShiftDate: "2025-11-16",
+    requestingShiftTime: "14:00 - 22:00",
+    targetStaffId: undefined,
+    targetStaffName: undefined,
+    targetShiftId: undefined,
+    targetShiftDate: "2025-11-17",
+    targetShiftTime: undefined,
+    reason: "Family event on Saturday evening",
+    status: "pending",
+    requestedAt: "2025-11-14T09:00:00",
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 3,
+    requestingStaffId: 9,
+    requestingStaffName: "Tom Anderson",
+    requestingShiftId: 36,
+    requestingShiftDate: "2025-11-15",
+    requestingShiftTime: "12:00 - 20:00",
+    targetStaffId: 8,
+    targetStaffName: "Lisa Rodriguez",
+    targetShiftId: 34,
+    targetShiftDate: "2025-11-15",
+    targetShiftTime: "11:00 - 19:00",
+    reason: "Need to leave an hour earlier",
+    status: "denied",
+    requestedAt: "2025-11-12T16:00:00",
+    reviewedByStaffId: 2,
+    reviewedByStaffName: "Manager One",
+    reviewedAt: "2025-11-13T08:00:00",
+    reviewNotes:
+      "Lisa is not available for the extra hour. Please find another arrangement.",
+    facility: "Paws & Play Daycare",
+  },
+];
+
+// Sick Call-ins
+export interface SickCallIn {
+  id: number;
+  staffId: number;
+  staffName: string;
+  shiftId: number;
+  shiftDate: string;
+  shiftTime: string;
+  calledInAt: string;
+  reason: string;
+  expectedReturnDate?: string;
+  coverageStatus: "needs_coverage" | "covered" | "cancelled_shift";
+  coveredByStaffId?: number;
+  coveredByStaffName?: string;
+  approvedByStaffId?: number;
+  approvedByStaffName?: string;
+  notes?: string;
+  facility: string;
+}
+
+export const sickCallIns: SickCallIn[] = [
+  {
+    id: 1,
+    staffId: 8,
+    staffName: "Lisa Rodriguez",
+    shiftId: 35,
+    shiftDate: "2025-11-17",
+    shiftTime: "11:00 - 19:00",
+    calledInAt: "2025-11-17T06:30:00",
+    reason: "Stomach flu",
+    expectedReturnDate: "2025-11-19",
+    coverageStatus: "covered",
+    coveredByStaffId: 9,
+    coveredByStaffName: "Tom Anderson",
+    approvedByStaffId: 2,
+    approvedByStaffName: "Manager One",
+    notes: "Tom volunteered to cover. Get well soon!",
+    facility: "Paws & Play Daycare",
+  },
+  {
+    id: 2,
+    staffId: 6,
+    staffName: "Emily Davis",
+    shiftId: 29,
+    shiftDate: "2025-11-18",
+    shiftTime: "08:00 - 16:00",
+    calledInAt: "2025-11-18T05:45:00",
+    reason: "Migraine",
+    expectedReturnDate: "2025-11-19",
+    coverageStatus: "needs_coverage",
+    approvedByStaffId: 1,
+    approvedByStaffName: "Admin User",
+    facility: "Paws & Play Daycare",
+  },
+];
+
 // Staff Availability
 export interface StaffAvailability {
   id: number;
@@ -694,3 +987,36 @@ export const staffRates: StaffRate[] = [
     facility: "Paws & Play Daycare",
   },
 ];
+
+// Helper functions
+export const getShiftTasksForDate = (date: string) =>
+  shiftTasks.filter((t) => t.scheduleDate === date);
+
+export const getShiftTasksForShift = (
+  date: string,
+  startTime: string,
+  endTime: string,
+) =>
+  shiftTasks.filter(
+    (t) =>
+      t.scheduleDate === date &&
+      t.shiftStartTime === startTime &&
+      t.shiftEndTime === endTime,
+  );
+
+export const getPendingSwapRequests = () =>
+  shiftSwapRequests.filter((r) => r.status === "pending");
+
+export const getSickCallInsNeedingCoverage = () =>
+  sickCallIns.filter((s) => s.coverageStatus === "needs_coverage");
+
+export const getShiftTaskStats = (date: string) => {
+  const tasks = getShiftTasksForDate(date);
+  return {
+    total: tasks.length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    pending: tasks.filter((t) => t.status === "pending").length,
+    inProgress: tasks.filter((t) => t.status === "in_progress").length,
+    skipped: tasks.filter((t) => t.status === "skipped").length,
+  };
+};

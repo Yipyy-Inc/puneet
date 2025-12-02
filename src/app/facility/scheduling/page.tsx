@@ -5,7 +5,18 @@ import { useTranslations } from "next-intl";
 import { users } from "@/data/users";
 import { schedules } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
-import { shiftTemplates, staffRates } from "@/data/staff-availability";
+import {
+  shiftTemplates,
+  staffRates,
+  shiftTasks,
+  shiftSwapRequests,
+  sickCallIns,
+  staffAvailability,
+  type ShiftTask,
+  type SickCallIn,
+  getPendingSwapRequests,
+  getSickCallInsNeedingCoverage,
+} from "@/data/staff-availability";
 import {
   GenericCalendar,
   CalendarItem,
@@ -13,7 +24,20 @@ import {
 } from "@/components/ui/GenericCalendar";
 import { StaffConflictDetector } from "@/components/additional-features/StaffConflictDetector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Calendar } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  Phone,
+  ArrowLeftRight,
+  ClipboardList,
+  UserX,
+  CheckCircle2,
+  XCircle,
+  Clock as ClockIcon,
+  User,
+} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [
@@ -528,6 +552,86 @@ export default function FacilitySchedulingPage() {
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [copyTargetDate, setCopyTargetDate] = useState("");
 
+  // Sick call-in modal
+  const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
+  const [sickCallData, setSickCallData] = useState({
+    staffId: "",
+    shiftId: "",
+    reason: "",
+    expectedReturnDate: "",
+  });
+
+  // Shift swap modal
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [swapData, setSwapData] = useState({
+    requestingStaffId: "",
+    requestingShiftId: "",
+    targetStaffId: "",
+    targetShiftId: "",
+    reason: "",
+  });
+
+  // Shift task modal
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskData, setTaskData] = useState({
+    taskName: "",
+    description: "",
+    category: "other" as ShiftTask["category"],
+    priority: "medium" as ShiftTask["priority"],
+    scheduleDate: new Date().toISOString().split("T")[0],
+    shiftStartTime: "",
+    shiftEndTime: "",
+    assignedToStaffId: "",
+    requiresPhoto: false,
+  });
+
+  // Shift report modal
+  const [isShiftReportModalOpen, setIsShiftReportModalOpen] = useState(false);
+  const [selectedShiftForReport, setSelectedShiftForReport] = useState<
+    (typeof schedules)[number] | null
+  >(null);
+
+  // Find coverage modal
+  const [isFindCoverageModalOpen, setIsFindCoverageModalOpen] = useState(false);
+  const [selectedSickCallIn, setSelectedSickCallIn] =
+    useState<SickCallIn | null>(null);
+  const [selectedCoverageStaffId, setSelectedCoverageStaffId] =
+    useState<string>("");
+
+  // Get available staff for coverage
+  const getAvailableStaffForCoverage = (sickCall: SickCallIn | null) => {
+    if (!sickCall) return [];
+
+    const shiftDate = new Date(sickCall.shiftDate);
+    const dayOfWeek = shiftDate.getDay();
+    const [shiftStart] = sickCall.shiftTime.split(" - ");
+
+    // Find staff who are available on this day and not the sick staff member
+    const availableStaffIds = staffAvailability
+      .filter((av) => {
+        if (av.staffId === sickCall.staffId) return false;
+        if (av.dayOfWeek !== dayOfWeek) return false;
+        if (!av.isAvailable) return false;
+        // Check if their availability window covers the shift
+        return av.startTime <= shiftStart;
+      })
+      .map((av) => av.staffId);
+
+    // Get unique staff members who are available
+    const uniqueStaffIds = [...new Set(availableStaffIds)];
+
+    // Check if they're already scheduled for that date
+    const alreadyScheduledIds = facilitySchedules
+      .filter((s) => s.date === sickCall.shiftDate)
+      .map((s) => s.staffId);
+
+    return facilityStaff.filter(
+      (staff) =>
+        uniqueStaffIds.includes(staff.id) &&
+        !alreadyScheduledIds.includes(staff.id),
+    );
+  };
+
   if (!facility) {
     return <div>Facility not found</div>;
   }
@@ -740,6 +844,28 @@ export default function FacilitySchedulingPage() {
             <Calendar className="h-4 w-4 mr-2" />
             Schedule
           </TabsTrigger>
+          <TabsTrigger value="tasks">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Shift Tasks
+          </TabsTrigger>
+          <TabsTrigger value="sick">
+            <Phone className="h-4 w-4 mr-2" />
+            Sick Call-ins
+            {getSickCallInsNeedingCoverage().length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 px-1.5">
+                {getSickCallInsNeedingCoverage().length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="swaps">
+            <ArrowLeftRight className="h-4 w-4 mr-2" />
+            Shift Swaps
+            {getPendingSwapRequests().length > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                {getPendingSwapRequests().length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="conflicts">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Conflicts
@@ -860,6 +986,18 @@ export default function FacilitySchedulingPage() {
                                     className="h-6 px-2"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      setSelectedShiftForReport(schedule);
+                                      setIsShiftReportModalOpen(true);
+                                    }}
+                                  >
+                                    <ClipboardList className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       handleDeleteClick(schedule);
                                     }}
                                   >
@@ -951,6 +1089,16 @@ export default function FacilitySchedulingPage() {
                               onClick={() => handleEdit(schedule)}
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedShiftForReport(schedule);
+                                setIsShiftReportModalOpen(true);
+                              }}
+                            >
+                              <ClipboardList className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="outline"
@@ -1272,11 +1420,1233 @@ export default function FacilitySchedulingPage() {
           </Dialog>
         </TabsContent>
 
+        {/* Shift Tasks Tab */}
+        <TabsContent value="tasks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Shift Tasks</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Tasks assigned to shifts - can be assigned to specific
+                    personnel or anyone on shift
+                  </p>
+                </div>
+                <Button onClick={() => setIsTaskModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Task
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task</TableHead>
+                    <TableHead>Shift Time</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Completed By</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shiftTasks.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{task.taskName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {task.description}
+                          </div>
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {task.category}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{task.scheduleDate}</div>
+                          <div className="text-muted-foreground">
+                            {task.shiftStartTime} - {task.shiftEndTime}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {task.assignedToStaffName ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {task.assignedToStaffName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {task.assignedToStaffName}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge variant="secondary">
+                            <User className="h-3 w-3 mr-1" />
+                            Anyone on shift
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            task.priority === "urgent"
+                              ? "destructive"
+                              : task.priority === "high"
+                                ? "default"
+                                : task.priority === "medium"
+                                  ? "secondary"
+                                  : "outline"
+                          }
+                        >
+                          {task.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            task.status === "completed"
+                              ? "default"
+                              : task.status === "in_progress"
+                                ? "secondary"
+                                : task.status === "skipped"
+                                  ? "destructive"
+                                  : "outline"
+                          }
+                          className={
+                            task.status === "completed" ? "bg-green-600" : ""
+                          }
+                        >
+                          {task.status === "completed" && (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          )}
+                          {task.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {task.completedByStaffName ? (
+                          <div className="text-sm">
+                            <div>{task.completedByStaffName}</div>
+                            {task.completedAt && (
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(
+                                  task.completedAt,
+                                ).toLocaleTimeString()}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sick Call-ins Tab */}
+        <TabsContent value="sick" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserX className="h-5 w-5" />
+                    Sick Call-ins
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage staff sick calls and find coverage
+                  </p>
+                </div>
+                <Button onClick={() => setIsSickCallModalOpen(true)}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  Record Sick Call
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staff Member</TableHead>
+                    <TableHead>Shift</TableHead>
+                    <TableHead>Called In</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Coverage Status</TableHead>
+                    <TableHead>Covered By</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sickCallIns.map((callIn) => (
+                    <TableRow key={callIn.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {callIn.staffName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">
+                            {callIn.staffName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{callIn.shiftDate}</div>
+                          <div className="text-muted-foreground">
+                            {callIn.shiftTime}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(callIn.calledInAt).toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{callIn.reason}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            callIn.coverageStatus === "covered"
+                              ? "default"
+                              : callIn.coverageStatus === "needs_coverage"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                          className={
+                            callIn.coverageStatus === "covered"
+                              ? "bg-green-600"
+                              : ""
+                          }
+                        >
+                          {callIn.coverageStatus === "covered" && (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          )}
+                          {callIn.coverageStatus === "needs_coverage" && (
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                          )}
+                          {callIn.coverageStatus.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {callIn.coveredByStaffName ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {callIn.coveredByStaffName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {callIn.coveredByStaffName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {callIn.coverageStatus === "needs_coverage" && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSickCallIn(callIn);
+                              setSelectedCoverageStaffId("");
+                              setIsFindCoverageModalOpen(true);
+                            }}
+                          >
+                            Find Coverage
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Shift Swaps Tab */}
+        <TabsContent value="swaps" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowLeftRight className="h-5 w-5" />
+                    Shift Swap Requests
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Review and manage shift swap requests between staff
+                  </p>
+                </div>
+                <Button onClick={() => setIsSwapModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Swap Request
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Requesting Staff</TableHead>
+                    <TableHead>Their Shift</TableHead>
+                    <TableHead>Swap With</TableHead>
+                    <TableHead>Target Shift</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shiftSwapRequests.map((swap) => (
+                    <TableRow key={swap.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {swap.requestingStaffName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">
+                            {swap.requestingStaffName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{swap.requestingShiftDate}</div>
+                          <div className="text-muted-foreground">
+                            {swap.requestingShiftTime}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {swap.targetStaffName ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {swap.targetStaffName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {swap.targetStaffName}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline">
+                            <User className="h-3 w-3 mr-1" />
+                            Anyone available
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {swap.targetShiftDate ? (
+                          <div className="text-sm">
+                            <div>{swap.targetShiftDate}</div>
+                            {swap.targetShiftTime && (
+                              <div className="text-muted-foreground">
+                                {swap.targetShiftTime}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Any shift
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm max-w-[200px] truncate block">
+                          {swap.reason}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            swap.status === "approved"
+                              ? "default"
+                              : swap.status === "denied"
+                                ? "destructive"
+                                : swap.status === "pending"
+                                  ? "secondary"
+                                  : "outline"
+                          }
+                          className={
+                            swap.status === "approved" ? "bg-green-600" : ""
+                          }
+                        >
+                          {swap.status === "approved" && (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          )}
+                          {swap.status === "denied" && (
+                            <XCircle className="h-3 w-3 mr-1" />
+                          )}
+                          {swap.status === "pending" && (
+                            <ClockIcon className="h-3 w-3 mr-1" />
+                          )}
+                          {swap.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {swap.status === "pending" && (
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="default">
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Deny
+                            </Button>
+                          </div>
+                        )}
+                        {swap.status !== "pending" && swap.reviewNotes && (
+                          <span className="text-xs text-muted-foreground max-w-[150px] truncate block">
+                            {swap.reviewNotes}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Conflicts Tab */}
         <TabsContent value="conflicts" className="space-y-4">
           <StaffConflictDetector />
         </TabsContent>
       </Tabs>
+
+      {/* Sick Call-in Modal */}
+      <Dialog open={isSickCallModalOpen} onOpenChange={setIsSickCallModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Record Sick Call-in
+            </DialogTitle>
+            <DialogDescription>
+              Record a staff member calling in sick and manage shift coverage.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sickStaffId">Staff Member</Label>
+              <Select
+                value={sickCallData.staffId}
+                onValueChange={(value) =>
+                  setSickCallData({ ...sickCallData, staffId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilityStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sickShiftId">Shift</Label>
+              <Select
+                value={sickCallData.shiftId}
+                onValueChange={(value) =>
+                  setSickCallData({ ...sickCallData, shiftId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift to cover" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilitySchedules
+                    .filter(
+                      (s) =>
+                        s.staffId.toString() === sickCallData.staffId &&
+                        s.status === "scheduled",
+                    )
+                    .map((schedule) => (
+                      <SelectItem
+                        key={schedule.id}
+                        value={schedule.id.toString()}
+                      >
+                        {schedule.date} ({schedule.startTime} -{" "}
+                        {schedule.endTime})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sickReason">Reason</Label>
+              <Textarea
+                id="sickReason"
+                placeholder="e.g., Flu symptoms, migraine..."
+                value={sickCallData.reason}
+                onChange={(e) =>
+                  setSickCallData({ ...sickCallData, reason: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="returnDate">Expected Return Date</Label>
+              <Input
+                id="returnDate"
+                type="date"
+                value={sickCallData.expectedReturnDate}
+                onChange={(e) =>
+                  setSickCallData({
+                    ...sickCallData,
+                    expectedReturnDate: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSickCallModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => setIsSickCallModalOpen(false)}>
+              Record Call-in
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Swap Modal */}
+      <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5" />
+              Request Shift Swap
+            </DialogTitle>
+            <DialogDescription>
+              Request to swap shifts with another staff member.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Requesting Staff Member</Label>
+              <Select
+                value={swapData.requestingStaffId}
+                onValueChange={(value) =>
+                  setSwapData({ ...swapData, requestingStaffId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilityStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Their Shift to Swap</Label>
+              <Select
+                value={swapData.requestingShiftId}
+                onValueChange={(value) =>
+                  setSwapData({ ...swapData, requestingShiftId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilitySchedules
+                    .filter(
+                      (s) =>
+                        s.staffId.toString() === swapData.requestingStaffId &&
+                        s.status === "scheduled",
+                    )
+                    .map((schedule) => (
+                      <SelectItem
+                        key={schedule.id}
+                        value={schedule.id.toString()}
+                      >
+                        {schedule.date} ({schedule.startTime} -{" "}
+                        {schedule.endTime})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Swap With (Optional)</Label>
+              <Select
+                value={swapData.targetStaffId}
+                onValueChange={(value) =>
+                  setSwapData({ ...swapData, targetStaffId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Anyone available" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="anyone">Anyone available</SelectItem>
+                  {facilityStaff
+                    .filter(
+                      (s) => s.id.toString() !== swapData.requestingStaffId,
+                    )
+                    .map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id.toString()}>
+                        {staff.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {swapData.targetStaffId && (
+              <div className="space-y-2">
+                <Label>Target Shift</Label>
+                <Select
+                  value={swapData.targetShiftId}
+                  onValueChange={(value) =>
+                    setSwapData({ ...swapData, targetShiftId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {facilitySchedules
+                      .filter(
+                        (s) =>
+                          s.staffId.toString() === swapData.targetStaffId &&
+                          s.status === "scheduled",
+                      )
+                      .map((schedule) => (
+                        <SelectItem
+                          key={schedule.id}
+                          value={schedule.id.toString()}
+                        >
+                          {schedule.date} ({schedule.startTime} -{" "}
+                          {schedule.endTime})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Reason for Swap</Label>
+              <Textarea
+                placeholder="Why do you need to swap this shift?"
+                value={swapData.reason}
+                onChange={(e) =>
+                  setSwapData({ ...swapData, reason: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSwapModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsSwapModalOpen(false)}>
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Task Modal */}
+      <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Add Shift Task
+            </DialogTitle>
+            <DialogDescription>
+              Create a task for a shift. Assign to specific personnel or leave
+              unassigned for anyone on shift.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Name</Label>
+              <Input
+                placeholder="e.g., Morning Feeding"
+                value={taskData.taskName}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, taskName: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Describe the task..."
+                value={taskData.description}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, description: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={taskData.category}
+                  onValueChange={(value: ShiftTask["category"]) =>
+                    setTaskData({ ...taskData, category: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="feeding">Feeding</SelectItem>
+                    <SelectItem value="cleaning">Cleaning</SelectItem>
+                    <SelectItem value="medication">Medication</SelectItem>
+                    <SelectItem value="exercise">Exercise</SelectItem>
+                    <SelectItem value="grooming">Grooming</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select
+                  value={taskData.priority}
+                  onValueChange={(value: ShiftTask["priority"]) =>
+                    setTaskData({ ...taskData, priority: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={taskData.scheduleDate}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, scheduleDate: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Shift Start Time</Label>
+                <Select
+                  value={taskData.shiftStartTime}
+                  onValueChange={(value) =>
+                    setTaskData({ ...taskData, shiftStartTime: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Shift End Time</Label>
+                <Select
+                  value={taskData.shiftEndTime}
+                  onValueChange={(value) =>
+                    setTaskData({ ...taskData, shiftEndTime: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assign To (Optional)</Label>
+              <Select
+                value={taskData.assignedToStaffId}
+                onValueChange={(value) =>
+                  setTaskData({ ...taskData, assignedToStaffId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Anyone on shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="anyone">Anyone on shift</SelectItem>
+                  {facilityStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Leave unassigned if any staff member on the shift can complete
+                this task.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="requiresPhoto"
+                checked={taskData.requiresPhoto}
+                onCheckedChange={(checked) =>
+                  setTaskData({ ...taskData, requiresPhoto: !!checked })
+                }
+              />
+              <Label htmlFor="requiresPhoto" className="font-normal">
+                Requires photo proof
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTaskModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsTaskModalOpen(false)}>Add Task</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Find Coverage Modal */}
+      <Dialog
+        open={isFindCoverageModalOpen}
+        onOpenChange={setIsFindCoverageModalOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Find Coverage
+            </DialogTitle>
+            {selectedSickCallIn && (
+              <DialogDescription>
+                Find a replacement for {selectedSickCallIn.staffName}&apos;s
+                shift on {selectedSickCallIn.shiftDate} (
+                {selectedSickCallIn.shiftTime})
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            {selectedSickCallIn && (
+              <>
+                {/* Shift Details */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Shift Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Date:</span>
+                        <p className="font-medium">
+                          {selectedSickCallIn.shiftDate}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Time:</span>
+                        <p className="font-medium">
+                          {selectedSickCallIn.shiftTime}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Reason:</span>
+                        <p className="font-medium">
+                          {selectedSickCallIn.reason}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Available Staff */}
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">
+                    Available Staff
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Staff members available on this day who are not already
+                    scheduled
+                  </p>
+
+                  {getAvailableStaffForCoverage(selectedSickCallIn).length >
+                  0 ? (
+                    <div className="space-y-2 mt-3">
+                      {getAvailableStaffForCoverage(selectedSickCallIn).map(
+                        (staff) => {
+                          const availability = staffAvailability.find(
+                            (av) =>
+                              av.staffId === staff.id &&
+                              av.dayOfWeek ===
+                                new Date(selectedSickCallIn.shiftDate).getDay(),
+                          );
+                          return (
+                            <div
+                              key={staff.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedCoverageStaffId === staff.id.toString()
+                                  ? "border-primary bg-primary/5"
+                                  : "hover:bg-muted/50"
+                              }`}
+                              onClick={() =>
+                                setSelectedCoverageStaffId(staff.id.toString())
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback>
+                                    {staff.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{staff.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {staff.role}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                {availability && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Available: {availability.startTime} -{" "}
+                                    {availability.endTime}
+                                  </p>
+                                )}
+                                {selectedCoverageStaffId ===
+                                  staff.id.toString() && (
+                                  <Badge className="mt-1 bg-green-600">
+                                    Selected
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  ) : (
+                    <Card className="bg-muted/50">
+                      <CardContent className="py-8 text-center">
+                        <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">
+                          No available staff found for this shift
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          All available staff are already scheduled or
+                          unavailable
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Send Request Options */}
+                {getAvailableStaffForCoverage(selectedSickCallIn).length >
+                  0 && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <Label className="text-base font-semibold">
+                      Coverage Options
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          // Would send to all available staff
+                          setIsFindCoverageModalOpen(false);
+                        }}
+                      >
+                        <Phone className="h-4 w-4 mr-2" />
+                        Notify All Available
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        disabled={!selectedCoverageStaffId}
+                        onClick={() => {
+                          // Would assign to selected staff
+                          setIsFindCoverageModalOpen(false);
+                        }}
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Assign Selected
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsFindCoverageModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Report Modal */}
+      <Dialog
+        open={isShiftReportModalOpen}
+        onOpenChange={setIsShiftReportModalOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Shift Report
+            </DialogTitle>
+            {selectedShiftForReport && (
+              <DialogDescription>
+                Task report for {selectedShiftForReport.staffName} on{" "}
+                {selectedShiftForReport.date} (
+                {selectedShiftForReport.startTime} -{" "}
+                {selectedShiftForReport.endTime})
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="py-4">
+            {selectedShiftForReport && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="text-2xl font-bold">
+                        {
+                          shiftTasks.filter(
+                            (t) =>
+                              t.scheduleDate === selectedShiftForReport.date &&
+                              t.shiftStartTime ===
+                                selectedShiftForReport.startTime,
+                          ).length
+                        }
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Total Tasks
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="text-2xl font-bold text-green-600">
+                        {
+                          shiftTasks.filter(
+                            (t) =>
+                              t.scheduleDate === selectedShiftForReport.date &&
+                              t.shiftStartTime ===
+                                selectedShiftForReport.startTime &&
+                              t.status === "completed",
+                          ).length
+                        }
+                      </div>
+                      <p className="text-xs text-muted-foreground">Completed</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {
+                          shiftTasks.filter(
+                            (t) =>
+                              t.scheduleDate === selectedShiftForReport.date &&
+                              t.shiftStartTime ===
+                                selectedShiftForReport.startTime &&
+                              t.status === "pending",
+                          ).length
+                        }
+                      </div>
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="text-2xl font-bold text-red-600">
+                        {
+                          shiftTasks.filter(
+                            (t) =>
+                              t.scheduleDate === selectedShiftForReport.date &&
+                              t.shiftStartTime ===
+                                selectedShiftForReport.startTime &&
+                              t.status === "skipped",
+                          ).length
+                        }
+                      </div>
+                      <p className="text-xs text-muted-foreground">Skipped</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Completed By</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shiftTasks
+                      .filter(
+                        (t) =>
+                          t.scheduleDate === selectedShiftForReport.date &&
+                          t.shiftStartTime === selectedShiftForReport.startTime,
+                      )
+                      .map((task) => (
+                        <TableRow key={task.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{task.taskName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {task.description}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                task.priority === "urgent"
+                                  ? "destructive"
+                                  : task.priority === "high"
+                                    ? "default"
+                                    : "outline"
+                              }
+                            >
+                              {task.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                task.status === "completed"
+                                  ? "default"
+                                  : task.status === "skipped"
+                                    ? "destructive"
+                                    : "outline"
+                              }
+                              className={
+                                task.status === "completed"
+                                  ? "bg-green-600"
+                                  : ""
+                              }
+                            >
+                              {task.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {task.completedByStaffName || "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setIsShiftReportModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
