@@ -51,6 +51,10 @@ import {
   CreditCard,
   MessageSquare,
   Scissors,
+  UserMinus,
+  UserCheck,
+  Mail,
+  Headphones,
 } from "lucide-react";
 
 // Mock data for charts
@@ -85,10 +89,106 @@ const reservationVolumeData = [
 ];
 
 const activityData = [
-  { name: "Active", value: 45, color: "#22c55e" },
-  { name: "Pending", value: 23, color: "#f59e0b" },
-  { name: "Completed", value: 32, color: "#0ea5e9" },
+  { name: "Completed", value: 542, color: "#22c55e" },
+  { name: "Pending", value: 156, color: "#f59e0b" },
+  { name: "Cancelled", value: 88, color: "#ef4444" },
 ];
+
+// Churn rate data (monthly)
+const churnRateData = [
+  { month: "Jan", rate: 2.1 },
+  { month: "Feb", rate: 1.9 },
+  { month: "Mar", rate: 2.3 },
+  { month: "Apr", rate: 1.8 },
+  { month: "May", rate: 1.6 },
+  { month: "Jun", rate: 1.5 },
+];
+
+// Daily active users data (last 7 days)
+const dailyActiveUsersData = [
+  { day: "Mon", staff: 165, customers: 1540 },
+  { day: "Tue", staff: 172, customers: 1620 },
+  { day: "Wed", staff: 168, customers: 1580 },
+  { day: "Thu", staff: 175, customers: 1710 },
+  { day: "Fri", staff: 180, customers: 1820 },
+  { day: "Sat", staff: 155, customers: 1650 },
+  { day: "Sun", staff: 172, customers: 1680 },
+];
+
+// SMS/Email communication usage data (last 6 months)
+const communicationUsageData = [
+  { month: "Jan", sms: 1200, email: 3200 },
+  { month: "Feb", sms: 1350, email: 3500 },
+  { month: "Mar", sms: 1280, email: 3800 },
+  { month: "Apr", sms: 1450, email: 4100 },
+  { month: "May", sms: 1680, email: 4500 },
+  { month: "Jun", sms: 1540, email: 4300 },
+];
+
+// Facility performance heatmap data (metrics across facilities)
+const allHeatmapMetrics = [
+  { key: "revenue", label: "Revenue" },
+  { key: "occupancy", label: "Occupancy" },
+  { key: "bookings", label: "Bookings" },
+  { key: "retention", label: "Retention" },
+] as const;
+
+type HeatmapMetricKey = (typeof allHeatmapMetrics)[number]["key"];
+const facilityHeatmapData = [
+  {
+    facility: "Downtown Spa",
+    revenue: 92,
+    occupancy: 78,
+    bookings: 85,
+    retention: 88,
+  },
+  {
+    facility: "Uptown Wellness",
+    revenue: 65,
+    occupancy: 82,
+    bookings: 71,
+    retention: 76,
+  },
+  {
+    facility: "Metro Fitness",
+    revenue: 88,
+    occupancy: 91,
+    bookings: 79,
+    retention: 82,
+  },
+  {
+    facility: "Harbor Health",
+    revenue: 45,
+    occupancy: 58,
+    bookings: 52,
+    retention: 61,
+  },
+  {
+    facility: "Valley Care",
+    revenue: 73,
+    occupancy: 69,
+    bookings: 81,
+    retention: 77,
+  },
+  {
+    facility: "Summit Studio",
+    revenue: 81,
+    occupancy: 75,
+    bookings: 88,
+    retention: 85,
+  },
+];
+
+const getHeatmapColor = (value: number) => {
+  if (value >= 85) return "bg-emerald-500";
+  if (value >= 70) return "bg-emerald-400";
+  if (value >= 55) return "bg-amber-400";
+  if (value >= 40) return "bg-orange-400";
+  return "bg-red-400";
+};
+
+// Mock support requests count
+const pendingSupportRequests = 5;
 
 // Quick actions data
 const quickActions = [
@@ -104,7 +204,13 @@ const quickActions = [
     icon: Clock,
     href: "/dashboard/analytics",
   },
-
+  {
+    id: 3,
+    label: "Support Requests",
+    icon: Headphones,
+    href: "/dashboard/system-admin/support-ticketing",
+    badge: pendingSupportRequests,
+  },
   {
     id: 4,
     label: "Announce",
@@ -466,9 +572,19 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "12m">(
     "12m",
   );
-  const [comparisonMetric, setComparisonMetric] = useState<
-    "revenue" | "reservations" | "customers" | "occupancy"
-  >("revenue");
+  const [selectedHeatmapMetrics, setSelectedHeatmapMetrics] = useState<
+    HeatmapMetricKey[]
+  >(["revenue", "occupancy", "bookings", "retention"]);
+
+  const toggleHeatmapMetric = (metric: HeatmapMetricKey) => {
+    setSelectedHeatmapMetrics((prev) =>
+      prev.includes(metric)
+        ? prev.length > 1
+          ? prev.filter((m) => m !== metric)
+          : prev
+        : [...prev, metric],
+    );
+  };
 
   // Calculate key metrics from facilities data
   const metrics = useMemo(() => {
@@ -582,6 +698,232 @@ export default function DashboardPage() {
           totalFacilities={metrics.totalFacilities}
         />
         <SystemHealthCard overallHealth={metrics.systemHealth} />
+      </div>
+
+      {/* Additional Metrics Row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+        {/* Churn Rate */}
+        <Card className="border-0 shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Churn Rate
+              </CardTitle>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold">1.5%</span>
+                <span className="inline-flex items-center text-xs font-medium text-success">
+                  <TrendingDown className="h-3 w-3 mr-0.5" />
+                  -0.3%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                vs last month 1.8%
+              </p>
+            </div>
+            <div
+              className="flex items-center justify-center w-11 h-11 rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
+              }}
+            >
+              <UserMinus className="h-5 w-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={churnRateData}>
+                  <defs>
+                    <linearGradient
+                      id="churnGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="rate"
+                    stroke="#f43f5e"
+                    strokeWidth={2}
+                    fill="url(#churnGradient)"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                    formatter={(value: number) => [`${value}%`, "Churn Rate"]}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Daily Active Users */}
+        <Card className="border-0 shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Daily Active Users
+              </CardTitle>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold">1,852</span>
+                <span className="inline-flex items-center text-xs font-medium text-success">
+                  <TrendingUp className="h-3 w-3 mr-0.5" />
+                  +8.4%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                172 staff • 1,680 customers
+              </p>
+            </div>
+            <div
+              className="flex items-center justify-center w-11 h-11 rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+              }}
+            >
+              <UserCheck className="h-5 w-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyActiveUsersData} barSize={12}>
+                  <Bar
+                    dataKey="customers"
+                    fill="#8b5cf6"
+                    radius={[2, 2, 0, 0]}
+                    stackId="stack"
+                  />
+                  <Bar
+                    dataKey="staff"
+                    fill="#c4b5fd"
+                    radius={[2, 2, 0, 0]}
+                    stackId="stack"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center gap-4 mt-2">
+              <div className="flex items-center gap-1.5 text-xs">
+                <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
+                <span className="text-muted-foreground">Customers</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <div className="w-2 h-2 rounded-full bg-[#c4b5fd]" />
+                <span className="text-muted-foreground">Staff</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SMS/Email Usage */}
+        <Card className="border-0 shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Communication Volume
+              </CardTitle>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold">31.9K</span>
+                <span className="inline-flex items-center text-xs font-medium text-success">
+                  <TrendingUp className="h-3 w-3 mr-0.5" />
+                  +15.2%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                8.5K SMS • 23.4K emails
+              </p>
+            </div>
+            <div
+              className="flex items-center justify-center w-11 h-11 rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+              }}
+            >
+              <Mail className="h-5 w-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={communicationUsageData}>
+                  <defs>
+                    <linearGradient
+                      id="smsGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient
+                      id="emailGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="email"
+                    stroke="#06b6d4"
+                    strokeWidth={2}
+                    fill="url(#emailGradient)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sms"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fill="url(#smsGradient)"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center gap-4 mt-2">
+              <div className="flex items-center gap-1.5 text-xs">
+                <div className="w-2 h-2 rounded-full bg-[#06b6d4]" />
+                <span className="text-muted-foreground">Email</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
+                <span className="text-muted-foreground">SMS</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content Grid */}
@@ -845,15 +1187,37 @@ export default function DashboardPage() {
               <Link
                 key={action.id}
                 href={action.href}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors group"
+                className={`flex items-center gap-3 p-3 rounded-xl transition-colors group ${
+                  "badge" in action && action.badge
+                    ? "bg-destructive/5 hover:bg-destructive/10 border border-destructive/20"
+                    : "hover:bg-muted/50"
+                }`}
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted group-hover:bg-primary/10 transition-colors">
-                  <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors ${
+                    "badge" in action && action.badge
+                      ? "bg-destructive/10 group-hover:bg-destructive/20"
+                      : "bg-muted group-hover:bg-primary/10"
+                  }`}
+                >
+                  <action.icon
+                    className={`h-5 w-5 transition-colors ${
+                      "badge" in action && action.badge
+                        ? "text-destructive"
+                        : "text-muted-foreground group-hover:text-primary"
+                    }`}
+                  />
                 </div>
                 <span className="font-medium text-sm flex-1">
                   {action.label}
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                {"badge" in action && action.badge ? (
+                  <Badge variant="destructive" className="text-xs">
+                    {action.badge}
+                  </Badge>
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
               </Link>
             ))}
           </CardContent>
@@ -862,16 +1226,105 @@ export default function DashboardPage() {
 
       {/* Facility Performance Section */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Top Performers */}
+        {/* Facility Performance Heatmap */}
         <Card className="lg:col-span-2 border-0 shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-lg font-semibold">
-                Top Performing Facilities
+                Performance Heatmap
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Ranked by revenue
+                Multi-metric comparison across facilities
               </p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {allHeatmapMetrics.map((metric) => (
+                <Button
+                  key={metric.key}
+                  variant={
+                    selectedHeatmapMetrics.includes(metric.key)
+                      ? "default"
+                      : "outline"
+                  }
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => toggleHeatmapMetric(metric.key)}
+                >
+                  {metric.label}
+                </Button>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {/* Header row */}
+              <div
+                className="grid gap-2 mb-2"
+                style={{
+                  gridTemplateColumns: `minmax(120px, 1fr) repeat(${selectedHeatmapMetrics.length}, 1fr)`,
+                }}
+              >
+                <div className="text-sm font-medium text-muted-foreground px-2" />
+                {allHeatmapMetrics
+                  .filter((m) => selectedHeatmapMetrics.includes(m.key))
+                  .map((metric) => (
+                    <div
+                      key={metric.key}
+                      className="text-sm font-medium text-muted-foreground text-center px-2"
+                    >
+                      {metric.label}
+                    </div>
+                  ))}
+              </div>
+              {/* Data rows */}
+              <div className="space-y-2">
+                {facilityHeatmapData.map((facility) => (
+                  <div
+                    key={facility.facility}
+                    className="grid gap-2"
+                    style={{
+                      gridTemplateColumns: `minmax(120px, 1fr) repeat(${selectedHeatmapMetrics.length}, 1fr)`,
+                    }}
+                  >
+                    <div className="text-sm font-medium text-foreground truncate px-2 flex items-center">
+                      {facility.facility}
+                    </div>
+                    {selectedHeatmapMetrics.map((metric) => (
+                      <div
+                        key={metric}
+                        className={`relative h-10 rounded-md flex items-center justify-center text-sm font-semibold text-white cursor-pointer transition-transform hover:scale-105 ${getHeatmapColor(facility[metric])}`}
+                        title={`${facility.facility} - ${metric}: ${facility[metric]}%`}
+                      >
+                        {facility[metric]}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-border/50">
+                <span className="text-sm text-muted-foreground">Low</span>
+                <div className="flex gap-1">
+                  <div className="w-6 h-4 rounded-sm bg-red-400" />
+                  <div className="w-6 h-4 rounded-sm bg-orange-400" />
+                  <div className="w-6 h-4 rounded-sm bg-amber-400" />
+                  <div className="w-6 h-4 rounded-sm bg-emerald-400" />
+                  <div className="w-6 h-4 rounded-sm bg-emerald-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">High</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Performers */}
+        <Card className="border-0 shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-lg font-semibold">
+                Top Performers
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">By revenue</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="gap-1">
               <Link href="/dashboard/facilities">
@@ -882,13 +1335,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {topPerformers.map((facility, index) => (
+              {topPerformers.slice(0, 5).map((facility, index) => (
                 <div
                   key={facility.id}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/30 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
                 >
                   <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${
+                    className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${
                       index === 0
                         ? "bg-amber-100 text-amber-700"
                         : index === 1
@@ -905,8 +1358,7 @@ export default function DashboardPage() {
                       {facility.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {facility.clients} clients • {facility.locations}{" "}
-                      locations
+                      {facility.clients} clients
                     </p>
                   </div>
                   <div className="text-right">
@@ -931,97 +1383,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Comparative Analytics */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-lg font-semibold">
-              Facility Metrics
-            </CardTitle>
-            <Select
-              value={comparisonMetric}
-              onValueChange={(v) =>
-                setComparisonMetric(v as typeof comparisonMetric)
-              }
-            >
-              <SelectTrigger className="w-28 h-8 text-xs rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="revenue">Revenue</SelectItem>
-                <SelectItem value="reservations">Bookings</SelectItem>
-                <SelectItem value="customers">Clients</SelectItem>
-                <SelectItem value="occupancy">Occupancy</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={facilityPerformance.slice(0, 6)}
-                  layout="vertical"
-                  margin={{ left: -10 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    horizontal={false}
-                  />
-                  <XAxis
-                    type="number"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 10 }}
-                    tickFormatter={(value) =>
-                      comparisonMetric === "revenue"
-                        ? `$${value / 1000}K`
-                        : comparisonMetric === "occupancy"
-                          ? `${value}%`
-                          : value.toString()
-                    }
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#64748b", fontSize: 10 }}
-                    width={80}
-                    tickFormatter={(value) =>
-                      value.length > 12 ? value.slice(0, 12) + "..." : value
-                    }
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      boxShadow:
-                        "0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 8px 32px -4px rgba(0, 0, 0, 0.1)",
-                    }}
-                    formatter={(value: number) => [
-                      comparisonMetric === "revenue"
-                        ? `$${value.toLocaleString()}`
-                        : comparisonMetric === "occupancy"
-                          ? `${value}%`
-                          : value,
-                    ]}
-                  />
-                  <Bar
-                    dataKey={
-                      comparisonMetric === "customers"
-                        ? "clients"
-                        : comparisonMetric
-                    }
-                    fill="#0ea5e9"
-                    radius={[0, 6, 6, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -1081,7 +1442,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="grid grid-cols-3 gap-3 text-xs">
                   <div>
                     <p className="text-muted-foreground">Revenue</p>
                     <p className="font-semibold mt-0.5">
@@ -1094,18 +1455,29 @@ export default function DashboardPage() {
                       {facility.occupancy}%
                     </p>
                   </div>
+                  <div>
+                    <p className="text-muted-foreground">Growth</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${facility.growth > 0 ? "bg-success" : "bg-destructive"}`}
+                          style={{
+                            width: `${Math.min(Math.abs(facility.growth) * 3, 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span
+                        className={`font-semibold ${facility.growth > 0 ? "text-success" : "text-destructive"}`}
+                      >
+                        {facility.growth > 0 ? "+" : ""}
+                        {facility.growth}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
                   <span>
                     {facility.staff} staff • {facility.clients} clients
-                  </span>
-                  <span
-                    className={`font-medium ${
-                      facility.growth > 0 ? "text-success" : "text-destructive"
-                    }`}
-                  >
-                    {facility.growth > 0 ? "+" : ""}
-                    {facility.growth}%
                   </span>
                 </div>
               </CardContent>
