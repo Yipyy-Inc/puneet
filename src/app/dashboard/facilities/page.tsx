@@ -436,7 +436,12 @@ export default function FacilitiesPage() {
             data={facilitiesState}
             columns={columns}
             filters={filters}
-            searchKey="name"
+            getSearchValue={(facility) => {
+              const locations = facility.locationsList
+                .map((loc) => loc.address)
+                .join(" ");
+              return `${facility.name} ${facility.owner.name} ${facility.contact.email} ${facility.contact.phone} ${locations}`;
+            }}
             searchPlaceholder={t("searchFacilities")}
             itemsPerPage={10}
             actions={(facility) => (

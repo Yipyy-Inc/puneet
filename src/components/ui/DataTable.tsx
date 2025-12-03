@@ -61,6 +61,8 @@ interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   filters?: FilterDef[];
   searchKey?: keyof T;
+  searchKeys?: (keyof T)[];
+  getSearchValue?: (item: T) => string;
   searchPlaceholder?: string;
   itemsPerPage?: number;
   actions?: (item: T) => React.ReactNode;
@@ -72,6 +74,8 @@ export function DataTable<T extends object>({
   columns,
   filters = [],
   searchKey,
+  searchKeys,
+  getSearchValue,
   searchPlaceholder = "Search...",
   itemsPerPage = 10,
   actions,
@@ -98,12 +102,31 @@ export function DataTable<T extends object>({
 
   const filteredData = data.filter((item) => {
     // Search filter
-    if (searchKey && searchTerm) {
-      const searchValue = String(
-        (item as Record<string, unknown>)[searchKey as string],
-      ).toLowerCase();
-      if (!searchValue.includes(searchTerm.toLowerCase())) {
-        return false;
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+
+      if (getSearchValue) {
+        const searchValue = getSearchValue(item).toLowerCase();
+        if (!searchValue.includes(lowerSearchTerm)) {
+          return false;
+        }
+      } else if (searchKeys && searchKeys.length > 0) {
+        const matches = searchKeys.some((key) => {
+          const value = String(
+            (item as Record<string, unknown>)[key as string] ?? "",
+          ).toLowerCase();
+          return value.includes(lowerSearchTerm);
+        });
+        if (!matches) {
+          return false;
+        }
+      } else if (searchKey) {
+        const searchValue = String(
+          (item as Record<string, unknown>)[searchKey as string],
+        ).toLowerCase();
+        if (!searchValue.includes(lowerSearchTerm)) {
+          return false;
+        }
       }
     }
 
@@ -151,7 +174,7 @@ export function DataTable<T extends object>({
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center space-x-2">
-        {searchKey && (
+        {(searchKey || searchKeys || getSearchValue) && (
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input

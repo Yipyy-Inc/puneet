@@ -15,7 +15,14 @@ import { TenantActivityLogs } from "@/components/facility/TenantActivityLogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +42,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Building,
@@ -73,7 +81,7 @@ import {
   Edit,
   PawPrint,
   Shield,
-  ChevronDown,
+  LayoutDashboard,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -164,6 +172,49 @@ const recentActivities = [
   },
 ];
 
+const tabs = [
+  {
+    id: "overview",
+    name: "Overview",
+    icon: LayoutDashboard,
+  },
+  {
+    id: "locations",
+    name: "Locations",
+    icon: MapPin,
+  },
+  {
+    id: "clients",
+    name: "Clients",
+    icon: UserCheck,
+  },
+  {
+    id: "staff",
+    name: "Staff",
+    icon: Users,
+  },
+  {
+    id: "billing",
+    name: "Billing",
+    icon: CreditCard,
+  },
+  {
+    id: "modules",
+    name: "Modules",
+    icon: Puzzle,
+  },
+  {
+    id: "reports",
+    name: "Reports",
+    icon: FileText,
+  },
+  {
+    id: "logs",
+    name: "Logs",
+    icon: Shield,
+  },
+];
+
 function StatCard({
   title,
   value,
@@ -227,13 +278,13 @@ export default function FacilityDetailPage() {
     notFound();
   }
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [currentStatus, setCurrentStatus] = useState(facility.status);
   const [statusChangeModal, setStatusChangeModal] = useState<{
     newStatus: "active" | "inactive" | "suspended" | "archived";
   } | null>(null);
   const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
   const [showModulesDialog, setShowModulesDialog] = useState(false);
-  const [showLogsSection, setShowLogsSection] = useState(false);
   const [enabledModules, setEnabledModules] = useState<string[]>(
     facility.enabledModules || [],
   );
@@ -252,6 +303,14 @@ export default function FacilityDetailPage() {
   });
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(facility.plan);
+  const [showOwnerDialog, setShowOwnerDialog] = useState(false);
+  const [ownerMode, setOwnerMode] = useState<"existing" | "new">("existing");
+  const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
+  const [newOwner, setNewOwner] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
 
   const activeClients = facility.clients.filter(
     (c) => c.status === "active",
@@ -363,266 +422,336 @@ export default function FacilityDetailPage() {
     router.push("/facility/dashboard");
   };
 
-  return (
-    <div className="flex-1 space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/dashboard/facilities")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl"
-              style={{
-                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-              }}
-            >
-              <Building className="h-6 w-6 text-white" />
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return (
+          <div className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Total Revenue"
+                value={`$${(totalRevenue / 1000).toFixed(1)}K`}
+                subtitle="Last 6 months"
+                icon={DollarSign}
+                iconBgStyle={{
+                  background:
+                    "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+                }}
+                trend={{ value: "+12%", isPositive: true }}
+              />
+              <StatCard
+                title="Staff Members"
+                value={facility.usersList.length}
+                subtitle="Active users"
+                icon={Users}
+                iconBgStyle={{
+                  background:
+                    "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
+                }}
+              />
+              <StatCard
+                title="Active Clients"
+                value={activeClients}
+                subtitle={`of ${facility.clients.length} total`}
+                icon={UserCheck}
+                iconBgStyle={{
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                }}
+                trend={{ value: "+8%", isPositive: true }}
+              />
+              <StatCard
+                title="Locations"
+                value={facility.locationsList.length}
+                subtitle="Active branches"
+                icon={MapPin}
+                iconBgStyle={{
+                  background:
+                    "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                }}
+              />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">{facility.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <StatusBadge type="status" value={currentStatus} showIcon />
-                <StatusBadge type="plan" value={facility.plan} showIcon />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowImpersonateDialog(true)}
-          >
-            <LogIn className="h-4 w-4 mr-2" />
-            Impersonate
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
 
-              <DropdownMenuItem
-                onClick={() => router.push(`/dashboard/facilities/new`)}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Facility
-              </DropdownMenuItem>
-
-              <DropdownMenuItem>
-                <Key className="mr-2 h-4 w-4" />
-                Manage Permissions
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Status Management</DropdownMenuLabel>
-
-              {currentStatus !== "active" && (
-                <DropdownMenuItem onClick={() => handleStatusChange("active")}>
-                  <Power className="mr-2 h-4 w-4 text-success" />
-                  <span className="text-success">Activate</span>
-                </DropdownMenuItem>
-              )}
-
-              {currentStatus === "active" && (
-                <DropdownMenuItem
-                  onClick={() => handleStatusChange("inactive")}
-                >
-                  <Power className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Deactivate
-                </DropdownMenuItem>
-              )}
-
-              {currentStatus !== "suspended" && (
-                <DropdownMenuItem
-                  onClick={() => handleStatusChange("suspended")}
-                >
-                  <Pause className="mr-2 h-4 w-4 text-warning" />
-                  <span className="text-warning">Suspend</span>
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("archived")}
-                className="text-destructive"
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Services */}
-      {uniqueServices.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {uniqueServices.map((service) => {
-            const Icon = getServiceIcon(service);
-            return (
-              <Badge
-                key={service}
-                variant="secondary"
-                className="capitalize py-1.5 px-3"
-              >
-                <Icon className="h-3.5 w-3.5 mr-1.5" />
-                {service}
-              </Badge>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Revenue"
-          value={`$${(totalRevenue / 1000).toFixed(1)}K`}
-          subtitle="Last 6 months"
-          icon={DollarSign}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-          }}
-          trend={{ value: "+12%", isPositive: true }}
-        />
-        <StatCard
-          title="Staff Members"
-          value={facility.usersList.length}
-          subtitle="Active users"
-          icon={Users}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-          }}
-        />
-        <StatCard
-          title="Active Clients"
-          value={activeClients}
-          subtitle={`of ${facility.clients.length} total`}
-          icon={UserCheck}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-          }}
-          trend={{ value: "+8%", isPositive: true }}
-        />
-        <StatCard
-          title="Locations"
-          value={facility.locationsList.length}
-          subtitle="Active branches"
-          icon={MapPin}
-          iconBgStyle={{
-            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-          }}
-        />
-      </div>
-
-      {/* Facility Reports Section */}
-      <FacilityReports facilityId={facility.id} facilityName={facility.name} />
-
-      {/* Activity & Audit Logs Section */}
-      <Card className="border-0 shadow-card">
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg"
-          onClick={() => setShowLogsSection(!showLogsSection)}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Activity & Audit Logs
-            </CardTitle>
-            <ChevronDown
-              className={`h-5 w-5 text-muted-foreground transition-transform ${
-                showLogsSection ? "rotate-180" : ""
-              }`}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground text-left">
-            Track all activities and system changes for this tenant
-          </p>
-        </CardHeader>
-        {showLogsSection && (
-          <CardContent>
-            <TenantActivityLogs
-              facilityId={facility.id}
-              facilityName={facility.name}
-            />
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - 2/3 width */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Tabs Section */}
-          <Card className="border-0 shadow-card">
-            <Tabs defaultValue="locations" className="w-full">
-              <CardHeader className="pb-0">
-                <TabsList className="grid w-full grid-cols-3 h-auto bg-muted/50">
-                  <TabsTrigger
-                    value="locations"
-                    className="gap-2 data-[state=active]:shadow-sm"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    Locations
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                      {facility.locationsList.length}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="clients"
-                    className="gap-2 data-[state=active]:shadow-sm"
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    Clients
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                      {facility.clients.length}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="staff"
-                    className="gap-2 data-[state=active]:shadow-sm"
-                  >
-                    <Users className="h-4 w-4" />
-                    Staff
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                      {facility.usersList.length}
-                    </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <TabsContent value="locations" className="mt-0">
-                  <div className="space-y-3">
-                    {facility.locationsList.map((location, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+            {/* Two Column Layout */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Contact & Owner Info */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Contact Information */}
+                  <Card className="border-0 shadow-card">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                        <Phone className="h-5 w-5" />
+                        Contact Information
+                      </CardTitle>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditableContact({
+                            email: facility.contact?.email ?? "",
+                            phone: facility.contact?.phone ?? "",
+                            website: facility.contact?.website ?? "",
+                          });
+                          setShowContactDialog(true);
+                        }}
                       >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm font-medium">
+                            {facility.contact?.email || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
+                          <Phone className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          <p className="text-sm font-medium">
+                            {facility.contact?.phone || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-info/10">
+                          <Globe className="h-4 w-4 text-info" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Website
+                          </p>
+                          <p className="text-sm font-medium">
+                            {facility.contact?.website || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Owner / Admin Information */}
+                  <Card className="border-0 shadow-card">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Owner / Admin
+                      </CardTitle>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setOwnerMode("existing");
+                          setSelectedOwnerId(null);
+                          setNewOwner({ name: "", email: "", phone: "" });
+                          setShowOwnerDialog(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Change
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                         <div
-                          className="flex items-center justify-center w-10 h-10 rounded-xl"
+                          className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
                           style={{
                             background:
                               "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                           }}
                         >
-                          <Building className="h-5 w-5 text-white" />
+                          {facility.owner?.name
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase() || "?"}
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{location.name}</h4>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                        <div>
+                          <p className="font-medium">
+                            {facility.owner?.name || "Not provided"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Facility Owner
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm font-medium">
+                            {facility.owner?.email || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
+                          <Phone className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          <p className="text-sm font-medium">
+                            {facility.owner?.phone || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Quick Actions */}
+                <Card className="border-0 shadow-card">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Button
+                        variant="outline"
+                        className="h-auto py-4 flex-col gap-2"
+                        onClick={() => setActiveTab("reports")}
+                      >
+                        <FileText className="h-5 w-5" />
+                        <span className="text-xs">Generate Report</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto py-4 flex-col gap-2"
+                      >
+                        <Mail className="h-5 w-5" />
+                        <span className="text-xs">Send Notification</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto py-4 flex-col gap-2"
+                      >
+                        <Key className="h-5 w-5" />
+                        <span className="text-xs">Reset Password</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-auto py-4 flex-col gap-2"
+                        onClick={() => setActiveTab("modules")}
+                      >
+                        <Puzzle className="h-5 w-5" />
+                        <span className="text-xs">Manage Modules</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column - Recent Activity */}
+              <div className="space-y-6">
+                <Card className="border-0 shadow-card">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Recent Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {recentActivities.map((activity) => {
+                        const Icon = getActivityIcon(activity.type);
+                        return (
+                          <div key={activity.id} className="flex gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">
+                                {activity.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {activity.description}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {activity.time}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="w-full mt-4"
+                      onClick={() => setActiveTab("logs")}
+                    >
+                      View All Activity
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "locations":
+        return (
+          <Card className="border-0 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Locations
+                <Badge variant="secondary" className="ml-2">
+                  {facility.locationsList.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead>Services</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facility.locationsList.map((location, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center justify-center w-8 h-8 rounded-lg"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                              }}
+                            >
+                              <Building className="h-4 w-4 text-white" />
+                            </div>
+                            {location.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
                             <MapPin className="h-3.5 w-3.5" />
                             {location.address}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
                             {location.services.map((service: string) => (
                               <Badge
                                 key={service}
@@ -633,123 +762,180 @@ export default function FacilityDetailPage() {
                               </Badge>
                             ))}
                           </div>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon">
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="clients" className="mt-0">
-                  <div className="space-y-3">
-                    {facility.clients.map((client, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-semibold text-sm text-primary">
-                            {client.person.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold">
-                              {client.person.name}
-                            </h4>
-                            <div className="flex items-center gap-4 mt-0.5">
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {client.person.email}
-                              </span>
-                              {client.person.phone && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {client.person.phone}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            client.status === "active" ? "default" : "secondary"
-                          }
-                          className={
-                            client.status === "active"
-                              ? "bg-success text-success-foreground"
-                              : ""
-                          }
-                        >
-                          {client.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="staff" className="mt-0">
-                  <div className="space-y-3">
-                    {facility.usersList.map((user, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
-                            style={{
-                              background:
-                                user.role === "Admin"
-                                  ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
-                                  : user.role === "Manager"
-                                    ? "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)"
-                                    : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
-                            }}
-                          >
-                            {user.person.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold">
-                              {user.person.name}
-                            </h4>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {user.person.email}
-                            </span>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            user.role === "Admin" ? "default" : "secondary"
-                          }
-                          className={
-                            user.role === "Admin"
-                              ? "bg-primary"
-                              : user.role === "Manager"
-                                ? "bg-info text-info-foreground"
-                                : ""
-                          }
-                        >
-                          {user.role}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
-              </CardContent>
-            </Tabs>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </Card>
+        );
 
-          {/* Billing & Subscription */}
+      case "clients":
+        return (
+          <Card className="border-0 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                Clients
+                <Badge variant="secondary" className="ml-2">
+                  {facility.clients.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facility.clients.map((client, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-semibold text-xs text-primary">
+                              {client.person.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()}
+                            </div>
+                            {client.person.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Mail className="h-3.5 w-3.5" />
+                            {client.person.email}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {client.person.phone ? (
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" />
+                              {client.person.phone}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              client.status === "active"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className={
+                              client.status === "active"
+                                ? "bg-success text-success-foreground"
+                                : ""
+                            }
+                          >
+                            {client.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case "staff":
+        return (
+          <Card className="border-0 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Staff Members
+                <Badge variant="secondary" className="ml-2">
+                  {facility.usersList.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facility.usersList.map((user, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center justify-center w-8 h-8 rounded-full font-semibold text-xs text-white"
+                              style={{
+                                background:
+                                  user.role === "Admin"
+                                    ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
+                                    : user.role === "Manager"
+                                      ? "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)"
+                                      : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                              }}
+                            >
+                              {user.person.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()}
+                            </div>
+                            {user.person.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Mail className="h-3.5 w-3.5" />
+                            {user.person.email}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.role === "Admin" ? "default" : "secondary"
+                            }
+                            className={
+                              user.role === "Admin"
+                                ? "bg-primary"
+                                : user.role === "Manager"
+                                  ? "bg-info text-info-foreground"
+                                  : ""
+                            }
+                          >
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case "billing":
+        return (
           <Card className="border-0 shadow-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -765,7 +951,20 @@ export default function FacilityDetailPage() {
               {/* Subscription Info */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">Current Plan</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Current Plan
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setShowSubscriptionDialog(true)}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Change
+                    </Button>
+                  </div>
                   <div className="mt-1">
                     <StatusBadge type="plan" value={facility.plan} />
                   </div>
@@ -910,8 +1109,10 @@ export default function FacilityDetailPage() {
               </Button>
             </CardContent>
           </Card>
+        );
 
-          {/* Enabled Modules */}
+      case "modules":
+        return (
           <Card className="border-0 shadow-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -1029,188 +1230,188 @@ export default function FacilityDetailPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        );
 
-        {/* Right Column - 1/3 width */}
-        <div className="space-y-6">
-          {/* Contact Information */}
-          <Card className="border-0 shadow-card">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Phone className="h-5 w-5" />
-                Contact Information
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditableContact({
-                    email: facility.contact?.email ?? "",
-                    phone: facility.contact?.phone ?? "",
-                    website: facility.contact?.website ?? "",
-                  });
-                  setShowContactDialog(true);
+      case "reports":
+        return (
+          <FacilityReports
+            facilityId={facility.id}
+            facilityName={facility.name}
+          />
+        );
+
+      case "logs":
+        return (
+          <TenantActivityLogs
+            facilityId={facility.id}
+            facilityName={facility.name}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col">
+      {/* Header */}
+      <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+        <div className="px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/dashboard/facilities")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3 flex-1">
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                  <Mail className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium">
-                    {facility.contact?.email || "Not provided"}
-                  </p>
-                </div>
+                <Building className="h-6 w-6 text-white" />
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
-                  <Phone className="h-4 w-4 text-success" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="text-sm font-medium">
-                    {facility.contact?.phone || "Not provided"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-info/10">
-                  <Globe className="h-4 w-4 text-info" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Website</p>
-                  <p className="text-sm font-medium">
-                    {facility.contact?.website || "Not provided"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Owner / Admin Information */}
-          <Card className="border-0 shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Owner / Admin
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div
-                  className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-                  }}
-                >
-                  {facility.owner?.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase() || "?"}
-                </div>
-                <div>
-                  <p className="font-medium">
-                    {facility.owner?.name || "Not provided"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Facility Owner
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                  <Mail className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium">
-                    {facility.owner?.email || "Not provided"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
-                  <Phone className="h-4 w-4 text-success" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="text-sm font-medium">
-                    {facility.owner?.phone || "Not provided"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="border-0 shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity) => {
-                  const Icon = getActivityIcon(activity.type);
-                  return (
-                    <div key={activity.id} className="flex gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {activity.time}
-                        </p>
-                      </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  {facility.name}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <StatusBadge type="status" value={currentStatus} showIcon />
+                  <StatusBadge type="plan" value={facility.plan} showIcon />
+                  {uniqueServices.length > 0 && (
+                    <div className="flex gap-1 ml-2">
+                      {uniqueServices.slice(0, 3).map((service) => {
+                        const Icon = getServiceIcon(service);
+                        return (
+                          <Badge
+                            key={service}
+                            variant="secondary"
+                            className="capitalize py-0.5 px-2 text-xs"
+                          >
+                            <Icon className="h-3 w-3 mr-1" />
+                            {service}
+                          </Badge>
+                        );
+                      })}
+                      {uniqueServices.length > 3 && (
+                        <Badge
+                          variant="secondary"
+                          className="py-0.5 px-2 text-xs"
+                        >
+                          +{uniqueServices.length - 3}
+                        </Badge>
+                      )}
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
-              <Button variant="ghost" className="w-full mt-4">
-                View All Activity
-                <ChevronRight className="h-4 w-4 ml-1" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowImpersonateDialog(true)}
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Impersonate
               </Button>
-            </CardContent>
-          </Card>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
 
-          {/* Quick Actions */}
-          <Card className="border-0 shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Mail className="h-4 w-4 mr-2" />
-                Send Notification
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Key className="h-4 w-4 mr-2" />
-                Reset Admin Password
-              </Button>
-            </CardContent>
-          </Card>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/dashboard/facilities/new`)}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Edit Facility
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem>
+                    <Key className="mr-2 h-4 w-4" />
+                    Manage Permissions
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Status Management</DropdownMenuLabel>
+
+                  {currentStatus !== "active" && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusChange("active")}
+                    >
+                      <Power className="mr-2 h-4 w-4 text-success" />
+                      <span className="text-success">Activate</span>
+                    </DropdownMenuItem>
+                  )}
+
+                  {currentStatus === "active" && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusChange("inactive")}
+                    >
+                      <Power className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Deactivate
+                    </DropdownMenuItem>
+                  )}
+
+                  {currentStatus !== "suspended" && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusChange("suspended")}
+                    >
+                      <Pause className="mr-2 h-4 w-4 text-warning" />
+                      <span className="text-warning">Suspend</span>
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuItem
+                    onClick={() => handleStatusChange("archived")}
+                    className="text-destructive"
+                  >
+                    <Archive className="mr-2 h-4 w-4" />
+                    Archive
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
+
+        {/* Tabs Navigation */}
+        <nav className="px-6 flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  "hover:bg-muted/50",
+                  isActive
+                    ? "bg-background border-b-2 border-primary text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
       </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 p-6">{renderTabContent()}</div>
 
       {/* Impersonation Dialog */}
       <Dialog
@@ -1583,6 +1784,180 @@ export default function FacilityDetailPage() {
               {selectedPlan.toLowerCase() === facility.plan.toLowerCase()
                 ? "No Changes"
                 : "Update Plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Owner Dialog */}
+      <Dialog open={showOwnerDialog} onOpenChange={setShowOwnerDialog}>
+        <DialogContent className="min-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Change Facility Owner</DialogTitle>
+            <DialogDescription>
+              Transfer ownership of {facility.name} to an existing staff member
+              or create a new owner.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {/* Mode Selection */}
+            <div className="flex gap-2">
+              <Button
+                variant={ownerMode === "existing" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setOwnerMode("existing")}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Existing Member
+              </Button>
+              <Button
+                variant={ownerMode === "new" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setOwnerMode("new")}
+              >
+                <User className="h-4 w-4 mr-2" />
+                New Owner
+              </Button>
+            </div>
+
+            {ownerMode === "existing" ? (
+              <div className="space-y-3">
+                <Label>Select a staff member to promote to owner</Label>
+                <div className="max-h-[300px] overflow-y-auto space-y-2">
+                  {facility.usersList.map((user, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all",
+                        selectedOwnerId === index
+                          ? "border-primary bg-primary/5"
+                          : "border-transparent bg-muted/50 hover:bg-muted",
+                      )}
+                      onClick={() => setSelectedOwnerId(index)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
+                          style={{
+                            background:
+                              user.role === "Admin"
+                                ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
+                                : user.role === "Manager"
+                                  ? "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)"
+                                  : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                          }}
+                        >
+                          {user.person.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium">{user.person.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {user.person.email}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">{user.role}</Badge>
+                    </div>
+                  ))}
+                </div>
+                {facility.usersList.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No staff members available. Create a new owner instead.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="new-owner-name"
+                    className="flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Full Name
+                  </Label>
+                  <Input
+                    id="new-owner-name"
+                    placeholder="John Doe"
+                    value={newOwner.name}
+                    onChange={(e) =>
+                      setNewOwner((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="new-owner-email"
+                    className="flex items-center gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Label>
+                  <Input
+                    id="new-owner-email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={newOwner.email}
+                    onChange={(e) =>
+                      setNewOwner((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="new-owner-phone"
+                    className="flex items-center gap-2"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Phone
+                  </Label>
+                  <Input
+                    id="new-owner-phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={newOwner.phone}
+                    onChange={(e) =>
+                      setNewOwner((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Changing the owner will transfer full administrative control
+                  of this facility. The new owner will receive an email
+                  notification.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOwnerDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => setShowOwnerDialog(false)}
+              disabled={
+                ownerMode === "existing"
+                  ? selectedOwnerId === null
+                  : !newOwner.name || !newOwner.email
+              }
+            >
+              Transfer Ownership
             </Button>
           </DialogFooter>
         </DialogContent>
