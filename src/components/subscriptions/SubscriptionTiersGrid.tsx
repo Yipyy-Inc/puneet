@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SubscriptionTier, subscriptionTiers } from "@/data/subscription-tiers";
+import { modules } from "@/data/modules";
 import {
   Card,
   CardContent,
@@ -12,6 +13,26 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Check,
   Edit,
@@ -21,6 +42,7 @@ import {
   Calendar,
   HardDrive,
   MapPin,
+  Blocks,
 } from "lucide-react";
 
 interface TierCardProps {
@@ -133,6 +155,24 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
           </div>
         </div>
 
+        {/* Included Modules */}
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+            <Blocks className="h-4 w-4" />
+            Modules ({tier.availableModules.length})
+          </h4>
+          <div className="flex flex-wrap gap-1">
+            {tier.availableModules.map((moduleId) => {
+              const moduleObj = modules.find((m) => m.id === moduleId);
+              return moduleObj ? (
+                <Badge key={moduleId} variant="secondary" className="text-xs">
+                  {moduleObj.name}
+                </Badge>
+              ) : null;
+            })}
+          </div>
+        </div>
+
         {/* Features */}
         <div className="space-y-2">
           <h4 className="font-semibold text-sm text-muted-foreground">
@@ -186,11 +226,28 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
 }
 
 export function SubscriptionTiersGrid() {
-  const [tiers] = useState<SubscriptionTier[]>(subscriptionTiers);
+  const [tiers, setTiers] = useState<SubscriptionTier[]>(subscriptionTiers);
+  const [editingTier, setEditingTier] = useState<SubscriptionTier | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newTier, setNewTier] = useState<SubscriptionTier | null>(null);
 
   const handleEdit = (tier: SubscriptionTier) => {
-    console.log("Edit tier:", tier);
-    // TODO: Open edit modal
+    setEditingTier({ ...tier });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTier) return;
+    setTiers((prev) =>
+      prev.map((t) =>
+        t.id === editingTier.id
+          ? { ...editingTier, updatedAt: new Date().toISOString() }
+          : t,
+      ),
+    );
+    setIsEditDialogOpen(false);
+    setEditingTier(null);
   };
 
   const handleDelete = (tier: SubscriptionTier) => {
@@ -199,8 +256,94 @@ export function SubscriptionTiersGrid() {
   };
 
   const handleCreate = () => {
-    console.log("Create new tier");
-    // TODO: Open create modal
+    const defaultTier: SubscriptionTier = {
+      id: `tier-${Date.now()}`,
+      name: "",
+      type: "beginner",
+      description: "",
+      pricing: {
+        monthly: 0,
+        quarterly: 0,
+        yearly: 0,
+        currency: "USD",
+      },
+      features: [],
+      limitations: {
+        maxUsers: 5,
+        maxReservations: 100,
+        storageGB: 5,
+        maxLocations: 1,
+        maxClients: 50,
+      },
+      availableModules: ["module-booking", "module-customer-management"],
+      isActive: true,
+      isCustomizable: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setNewTier(defaultTier);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleSaveCreate = () => {
+    if (!newTier || !newTier.name.trim()) return;
+    setTiers((prev) => [...prev, newTier]);
+    setIsCreateDialogOpen(false);
+    setNewTier(null);
+  };
+
+  const updateNewTier = (updates: Partial<SubscriptionTier>) => {
+    if (!newTier) return;
+    setNewTier({ ...newTier, ...updates });
+  };
+
+  const updateNewTierPricing = (
+    field: keyof SubscriptionTier["pricing"],
+    value: number,
+  ) => {
+    if (!newTier) return;
+    setNewTier({
+      ...newTier,
+      pricing: { ...newTier.pricing, [field]: value },
+    });
+  };
+
+  const updateNewTierLimitations = (
+    field: keyof SubscriptionTier["limitations"],
+    value: number,
+  ) => {
+    if (!newTier) return;
+    setNewTier({
+      ...newTier,
+      limitations: { ...newTier.limitations, [field]: value },
+    });
+  };
+
+  const updateEditingTier = (updates: Partial<SubscriptionTier>) => {
+    if (!editingTier) return;
+    setEditingTier({ ...editingTier, ...updates });
+  };
+
+  const updatePricing = (
+    field: keyof SubscriptionTier["pricing"],
+    value: number,
+  ) => {
+    if (!editingTier) return;
+    setEditingTier({
+      ...editingTier,
+      pricing: { ...editingTier.pricing, [field]: value },
+    });
+  };
+
+  const updateLimitations = (
+    field: keyof SubscriptionTier["limitations"],
+    value: number,
+  ) => {
+    if (!editingTier) return;
+    setEditingTier({
+      ...editingTier,
+      limitations: { ...editingTier.limitations, [field]: value },
+    });
   };
 
   return (
@@ -228,6 +371,556 @@ export function SubscriptionTiersGrid() {
           />
         ))}
       </div>
+
+      {/* Edit Tier Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription Tier</DialogTitle>
+            <DialogDescription>
+              Modify the tier details, pricing, and limitations.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingTier && (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={editingTier.name}
+                    onChange={(e) =>
+                      updateEditingTier({ name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select
+                    value={editingTier.type}
+                    onValueChange={(value) =>
+                      updateEditingTier({
+                        type: value as SubscriptionTier["type"],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={editingTier.description}
+                  onChange={(e) =>
+                    updateEditingTier({ description: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Pricing */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">Pricing (USD)</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="monthly">Monthly</Label>
+                    <Input
+                      id="monthly"
+                      type="number"
+                      value={editingTier.pricing.monthly}
+                      onChange={(e) =>
+                        updatePricing("monthly", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quarterly">Quarterly</Label>
+                    <Input
+                      id="quarterly"
+                      type="number"
+                      value={editingTier.pricing.quarterly}
+                      onChange={(e) =>
+                        updatePricing("quarterly", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="yearly">Yearly</Label>
+                    <Input
+                      id="yearly"
+                      type="number"
+                      value={editingTier.pricing.yearly}
+                      onChange={(e) =>
+                        updatePricing("yearly", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Limitations */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">
+                  Limitations (-1 for unlimited)
+                </Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="maxUsers">Max Users</Label>
+                    <Input
+                      id="maxUsers"
+                      type="number"
+                      value={editingTier.limitations.maxUsers}
+                      onChange={(e) =>
+                        updateLimitations("maxUsers", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maxReservations">Max Reservations</Label>
+                    <Input
+                      id="maxReservations"
+                      type="number"
+                      value={editingTier.limitations.maxReservations}
+                      onChange={(e) =>
+                        updateLimitations(
+                          "maxReservations",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="storageGB">Storage (GB)</Label>
+                    <Input
+                      id="storageGB"
+                      type="number"
+                      value={editingTier.limitations.storageGB}
+                      onChange={(e) =>
+                        updateLimitations("storageGB", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maxLocations">Max Locations</Label>
+                    <Input
+                      id="maxLocations"
+                      type="number"
+                      value={editingTier.limitations.maxLocations}
+                      onChange={(e) =>
+                        updateLimitations(
+                          "maxLocations",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maxClients">Max Clients</Label>
+                    <Input
+                      id="maxClients"
+                      type="number"
+                      value={editingTier.limitations.maxClients}
+                      onChange={(e) =>
+                        updateLimitations("maxClients", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="isActive"
+                    checked={editingTier.isActive}
+                    onCheckedChange={(checked) =>
+                      updateEditingTier({ isActive: checked })
+                    }
+                  />
+                  <Label htmlFor="isActive">Active</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="isCustomizable"
+                    checked={editingTier.isCustomizable}
+                    onCheckedChange={(checked) =>
+                      updateEditingTier({ isCustomizable: checked })
+                    }
+                  />
+                  <Label htmlFor="isCustomizable">Customizable</Label>
+                </div>
+              </div>
+
+              {/* Included Modules */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">
+                  Included Modules
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {modules.map((module) => (
+                    <div
+                      key={module.id}
+                      className="flex items-center gap-2 p-2 border rounded-lg"
+                    >
+                      <Checkbox
+                        id={`module-${module.id}`}
+                        checked={editingTier.availableModules.includes(
+                          module.id,
+                        )}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            updateEditingTier({
+                              availableModules: [
+                                ...editingTier.availableModules,
+                                module.id,
+                              ],
+                            });
+                          } else {
+                            updateEditingTier({
+                              availableModules:
+                                editingTier.availableModules.filter(
+                                  (id) => id !== module.id,
+                                ),
+                            });
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`module-${module.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {module.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="space-y-2">
+                <Label htmlFor="features">Features (one per line)</Label>
+                <Textarea
+                  id="features"
+                  className="min-h-[120px]"
+                  value={editingTier.features.join("\n")}
+                  onChange={(e) =>
+                    updateEditingTier({
+                      features: e.target.value
+                        .split("\n")
+                        .filter((f) => f.trim()),
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Tier Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Subscription Tier</DialogTitle>
+            <DialogDescription>
+              Create a new subscription tier with pricing and limitations.
+            </DialogDescription>
+          </DialogHeader>
+
+          {newTier && (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="create-name">Name</Label>
+                  <Input
+                    id="create-name"
+                    value={newTier.name}
+                    onChange={(e) => updateNewTier({ name: e.target.value })}
+                    placeholder="Enter tier name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-type">Type</Label>
+                  <Select
+                    value={newTier.type}
+                    onValueChange={(value) =>
+                      updateNewTier({
+                        type: value as SubscriptionTier["type"],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-description">Description</Label>
+                <Textarea
+                  id="create-description"
+                  value={newTier.description}
+                  onChange={(e) =>
+                    updateNewTier({ description: e.target.value })
+                  }
+                  placeholder="Enter tier description"
+                />
+              </div>
+
+              {/* Pricing */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">Pricing (USD)</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="create-monthly">Monthly</Label>
+                    <Input
+                      id="create-monthly"
+                      type="number"
+                      value={newTier.pricing.monthly}
+                      onChange={(e) =>
+                        updateNewTierPricing("monthly", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-quarterly">Quarterly</Label>
+                    <Input
+                      id="create-quarterly"
+                      type="number"
+                      value={newTier.pricing.quarterly}
+                      onChange={(e) =>
+                        updateNewTierPricing(
+                          "quarterly",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-yearly">Yearly</Label>
+                    <Input
+                      id="create-yearly"
+                      type="number"
+                      value={newTier.pricing.yearly}
+                      onChange={(e) =>
+                        updateNewTierPricing("yearly", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Limitations */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">
+                  Limitations (-1 for unlimited)
+                </Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="create-maxUsers">Max Users</Label>
+                    <Input
+                      id="create-maxUsers"
+                      type="number"
+                      value={newTier.limitations.maxUsers}
+                      onChange={(e) =>
+                        updateNewTierLimitations(
+                          "maxUsers",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-maxReservations">
+                      Max Reservations
+                    </Label>
+                    <Input
+                      id="create-maxReservations"
+                      type="number"
+                      value={newTier.limitations.maxReservations}
+                      onChange={(e) =>
+                        updateNewTierLimitations(
+                          "maxReservations",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-storageGB">Storage (GB)</Label>
+                    <Input
+                      id="create-storageGB"
+                      type="number"
+                      value={newTier.limitations.storageGB}
+                      onChange={(e) =>
+                        updateNewTierLimitations(
+                          "storageGB",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-maxLocations">Max Locations</Label>
+                    <Input
+                      id="create-maxLocations"
+                      type="number"
+                      value={newTier.limitations.maxLocations}
+                      onChange={(e) =>
+                        updateNewTierLimitations(
+                          "maxLocations",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-maxClients">Max Clients</Label>
+                    <Input
+                      id="create-maxClients"
+                      type="number"
+                      value={newTier.limitations.maxClients}
+                      onChange={(e) =>
+                        updateNewTierLimitations(
+                          "maxClients",
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="create-isActive"
+                    checked={newTier.isActive}
+                    onCheckedChange={(checked) =>
+                      updateNewTier({ isActive: checked })
+                    }
+                  />
+                  <Label htmlFor="create-isActive">Active</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="create-isCustomizable"
+                    checked={newTier.isCustomizable}
+                    onCheckedChange={(checked) =>
+                      updateNewTier({ isCustomizable: checked })
+                    }
+                  />
+                  <Label htmlFor="create-isCustomizable">Customizable</Label>
+                </div>
+              </div>
+
+              {/* Included Modules */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">
+                  Included Modules
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {modules.map((module) => (
+                    <div
+                      key={module.id}
+                      className="flex items-center gap-2 p-2 border rounded-lg"
+                    >
+                      <Checkbox
+                        id={`create-module-${module.id}`}
+                        checked={newTier.availableModules.includes(module.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            updateNewTier({
+                              availableModules: [
+                                ...newTier.availableModules,
+                                module.id,
+                              ],
+                            });
+                          } else {
+                            updateNewTier({
+                              availableModules: newTier.availableModules.filter(
+                                (id) => id !== module.id,
+                              ),
+                            });
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`create-module-${module.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {module.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="space-y-2">
+                <Label htmlFor="create-features">Features (one per line)</Label>
+                <Textarea
+                  id="create-features"
+                  className="min-h-[120px]"
+                  value={newTier.features.join("\n")}
+                  onChange={(e) =>
+                    updateNewTier({
+                      features: e.target.value
+                        .split("\n")
+                        .filter((f) => f.trim()),
+                    })
+                  }
+                  placeholder="Enter features, one per line"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCreate} disabled={!newTier?.name.trim()}>
+              Create Tier
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

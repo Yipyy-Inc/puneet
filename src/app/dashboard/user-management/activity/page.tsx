@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Download,
   User,
@@ -22,6 +22,24 @@ import {
   History,
   FileText,
 } from "lucide-react";
+
+const tabs = [
+  {
+    id: "activity",
+    name: "Activity Log",
+    icon: Activity,
+  },
+  {
+    id: "logins",
+    name: "Login History",
+    icon: History,
+  },
+  {
+    id: "audit",
+    name: "Audit Trail",
+    icon: Shield,
+  },
+];
 
 // Flatten all activity logs from all users
 const allActivityLogs = adminUsers
@@ -280,108 +298,10 @@ export default function ActivityTrackingPage() {
   const uniqueLocations = new Set(allLoginHistory.map((log) => log.location))
     .size;
 
-  return (
-    <div className="flex-1 space-y-6 p-4 pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {t("activityTrackingTitle")}
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            Monitor admin user actions, login history, and audit trails
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => exportActivityToCSV(allActivityLogs)}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          {t("exportAuditLog")}
-        </Button>
-      </div>
-
-      {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Actions</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allActivityLogs.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all admin users
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t("sensitiveActions")}
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {highSeverityCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              High severity actions
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Today&apos;s Logins
-            </CardTitle>
-            <History className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {todayLogins}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Login sessions today
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Unique Locations
-            </CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{uniqueLocations}</div>
-            <p className="text-xs text-muted-foreground">Access locations</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs for Activity and Login History */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList>
-          <TabsTrigger value="activity" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            {t("activityLog")}
-          </TabsTrigger>
-          <TabsTrigger value="logins" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            {t("loginHistory")}
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            {t("auditTrail")}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="activity" className="space-y-4">
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "activity":
+        return (
           <DataTable
             data={allActivityLogs}
             columns={activityColumns}
@@ -390,9 +310,9 @@ export default function ActivityTrackingPage() {
             searchPlaceholder="Search by user name..."
             itemsPerPage={10}
           />
-        </TabsContent>
-
-        <TabsContent value="logins" className="space-y-4">
+        );
+      case "logins":
+        return (
           <DataTable
             data={allLoginHistory}
             columns={loginColumns}
@@ -401,9 +321,9 @@ export default function ActivityTrackingPage() {
             searchPlaceholder="Search by user name..."
             itemsPerPage={10}
           />
-        </TabsContent>
-
-        <TabsContent value="audit" className="space-y-4">
+        );
+      case "audit":
+        return (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -458,8 +378,127 @@ export default function ActivityTrackingPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm border-b">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">
+                {t("activityTrackingTitle")}
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Monitor admin user actions, login history, and audit trails
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => exportActivityToCSV(allActivityLogs)}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("exportAuditLog")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs Navigation */}
+        <nav className="px-6 flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  "hover:bg-muted/50",
+                  isActive
+                    ? "bg-background border-b-2 border-primary text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 p-6 space-y-6">
+        {/* Stats Section */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Actions
+              </CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{allActivityLogs.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Across all admin users
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t("sensitiveActions")}
+              </CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {highSeverityCount}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                High severity actions
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Today&apos;s Logins
+              </CardTitle>
+              <History className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {todayLogins}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Login sessions today
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Unique Locations
+              </CardTitle>
+              <Globe className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{uniqueLocations}</div>
+              <p className="text-xs text-muted-foreground">Access locations</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {renderTabContent()}
+      </div>
     </div>
   );
 }

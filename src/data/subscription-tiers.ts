@@ -31,7 +31,7 @@ export interface SubscriptionTier {
 export const subscriptionTiers: SubscriptionTier[] = [
   {
     id: "tier-beginner",
-    name: "Beginner",
+    name: "Puppy",
     type: "beginner",
     description: "Perfect for small facilities just getting started",
     pricing: {
@@ -68,7 +68,7 @@ export const subscriptionTiers: SubscriptionTier[] = [
   },
   {
     id: "tier-pro",
-    name: "Pro",
+    name: "Pack Leader",
     type: "pro",
     description: "Advanced features for growing pet care businesses",
     pricing: {
@@ -111,7 +111,7 @@ export const subscriptionTiers: SubscriptionTier[] = [
   },
   {
     id: "tier-enterprise",
-    name: "Enterprise",
+    name: "Alpha Enterprise",
     type: "enterprise",
     description: "Complete solution for large-scale operations",
     pricing: {
@@ -156,7 +156,7 @@ export const subscriptionTiers: SubscriptionTier[] = [
   },
   {
     id: "tier-custom-1",
-    name: "Custom - Pet Spa Plus",
+    name: "Custom Enterprise",
     type: "custom",
     description: "Custom package for premium grooming facilities",
     pricing: {
