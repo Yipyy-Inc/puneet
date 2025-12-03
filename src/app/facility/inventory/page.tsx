@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { inventory } from "@/data/inventory";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +97,6 @@ const categories = [
 const units = ["pieces", "bags", "bottles", "cans", "boxes", "packs", "beds"];
 
 export default function InventoryPage() {
-  const t = useTranslations("inventory");
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
@@ -304,7 +302,7 @@ export default function InventoryPage() {
         <div className="flex items-center space-x-2">
           <Button onClick={handleAddNew}>
             <Plus className="mr-2 h-4 w-4" />
-            {t("addItem")}
+            {"Add Item"}
           </Button>
           <Button
             variant="outline"
@@ -340,7 +338,7 @@ export default function InventoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("totalValue")}
+              {"Total Value"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -364,7 +362,7 @@ export default function InventoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("outOfStock")}
+              {"Out of Stock"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -392,7 +390,7 @@ export default function InventoryPage() {
         columns={columns}
         filters={filters}
         searchKey="name"
-        searchPlaceholder={t("searchItems")}
+        searchPlaceholder={"Search items..."}
         itemsPerPage={10}
         actions={(item) => (
           <div className="flex gap-2">

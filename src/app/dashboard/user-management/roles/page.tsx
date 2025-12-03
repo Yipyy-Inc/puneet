@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import {
   rolePermissions,
   roleDisplayNames,
@@ -106,8 +105,6 @@ const allPermissions = [
 ];
 
 export default function RolesPermissionsPage() {
-  const t = useTranslations("userManagement");
-  const tCommon = useTranslations("common");
   const [selectedRole, setSelectedRole] = useState<AdminRole | null>(null);
   const [viewMode, setViewMode] = useState<"view" | "edit">("view");
 
@@ -133,7 +130,7 @@ export default function RolesPermissionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {t("rolesPermissionsTitle")}
+            {"Roles & Permissions"}
           </h2>
           <p className="text-muted-foreground mt-1">
             Configure user roles and their associated permissions
@@ -336,10 +333,10 @@ export default function RolesPermissionsPage() {
                     variant="outline"
                     onClick={() => setSelectedRole(null)}
                   >
-                    {tCommon("cancel")}
+                    {"Cancel"}
                   </Button>
                   <Button onClick={() => setSelectedRole(null)}>
-                    {tCommon("save")}
+                    {"Save"}
                   </Button>
                 </div>
               )}

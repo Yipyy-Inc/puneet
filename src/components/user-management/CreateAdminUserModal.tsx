@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import {
   rolePermissions,
   roleDisplayNames,
@@ -101,8 +100,6 @@ export function CreateAdminUserModal({
   onOpenChange,
   onSave,
 }: CreateAdminUserModalProps) {
-  const t = useTranslations("userManagement");
-  const tCommon = useTranslations("common");
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -278,7 +275,7 @@ export function CreateAdminUserModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5" />
-                {t("createUserTitle")} - Step {step} of 3
+                {"Create New User"} - Step {step} of 3
               </DialogTitle>
               <DialogDescription>
                 {step === 1 && "Enter basic user information"}
@@ -497,15 +494,15 @@ export function CreateAdminUserModal({
                         <SelectValue placeholder="Select access level" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="full">{t("fullAccess")}</SelectItem>
+                        <SelectItem value="full">{"Full Access"}</SelectItem>
                         <SelectItem value="read_write">
-                          {t("readWriteAccess")}
+                          {"Read/Write Access"}
                         </SelectItem>
                         <SelectItem value="read_only">
-                          {t("readOnlyAccess")}
+                          {"Read Only Access"}
                         </SelectItem>
                         <SelectItem value="restricted">
-                          {t("restrictedAccess")}
+                          {"Restricted Access"}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -578,7 +575,7 @@ export function CreateAdminUserModal({
                     variant="outline"
                     onClick={resetAndClose}
                   >
-                    {tCommon("cancel")}
+                    Cancel
                   </Button>
                   <Button type="button" onClick={handleNext}>
                     Next
@@ -615,7 +612,7 @@ export function CreateAdminUserModal({
                     ) : (
                       <>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        {t("addUser")}
+                        {"Add User"}
                       </>
                     )}
                   </Button>

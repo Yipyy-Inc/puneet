@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -81,7 +80,6 @@ export function DataTable<T extends object>({
   actions,
   rowClassName,
 }: DataTableProps<T>) {
-  const t = useTranslations("common");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
     filters.reduce((acc, filter) => ({ ...acc, [filter.key]: "all" }), {}),
@@ -227,7 +225,7 @@ export function DataTable<T extends object>({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="space-y-1">
-              <DropdownMenuLabel>{t("filter")}</DropdownMenuLabel>
+              <DropdownMenuLabel>Filter</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {columns.map((col) => (
                 <DropdownMenuItem

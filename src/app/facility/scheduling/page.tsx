@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { users } from "@/data/users";
 import { schedules } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
@@ -510,7 +509,6 @@ const timeSlots = [
 ];
 
 export default function FacilitySchedulingPage() {
-  const t = useTranslations("scheduling");
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
@@ -780,7 +778,7 @@ export default function FacilitySchedulingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("todayShifts")}
+              {"Today's Shifts"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -791,7 +789,7 @@ export default function FacilitySchedulingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("upcomingShifts")}
+              {"Upcoming Shifts"}
             </CardTitle>
           </CardHeader>
           <CardContent>

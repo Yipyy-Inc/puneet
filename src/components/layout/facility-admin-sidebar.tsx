@@ -25,7 +25,6 @@ import {
   Lightbulb,
   FileText,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import {
   GenericSidebar,
@@ -35,19 +34,16 @@ import {
 import { useFacilityRole } from "@/hooks/use-facility-role";
 
 export function FacilitySidebar() {
-  const t = useTranslations("navigation");
-  const tServices = useTranslations("services");
-  const tCommon = useTranslations("common");
   const { canAccess, isLoading } = useFacilityRole();
 
   // Filter menu items based on role permissions
   const filteredMenuSections = useMemo((): MenuSection[] => {
     const allMenuSections: MenuSection[] = [
       {
-        label: t("overview"),
+        label: "Overview",
         items: [
           {
-            title: t("dashboard"),
+            title: "Dashboard",
             url: "/facility/dashboard",
             icon: Home,
             disabled: false,
@@ -64,7 +60,7 @@ export function FacilitySidebar() {
         label: "Customers & Pets",
         items: [
           {
-            title: t("clients"),
+            title: "Clients",
             url: "/facility/dashboard/clients",
             icon: Users,
             disabled: false,
@@ -72,22 +68,22 @@ export function FacilitySidebar() {
         ],
       },
       {
-        label: t("operations"),
+        label: "Operations",
         items: [
           {
-            title: tCommon("bookings"),
+            title: "Bookings",
             url: "/facility/dashboard/bookings",
             icon: Calendar,
             disabled: false,
           },
           {
-            title: t("staff"),
+            title: "Staff",
             url: "/facility/staff",
             icon: UserCheck,
             disabled: false,
           },
           {
-            title: t("scheduling"),
+            title: "Scheduling",
             url: "/facility/scheduling",
             icon: Clock,
             disabled: false,
@@ -110,19 +106,19 @@ export function FacilitySidebar() {
         label: "Modules",
         items: [
           {
-            title: tServices("daycare"),
+            title: "Daycare",
             url: "/facility/dashboard/services/daycare",
             icon: PawPrint,
             disabled: false,
           },
           {
-            title: tServices("boarding"),
+            title: "Boarding",
             url: "/facility/dashboard/services/boarding",
             icon: Bed,
             disabled: false,
           },
           {
-            title: tServices("grooming"),
+            title: "Grooming",
             url: "/facility/dashboard/services/grooming",
             icon: Scissors,
             disabled: false,
@@ -151,7 +147,7 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: t("inventory"),
+            title: "Inventory",
             url: "/facility/inventory",
             icon: Package,
             disabled: false,
@@ -188,10 +184,10 @@ export function FacilitySidebar() {
         ],
       },
       {
-        label: t("management"),
+        label: "Management",
         items: [
           {
-            title: t("incidents"),
+            title: "Incidents",
             url: "/facility/dashboard/incidents",
             icon: AlertTriangle,
             disabled: false,
@@ -203,7 +199,7 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: tCommon("settings"),
+            title: "Settings",
             url: "/facility/dashboard/settings",
             icon: Settings,
             disabled: false,
@@ -224,7 +220,7 @@ export function FacilitySidebar() {
         items: section.items.filter((item: MenuItem) => canAccess(item.url)),
       }))
       .filter((section) => section.items.length > 0);
-  }, [t, tServices, tCommon, canAccess, isLoading]);
+  }, [canAccess, isLoading]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic
@@ -233,7 +229,7 @@ export function FacilitySidebar() {
   return (
     <GenericSidebar
       header={
-        <h2 className="text-lg font-semibold">{t("facilityDashboard")}</h2>
+        <h2 className="text-lg font-semibold">Facility Dashboard</h2>
       }
       menuSections={filteredMenuSections}
       onLogout={handleLogout}

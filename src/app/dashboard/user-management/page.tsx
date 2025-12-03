@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { adminUsers, roleDisplayNames, AdminUser } from "@/data/admin-users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,49 +78,45 @@ const exportUsersToCSV = (usersData: AdminUser[]) => {
 };
 
 export default function UserManagementPage() {
-  const t = useTranslations("userManagement");
-  const tCommon = useTranslations("common");
-  const tStatus = useTranslations("status");
-  const tRoles = useTranslations("adminRoles");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const columns: ColumnDef<AdminUser>[] = [
     {
       key: "name",
-      label: tCommon("name"),
+      label: "Name",
       icon: User,
       defaultVisible: true,
     },
     {
       key: "email",
-      label: tCommon("email"),
+      label: "Email",
       icon: MailIcon,
       defaultVisible: true,
     },
     {
       key: "role",
-      label: t("assignRole"),
+      label: "Assign Role",
       icon: Shield,
       defaultVisible: true,
       render: (user) => <StatusBadge type="adminRole" value={user.role} />,
     },
     {
       key: "department",
-      label: t("department"),
+      label: "Department",
       icon: Building,
       defaultVisible: true,
     },
     {
       key: "status",
-      label: tCommon("status"),
+      label: "Status",
       icon: Shield,
       defaultVisible: true,
       render: (user) => <StatusBadge type="status" value={user.status} />,
     },
     {
       key: "accessLevel",
-      label: t("accessLevel"),
+      label: "Access Level",
       icon: Key,
       defaultVisible: true,
       render: (user) => (
@@ -130,7 +125,7 @@ export default function UserManagementPage() {
     },
     {
       key: "lastLogin",
-      label: t("lastLogin"),
+      label: "Last Login",
       icon: Clock,
       defaultVisible: true,
       render: (user) => new Date(user.lastLogin).toLocaleDateString(),
@@ -140,35 +135,35 @@ export default function UserManagementPage() {
   const filters: FilterDef[] = [
     {
       key: "status",
-      label: tCommon("status"),
+      label: "Status",
       options: [
-        { value: "all", label: tCommon("all") + " " + tCommon("status") },
-        { value: "active", label: tStatus("active") },
-        { value: "inactive", label: tStatus("inactive") },
-        { value: "suspended", label: tStatus("suspended") },
+        { value: "all", label: "All Status" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "suspended", label: "Suspended" },
       ],
     },
     {
       key: "role",
-      label: t("assignRole"),
+      label: "Assign Role",
       options: [
-        { value: "all", label: tCommon("all") + " Roles" },
-        { value: "sales_team", label: tRoles("salesTeam") },
-        { value: "technical_support", label: tRoles("technicalSupport") },
-        { value: "account_manager", label: tRoles("accountManager") },
-        { value: "financial_auditor", label: tRoles("financialAuditor") },
-        { value: "system_administrator", label: tRoles("systemAdministrator") },
+        { value: "all", label: "All Roles" },
+        { value: "sales_team", label: "Sales Team" },
+        { value: "technical_support", label: "Technical Support" },
+        { value: "account_manager", label: "Account Manager" },
+        { value: "financial_auditor", label: "Financial Auditor" },
+        { value: "system_administrator", label: "System Administrator" },
       ],
     },
     {
       key: "accessLevel",
-      label: t("accessLevel"),
+      label: "Access Level",
       options: [
-        { value: "all", label: tCommon("all") + " Access Levels" },
-        { value: "full", label: t("fullAccess") },
-        { value: "read_write", label: t("readWriteAccess") },
-        { value: "read_only", label: t("readOnlyAccess") },
-        { value: "restricted", label: t("restrictedAccess") },
+        { value: "all", label: "All Access Levels" },
+        { value: "full", label: "Full Access" },
+        { value: "read_write", label: "Read/Write Access" },
+        { value: "read_only", label: "Read Only Access" },
+        { value: "restricted", label: "Restricted Access" },
       ],
     },
   ];
@@ -185,7 +180,7 @@ export default function UserManagementPage() {
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">
-          {t("adminUsersTitle")}
+          {"Admin Users"}
         </h2>
         <div className="flex items-center space-x-2">
           <Button
@@ -193,11 +188,11 @@ export default function UserManagementPage() {
             onClick={() => exportUsersToCSV(adminUsers)}
           >
             <Download className="mr-2 h-4 w-4" />
-            {tCommon("export")}
+            {"Export"}
           </Button>
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            {t("addUser")}
+            {"Add User"}
           </Button>
         </div>
       </div>
@@ -207,7 +202,7 @@ export default function UserManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("totalAdminUsers")}
+              {"Total Admin Users"}
             </CardTitle>
             <UserCog className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -219,7 +214,7 @@ export default function UserManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("activeAdminUsers")}
+              {"Active Admin Users"}
             </CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -235,7 +230,7 @@ export default function UserManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("suspendedUsers")}
+              {"Suspended Users"}
             </CardTitle>
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -251,7 +246,7 @@ export default function UserManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("rolesConfigured")}
+              {"Roles Configured"}
             </CardTitle>
             <Key className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -269,7 +264,7 @@ export default function UserManagementPage() {
         columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
         filters={filters}
         searchKey="name"
-        searchPlaceholder={t("searchAdminUsers")}
+        searchPlaceholder={"Search admin users..."}
         itemsPerPage={10}
         actions={(user) => (
           <Button
@@ -286,7 +281,7 @@ export default function UserManagementPage() {
           <div className="p-6 flex-1 overflow-y-auto">
             <DialogHeader className="mb-0">
               <DialogTitle className="sr-only">
-                {selectedUser?.name} - {t("userDetails")}
+                {selectedUser?.name} - {"User Details"}
               </DialogTitle>
             </DialogHeader>
             {selectedUser && <AdminUserModal user={selectedUser} />}

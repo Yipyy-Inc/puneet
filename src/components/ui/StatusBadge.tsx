@@ -9,7 +9,6 @@ import {
   Shield,
   Key,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 interface StatusBadgeProps {
   type:
@@ -31,11 +30,6 @@ export function StatusBadge({
   size = "default",
   showIcon = false,
 }: StatusBadgeProps) {
-  const tStatus = useTranslations("status");
-  const tPlans = useTranslations("plans");
-  const tRoles = useTranslations("userRoles");
-  const tAdminRoles = useTranslations("adminRoles");
-  const tUserMgmt = useTranslations("userManagement");
 
   const getVariant = () => {
     if (type === "status") {
@@ -127,57 +121,58 @@ export function StatusBadge({
     }
   };
 
-  const getTranslatedValue = () => {
+  const getDisplayValue = () => {
     if (type === "status") {
-      const statusKey = value.toLowerCase() as
-        | "active"
-        | "inactive"
-        | "pending"
-        | "approved"
-        | "denied"
-        | "suspended"
-        | "online"
-        | "offline"
-        | "busy"
-        | "available"
-        | "completed"
-        | "confirmed"
-        | "cancelled"
-        | "paid"
-        | "refunded";
-      return tStatus(statusKey);
+      const statusMap: Record<string, string> = {
+        active: "Active",
+        inactive: "Inactive",
+        pending: "Pending",
+        approved: "Approved",
+        denied: "Denied",
+        suspended: "Suspended",
+        online: "Online",
+        offline: "Offline",
+        busy: "Busy",
+        available: "Available",
+        completed: "Completed",
+        confirmed: "Confirmed",
+        cancelled: "Cancelled",
+        paid: "Paid",
+        refunded: "Refunded",
+      };
+      return statusMap[value.toLowerCase()] || value;
     }
     if (type === "plan") {
-      const planKey = value.toLowerCase() as
-        | "free"
-        | "basic"
-        | "premium"
-        | "enterprise";
-      return tPlans(planKey);
+      const planMap: Record<string, string> = {
+        free: "Free",
+        basic: "Basic",
+        premium: "Premium",
+        enterprise: "Enterprise",
+      };
+      return planMap[value.toLowerCase()] || value;
     }
     if (type === "role") {
-      if (value === "Super Admin") return tRoles("superAdmin");
+      if (value === "Super Admin") return "Super Admin";
       if (value === "Facility Admin" || value === "Admin")
-        return tRoles("facilityAdmin");
-      if (value === "Manager") return tRoles("manager");
-      if (value === "Staff") return tRoles("staff");
-      if (value === "Customer") return tRoles("customer");
+        return "Facility Admin";
+      if (value === "Manager") return "Manager";
+      if (value === "Staff") return "Staff";
+      if (value === "Customer") return "Customer";
       return value;
     }
     if (type === "adminRole") {
-      if (value === "sales_team") return tAdminRoles("salesTeam");
-      if (value === "technical_support") return tAdminRoles("technicalSupport");
-      if (value === "account_manager") return tAdminRoles("accountManager");
-      if (value === "financial_auditor") return tAdminRoles("financialAuditor");
-      if (value === "system_administrator")
-        return tAdminRoles("systemAdministrator");
+      if (value === "sales_team") return "Sales Team";
+      if (value === "technical_support") return "Technical Support";
+      if (value === "account_manager") return "Account Manager";
+      if (value === "financial_auditor") return "Financial Auditor";
+      if (value === "system_administrator") return "System Administrator";
       return value;
     }
     if (type === "accessLevel") {
-      if (value === "full") return tUserMgmt("fullAccess");
-      if (value === "read_write") return tUserMgmt("readWriteAccess");
-      if (value === "read_only") return tUserMgmt("readOnlyAccess");
-      if (value === "restricted") return tUserMgmt("restrictedAccess");
+      if (value === "full") return "Full Access";
+      if (value === "read_write") return "Read/Write Access";
+      if (value === "read_only") return "Read Only Access";
+      if (value === "restricted") return "Restricted Access";
       return value;
     }
     if (type === "severity") {
@@ -192,7 +187,7 @@ export function StatusBadge({
   return (
     <Badge variant={getVariant()} className={getSizeClass()}>
       {getIcon()}
-      {getTranslatedValue()}
+      {getDisplayValue()}
     </Badge>
   );
 }

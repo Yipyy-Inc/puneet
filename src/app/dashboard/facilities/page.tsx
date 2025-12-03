@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { facilities as initialFacilities } from "@/data/facilities";
 import { facilityRequests } from "@/data/facility-requests";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,10 +147,6 @@ function StatCard({
 
 export default function FacilitiesPage() {
   const router = useRouter();
-  const t = useTranslations("facilities");
-  const tCommon = useTranslations("common");
-  const tStatus = useTranslations("status");
-  const tPlans = useTranslations("plans");
   const [facilitiesState] = useState(initialFacilities);
   const [selectedFacility, setSelectedFacility] = useState<
     (typeof initialFacilities)[0] | null
@@ -206,7 +201,7 @@ export default function FacilitiesPage() {
   const columns: ColumnDef<(typeof initialFacilities)[0]>[] = [
     {
       key: "name",
-      label: t("facilityName"),
+      label: "Facility Name",
       icon: Building,
       defaultVisible: true,
       render: (facility) => (
@@ -220,7 +215,7 @@ export default function FacilitiesPage() {
     },
     {
       key: "status",
-      label: tCommon("status"),
+      label: "Status",
       icon: Shield,
       defaultVisible: true,
       render: (facility) => (
@@ -229,7 +224,7 @@ export default function FacilitiesPage() {
     },
     {
       key: "plan",
-      label: tCommon("plan"),
+      label: "Plan",
       icon: CreditCard,
       defaultVisible: true,
       render: (facility) => <StatusBadge type="plan" value={facility.plan} />,
@@ -259,7 +254,7 @@ export default function FacilitiesPage() {
     },
     {
       key: "users",
-      label: t("totalUsers"),
+      label: "Total Users",
       icon: Users,
       defaultVisible: true,
       render: (facility) => facility.usersList.length,
@@ -267,7 +262,7 @@ export default function FacilitiesPage() {
     },
     {
       key: "activeClients",
-      label: t("activeClients"),
+      label: "Active Clients",
       icon: UserCheck,
       defaultVisible: true,
       render: (facility) =>
@@ -277,7 +272,7 @@ export default function FacilitiesPage() {
     },
     {
       key: "locations",
-      label: t("locations"),
+      label: "Locations",
       icon: MapPin,
       defaultVisible: false,
       render: (facility) => facility.locationsList.length,
@@ -285,13 +280,13 @@ export default function FacilitiesPage() {
     },
     {
       key: "dayJoined",
-      label: t("dayJoined"),
+      label: "Day Joined",
       icon: Calendar,
       defaultVisible: true,
     },
     {
       key: "subscriptionEnd",
-      label: t("subscriptionEnd"),
+      label: "Subscription End",
       icon: Clock,
       defaultVisible: false,
       render: (facility) => facility.subscriptionEnd || "N/A",
@@ -302,22 +297,22 @@ export default function FacilitiesPage() {
   const filters: FilterDef[] = [
     {
       key: "status",
-      label: tCommon("status"),
+      label: "Status",
       options: [
-        { value: "all", label: tCommon("all") + " " + tCommon("status") },
-        { value: "active", label: tStatus("active") },
-        { value: "inactive", label: tStatus("inactive") },
+        { value: "all", label: "All Status" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
       ],
     },
     {
       key: "plan",
-      label: tCommon("plan"),
+      label: "Plan",
       options: [
-        { value: "all", label: tCommon("all") + " " + tCommon("plans") },
-        { value: "Free", label: tPlans("free") },
-        { value: "Basic", label: tPlans("basic") },
-        { value: "Premium", label: tPlans("premium") },
-        { value: "Enterprise", label: tPlans("enterprise") },
+        { value: "all", label: "All Plans" },
+        { value: "Free", label: "Free" },
+        { value: "Basic", label: "Basic" },
+        { value: "Premium", label: "Premium" },
+        { value: "Enterprise", label: "Enterprise" },
       ],
     },
   ];
@@ -327,7 +322,7 @@ export default function FacilitiesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{"Facilities Management"}</h1>
           <p className="text-muted-foreground mt-1">
             Manage and monitor all facility operations
           </p>
@@ -338,15 +333,15 @@ export default function FacilitiesPage() {
             onClick={() => exportToCSV(facilitiesState)}
           >
             <Download className="mr-2 h-4 w-4" />
-            {tCommon("export")}
+            {"Export"}
           </Button>
           <Button variant="outline" onClick={() => setIsNotifyModalOpen(true)}>
             <Mail className="mr-2 h-4 w-4" />
-            {t("notifyAll")}
+            {"Notify All"}
           </Button>
           <Button onClick={() => router.push("/dashboard/facilities/new")}>
             <Plus className="mr-2 h-4 w-4" />
-            {t("addFacility")}
+            {"Add Facility"}
           </Button>
         </div>
       </div>
@@ -354,9 +349,9 @@ export default function FacilitiesPage() {
       {/* Stats Section */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title={t("totalFacilities")}
+          title={"Total Facilities"}
           value={stats.total}
-          subtitle={`${stats.active} ${tStatus("active").toLowerCase()}, ${stats.inactive} inactive`}
+          subtitle={`${stats.active} ${"Active".toLowerCase()}, ${stats.inactive} inactive`}
           icon={Building}
           iconBgStyle={{
             background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -364,9 +359,9 @@ export default function FacilitiesPage() {
           trend={{ value: "+12%", isPositive: true }}
         />
         <StatCard
-          title={t("totalUsers")}
+          title={"Total Users"}
           value={stats.totalUsers}
-          subtitle={t("acrossAllFacilities")}
+          subtitle={"Across all facilities"}
           icon={Users}
           iconBgStyle={{
             background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
@@ -417,7 +412,7 @@ export default function FacilitiesPage() {
                 onClick={() => router.push("/dashboard/facilities/requests")}
               >
                 <Eye className="mr-2 h-4 w-4" />
-                {t("viewRequests")}
+                {"View Requests"}
               </Button>
             </div>
           </CardContent>
@@ -442,7 +437,7 @@ export default function FacilitiesPage() {
                 .join(" ");
               return `${facility.name} ${facility.owner.name} ${facility.contact.email} ${facility.contact.phone} ${locations}`;
             }}
-            searchPlaceholder={t("searchFacilities")}
+            searchPlaceholder={"Search facilities..."}
             itemsPerPage={10}
             actions={(facility) => (
               <div className="flex items-center gap-2">
@@ -492,7 +487,7 @@ export default function FacilitiesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              {t("notifyAll")}
+              {"Notify All"}
             </DialogTitle>
             <DialogDescription>
               Send a notification to all {facilitiesState.length} facilities

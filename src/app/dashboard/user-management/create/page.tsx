@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   rolePermissions,
@@ -83,8 +82,6 @@ const responsibilityOptions = [
 ];
 
 export default function CreateUserPage() {
-  const t = useTranslations("userManagement");
-  const tCommon = useTranslations("common");
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -180,7 +177,7 @@ export default function CreateUserPage() {
         </Link>
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {t("createUserTitle")}
+            {"Create New User"}
           </h2>
           <p className="text-muted-foreground mt-1">
             Add a new admin user with role and permissions
@@ -347,15 +344,15 @@ export default function CreateUserPage() {
                       <SelectValue placeholder="Select access level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="full">{t("fullAccess")}</SelectItem>
+                      <SelectItem value="full">{"Full Access"}</SelectItem>
                       <SelectItem value="read_write">
-                        {t("readWriteAccess")}
+                        {"Read/Write Access"}
                       </SelectItem>
                       <SelectItem value="read_only">
-                        {t("readOnlyAccess")}
+                        {"Read Only Access"}
                       </SelectItem>
                       <SelectItem value="restricted">
-                        {t("restrictedAccess")}
+                        {"Restricted Access"}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -374,7 +371,7 @@ export default function CreateUserPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                {t("responsibilityAreas")}
+                {"Responsibility Areas"}
               </CardTitle>
               <CardDescription>
                 Define the areas this user will be responsible for
@@ -422,7 +419,7 @@ export default function CreateUserPage() {
         <div className="flex justify-end gap-3 mt-6">
           <Link href="/dashboard/user-management">
             <Button variant="outline" type="button">
-              {tCommon("cancel")}
+              {"Cancel"}
             </Button>
           </Link>
           <Button type="submit" disabled={!isFormValid || isSubmitting}>
@@ -434,7 +431,7 @@ export default function CreateUserPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                {t("addUser")}
+                {"Add User"}
               </>
             )}
           </Button>

@@ -29,7 +29,6 @@ import {
   Ticket,
   ToggleRight,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import Image from "next/image";
@@ -58,14 +57,13 @@ function SidebarLogo() {
 }
 
 export function AppSidebar() {
-  const t = useTranslations("navigation");
 
   const menuSections: MenuSection[] = [
     {
-      label: t("overview"),
+      label: "Overview",
       items: [
         {
-          title: t("dashboard"),
+          title: "Dashboard",
           url: "/dashboard",
           icon: Home,
           disabled: false,
@@ -73,28 +71,28 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("analyticsReporting"),
+      label: "Analytics & Reporting",
       items: [
         {
-          title: t("overview"),
+          title: "Overview",
           url: "/dashboard/analytics",
           icon: BarChart2,
           disabled: false,
         },
         {
-          title: t("businessIntelligence"),
+          title: "Business Intelligence",
           url: "/dashboard/analytics/business-intelligence",
           icon: TrendingUp,
           disabled: false,
         },
         {
-          title: t("performanceMetrics"),
+          title: "Performance Metrics",
           url: "/dashboard/analytics/performance",
           icon: Activity,
           disabled: false,
         },
         {
-          title: t("customReports"),
+          title: "Custom Reports",
           url: "/dashboard/analytics/reports",
           icon: FileText,
           disabled: false,
@@ -155,16 +153,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("tenantManagement"),
+      label: "Tenant Management",
       items: [
         {
-          title: t("facilities"),
+          title: "Facilities",
           url: "/dashboard/facilities",
           icon: Building,
           disabled: false,
         },
         {
-          title: t("facilityConfiguration"),
+          title: "Facility Configuration",
           url: "/dashboard/facility-config",
           icon: Wrench,
           disabled: false,
@@ -172,22 +170,22 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("userManagement"),
+      label: "User Management",
       items: [
         {
-          title: t("adminUsers"),
+          title: "Admin Users",
           url: "/dashboard/user-management",
           icon: UserCog,
           disabled: false,
         },
         {
-          title: t("rolesPermissions"),
+          title: "Roles & Permissions",
           url: "/dashboard/user-management/roles",
           icon: KeyRound,
           disabled: false,
         },
         {
-          title: t("activityTracking"),
+          title: "Activity Tracking",
           url: "/dashboard/user-management/activity",
           icon: Activity,
           disabled: false,
@@ -195,16 +193,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("platformOperations"),
+      label: "Platform Operations",
       items: [
         {
-          title: t("subscriptionManagement"),
+          title: "Subscription & Modules",
           url: "/dashboard/subscriptions",
           icon: Package,
           disabled: false,
         },
         {
-          title: t("financialManagement"),
+          title: "Financial Management",
           url: "/dashboard/financial",
           icon: DollarSign,
           disabled: false,
@@ -212,16 +210,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("communicationSupport"),
+      label: "Communication & Support",
       items: [
         {
-          title: t("liveSupport"),
+          title: "Live Support",
           url: "/dashboard/communication/live-support",
           icon: Headphones,
           disabled: false,
         },
         {
-          title: t("announcements"),
+          title: "Announcements",
           url: "/dashboard/communication/announcements",
           icon: Megaphone,
           disabled: false,
@@ -230,40 +228,40 @@ export function AppSidebar() {
     },
 
     {
-      label: t("systemAdministration"),
+      label: "System Administration",
       items: [
         {
-          title: t("globalSettings"),
+          title: "Global Settings",
           url: "/dashboard/system-admin/global-settings",
           icon: Globe,
           disabled: false,
         },
         {
-          title: t("featureToggles"),
+          title: "Feature Toggles",
           url: "/dashboard/system-admin/feature-toggles",
           icon: ToggleRight,
           disabled: false,
         },
         {
-          title: t("supportTicketing"),
+          title: "Support & Ticketing",
           url: "/dashboard/system-admin/support-ticketing",
           icon: Ticket,
           disabled: false,
         },
         {
-          title: t("auditLogs"),
+          title: "Audit & Logging",
           url: "/dashboard/system-admin/audit-logs",
           icon: Shield,
           disabled: false,
         },
         {
-          title: t("dataManagement"),
+          title: "Data Management",
           url: "/dashboard/system-admin/data-management",
           icon: Database,
           disabled: false,
         },
         {
-          title: t("systemConfiguration"),
+          title: "System Configuration",
           url: "/dashboard/system-admin/system-config",
           icon: Settings,
           disabled: false,
@@ -271,16 +269,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("securityCompliance"),
+      label: "Security & Compliance",
       items: [
         {
-          title: t("securityManagement"),
+          title: "Security Management",
           url: "/dashboard/security-compliance/security-management",
           icon: Shield,
           disabled: false,
         },
         {
-          title: t("complianceTools"),
+          title: "Compliance Tools",
           url: "/dashboard/security-compliance/compliance-tools",
           icon: CheckSquare,
           disabled: false,
@@ -288,16 +286,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("systemHealth"),
+      label: "System Health & Monitoring",
       items: [
         {
-          title: t("systemStatus"),
+          title: "System Status",
           url: "/dashboard/system-health/system-status",
           icon: Activity,
           disabled: false,
         },
         {
-          title: t("alertsNotifications"),
+          title: "Alerts & Notifications",
           url: "/dashboard/system-health/alerts-notifications",
           icon: AlertTriangle,
           disabled: false,
@@ -305,16 +303,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: t("promotionsDiscounts"),
+      label: "Promotions & Discounts",
       items: [
         {
-          title: t("promoCodeSystem"),
+          title: "Promo Code System",
           url: "/dashboard/promotions/promo-code-system",
           icon: Tag,
           disabled: false,
         },
         {
-          title: t("performanceMetrics"),
+          title: "Performance Metrics",
           url: "/dashboard/promotions/performance-metrics",
           icon: TrendingUp,
           disabled: false,

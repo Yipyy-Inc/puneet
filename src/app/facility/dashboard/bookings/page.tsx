@@ -44,8 +44,6 @@ import {
   CalendarDays,
   CalendarX,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-
 const exportBookingsToCSV = (bookingsData: Booking[]) => {
   const headers = [
     "ID",
@@ -128,8 +126,6 @@ const isPast = (dateString: string): boolean => {
 };
 
 export default function FacilityBookingsPage() {
-  const tCommon = useTranslations("common");
-  const tBookings = useTranslations("bookings");
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
@@ -442,7 +438,7 @@ export default function FacilityBookingsPage() {
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {tBookings("title")}
+            {"Bookings Management"}
           </h2>
           <p className="text-muted-foreground">{facility.name}</p>
         </div>
@@ -455,7 +451,7 @@ export default function FacilityBookingsPage() {
             }
           >
             <CalendarDays className="mr-2 h-4 w-4" />
-            {viewMode === "calendar" ? "Table View" : tBookings("calendarView")}
+            {viewMode === "calendar" ? "Table View" : "Calendar View"}
           </Button>
           <Button
             variant="outline"
@@ -463,7 +459,7 @@ export default function FacilityBookingsPage() {
             onClick={() => exportBookingsToCSV(getDataForTab())}
           >
             <Download className="mr-2 h-4 w-4" />
-            {tCommon("export")}
+            {"Export"}
           </Button>
         </div>
       </div>
@@ -473,36 +469,35 @@ export default function FacilityBookingsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {tBookings("allBookings")}
+              {"All Bookings"}
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBookings}</div>
             <p className="text-xs text-muted-foreground">
-              {upcomingBookings.length}{" "}
-              {tBookings("upcomingBookings").toLowerCase()}
+              {upcomingBookings.length} upcoming bookings
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {tBookings("todayBookings")}
+              {"Today's Bookings"}
             </CardTitle>
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todayBookings.length}</div>
             <p className="text-xs text-muted-foreground">
-              {tBookings("activeToday")}
+              {"Active today"}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {tBookings("completedBookings")}
+              {"Completed Bookings"}
             </CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -512,28 +507,28 @@ export default function FacilityBookingsPage() {
               {totalBookings > 0
                 ? Math.round((completedBookings / totalBookings) * 100)
                 : 0}
-              % {tBookings("completionRate")}
+              % {"completion rate"}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {tBookings("pendingBookings")}
+              {"Pending Bookings"}
             </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingBookings.length}</div>
             <p className="text-xs text-muted-foreground">
-              ${pendingRevenue} {tBookings("pendingRevenue").toLowerCase()}
+              ${pendingRevenue} pending revenue
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {tBookings("totalRevenue")}
+              {"Total Revenue"}
             </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -541,7 +536,7 @@ export default function FacilityBookingsPage() {
             <div className="text-2xl font-bold">${totalRevenue}</div>
             <p className="text-xs text-muted-foreground flex items-center">
               <TrendingUp className="h-3 w-3 mr-1" />
-              {tBookings("totalReceived")}
+              {"Total received"}
             </p>
           </CardContent>
         </Card>
@@ -551,7 +546,7 @@ export default function FacilityBookingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {tBookings("revenueByService")}
+            {"Revenue by Service"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -614,7 +609,7 @@ export default function FacilityBookingsPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="all" className="relative">
-              {tCommon("all")}
+              {"All"}
               <Badge
                 variant="secondary"
                 className="ml-2 px-1.5 py-0 text-xs h-5"
@@ -623,7 +618,7 @@ export default function FacilityBookingsPage() {
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="today" className="relative">
-              {tCommon("today")}
+              {"Today"}
               <Badge
                 variant="secondary"
                 className="ml-2 px-1.5 py-0 text-xs h-5"
@@ -632,7 +627,7 @@ export default function FacilityBookingsPage() {
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="upcoming" className="relative">
-              {tCommon("upcoming")}
+              {"Upcoming"}
               <Badge
                 variant="secondary"
                 className="ml-2 px-1.5 py-0 text-xs h-5"
@@ -641,7 +636,7 @@ export default function FacilityBookingsPage() {
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="past" className="relative">
-              {tCommon("past")}
+              {"Past"}
               <Badge
                 variant="secondary"
                 className="ml-2 px-1.5 py-0 text-xs h-5"
@@ -650,7 +645,7 @@ export default function FacilityBookingsPage() {
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="pending" className="relative">
-              {tCommon("pending")}
+              {"Pending"}
               <Badge
                 variant="secondary"
                 className="ml-2 px-1.5 py-0 text-xs h-5"
@@ -666,10 +661,10 @@ export default function FacilityBookingsPage() {
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <CalendarX className="h-16 w-16 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
-                    {tBookings("noBookingsFound")}
+                    {"No bookings found"}
                   </h3>
                   <p className="text-muted-foreground text-center max-w-md">
-                    {tBookings("noBookingsMessage")}
+                    {"There are no bookings in this category yet."}
                   </p>
                 </CardContent>
               </Card>
@@ -681,7 +676,7 @@ export default function FacilityBookingsPage() {
                 }
                 filters={filters}
                 searchKey="id"
-                searchPlaceholder={tBookings("searchBookings")}
+                searchPlaceholder={"Search by booking ID, client, or pet..."}
                 itemsPerPage={15}
                 actions={(booking) => (
                   <DropdownMenu>
@@ -692,7 +687,7 @@ export default function FacilityBookingsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuLabel>
-                        {tCommon("actions")}
+                        {"Actions"}
                       </DropdownMenuLabel>
                       <DropdownMenuItem
                         onClick={() =>
@@ -700,7 +695,7 @@ export default function FacilityBookingsPage() {
                         }
                       >
                         <Eye className="mr-2 h-4 w-4" />
-                        {tBookings("viewDetails")}
+                        {"View Details"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
@@ -708,10 +703,10 @@ export default function FacilityBookingsPage() {
                         }
                       >
                         <Edit className="mr-2 h-4 w-4" />
-                        {tBookings("editBooking")}
+                        {"Edit Booking"}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel>{tCommon("status")}</DropdownMenuLabel>
+                      <DropdownMenuLabel>{"Status"}</DropdownMenuLabel>
                       {booking.status === "pending" && (
                         <DropdownMenuItem
                           onClick={() =>
@@ -721,7 +716,7 @@ export default function FacilityBookingsPage() {
                           }
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          {tBookings("confirmBooking")}
+                          {"Confirm Booking"}
                         </DropdownMenuItem>
                       )}
                       {booking.status === "confirmed" && (
@@ -733,7 +728,7 @@ export default function FacilityBookingsPage() {
                           }
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          {tBookings("markAsCompleted")}
+                          {"Mark as Completed"}
                         </DropdownMenuItem>
                       )}
                       {booking.paymentStatus === "pending" && (
@@ -747,7 +742,7 @@ export default function FacilityBookingsPage() {
                             }
                           >
                             <DollarSign className="mr-2 h-4 w-4" />
-                            {tBookings("processPayment")}
+                            {"Process Payment"}
                           </DropdownMenuItem>
                         </>
                       )}
@@ -780,7 +775,7 @@ export default function FacilityBookingsPage() {
                             }
                           >
                             <X className="mr-2 h-4 w-4" />
-                            {tBookings("cancelBooking")}
+                            {"Cancel Booking"}
                           </DropdownMenuItem>
                         </>
                       )}

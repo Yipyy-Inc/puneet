@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { adminUsers, roleDisplayNames } from "@/data/admin-users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,15 +114,12 @@ const exportActivityToCSV = (data: ActivityLogEntry[]) => {
 };
 
 export default function ActivityTrackingPage() {
-  const t = useTranslations("userManagement");
-  const tCommon = useTranslations("common");
-  const tRoles = useTranslations("adminRoles");
   const [activeTab, setActiveTab] = useState("activity");
 
   const activityColumns: ColumnDef<ActivityLogEntry>[] = [
     {
       key: "userName",
-      label: tCommon("name"),
+      label: "Name",
       icon: User,
       defaultVisible: true,
       render: (log) => (
@@ -142,20 +138,20 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "action",
-      label: t("action"),
+      label: "Action",
       icon: Activity,
       defaultVisible: true,
       render: (log) => <div className="font-medium">{log.action}</div>,
     },
     {
       key: "target",
-      label: t("target"),
+      label: "Target",
       icon: Eye,
       defaultVisible: true,
     },
     {
       key: "details",
-      label: t("details"),
+      label: "Details",
       icon: FileText,
       defaultVisible: true,
       render: (log) => (
@@ -166,14 +162,14 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "severity",
-      label: t("severity"),
+      label: "Severity",
       icon: AlertTriangle,
       defaultVisible: true,
       render: (log) => <StatusBadge type="severity" value={log.severity} />,
     },
     {
       key: "timestamp",
-      label: t("timestamp"),
+      label: "Timestamp",
       icon: Clock,
       defaultVisible: true,
       render: (log) => (
@@ -190,7 +186,7 @@ export default function ActivityTrackingPage() {
   const loginColumns: ColumnDef<LoginHistoryEntry>[] = [
     {
       key: "userName",
-      label: tCommon("name"),
+      label: "Name",
       icon: User,
       defaultVisible: true,
       render: (log) => (
@@ -209,7 +205,7 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "date",
-      label: t("timestamp"),
+      label: "Timestamp",
       icon: Clock,
       defaultVisible: true,
       render: (log) => (
@@ -223,7 +219,7 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "ip",
-      label: t("ipAddress"),
+      label: "IP Address",
       icon: Globe,
       defaultVisible: true,
       render: (log) => (
@@ -232,7 +228,7 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "device",
-      label: t("device"),
+      label: "Device",
       icon: Monitor,
       defaultVisible: true,
       render: (log) => (
@@ -243,7 +239,7 @@ export default function ActivityTrackingPage() {
     },
     {
       key: "location",
-      label: t("location"),
+      label: "Location",
       icon: Globe,
       defaultVisible: true,
     },
@@ -252,7 +248,7 @@ export default function ActivityTrackingPage() {
   const activityFilters: FilterDef[] = [
     {
       key: "severity",
-      label: t("severity"),
+      label: "Severity",
       options: [
         { value: "all", label: "All Severity" },
         { value: "high", label: "High" },
@@ -265,11 +261,11 @@ export default function ActivityTrackingPage() {
       label: "Role",
       options: [
         { value: "all", label: "All Roles" },
-        { value: "sales_team", label: tRoles("salesTeam") },
-        { value: "technical_support", label: tRoles("technicalSupport") },
-        { value: "account_manager", label: tRoles("accountManager") },
-        { value: "financial_auditor", label: tRoles("financialAuditor") },
-        { value: "system_administrator", label: tRoles("systemAdministrator") },
+        { value: "sales_team", label: "Sales Team" },
+        { value: "technical_support", label: "Technical Support" },
+        { value: "account_manager", label: "Account Manager" },
+        { value: "financial_auditor", label: "Financial Auditor" },
+        { value: "system_administrator", label: "System Administrator" },
       ],
     },
   ];
@@ -280,11 +276,11 @@ export default function ActivityTrackingPage() {
       label: "Role",
       options: [
         { value: "all", label: "All Roles" },
-        { value: "sales_team", label: tRoles("salesTeam") },
-        { value: "technical_support", label: tRoles("technicalSupport") },
-        { value: "account_manager", label: tRoles("accountManager") },
-        { value: "financial_auditor", label: tRoles("financialAuditor") },
-        { value: "system_administrator", label: tRoles("systemAdministrator") },
+        { value: "sales_team", label: "Sales Team" },
+        { value: "technical_support", label: "Technical Support" },
+        { value: "account_manager", label: "Account Manager" },
+        { value: "financial_auditor", label: "Financial Auditor" },
+        { value: "system_administrator", label: "System Administrator" },
       ],
     },
   ];
@@ -328,7 +324,7 @@ export default function ActivityTrackingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                {t("sensitiveActions")} - {t("auditTrail")}
+                {"Sensitive Actions"} - {"Audit Trail"}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -391,7 +387,7 @@ export default function ActivityTrackingPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold tracking-tight">
-                {t("activityTrackingTitle")}
+                {"Activity Tracking"}
               </h2>
               <p className="text-muted-foreground mt-1">
                 Monitor admin user actions, login history, and audit trails
@@ -402,7 +398,7 @@ export default function ActivityTrackingPage() {
               onClick={() => exportActivityToCSV(allActivityLogs)}
             >
               <Download className="mr-2 h-4 w-4" />
-              {t("exportAuditLog")}
+              {"Export Audit Log"}
             </Button>
           </div>
         </div>
@@ -454,7 +450,7 @@ export default function ActivityTrackingPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {t("sensitiveActions")}
+                {"Sensitive Actions"}
               </CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>

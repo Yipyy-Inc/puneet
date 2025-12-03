@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -568,7 +567,6 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 export default function DashboardPage() {
-  const t = useTranslations("dashboard");
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "12m">(
     "12m",
   );
@@ -651,9 +649,9 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
-            {t("title")}
+            {"Dashboard"}
           </h1>
-          <p className="text-muted-foreground mt-1">{t("welcome")}</p>
+          <p className="text-muted-foreground mt-1">{"Welcome back! Here's what's happening today 🐾"}</p>
         </div>
         <div className="flex items-center gap-3">
           <Select

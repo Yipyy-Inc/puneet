@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +37,6 @@ interface Product {
 }
 
 export default function StoreServicePage() {
-  const t = useTranslations("services");
-  const tCommon = useTranslations("common");
   // Static facility ID for now
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
@@ -159,14 +156,14 @@ export default function StoreServicePage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {t("storeTitle")}
+            {"Store Management"}
           </h2>
           <p className="text-muted-foreground">
             Manage your online store and inventory
           </p>
         </div>
         <Badge variant={settings.enabled ? "default" : "secondary"}>
-          {settings.enabled ? tCommon("active") : tCommon("inactive")}
+          {settings.enabled ? "Active" : "Inactive"}
         </Badge>
       </div>
 

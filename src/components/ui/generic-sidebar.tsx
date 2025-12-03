@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, ChevronRight, ChevronUp, Search, X } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import {
   Collapsible,
@@ -55,7 +54,6 @@ export function GenericSidebar({
 }: GenericSidebarProps) {
   const { state, setOpen, open } = useSidebar();
   const pathname = usePathname();
-  const t = useTranslations("navigation");
   const isExpanded = state === "expanded";
 
   const [collapsedSections, setCollapsedSections] = React.useState<
@@ -479,7 +477,7 @@ export function GenericSidebar({
               >
                 <button className="flex items-center gap-3">
                   <LogOut className="size-4 shrink-0" />
-                  <span>{t("logout")}</span>
+                  <span>Logout</span>
                 </button>
               </SidebarMenuButton>
             )}

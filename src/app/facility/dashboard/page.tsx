@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { useTranslations } from "next-intl";
 import { PawPrint, Search, Plus } from "lucide-react";
 import { facilities } from "@/data/facilities";
 import { bookings as initialBookings, type Booking } from "@/data/bookings";
@@ -18,8 +17,6 @@ import { TrainingSection } from "@/components/facility/TrainingSection";
 import { PermissionGuard } from "@/components/facility/PermissionGuard";
 
 export default function FacilityDashboard() {
-  const tStatus = useTranslations("status");
-
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modal states
@@ -221,7 +218,7 @@ export default function FacilityDashboard() {
           variant={facility.status === "active" ? "default" : "secondary"}
           className="w-fit"
         >
-          {tStatus(facility.status as "active" | "inactive")}
+          {facility.status === "active" ? "Active" : "Inactive"}
         </Badge>
       </div>
 

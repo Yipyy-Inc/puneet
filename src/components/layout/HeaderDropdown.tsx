@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,11 +17,18 @@ import { FacilityRoleSwitcher } from "./FacilityRoleSwitcher";
 
 export function HeaderDropdown() {
   const [isPending, startTransition] = useTransition();
-  const locale = useLocale();
   const pathname = usePathname();
   const currentRole = getUserRole();
 
   const isFacilityPortal = pathname?.startsWith("/facility");
+
+  const getLocale = () => {
+    const cookies = document.cookie.split(";");
+    const localeCookie = cookies.find((c) => c.trim().startsWith("NEXT_LOCALE="));
+    return localeCookie ? localeCookie.split("=")[1] : "en";
+  };
+
+  const locale = getLocale();
 
   const switchLocale = (newLocale: string) => {
     startTransition(() => {
