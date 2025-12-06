@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,24 +15,23 @@ import { Globe, Settings } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
 import { FacilityRoleSwitcher } from "./FacilityRoleSwitcher";
 
+const getLocaleFromCookie = () => {
+  if (typeof document === "undefined") return "en";
+  const cookies = document.cookie.split(";");
+  const localeCookie = cookies.find((c) => c.trim().startsWith("NEXT_LOCALE="));
+  return localeCookie ? localeCookie.split("=")[1] : "en";
+};
+
 export function HeaderDropdown() {
   const [isPending, startTransition] = useTransition();
+  const [locale, setLocale] = useState(getLocaleFromCookie);
   const pathname = usePathname();
   const currentRole = getUserRole();
 
   const isFacilityPortal = pathname?.startsWith("/facility");
 
-  const getLocale = () => {
-    const cookies = document.cookie.split(";");
-    const localeCookie = cookies.find((c) =>
-      c.trim().startsWith("NEXT_LOCALE="),
-    );
-    return localeCookie ? localeCookie.split("=")[1] : "en";
-  };
-
-  const locale = getLocale();
-
   const switchLocale = (newLocale: string) => {
+    setLocale(newLocale);
     startTransition(() => {
       document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`;
       window.location.reload();

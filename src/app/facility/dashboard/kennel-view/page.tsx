@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import {
   PawPrint,
   Calendar,
@@ -40,9 +41,16 @@ import {
   User,
   List,
   LayoutGrid,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { clients } from "@/data/clients";
 import { KennelCalendarView } from "./kennel-calendar";
+import {
+  DaycareCalendarView,
+  DaycareSpot,
+  DaycareReservation,
+} from "./daycare-calendar";
 
 type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
 
@@ -183,7 +191,251 @@ const initialKennels: Kennel[] = [
   },
 ];
 
+// Mock daycare spots
+const initialDaycareSpots: DaycareSpot[] = [
+  {
+    id: "D1",
+    name: "Small Play Area 1",
+    type: "small",
+    status: "available",
+    capacity: 3,
+    hourlyRate: 8,
+  },
+  {
+    id: "D2",
+    name: "Small Play Area 2",
+    type: "small",
+    status: "available",
+    capacity: 3,
+    hourlyRate: 8,
+  },
+  {
+    id: "D3",
+    name: "Medium Play Area 1",
+    type: "medium",
+    status: "available",
+    capacity: 4,
+    hourlyRate: 10,
+  },
+  {
+    id: "D4",
+    name: "Medium Play Area 2",
+    type: "medium",
+    status: "available",
+    capacity: 4,
+    hourlyRate: 10,
+  },
+  {
+    id: "D5",
+    name: "Large Play Area 1",
+    type: "large",
+    status: "available",
+    capacity: 3,
+    hourlyRate: 12,
+  },
+  {
+    id: "D6",
+    name: "Large Play Area 2",
+    type: "large",
+    status: "maintenance",
+    capacity: 5,
+    hourlyRate: 12,
+  },
+  {
+    id: "D7",
+    name: "XL Play Yard",
+    type: "xlarge",
+    status: "available",
+    capacity: 4,
+    hourlyRate: 15,
+  },
+];
+
+// Get today's date for mock reservations (using local timezone)
+const getTodayStr = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const initialDaycareReservations: DaycareReservation[] = [
+  // D1 - Small Dogs Play Area: 3 overlapping pets
+  {
+    id: "DR1",
+    spotId: "D1",
+    petName: "Bella",
+    clientName: "Sarah Wilson",
+    clientPhone: "555-111-2222",
+    date: getTodayStr(),
+    startTime: "07:00",
+    endTime: "14:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR2",
+    spotId: "D1",
+    petName: "Cooper",
+    clientName: "Mike Brown",
+    clientPhone: "555-333-4444",
+    date: getTodayStr(),
+    startTime: "08:00",
+    endTime: "16:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR8",
+    spotId: "D1",
+    petName: "Peanut",
+    clientName: "Jessica Lee",
+    clientPhone: "555-888-1111",
+    date: getTodayStr(),
+    startTime: "09:00",
+    endTime: "13:00",
+    status: "checked-in",
+  },
+  // D2 - Medium Dogs Zone: 2 overlapping pets
+  {
+    id: "DR6",
+    spotId: "D2",
+    petName: "Daisy",
+    clientName: "Tom Harris",
+    clientPhone: "555-222-3333",
+    date: getTodayStr(),
+    startTime: "08:00",
+    endTime: "15:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR9",
+    spotId: "D2",
+    petName: "Charlie",
+    clientName: "Rachel Green",
+    clientPhone: "555-999-2222",
+    date: getTodayStr(),
+    startTime: "10:00",
+    endTime: "17:00",
+    status: "reserved",
+  },
+  // D3 - Large Dogs Area: 4 overlapping pets
+  {
+    id: "DR3",
+    spotId: "D3",
+    petName: "Rocky",
+    clientName: "Emma Davis",
+    clientPhone: "555-555-6666",
+    date: getTodayStr(),
+    startTime: "07:00",
+    endTime: "16:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR10",
+    spotId: "D3",
+    petName: "Bear",
+    clientName: "John Smith",
+    clientPhone: "555-111-3333",
+    date: getTodayStr(),
+    startTime: "08:00",
+    endTime: "14:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR11",
+    spotId: "D3",
+    petName: "Thor",
+    clientName: "Amy Johnson",
+    clientPhone: "555-222-4444",
+    date: getTodayStr(),
+    startTime: "09:00",
+    endTime: "17:00",
+    status: "reserved",
+  },
+  {
+    id: "DR12",
+    spotId: "D3",
+    petName: "Bruno",
+    clientName: "David Wilson",
+    clientPhone: "555-333-5555",
+    date: getTodayStr(),
+    startTime: "11:00",
+    endTime: "18:00",
+    status: "reserved",
+  },
+  // D4 - Puppy Playroom: 1 pet (checked out)
+  {
+    id: "DR7",
+    spotId: "D4",
+    petName: "Milo",
+    clientName: "Lisa Garcia",
+    clientPhone: "555-444-5555",
+    date: getTodayStr(),
+    startTime: "07:30",
+    endTime: "11:30",
+    status: "checked-out",
+  },
+  // D5 - Senior Dogs Lounge: 2 overlapping pets
+  {
+    id: "DR4",
+    spotId: "D5",
+    petName: "Duke",
+    clientName: "Chris Miller",
+    clientPhone: "555-777-8888",
+    date: getTodayStr(),
+    startTime: "08:00",
+    endTime: "14:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR13",
+    spotId: "D5",
+    petName: "Ginger",
+    clientName: "Nancy Taylor",
+    clientPhone: "555-444-6666",
+    date: getTodayStr(),
+    startTime: "10:00",
+    endTime: "16:00",
+    status: "checked-in",
+  },
+  // D7 - XL Dogs Space: 3 overlapping pets
+  {
+    id: "DR5",
+    spotId: "D7",
+    petName: "Zeus",
+    clientName: "Amanda Clark",
+    clientPhone: "555-999-0000",
+    date: getTodayStr(),
+    startTime: "06:00",
+    endTime: "18:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR14",
+    spotId: "D7",
+    petName: "Titan",
+    clientName: "Mark Robinson",
+    clientPhone: "555-555-7777",
+    date: getTodayStr(),
+    startTime: "09:00",
+    endTime: "15:00",
+    status: "checked-in",
+  },
+  {
+    id: "DR15",
+    spotId: "D7",
+    petName: "Goliath",
+    clientName: "Susan White",
+    clientPhone: "555-666-8888",
+    date: getTodayStr(),
+    startTime: "12:00",
+    endTime: "19:00",
+    status: "reserved",
+  },
+];
+
 type ViewMode = "list" | "calendar";
+type ServiceType = "boarding" | "daycare";
 
 export default function KennelViewPage() {
   const [kennels, setKennels] = useState<Kennel[]>(initialKennels);
@@ -191,6 +443,12 @@ export default function KennelViewPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [serviceType, setServiceType] = useState<ServiceType>("boarding");
+  const [daycareViewMode, setDaycareViewMode] = useState<ViewMode>("list");
+  const [daycareSpots] = useState<DaycareSpot[]>(initialDaycareSpots);
+  const [daycareReservations] = useState<DaycareReservation[]>(
+    initialDaycareReservations,
+  );
 
   // Booking/edit form state
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -210,6 +468,51 @@ export default function KennelViewPage() {
     if (filterStatus === "all") return kennels;
     return kennels.filter((k) => k.status === filterStatus);
   }, [kennels, filterStatus]);
+
+  const [daycareFilterStatus, setDaycareFilterStatus] = useState<
+    DaycareSpot["status"] | "all"
+  >("all");
+
+  const filteredDaycareSpots = useMemo(() => {
+    if (daycareFilterStatus === "all") return daycareSpots;
+    return daycareSpots.filter((s) => s.status === daycareFilterStatus);
+  }, [daycareSpots, daycareFilterStatus]);
+
+  const daycareStatusCounts = useMemo(() => {
+    return {
+      available: daycareSpots.filter((s) => s.status === "available").length,
+      occupied: daycareSpots.filter((s) => s.status === "occupied").length,
+      reserved: daycareSpots.filter((s) => s.status === "reserved").length,
+      maintenance: daycareSpots.filter((s) => s.status === "maintenance")
+        .length,
+    };
+  }, [daycareSpots]);
+
+  const getDaycareStatusBadgeClass = (status: DaycareSpot["status"]) => {
+    switch (status) {
+      case "available":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "occupied":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "reserved":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "maintenance":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    }
+  };
+
+  const getDaycareTypeLabel = (type: DaycareSpot["type"]) => {
+    switch (type) {
+      case "small":
+        return "Small Dogs";
+      case "medium":
+        return "Medium Dogs";
+      case "large":
+        return "Large Dogs";
+      case "xlarge":
+        return "XL Dogs";
+    }
+  };
 
   const statusCounts = useMemo(() => {
     return {
@@ -380,267 +683,557 @@ export default function KennelViewPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Kennel View</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {serviceType === "boarding" ? "Kennel View" : "Daycare View"}
+          </h2>
           <p className="text-muted-foreground">
-            Manage kennel occupancy and bookings
+            {serviceType === "boarding"
+              ? "Manage kennel occupancy and bookings"
+              : "Manage daycare reservations by hour"}
           </p>
         </div>
-        <div className="flex rounded-lg border overflow-hidden">
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="sm"
-            className="rounded-none gap-2"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" />
-            List
-          </Button>
-          <Button
-            variant={viewMode === "calendar" ? "secondary" : "ghost"}
-            size="sm"
-            className="rounded-none gap-2"
-            onClick={() => setViewMode("calendar")}
-          >
-            <LayoutGrid className="h-4 w-4" />
-            Calendar
-          </Button>
+        <div className="flex items-center gap-2">
+          {/* Service Type Toggle */}
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={serviceType === "boarding" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none gap-2"
+              onClick={() => setServiceType("boarding")}
+            >
+              <Moon className="h-4 w-4" />
+              Boarding
+            </Button>
+            <Button
+              variant={serviceType === "daycare" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none gap-2"
+              onClick={() => setServiceType("daycare")}
+            >
+              <Sun className="h-4 w-4" />
+              Daycare
+            </Button>
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex rounded-lg border overflow-hidden">
+            {serviceType === "boarding" ? (
+              <>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none gap-2"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === "calendar" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none gap-2"
+                  onClick={() => setViewMode("calendar")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Calendar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant={daycareViewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="rounded-none gap-2"
+                  onClick={() => setDaycareViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                  List
+                </Button>
+                <Button
+                  variant={
+                    daycareViewMode === "calendar" ? "secondary" : "ghost"
+                  }
+                  size="sm"
+                  className="rounded-none gap-2"
+                  onClick={() => setDaycareViewMode("calendar")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Calendar
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Status Summary */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card
-          className="cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-950/20"
-          onClick={() =>
-            setFilterStatus(filterStatus === "vacant" ? "all" : "vacant")
-          }
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Vacant
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {statusCounts.vacant}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
-          onClick={() =>
-            setFilterStatus(filterStatus === "occupied" ? "all" : "occupied")
-          }
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Occupied
-                </p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {statusCounts.occupied}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                <PawPrint className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
-          onClick={() =>
-            setFilterStatus(filterStatus === "reserved" ? "all" : "reserved")
-          }
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Reserved
-                </p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {statusCounts.reserved}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
-          onClick={() =>
-            setFilterStatus(
-              filterStatus === "maintenance" ? "all" : "maintenance",
-            )
-          }
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Maintenance
-                </p>
-                <p className="text-2xl font-bold text-red-600">
-                  {statusCounts.maintenance}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                <Wrench className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {viewMode === "calendar" ? (
-        <Card className="p-4">
-          <KennelCalendarView
-            kennels={kennels}
-            onKennelClick={(kennel) => openKennelDialog(kennel)}
-            onAddBooking={(kennelId, date) => {
-              const kennel = kennels.find((k) => k.id === kennelId);
-              if (kennel && kennel.status !== "maintenance") {
-                setSelectedKennel(kennel);
-                setSelectedClientId("");
-                setSelectedPetId("");
-                setFormCheckIn(date);
-                setFormCheckOut("");
-                setDialogOpen(true);
-              }
-            }}
-            onUpdateBooking={(kennelId, checkIn, checkOut) => {
-              setKennels((prev) =>
-                prev.map((k) =>
-                  k.id === kennelId
-                    ? {
-                        ...k,
-                        checkIn,
-                        checkOut,
-                      }
-                    : k,
-                ),
-              );
-            }}
-          />
-        </Card>
-      ) : (
+      {serviceType === "boarding" && (
         <>
-          {/* Filter Bar */}
-          <div className="flex items-center gap-4">
-            <Select
-              value={filterStatus}
-              onValueChange={(v) => setFilterStatus(v as KennelStatus | "all")}
+          {/* Status Summary */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card
+              className="cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-950/20"
+              onClick={() =>
+                setFilterStatus(filterStatus === "vacant" ? "all" : "vacant")
+              }
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Kennels</SelectItem>
-                <SelectItem value="vacant">Vacant</SelectItem>
-                <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
-            {filterStatus !== "all" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFilterStatus("all")}
-              >
-                Clear filter
-              </Button>
-            )}
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Vacant
+                    </p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {statusCounts.vacant}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              onClick={() =>
+                setFilterStatus(
+                  filterStatus === "occupied" ? "all" : "occupied",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Occupied
+                    </p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {statusCounts.occupied}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <PawPrint className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+              onClick={() =>
+                setFilterStatus(
+                  filterStatus === "reserved" ? "all" : "reserved",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Reserved
+                    </p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {statusCounts.reserved}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-yellow-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() =>
+                setFilterStatus(
+                  filterStatus === "maintenance" ? "all" : "maintenance",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Maintenance
+                    </p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {statusCounts.maintenance}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                    <Wrench className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Kennel List */}
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kennel</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Pet</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Check-In</TableHead>
-                  <TableHead>Check-Out</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredKennels.map((kennel) => (
-                  <TableRow
-                    key={kennel.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => openKennelDialog(kennel)}
+          {viewMode === "calendar" ? (
+            <Card className="p-4">
+              <KennelCalendarView
+                kennels={kennels}
+                onKennelClick={(kennel) => openKennelDialog(kennel)}
+                onAddBooking={(kennelId, date) => {
+                  const kennel = kennels.find((k) => k.id === kennelId);
+                  if (kennel && kennel.status !== "maintenance") {
+                    setSelectedKennel(kennel);
+                    setSelectedClientId("");
+                    setSelectedPetId("");
+                    setFormCheckIn(date);
+                    setFormCheckOut("");
+                    setDialogOpen(true);
+                  }
+                }}
+                onUpdateBooking={(kennelId, checkIn, checkOut) => {
+                  setKennels((prev) =>
+                    prev.map((k) =>
+                      k.id === kennelId
+                        ? {
+                            ...k,
+                            checkIn,
+                            checkOut,
+                          }
+                        : k,
+                    ),
+                  );
+                }}
+              />
+            </Card>
+          ) : (
+            <>
+              {/* Filter Bar */}
+              <div className="flex items-center gap-4">
+                <Select
+                  value={filterStatus}
+                  onValueChange={(v) =>
+                    setFilterStatus(v as KennelStatus | "all")
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Kennels</SelectItem>
+                    <SelectItem value="vacant">Vacant</SelectItem>
+                    <SelectItem value="occupied">Occupied</SelectItem>
+                    <SelectItem value="reserved">Reserved</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+                {filterStatus !== "all" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFilterStatus("all")}
                   >
-                    <TableCell className="font-medium">{kennel.name}</TableCell>
-                    <TableCell>{getTypeLabel(kennel.type)}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadgeClass(kennel.status)}>
-                        {kennel.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {kennel.petName ? (
-                        <div className="flex items-center gap-2">
-                          <PawPrint className="h-4 w-4 text-muted-foreground" />
-                          {kennel.petName}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {kennel.clientName || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {kennel.checkIn || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {kennel.checkOut || (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${kennel.dailyRate}/night
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openKennelDialog(kennel);
+                    Clear filter
+                  </Button>
+                )}
+              </div>
+
+              {/* Kennel List */}
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kennel</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pet</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Check-In</TableHead>
+                      <TableHead>Check-Out</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredKennels.map((kennel) => (
+                      <TableRow
+                        key={kennel.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openKennelDialog(kennel)}
+                      >
+                        <TableCell className="font-medium">
+                          {kennel.name}
+                        </TableCell>
+                        <TableCell>{getTypeLabel(kennel.type)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadgeClass(kennel.status)}>
+                            {kennel.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {kennel.petName ? (
+                            <div className="flex items-center gap-2">
+                              <PawPrint className="h-4 w-4 text-muted-foreground" />
+                              {kennel.petName}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {kennel.clientName || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {kennel.checkIn || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {kennel.checkOut || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${kennel.dailyRate}/night
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openKennelDialog(kennel);
+                            }}
+                          >
+                            {kennel.status === "vacant" ? "Book" : "Manage"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
+          )}
+        </>
+      )}
+
+      {serviceType === "daycare" && (
+        <>
+          {/* Status Summary */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card
+              className="cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-950/20"
+              onClick={() =>
+                setDaycareFilterStatus(
+                  daycareFilterStatus === "available" ? "all" : "available",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Available
+                    </p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {daycareStatusCounts.available}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              onClick={() =>
+                setDaycareFilterStatus(
+                  daycareFilterStatus === "occupied" ? "all" : "occupied",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Occupied
+                    </p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {daycareStatusCounts.occupied}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <PawPrint className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+              onClick={() =>
+                setDaycareFilterStatus(
+                  daycareFilterStatus === "reserved" ? "all" : "reserved",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Reserved
+                    </p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {daycareStatusCounts.reserved}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-yellow-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() =>
+                setDaycareFilterStatus(
+                  daycareFilterStatus === "maintenance" ? "all" : "maintenance",
+                )
+              }
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Maintenance
+                    </p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {daycareStatusCounts.maintenance}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                    <Wrench className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {daycareViewMode === "calendar" ? (
+            <Card className="p-4">
+              <DaycareCalendarView
+                spots={filteredDaycareSpots}
+                reservations={daycareReservations}
+                onSpotClick={(spot) => {
+                  // TODO: Handle spot click
+                  console.log("Spot clicked:", spot);
+                }}
+                onAddReservation={(spotId, date) => {
+                  // TODO: Handle add reservation
+                  console.log("Add reservation:", spotId, date);
+                }}
+                onReservationClick={(reservation) => {
+                  // TODO: Handle reservation click
+                  console.log("Reservation clicked:", reservation);
+                }}
+              />
+            </Card>
+          ) : (
+            <>
+              {/* Filter Bar */}
+              <div className="flex items-center gap-4">
+                <Select
+                  value={daycareFilterStatus}
+                  onValueChange={(v) =>
+                    setDaycareFilterStatus(v as DaycareSpot["status"] | "all")
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="occupied">Occupied</SelectItem>
+                    <SelectItem value="reserved">Reserved</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+                {daycareFilterStatus !== "all" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDaycareFilterStatus("all")}
+                  >
+                    Clear filter
+                  </Button>
+                )}
+              </div>
+
+              {/* Daycare Spots List */}
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Area</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Capacity</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDaycareSpots.map((spot) => (
+                      <TableRow
+                        key={spot.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => {
+                          // TODO: Handle spot click
+                          console.log("Spot clicked:", spot);
                         }}
                       >
-                        {kennel.status === "vacant" ? "Book" : "Manage"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+                        <TableCell className="font-medium">
+                          {spot.name}
+                        </TableCell>
+                        <TableCell>{getDaycareTypeLabel(spot.type)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            className={getDaycareStatusBadgeClass(spot.status)}
+                          >
+                            {spot.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <PawPrint className="h-4 w-4 text-muted-foreground" />
+                            {spot.capacity}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${spot.hourlyRate}/hr
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: Handle spot click
+                              console.log("Spot clicked:", spot);
+                            }}
+                          >
+                            {spot.status === "available" ? "Book" : "Manage"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
+          )}
         </>
       )}
 
