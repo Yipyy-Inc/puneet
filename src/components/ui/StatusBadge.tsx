@@ -30,7 +30,6 @@ export function StatusBadge({
   size = "default",
   showIcon = false,
 }: StatusBadgeProps) {
-
   const getVariant = () => {
     if (type === "status") {
       if (

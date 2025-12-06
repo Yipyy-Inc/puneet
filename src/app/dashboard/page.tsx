@@ -33,15 +33,11 @@ import {
   CalendarCheck,
   DollarSign,
   Activity,
-  Plus,
-  Clock,
-  Megaphone,
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
   ArrowRight,
   MoreHorizontal,
-  ChevronRight,
   CheckCircle2,
   AlertCircle,
   XCircle,
@@ -50,10 +46,6 @@ import {
   CreditCard,
   MessageSquare,
   Scissors,
-  UserMinus,
-  UserCheck,
-  Mail,
-  Headphones,
 } from "lucide-react";
 
 // Mock data for charts
@@ -94,129 +86,6 @@ const activityData = [
 ];
 
 // Churn rate data (monthly)
-const churnRateData = [
-  { month: "Jan", rate: 2.1 },
-  { month: "Feb", rate: 1.9 },
-  { month: "Mar", rate: 2.3 },
-  { month: "Apr", rate: 1.8 },
-  { month: "May", rate: 1.6 },
-  { month: "Jun", rate: 1.5 },
-];
-
-// Daily active users data (last 7 days)
-const dailyActiveUsersData = [
-  { day: "Mon", staff: 165, customers: 1540 },
-  { day: "Tue", staff: 172, customers: 1620 },
-  { day: "Wed", staff: 168, customers: 1580 },
-  { day: "Thu", staff: 175, customers: 1710 },
-  { day: "Fri", staff: 180, customers: 1820 },
-  { day: "Sat", staff: 155, customers: 1650 },
-  { day: "Sun", staff: 172, customers: 1680 },
-];
-
-// SMS/Email communication usage data (last 6 months)
-const communicationUsageData = [
-  { month: "Jan", sms: 1200, email: 3200 },
-  { month: "Feb", sms: 1350, email: 3500 },
-  { month: "Mar", sms: 1280, email: 3800 },
-  { month: "Apr", sms: 1450, email: 4100 },
-  { month: "May", sms: 1680, email: 4500 },
-  { month: "Jun", sms: 1540, email: 4300 },
-];
-
-// Facility performance heatmap data (metrics across facilities)
-const allHeatmapMetrics = [
-  { key: "revenue", label: "Revenue" },
-  { key: "occupancy", label: "Occupancy" },
-  { key: "bookings", label: "Bookings" },
-  { key: "retention", label: "Retention" },
-] as const;
-
-type HeatmapMetricKey = (typeof allHeatmapMetrics)[number]["key"];
-const facilityHeatmapData = [
-  {
-    facility: "Downtown Spa",
-    revenue: 92,
-    occupancy: 78,
-    bookings: 85,
-    retention: 88,
-  },
-  {
-    facility: "Uptown Wellness",
-    revenue: 65,
-    occupancy: 82,
-    bookings: 71,
-    retention: 76,
-  },
-  {
-    facility: "Metro Fitness",
-    revenue: 88,
-    occupancy: 91,
-    bookings: 79,
-    retention: 82,
-  },
-  {
-    facility: "Harbor Health",
-    revenue: 45,
-    occupancy: 58,
-    bookings: 52,
-    retention: 61,
-  },
-  {
-    facility: "Valley Care",
-    revenue: 73,
-    occupancy: 69,
-    bookings: 81,
-    retention: 77,
-  },
-  {
-    facility: "Summit Studio",
-    revenue: 81,
-    occupancy: 75,
-    bookings: 88,
-    retention: 85,
-  },
-];
-
-const getHeatmapColor = (value: number) => {
-  if (value >= 85) return "bg-emerald-500";
-  if (value >= 70) return "bg-emerald-400";
-  if (value >= 55) return "bg-amber-400";
-  if (value >= 40) return "bg-orange-400";
-  return "bg-red-400";
-};
-
-// Mock support requests count
-const pendingSupportRequests = 5;
-
-// Quick actions data
-const quickActions = [
-  {
-    id: 1,
-    label: "Add Facility",
-    icon: Plus,
-    href: "/dashboard/facilities/new",
-  },
-  {
-    id: 2,
-    label: "View Activity",
-    icon: Clock,
-    href: "/dashboard/analytics",
-  },
-  {
-    id: 3,
-    label: "Support Requests",
-    icon: Headphones,
-    href: "/dashboard/system-admin/support-ticketing",
-    badge: pendingSupportRequests,
-  },
-  {
-    id: 4,
-    label: "Announce",
-    icon: Megaphone,
-    href: "/dashboard/announcements",
-  },
-];
 
 // Facility activity data (for Active Facilities card)
 const facilityActivityData = [
@@ -570,19 +439,6 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "12m">(
     "12m",
   );
-  const [selectedHeatmapMetrics, setSelectedHeatmapMetrics] = useState<
-    HeatmapMetricKey[]
-  >(["revenue", "occupancy", "bookings", "retention"]);
-
-  const toggleHeatmapMetric = (metric: HeatmapMetricKey) => {
-    setSelectedHeatmapMetrics((prev) =>
-      prev.includes(metric)
-        ? prev.length > 1
-          ? prev.filter((m) => m !== metric)
-          : prev
-        : [...prev, metric],
-    );
-  };
 
   // Calculate key metrics from facilities data
   const metrics = useMemo(() => {
@@ -651,7 +507,9 @@ export default function DashboardPage() {
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
             {"Dashboard"}
           </h1>
-          <p className="text-muted-foreground mt-1">{"Welcome back! Here's what's happening today 🐾"}</p>
+          <p className="text-muted-foreground mt-1">
+            {"Welcome back! Here's what's happening today 🐾"}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Select
@@ -696,232 +554,6 @@ export default function DashboardPage() {
           totalFacilities={metrics.totalFacilities}
         />
         <SystemHealthCard overallHealth={metrics.systemHealth} />
-      </div>
-
-      {/* Additional Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-        {/* Churn Rate */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Churn Rate
-              </CardTitle>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold">1.5%</span>
-                <span className="inline-flex items-center text-xs font-medium text-success">
-                  <TrendingDown className="h-3 w-3 mr-0.5" />
-                  -0.3%
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                vs last month 1.8%
-              </p>
-            </div>
-            <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl"
-              style={{
-                background: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
-              }}
-            >
-              <UserMinus className="h-5 w-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={churnRateData}>
-                  <defs>
-                    <linearGradient
-                      id="churnGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.2} />
-                      <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="rate"
-                    stroke="#f43f5e"
-                    strokeWidth={2}
-                    fill="url(#churnGradient)"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    }}
-                    formatter={(value: number) => [`${value}%`, "Churn Rate"]}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Daily Active Users */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Daily Active Users
-              </CardTitle>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold">1,852</span>
-                <span className="inline-flex items-center text-xs font-medium text-success">
-                  <TrendingUp className="h-3 w-3 mr-0.5" />
-                  +8.4%
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                172 staff • 1,680 customers
-              </p>
-            </div>
-            <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl"
-              style={{
-                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-              }}
-            >
-              <UserCheck className="h-5 w-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyActiveUsersData} barSize={12}>
-                  <Bar
-                    dataKey="customers"
-                    fill="#8b5cf6"
-                    radius={[2, 2, 0, 0]}
-                    stackId="stack"
-                  />
-                  <Bar
-                    dataKey="staff"
-                    fill="#c4b5fd"
-                    radius={[2, 2, 0, 0]}
-                    stackId="stack"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5 text-xs">
-                <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-                <span className="text-muted-foreground">Customers</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <div className="w-2 h-2 rounded-full bg-[#c4b5fd]" />
-                <span className="text-muted-foreground">Staff</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* SMS/Email Usage */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Communication Volume
-              </CardTitle>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold">31.9K</span>
-                <span className="inline-flex items-center text-xs font-medium text-success">
-                  <TrendingUp className="h-3 w-3 mr-0.5" />
-                  +15.2%
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                8.5K SMS • 23.4K emails
-              </p>
-            </div>
-            <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl"
-              style={{
-                background: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
-              }}
-            >
-              <Mail className="h-5 w-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={communicationUsageData}>
-                  <defs>
-                    <linearGradient
-                      id="smsGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} />
-                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient
-                      id="emailGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.2} />
-                      <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="email"
-                    stroke="#06b6d4"
-                    strokeWidth={2}
-                    fill="url(#emailGradient)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sms"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    fill="url(#smsGradient)"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4 mt-2">
-              <div className="flex items-center gap-1.5 text-xs">
-                <div className="w-2 h-2 rounded-full bg-[#06b6d4]" />
-                <span className="text-muted-foreground">Email</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
-                <span className="text-muted-foreground">SMS</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main Content Grid */}
@@ -1116,9 +748,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Second Row */}
-      <div className="grid gap-6 lg:grid-cols-3 mb-8">
+      <div className="grid gap-6 lg:grid-cols-2 mb-8">
         {/* Reservations Chart */}
-        <Card className="lg:col-span-2 border-0 shadow-card">
+        <Card className="border-0 shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-semibold">
@@ -1169,148 +801,6 @@ export default function DashboardPage() {
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {quickActions.map((action) => (
-              <Link
-                key={action.id}
-                href={action.href}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-colors group ${
-                  "badge" in action && action.badge
-                    ? "bg-destructive/5 hover:bg-destructive/10 border border-destructive/20"
-                    : "hover:bg-muted/50"
-                }`}
-              >
-                <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors ${
-                    "badge" in action && action.badge
-                      ? "bg-destructive/10 group-hover:bg-destructive/20"
-                      : "bg-muted group-hover:bg-primary/10"
-                  }`}
-                >
-                  <action.icon
-                    className={`h-5 w-5 transition-colors ${
-                      "badge" in action && action.badge
-                        ? "text-destructive"
-                        : "text-muted-foreground group-hover:text-primary"
-                    }`}
-                  />
-                </div>
-                <span className="font-medium text-sm flex-1">
-                  {action.label}
-                </span>
-                {"badge" in action && action.badge ? (
-                  <Badge variant="destructive" className="text-xs">
-                    {action.badge}
-                  </Badge>
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                )}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Facility Performance Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Facility Performance Heatmap */}
-        <Card className="lg:col-span-2 border-0 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                Performance Heatmap
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Multi-metric comparison across facilities
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {allHeatmapMetrics.map((metric) => (
-                <Button
-                  key={metric.key}
-                  variant={
-                    selectedHeatmapMetrics.includes(metric.key)
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => toggleHeatmapMetric(metric.key)}
-                >
-                  {metric.label}
-                </Button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              {/* Header row */}
-              <div
-                className="grid gap-2 mb-2"
-                style={{
-                  gridTemplateColumns: `minmax(120px, 1fr) repeat(${selectedHeatmapMetrics.length}, 1fr)`,
-                }}
-              >
-                <div className="text-sm font-medium text-muted-foreground px-2" />
-                {allHeatmapMetrics
-                  .filter((m) => selectedHeatmapMetrics.includes(m.key))
-                  .map((metric) => (
-                    <div
-                      key={metric.key}
-                      className="text-sm font-medium text-muted-foreground text-center px-2"
-                    >
-                      {metric.label}
-                    </div>
-                  ))}
-              </div>
-              {/* Data rows */}
-              <div className="space-y-2">
-                {facilityHeatmapData.map((facility) => (
-                  <div
-                    key={facility.facility}
-                    className="grid gap-2"
-                    style={{
-                      gridTemplateColumns: `minmax(120px, 1fr) repeat(${selectedHeatmapMetrics.length}, 1fr)`,
-                    }}
-                  >
-                    <div className="text-sm font-medium text-foreground truncate px-2 flex items-center">
-                      {facility.facility}
-                    </div>
-                    {selectedHeatmapMetrics.map((metric) => (
-                      <div
-                        key={metric}
-                        className={`relative h-10 rounded-md flex items-center justify-center text-sm font-semibold text-white cursor-pointer transition-transform hover:scale-105 ${getHeatmapColor(facility[metric])}`}
-                        title={`${facility.facility} - ${metric}: ${facility[metric]}%`}
-                      >
-                        {facility[metric]}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-border/50">
-                <span className="text-sm text-muted-foreground">Low</span>
-                <div className="flex gap-1">
-                  <div className="w-6 h-4 rounded-sm bg-red-400" />
-                  <div className="w-6 h-4 rounded-sm bg-orange-400" />
-                  <div className="w-6 h-4 rounded-sm bg-amber-400" />
-                  <div className="w-6 h-4 rounded-sm bg-emerald-400" />
-                  <div className="w-6 h-4 rounded-sm bg-emerald-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">High</span>
-              </div>
             </div>
           </CardContent>
         </Card>

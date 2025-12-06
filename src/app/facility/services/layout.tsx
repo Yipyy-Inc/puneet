@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Package, Layers, DollarSign, CreditCard, Ticket } from "lucide-react";
+import { Package, Layers, CreditCard, Ticket } from "lucide-react";
 
 const servicesTabs = [
   {
@@ -15,11 +15,6 @@ const servicesTabs = [
     name: "Packages",
     href: "/facility/services/packages",
     icon: Layers,
-  },
-  {
-    name: "Pricing",
-    href: "/facility/services/pricing",
-    icon: DollarSign,
   },
   {
     name: "Memberships",

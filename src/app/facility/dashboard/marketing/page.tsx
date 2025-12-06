@@ -226,44 +226,6 @@ export default function MarketingPage() {
       header: "Sent",
     },
     {
-      accessorKey: "stats.opened",
-      header: "Opened",
-      cell: ({ row }) => {
-        const rate =
-          row.original.stats.sent > 0
-            ? (
-                (row.original.stats.opened / row.original.stats.sent) *
-                100
-              ).toFixed(1)
-            : "0";
-        return (
-          <div>
-            <div>{row.original.stats.opened}</div>
-            <div className="text-sm text-muted-foreground">{rate}%</div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "stats.clicked",
-      header: "Clicked",
-      cell: ({ row }) => {
-        const rate =
-          row.original.stats.opened > 0
-            ? (
-                (row.original.stats.clicked / row.original.stats.opened) *
-                100
-              ).toFixed(1)
-            : "0";
-        return (
-          <div>
-            <div>{row.original.stats.clicked}</div>
-            <div className="text-sm text-muted-foreground">{rate}%</div>
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "actions",
       header: "Actions",
       cell: ({ row }) => (

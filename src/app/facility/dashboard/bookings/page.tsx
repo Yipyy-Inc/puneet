@@ -489,9 +489,7 @@ export default function FacilityBookingsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todayBookings.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {"Active today"}
-            </p>
+            <p className="text-xs text-muted-foreground">{"Active today"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -545,9 +543,7 @@ export default function FacilityBookingsPage() {
       {/* Revenue by Service */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            {"Revenue by Service"}
-          </CardTitle>
+          <CardTitle className="text-base">{"Revenue by Service"}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
@@ -686,9 +682,7 @@ export default function FacilityBookingsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel>
-                        {"Actions"}
-                      </DropdownMenuLabel>
+                      <DropdownMenuLabel>{"Actions"}</DropdownMenuLabel>
                       <DropdownMenuItem
                         onClick={() =>
                           setSelectedBooking(booking as unknown as Booking)

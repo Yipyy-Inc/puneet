@@ -4,6 +4,6 @@
     "interface": true,
     "type": true
   },
-  "ignore": ["src/components/ui/**"],
+  "ignore": ["src/components/ui/**", "src/i18n/*"],
   "tags": ["-lintignore"]
 }

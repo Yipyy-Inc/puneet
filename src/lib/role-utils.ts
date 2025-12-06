@@ -92,55 +92,6 @@ export type Permission =
   | "delete_records"
   | "manage_permissions";
 
-// All permissions list for UI
-export const ALL_PERMISSIONS: Permission[] = [
-  "view_dashboard",
-  "view_kennel",
-  "view_clients",
-  "view_bookings",
-  "view_staff",
-  "view_scheduling",
-  "view_services",
-  "view_petcams",
-  "view_daycare",
-  "view_boarding",
-  "view_grooming",
-  "view_training",
-  "view_retail",
-  "view_billing",
-  "view_inventory",
-  "view_reports",
-  "view_insights",
-  "view_marketing",
-  "view_communications",
-  "view_incidents",
-  "view_waivers",
-  "view_settings",
-  "create_booking",
-  "edit_booking",
-  "cancel_booking",
-  "check_in_out",
-  "take_payment",
-  "process_refund",
-  "apply_discount",
-  "manage_staff",
-  "manage_services",
-  "manage_pricing",
-  "manage_settings",
-  "add_pet_notes",
-  "add_grooming_notes",
-  "add_training_notes",
-  "view_financials",
-  "view_revenue",
-  "view_wages",
-  "view_client_lifetime_value",
-  "export_reports",
-  "send_marketing",
-  "manage_incidents",
-  "delete_records",
-  "manage_permissions",
-];
-
 // Permission display labels
 export const PERMISSION_LABELS: Record<Permission, string> = {
   view_dashboard: "View Dashboard",
@@ -415,11 +366,6 @@ export interface UserPermissionOverride {
   removedPermissions: Permission[];
 }
 
-export interface PermissionConfig {
-  rolePermissions: Record<FacilityRole, Permission[]>;
-  userOverrides: UserPermissionOverride[];
-}
-
 // Get custom role permissions from localStorage
 export function getCustomRolePermissions(): Record<
   FacilityRole,
@@ -486,17 +432,13 @@ export function saveUserPermissionOverrides(
 }
 
 // Get effective role permissions (custom or default)
-export function getRolePermissions(role: FacilityRole): Permission[] {
+function getRolePermissions(role: FacilityRole): Permission[] {
   const custom = getCustomRolePermissions();
   if (custom && custom[role]) {
     return custom[role];
   }
   return DEFAULT_ROLE_PERMISSIONS[role];
 }
-
-// For backward compatibility - expose as ROLE_PERMISSIONS
-export const ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> =
-  DEFAULT_ROLE_PERMISSIONS;
 
 // Get current user ID
 export function getCurrentUserId(): string | null {
@@ -535,7 +477,7 @@ export function getEffectivePermissions(
 }
 
 // Navigation items mapped to permissions
-export const NAV_PERMISSIONS: Record<string, Permission> = {
+const NAV_PERMISSIONS: Record<string, Permission> = {
   "/facility/dashboard": "view_dashboard",
   "/facility/dashboard/kennel-view": "view_kennel",
   "/facility/dashboard/clients": "view_clients",

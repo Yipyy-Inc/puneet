@@ -489,18 +489,6 @@ export const daycareCapacity = {
   largeDogs: 15,
 };
 
-// Operating hours
-export const daycareOperatingHours = {
-  weekday: {
-    open: "07:00",
-    close: "19:00",
-  },
-  weekend: {
-    open: "08:00",
-    close: "18:00",
-  },
-};
-
 // Helper function to get current checked-in count
 export function getCurrentCheckedInCount(): number {
   return daycareCheckIns.filter((c) => c.status === "checked-in").length;

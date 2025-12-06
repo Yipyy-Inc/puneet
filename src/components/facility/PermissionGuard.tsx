@@ -52,23 +52,3 @@ export function PermissionGuard({
 
   return hasPermission ? <>{children}</> : <>{fallback}</>;
 }
-
-interface RouteGuardProps {
-  route: string;
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-/**
- * RouteGuard component that conditionally renders children based on route access.
- * Use this for page-level access control.
- */
-export function RouteGuard({ route, children, fallback }: RouteGuardProps) {
-  const { canAccess, isLoading } = useFacilityRole();
-
-  if (isLoading) {
-    return null;
-  }
-
-  return canAccess(route) ? <>{children}</> : <>{fallback}</>;
-}

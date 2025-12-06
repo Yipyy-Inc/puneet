@@ -695,34 +695,6 @@ export const dailyCareSheets: DailyCareSheet[] = [
   },
 ];
 
-// Mock kennel cards
-export const kennelCards: KennelCardData[] = [
-  {
-    id: "kc-001",
-    guestId: "bg-001",
-    petName: "Buddy",
-    petBreed: "Golden Retriever",
-    petSex: "Male (Neutered)",
-    petWeight: 70,
-    petColor: "Golden",
-    petPhotoUrl: "/pets/buddy.jpg",
-    ownerNames: "John Smith",
-    primaryPhone: "(514) 555-0101",
-    checkInDate: "2024-03-08",
-    checkOutDate: "2024-03-15",
-    allergies: ["Chicken"],
-    medications: [{ name: "Apoquel 16mg", schedule: "Daily @ 8:00 AM" }],
-    feedingInstructions: "Add warm water to kibble",
-    foodBrand: "Blue Buffalo",
-    feedingAmount: "1.5 cups",
-    feedingTimes: ["07:30 AM", "6:00 PM"],
-    emergencyVetContact: "Dr. Wilson - (514) 555-9999",
-    qrCodeUrl: "/qr-codes/bg-001.png",
-    generatedAt: "2024-03-08T14:15:00",
-    printedAt: "2024-03-08T14:20:00",
-  },
-];
-
 // Boarding capacity
 export const boardingCapacity = {
   total: 30,
@@ -731,48 +703,9 @@ export const boardingCapacity = {
   luxury: 5,
 };
 
-// Operating times
-export const boardingOperatingTimes = {
-  checkInStart: "14:00",
-  checkInEnd: "18:00",
-  checkOutStart: "08:00",
-  checkOutEnd: "11:00",
-};
-
 // Helper functions
 export function getCurrentGuests(): BoardingGuest[] {
   return boardingGuests.filter((g) => g.status === "checked-in");
-}
-
-export function getTodayArrivals(): BoardingGuest[] {
-  const today = new Date().toISOString().split("T")[0];
-  return boardingGuests.filter((g) => {
-    const checkInDate = g.checkInDate.split("T")[0];
-    return checkInDate === today && g.status === "scheduled";
-  });
-}
-
-export function getTodayDepartures(): BoardingGuest[] {
-  const today = new Date().toISOString().split("T")[0];
-  return boardingGuests.filter((g) => {
-    const checkOutDate = g.checkOutDate.split("T")[0];
-    return checkOutDate === today && g.status === "checked-in";
-  });
-}
-
-export function getUpcomingArrivals(days: number = 7): BoardingGuest[] {
-  const today = new Date();
-  const futureDate = new Date();
-  futureDate.setDate(today.getDate() + days);
-
-  return boardingGuests.filter((g) => {
-    const checkInDate = new Date(g.checkInDate);
-    return (
-      checkInDate > today &&
-      checkInDate <= futureDate &&
-      g.status === "scheduled"
-    );
-  });
 }
 
 export function calculateBoardingPrice(
@@ -798,37 +731,6 @@ export function getApplicableDiscount(
       return true;
     }) || null
   );
-}
-
-export function getApplicableSurcharge(
-  checkInDate: string,
-  checkOutDate: string,
-): PeakSurcharge | null {
-  const checkIn = new Date(checkInDate);
-  const checkOut = new Date(checkOutDate);
-
-  return (
-    peakSurcharges.find((s) => {
-      if (!s.isActive) return false;
-      const peakStart = new Date(s.startDate);
-      const peakEnd = new Date(s.endDate);
-      // Check if stay overlaps with peak period
-      return checkIn <= peakEnd && checkOut >= peakStart;
-    }) || null
-  );
-}
-
-export function getGuestCareSheet(
-  guestId: string,
-  date: string,
-): DailyCareSheet | undefined {
-  return dailyCareSheets.find(
-    (cs) => cs.guestId === guestId && cs.date === date,
-  );
-}
-
-export function getKennelCard(guestId: string): KennelCardData | undefined {
-  return kennelCards.find((kc) => kc.guestId === guestId);
 }
 
 export function getOccupancyStats(): {

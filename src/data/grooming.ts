@@ -474,28 +474,6 @@ export const stylistAvailability: StylistAvailability[] = [
   // David Kim - on leave
 ];
 
-// Mock Stylist Time Off
-export const stylistTimeOff: StylistTimeOff[] = [
-  {
-    id: "to-001",
-    stylistId: "stylist-005",
-    stylistName: "David Kim",
-    startDate: "2024-03-01",
-    endDate: "2024-03-31",
-    reason: "Personal leave",
-    status: "approved",
-  },
-  {
-    id: "to-002",
-    stylistId: "stylist-001",
-    stylistName: "Jessica Martinez",
-    startDate: "2024-04-15",
-    endDate: "2024-04-22",
-    reason: "Vacation",
-    status: "approved",
-  },
-];
-
 // Mock Grooming Packages
 export const groomingPackages: GroomingPackage[] = [
   {
@@ -640,90 +618,6 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 167,
     createdAt: "2023-04-20",
-  },
-];
-
-// Mock Grooming Add-Ons
-export const groomingAddOns: GroomingAddOn[] = [
-  {
-    id: "addon-001",
-    name: "Teeth Brushing",
-    description: "Dental hygiene service",
-    price: 10,
-    duration: 10,
-    isActive: true,
-  },
-  {
-    id: "addon-002",
-    name: "Nail Grinding",
-    description: "Smooth nail filing for comfort",
-    price: 8,
-    duration: 10,
-    isActive: true,
-  },
-  {
-    id: "addon-003",
-    name: "Flea & Tick Treatment",
-    description: "Medicated bath for flea/tick control",
-    price: 15,
-    duration: 15,
-    isActive: true,
-  },
-  {
-    id: "addon-004",
-    name: "Blueberry Facial",
-    description: "Brightening facial treatment",
-    price: 12,
-    duration: 10,
-    isActive: true,
-  },
-  {
-    id: "addon-005",
-    name: "Paw Balm Treatment",
-    description: "Moisturizing treatment for dry paws",
-    price: 8,
-    duration: 5,
-    isActive: true,
-  },
-  {
-    id: "addon-006",
-    name: "De-matting (per 15 min)",
-    description: "Careful removal of mats and tangles",
-    price: 15,
-    duration: 15,
-    isActive: true,
-  },
-  {
-    id: "addon-007",
-    name: "Anal Gland Expression",
-    description: "Gentle gland expression",
-    price: 12,
-    duration: 10,
-    isActive: true,
-  },
-  {
-    id: "addon-008",
-    name: "Cologne Spritz",
-    description: "Fresh finishing scent",
-    price: 5,
-    duration: 2,
-    isActive: true,
-  },
-  {
-    id: "addon-009",
-    name: "Bandana/Bow",
-    description: "Cute accessory finish",
-    price: 5,
-    duration: 2,
-    isActive: true,
-  },
-  {
-    id: "addon-010",
-    name: "Photo Session",
-    description: "Professional photos of your pet",
-    price: 15,
-    duration: 10,
-    isActive: true,
   },
 ];
 
@@ -1173,186 +1067,6 @@ export const groomingAppointments: GroomingAppointment[] = [
   },
 ];
 
-// Grooming Operating Hours
-export const groomingOperatingHours = {
-  weekday: {
-    open: "08:00",
-    close: "18:00",
-  },
-  weekend: {
-    open: "08:00",
-    close: "16:00",
-  },
-};
-
-// Mock Photo Albums
-export const photoAlbums: PhotoAlbum[] = [
-  {
-    id: "album-001",
-    appointmentId: "appt-010",
-    petId: 6,
-    petName: "Daisy",
-    date: getDateString(-1),
-    stylistId: "stylist-002",
-    stylistName: "Amy Chen",
-    beforePhotos: [
-      {
-        id: "photo-001",
-        url: "/grooming/daisy-before-1.jpg",
-        type: "before",
-        caption: "Before grooming - matted fur",
-        takenAt: getDateString(-1) + "T09:00:00",
-        takenBy: "Amy Chen",
-      },
-      {
-        id: "photo-002",
-        url: "/grooming/daisy-before-2.jpg",
-        type: "before",
-        caption: "Side view before",
-        takenAt: getDateString(-1) + "T09:02:00",
-        takenBy: "Amy Chen",
-      },
-    ],
-    afterPhotos: [
-      {
-        id: "photo-003",
-        url: "/grooming/daisy-after-1.jpg",
-        type: "after",
-        caption: "All cleaned up and beautiful!",
-        takenAt: getDateString(-1) + "T10:45:00",
-        takenBy: "Amy Chen",
-      },
-      {
-        id: "photo-004",
-        url: "/grooming/daisy-after-2.jpg",
-        type: "after",
-        caption: "Ready for her close-up",
-        takenAt: getDateString(-1) + "T10:47:00",
-        takenBy: "Amy Chen",
-      },
-    ],
-    notes: "Daisy was such a good girl! She loved the blueberry facial.",
-    sharedWithOwner: true,
-    sharedAt: getDateString(-1) + "T11:00:00",
-    createdAt: getDateString(-1) + "T09:00:00",
-  },
-  {
-    id: "album-002",
-    appointmentId: "appt-011",
-    petId: 7,
-    petName: "Cooper",
-    date: getDateString(-1),
-    stylistId: "stylist-001",
-    stylistName: "Jessica Martinez",
-    beforePhotos: [
-      {
-        id: "photo-005",
-        url: "/grooming/cooper-before-1.jpg",
-        type: "before",
-        caption: "Before bath - dusty coat",
-        takenAt: getDateString(-1) + "T11:00:00",
-        takenBy: "Jessica Martinez",
-      },
-    ],
-    afterPhotos: [
-      {
-        id: "photo-006",
-        url: "/grooming/cooper-after-1.jpg",
-        type: "after",
-        caption: "Fresh and fluffy!",
-        takenAt: getDateString(-1) + "T11:50:00",
-        takenBy: "Jessica Martinez",
-      },
-    ],
-    notes: "Cooper did great with nail grinding today.",
-    sharedWithOwner: true,
-    sharedAt: getDateString(-1) + "T12:00:00",
-    createdAt: getDateString(-1) + "T11:00:00",
-  },
-  {
-    id: "album-003",
-    appointmentId: "appt-001",
-    petId: 1,
-    petName: "Buddy",
-    date: getDateString(-42),
-    stylistId: "stylist-001",
-    stylistName: "Jessica Martinez",
-    beforePhotos: [
-      {
-        id: "photo-007",
-        url: "/grooming/buddy-before-1.jpg",
-        type: "before",
-        caption: "Long coat needs trimming",
-        takenAt: getDateString(-42) + "T09:00:00",
-        takenBy: "Jessica Martinez",
-      },
-    ],
-    afterPhotos: [
-      {
-        id: "photo-008",
-        url: "/grooming/buddy-after-1.jpg",
-        type: "after",
-        caption: "Summer cut complete!",
-        takenAt: getDateString(-42) + "T10:45:00",
-        takenBy: "Jessica Martinez",
-      },
-      {
-        id: "photo-009",
-        url: "/grooming/buddy-after-2.jpg",
-        type: "after",
-        caption: "Looking handsome",
-        takenAt: getDateString(-42) + "T10:47:00",
-        takenBy: "Jessica Martinez",
-      },
-    ],
-    notes: "Buddy's summer cut turned out great. Owner very happy!",
-    sharedWithOwner: true,
-    sharedAt: getDateString(-42) + "T11:00:00",
-    createdAt: getDateString(-42) + "T09:00:00",
-  },
-  {
-    id: "album-004",
-    appointmentId: "appt-previous",
-    petId: 5,
-    petName: "Luna",
-    date: getDateString(-21),
-    stylistId: "stylist-004",
-    stylistName: "Sophie Laurent",
-    beforePhotos: [
-      {
-        id: "photo-010",
-        url: "/grooming/luna-before-1.jpg",
-        type: "before",
-        caption: "Continental style needs refresh",
-        takenAt: getDateString(-21) + "T14:00:00",
-        takenBy: "Sophie Laurent",
-      },
-    ],
-    afterPhotos: [
-      {
-        id: "photo-011",
-        url: "/grooming/luna-after-1.jpg",
-        type: "after",
-        caption: "Show-ready Continental cut",
-        takenAt: getDateString(-21) + "T15:45:00",
-        takenBy: "Sophie Laurent",
-      },
-      {
-        id: "photo-012",
-        url: "/grooming/luna-after-2.jpg",
-        type: "after",
-        caption: "Perfect pom poms",
-        takenAt: getDateString(-21) + "T15:48:00",
-        takenBy: "Sophie Laurent",
-      },
-    ],
-    notes: "Luna's Continental cut is show-ready. Owner was thrilled!",
-    sharedWithOwner: true,
-    sharedAt: getDateString(-21) + "T16:00:00",
-    createdAt: getDateString(-21) + "T14:00:00",
-  },
-];
-
 // Mock Grooming Products/Inventory
 export const groomingProducts: GroomingProduct[] = [
   {
@@ -1673,60 +1387,6 @@ export const groomingProducts: GroomingProduct[] = [
   },
 ];
 
-// Mock Product Usage Logs
-export const productUsageLogs: ProductUsageLog[] = [
-  {
-    id: "usage-001",
-    productId: "prod-001",
-    productName: "Oatmeal Soothing Shampoo",
-    appointmentId: "appt-010",
-    quantity: 0.1,
-    usedBy: "Amy Chen",
-    usedAt: getDateString(-1) + "T09:30:00",
-    reason: "grooming",
-  },
-  {
-    id: "usage-002",
-    productId: "prod-004",
-    productName: "Silk & Shine Conditioner",
-    appointmentId: "appt-010",
-    quantity: 0.1,
-    usedBy: "Amy Chen",
-    usedAt: getDateString(-1) + "T09:45:00",
-    reason: "grooming",
-  },
-  {
-    id: "usage-003",
-    productId: "prod-008",
-    productName: "Blueberry Facial Scrub",
-    appointmentId: "appt-010",
-    quantity: 0.05,
-    usedBy: "Amy Chen",
-    usedAt: getDateString(-1) + "T10:00:00",
-    reason: "grooming",
-  },
-  {
-    id: "usage-004",
-    productId: "prod-001",
-    productName: "Oatmeal Soothing Shampoo",
-    appointmentId: "appt-011",
-    quantity: 0.15,
-    usedBy: "Jessica Martinez",
-    usedAt: getDateString(-1) + "T11:15:00",
-    reason: "grooming",
-  },
-  {
-    id: "usage-005",
-    productId: "prod-003",
-    productName: "Flea & Tick Medicated Shampoo",
-    quantity: 0.5,
-    usedBy: "Marcus Thompson",
-    usedAt: getDateString(-3) + "T14:00:00",
-    reason: "expired",
-    notes: "Product expired, disposed properly",
-  },
-];
-
 // Mock Inventory Orders
 export const inventoryOrders: InventoryOrder[] = [
   {
@@ -1772,43 +1432,6 @@ export const inventoryOrders: InventoryOrder[] = [
 ];
 
 // Helper functions
-export function getTodayAppointments(): GroomingAppointment[] {
-  const today = new Date().toISOString().split("T")[0];
-  return groomingAppointments.filter((apt) => apt.date === today);
-}
-
-export function getUpcomingAppointments(
-  days: number = 7,
-): GroomingAppointment[] {
-  const today = new Date();
-  const futureDate = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
-
-  return groomingAppointments.filter((apt) => {
-    const aptDate = new Date(apt.date);
-    return (
-      aptDate >= today && aptDate <= futureDate && apt.status === "scheduled"
-    );
-  });
-}
-
-export function getAppointmentsByStylist(
-  stylistId: string,
-): GroomingAppointment[] {
-  return groomingAppointments.filter((apt) => apt.stylistId === stylistId);
-}
-
-export function getStylistAvailabilityForDay(
-  stylistId: string,
-  dayOfWeek: number,
-): StylistAvailability | undefined {
-  return stylistAvailability.find(
-    (avail) =>
-      avail.stylistId === stylistId &&
-      avail.dayOfWeek === dayOfWeek &&
-      avail.isAvailable,
-  );
-}
-
 export function getActiveStylists(): Stylist[] {
   return stylists.filter((s) => s.status === "active");
 }
@@ -1843,40 +1466,10 @@ export function getGroomingStats() {
   };
 }
 
-// Photo Album Helper Functions
-export function getPhotoAlbumsByPet(petId: number): PhotoAlbum[] {
-  return photoAlbums.filter((album) => album.petId === petId);
-}
-
-export function getPhotoAlbumByAppointment(
-  appointmentId: string,
-): PhotoAlbum | undefined {
-  return photoAlbums.find((album) => album.appointmentId === appointmentId);
-}
-
-export function getRecentPhotoAlbums(limit: number = 10): PhotoAlbum[] {
-  return [...photoAlbums]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, limit);
-}
-
 // Inventory Helper Functions
 export function getLowStockProducts(): GroomingProduct[] {
   return groomingProducts.filter(
     (p) => p.isActive && p.currentStock <= p.minStock,
-  );
-}
-
-export function getProductsByCategory(
-  category: ProductCategory,
-): GroomingProduct[] {
-  return groomingProducts.filter((p) => p.category === category && p.isActive);
-}
-
-export function getInventoryValue(): number {
-  return groomingProducts.reduce(
-    (sum, p) => sum + p.currentStock * p.costPrice,
-    0,
   );
 }
 

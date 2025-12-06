@@ -13,7 +13,6 @@ import {
   BarChart3,
   AlertCircle,
   XCircle,
-  Briefcase,
   Trophy,
   Plus,
   Settings,
@@ -26,7 +25,6 @@ import {
   calculateAOV,
   calculateRetentionRate,
   getTopCustomers,
-  calculateLabourCost,
   generateOccupancyReport,
   generateNoShowReport,
   generateCancellationReport,
@@ -89,11 +87,6 @@ export default function ReportsPage() {
     dateRange.end,
   );
   const topCustomersData = getTopCustomers(facilityId, 10);
-  const labourData = calculateLabourCost(
-    facilityId,
-    dateRange.start,
-    dateRange.end,
-  );
 
   // Occupancy Report Columns
   const occupancyColumns: ColumnDef<OccupancyReportData>[] = [
@@ -390,10 +383,6 @@ export default function ReportsPage() {
               <XCircle className="h-4 w-4 mr-2" />
               Cancellation
             </TabsTrigger>
-            <TabsTrigger value="labour">
-              <Briefcase className="h-4 w-4 mr-2" />
-              Labour Cost
-            </TabsTrigger>
             <TabsTrigger value="top-customers">
               <Trophy className="h-4 w-4 mr-2" />
               Top Customers
@@ -535,127 +524,6 @@ export default function ReportsPage() {
                 searchColumn="clientName"
                 searchPlaceholder="Search by client..."
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Labour Cost Report */}
-        <TabsContent value="labour" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Labour Cost
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${labourData.totalCost.toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {labourData.totalHours} hours worked
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Labour Percentage
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {labourData.labourPercentage.toFixed(1)}%
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Of total revenue
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Avg Hourly Rate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${labourData.avgHourlyRate.toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Across all staff
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Period Revenue
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${labourData.revenue.toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Total period revenue
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Staff Cost Breakdown</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Individual staff labour costs
-                  </p>
-                </div>
-                <Button
-                  onClick={() =>
-                    handleExport(
-                      "labour",
-                      labourData.staffBreakdown as unknown as Record<
-                        string,
-                        unknown
-                      >[],
-                    )
-                  }
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {labourData.staffBreakdown.map((staff, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <div className="font-medium">{staff.staffName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {staff.role}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">
-                        ${staff.totalCost.toFixed(2)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {staff.hoursWorked}h × ${staff.hourlyRate}/h
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

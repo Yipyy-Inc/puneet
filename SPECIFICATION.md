@@ -19,7 +19,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **Purpose & Users**
 
 - [ ] 🟢 Platform operators manage tenants, billing, system configuration
-- [ ] 🟡 Internal sales, support, auditors, and account managers included as users
+- [ ] ~~🟡 Internal sales, support, auditors, and account managers included as users~~ **REMOVED**
 
 ---
 
@@ -28,11 +28,11 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **Global Dashboard**
 
 - [x] 🟠 System-wide KPIs (tenants, bookings, revenue, uptime)
-- [x] 🟡 Active users count (staff + customers)
+- [x] ~~🟡 Active users count (staff + customers)~~ **REMOVED**
 - [x] 🟠 Performance charts (revenue, growth, reservations trends)
-- [x] 🟡 Customer acquisition trends
-- [x] 🟡 Top/bottom facility performance
-- [x] 🟡 Quick actions (add facility, view activities, open tickets, send announcements)
+- [x] ~~🟡 Customer acquisition trends~~ **REMOVED**
+- [x] ~~🟡 Top/bottom facility performance~~ **REMOVED**
+- [x] ~~🟡 Quick actions (add facility, view activities, open tickets, send announcements)~~ **REMOVED**
 
 ---
 
@@ -72,10 +72,10 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 - [x] 🟢 View facility invoices & billing history
 - [x] 🟠 Refunds, adjustments, manual credits
-- [x] 🟡 Payment provider analytics (success rate, failure rate)
-- [x] 🟡 Multi-currency support
-- [x] 🟡 Transaction logs & reconciliation tools
-- [x] 🟡 Gateway-level performance dashboard
+- [x] ~~🟡 Payment provider analytics (success rate, failure rate)~~ **REMOVED**
+- [x] ~~🟡 Multi-currency support~~ **REMOVED**
+- [x] ~~🟡 Transaction logs & reconciliation tools~~ **REMOVED**
+- [x] ~~🟡 Gateway-level performance dashboard~~ **REMOVED**
 
 ---
 
@@ -84,7 +84,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟢 Branding defaults
 - [x] 🟢 Supported languages/currency
 - [x] 🟢 System-wide defaults
-- [ ] 🟡 Advanced integration options (email, SMS, messaging platforms)
+- [ ] ~~🟡 Advanced integration options (email, SMS, messaging platforms)~~ **REMOVED** (WhatsApp, Mailchimp, MailerLite, Postmark, Slack removed)
 
 ---
 
@@ -107,7 +107,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟠 Ticket history & timeline
 - [ ] 🟡 Real-time chat support
 - [ ] 🟡 Multiple concurrent chats
-- [ ] 🟡 Feature request tracking
+- [ ] ~~🟡 Feature request tracking~~ **REMOVED**
 
 ---
 
@@ -141,25 +141,29 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 ## **Promotions & Discounts Console**
 
-- [x] 🟡 Create system-wide or facility-specific promo codes
-- [x] 🟡 Time-limited campaigns
-- [x] 🟡 Percentage, fixed, bundle, or first-time offers
-- [x] 🟡 Redemption limits
-- [x] 🟡 Promo effectiveness analytics (ROI, conversion rate)
+- [x] ~~🟡 Create system-wide or facility-specific promo codes~~ **REMOVED** (facility-level promos kept)
+- [x] ~~🟡 Time-limited campaigns~~ **REMOVED** (platform-level)
+- [x] ~~🟡 Percentage, fixed, bundle, or first-time offers~~ **REMOVED** (platform-level)
+- [x] ~~🟡 Redemption limits~~ **REMOVED** (platform-level)
+- [x] ~~🟡 Promo effectiveness analytics (ROI, conversion rate)~~ **REMOVED** (platform-level)
+
+_Note: Facility-level promotions remain in scope per original SRS agreement._
 
 ---
 
-## **CRM & Sales Pipeline**
+## **CRM & Sales Pipeline** — **REMOVED**
 
-- [x] 🟡 Lead capture (facility name, owner, size, service type)
-- [x] 🟡 Pipeline stages (New → Demo → Proposal → Negotiation → Won/Lost)
-- [x] 🟡 Drag-and-drop pipeline UI
-- [x] 🟡 Deal tracking (tier, modules, value, close date)
-- [x] 🟡 Sales activity logging (calls, emails, tasks)
-- [x] 🟡 Follow-up reminders & task assignment
-- [x] 🟡 Sales analytics (conversion rates, time-to-close, rep performance)
-- [x] 🟡 One-click conversion → create facility account
-- [x] 🟡 Onboarding checklist for new facilities
+_Entire CRM & Sales Pipeline module has been removed from scope._
+
+- [x] ~~🟡 Lead capture (facility name, owner, size, service type)~~ **REMOVED**
+- [x] ~~🟡 Pipeline stages (New → Demo → Proposal → Negotiation → Won/Lost)~~ **REMOVED**
+- [x] ~~🟡 Drag-and-drop pipeline UI~~ **REMOVED**
+- [x] ~~🟡 Deal tracking (tier, modules, value, close date)~~ **REMOVED**
+- [x] ~~🟡 Sales activity logging (calls, emails, tasks)~~ **REMOVED**
+- [x] ~~🟡 Follow-up reminders & task assignment~~ **REMOVED**
+- [x] ~~🟡 Sales analytics (conversion rates, time-to-close, rep performance)~~ **REMOVED**
+- [x] ~~🟡 One-click conversion → create facility account~~ **REMOVED**
+- [x] ~~🟡 Onboarding checklist for new facilities~~ **REMOVED**
 
 ---
 
@@ -172,8 +176,8 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟠 Manage support tickets & SLAs
 - [ ] 🟡 Impersonate facility admin for support
 - [ ] 🟡 Send system-wide announcements
-- [x] 🟡 Manage promo campaigns
-- [x] 🟡 Convert sales lead → facility account
+- [x] ~~🟡 Manage promo campaigns~~ **REMOVED** (platform-level)
+- [x] ~~🟡 Convert sales lead → facility account~~ **REMOVED**
 - [x] 🟡 Configure payment providers per facility
 
 ---
@@ -184,10 +188,10 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟢 Feature toggles immediately reflect at tenant level
 - [ ] 🟢 All admin actions logged immutably
 - [ ] 🟡 Impersonation logs show session start, end, and actions
-- [x] 🟡 Promo codes track usage and conversion
-- [x] 🟡 Sales pipeline supports full lead → onboarding workflow
+- [x] ~~🟡 Promo codes track usage and conversion~~ **REMOVED** (platform-level)
+- [x] ~~🟡 Sales pipeline supports full lead → onboarding workflow~~ **REMOVED**
 - [ ] 🟡 Alerts fire when thresholds are crossed
-- [x] 🟡 Payment analytics correctly reflect failures & retries
+- [x] ~~🟡 Payment analytics correctly reflect failures & retries~~ **REMOVED**
 
 ---
 
@@ -196,9 +200,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [ ] 🟢 Super Admin–only access
 - [ ] 🟢 Mandatory MFA
 - [ ] 🟢 Immutable audit logs
-- [ ] 🟡 IP whitelisting
-- [ ] 🟡 Session policy enforcement
-- [ ] 🟡 Suspicious activity monitoring
+- [ ] ~~🟡 IP whitelisting~~ **REMOVED**
+- [ ] ~~🟡 Session policy enforcement~~ **REMOVED**
+- [ ] ~~🟡 Suspicious activity monitoring~~ **REMOVED**
 - [ ] 🟡 Compliance-level data retention & purge automation
 
 ---
@@ -296,9 +300,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟢 Recurring shifts
 - [x] 🟢 Availability grid + time-off request flow (approve / deny)
 - [ ] 🟡 Shift-swap request (manager approve)
-- [ ] 🟡 AI suggester: reads upcoming reservations & recommends head-count per shift
-- [ ] 🟠 Auto-scheduler: respects availability, max hours, labour budget vs revenue
-- [x] 🟠 Staff hourly rates / salary for cost vs labour reports
+- [ ] ~~🟡 AI suggester: reads upcoming reservations & recommends head-count per shift~~ **REMOVED**
+- [ ] ~~🟠 Auto-scheduler: respects availability, max hours, labour budget vs revenue~~ **REMOVED**
+- [x] ~~🟠 Staff hourly rates / salary for cost vs labour reports~~ **REMOVED**
 - [ ] 🟠 Real-time change push (30-min reminder)
 - [ ] 🟡 Sick-alert broadcast
 - [ ] 🟡 Open-shift pickup
@@ -334,7 +338,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟢 Size-based pricing
 - [x] 🟢 Seasonal pricing
 - [x] 🟢 Peak-surcharge rules
-- [x] 🟠 Dynamic pricing engine (demand & occupancy driven)
+- [x] ~~🟠 Dynamic pricing engine (demand & occupancy driven)~~ **REMOVED**
 - [x] 🟢 Memberships & prepaid credits
 - [x] 🟢 Discount / promo code manager
 
@@ -362,7 +366,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 - [x] 🟢 KPI tile row (bookings, occupancy %, AOV, retention)
 - [x] 🟢 Pre-built reports: occupancy, no-show, cancellation
-- [x] 🟠 Pre-built reports: labour cost
+- [x] ~~🟠 Pre-built reports: labour cost~~ **REMOVED**
 - [x] 🟢 Pre-built reports: top customers / client lifetime value
 - [x] 🟠 Custom report builder (drag fields, filter, schedule email)
 - [x] 🟢 Export CSV / PDF
@@ -377,9 +381,9 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 - [x] 🟢 Template library
 - [x] 🟢 Segment builder
-- [x] 🟠 A/B testing
+- [x] ~~🟠 A/B testing~~ **REMOVED**
 - [x] 🟢 Schedule campaigns
-- [x] 🟠 Track opens / clicks
+- [x] ~~🟠 Track opens / clicks~~ **REMOVED**
 
 ### 8.2 Loyalty & Referrals
 
@@ -395,10 +399,10 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟢 Usage limits
 - [x] 🟠 Auto-apply rules
 
-### 8.4 Paid-Ads Tracking
+### 8.4 Paid-Ads Tracking — **REMOVED**
 
-- [ ] 🟡 Google / Meta pixel integration
-- [ ] 🟡 ROI dashboard
+- [ ] ~~🟡 Google / Meta pixel integration~~ **REMOVED**
+- [ ] ~~🟡 ROI dashboard~~ **REMOVED**
 
 ---
 
@@ -500,28 +504,30 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 
 - [x] 🟢 Grooming calendar (online booking enabled)
 - [x] 🟢 Stylist assignment & availability
-- [ ] 🟡 Style preference gallery (owner uploads reference photo)
-- [ ] 🟡 Progress tracker: Check-in → Bath → Dry → Haircut → Finish → Pick-up
-- [ ] 🟡 Real-time push + photo at each stage
-- [x] 🟠 Before / after photo album per visit
+- [ ] ~~🟡 Style preference gallery (owner uploads reference photo)~~ **REMOVED**
+- [ ] ~~🟡 Progress tracker: Check-in → Bath → Dry → Haircut → Finish → Pick-up~~ **REMOVED**
+- [ ] ~~🟡 Real-time push + photo at each stage~~ **REMOVED**
+- [x] ~~🟠 Before / after photo album per visit~~ **REMOVED**
 - [x] 🟢 Grooming packages
 - [x] 🟠 Product inventory
 
 ---
 
-## **13. Training Module (Opt-In)**
+## **13. Training Module (Opt-In)** — **REMOVED**
 
-- [x] 🟢 Class schedule & capacity
-- [x] 🟢 Enrollment
-- [ ] 🟡 Wait-list
-- [ ] 🟡 Private session booking
-- [x] 🟢 Trainer notes
-- [ ] 🟡 Homework assignment
-- [x] 🟢 Progress tracker
-- [ ] 🟡 Skill badges
-- [ ] 🟡 Certificate auto-generation
-- [x] 🟢 Packages
-- [ ] 🟡 Drop-in billing
+_Entire Training Module has been removed from scope._
+
+- [x] ~~🟢 Class schedule & capacity~~ **REMOVED**
+- [x] ~~🟢 Enrollment~~ **REMOVED**
+- [ ] ~~🟡 Wait-list~~ **REMOVED**
+- [ ] ~~🟡 Private session booking~~ **REMOVED**
+- [x] ~~🟢 Trainer notes~~ **REMOVED**
+- [ ] ~~🟡 Homework assignment~~ **REMOVED**
+- [x] ~~🟢 Progress tracker~~ **REMOVED**
+- [ ] ~~🟡 Skill badges~~ **REMOVED**
+- [ ] ~~🟡 Certificate auto-generation~~ **REMOVED**
+- [x] ~~🟢 Packages~~ **REMOVED**
+- [ ] ~~🟡 Drop-in billing~~ **REMOVED**
 
 ---
 
@@ -572,7 +578,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - [x] 🟠 VOIP
 - [x] 🟢 QuickBooks (Phase 2)
 - [x] 🟢 AI tools
-- [ ] 🟡 Ads manager (Google, Facebook)
+- [ ] ~~🟡 Ads manager (Google, Facebook)~~ **REMOVED**
 - [ ] 🟡 Partnerships tab (pet insurance referral link / banner)
 
 ### Subscription
@@ -588,16 +594,16 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 ## **17. Additional Features**
 
 - [ ] 🟡 QR code generation for each pet (wallet-size tag / app screen, scan at check-in/out)
-- [ ] 🟡 Pet-Collar Printer Integration (print bright temporary ID bands at check-in)
-  - Works with PetDetect or thermal printers (1" or 1.5" collar media)
-  - Pet name & owner last name (large text)
-  - Coloured stripe = care-alert level (Red = medication/special notes, Amber = senior/special needs, Blue = behaviour tag, Green = standard)
-  - Small icons: feeding schedule, meds, escape-risk, diet
-  - Facility logo + phone (repeats every 6")
-  - Auto-choose collar length (12", 18", 24", 30") based on stored pet size
+- [ ] ~~🟡 Pet-Collar Printer Integration (print bright temporary ID bands at check-in)~~ **REMOVED**
+  - ~~Works with PetDetect or thermal printers (1" or 1.5" collar media)~~
+  - ~~Pet name & owner last name (large text)~~
+  - ~~Coloured stripe = care-alert level (Red = medication/special notes, Amber = senior/special needs, Blue = behaviour tag, Green = standard)~~
+  - ~~Small icons: feeding schedule, meds, escape-risk, diet~~
+  - ~~Facility logo + phone (repeats every 6")~~
+  - ~~Auto-choose collar length (12", 18", 24", 30") based on stored pet size~~
 - [x] 🟠 Reminder for grooming / vet appointments (separate from boarding)
-- [ ] 🟡 Customer community forum (pet-parents board, anonymised, with moderation queue)
-- [ ] 🟡 OTA performance reviews (Google / Yelp pull-in, reply inline)
+- [ ] ~~🟡 Customer community forum (pet-parents board, anonymised, with moderation queue)~~ **REMOVED**
+- [ ] 🟡 Google Review Reputation Manager (Google reviews only, reply inline) _(Yelp/OTA removed)_
 - [x] 🟢 Live PetCam Integration (link live camera feeds for clients to view pets)
 - [x] 🟢 Mobile App White-Label Option
 - [x] 🟢 Smart Insights Dashboard (AI-driven)
@@ -617,7 +623,7 @@ Below is the **Platform Admin (Super Admin)** section rewritten as a **clean, st
 - Daycare module
 - Boarding module
 - Grooming module
-- Training module
+- ~~Training module~~ **REMOVED**
 - Retail / POS module
 
 ---

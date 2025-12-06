@@ -6,7 +6,6 @@ import { schedules } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
 import {
   shiftTemplates,
-  staffRates,
   shiftTasks,
   shiftSwapRequests,
   sickCallIns,
@@ -392,7 +391,6 @@ import {
   Copy,
   Repeat,
   FileDown,
-  DollarSign,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -710,20 +708,6 @@ export default function FacilitySchedulingPage() {
     return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
   }, 0);
 
-  // Calculate labour costs
-  const calculateLabourCost = () => {
-    return facilitySchedules.reduce((sum, schedule) => {
-      const rate = staffRates.find((r) => r.staffId === schedule.staffId);
-      if (!rate) return sum;
-      const start = new Date(`2000-01-01T${schedule.startTime}`);
-      const end = new Date(`2000-01-01T${schedule.endTime}`);
-      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return sum + hours * rate.hourlyRate;
-    }, 0);
-  };
-
-  const totalLabourCost = calculateLabourCost();
-
   // Copy week schedules
   const handleCopyWeek = () => {
     // In a real app, this would copy all schedules from current week to target week
@@ -817,20 +801,6 @@ export default function FacilitySchedulingPage() {
               {new Set(facilitySchedules.map((s) => s.staffId)).size}
             </div>
             <p className="text-xs text-muted-foreground">Staff members</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Labour Cost</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${totalLabourCost.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Est. for scheduled shifts
-            </p>
           </CardContent>
         </Card>
       </div>

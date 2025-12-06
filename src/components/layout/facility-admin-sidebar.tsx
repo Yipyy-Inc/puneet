@@ -17,7 +17,6 @@ import {
   Settings,
   Grid3X3,
   Scissors,
-  GraduationCap,
   ShoppingCart,
   Bed,
   Tags,
@@ -124,12 +123,6 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Training",
-            url: "/facility/training",
-            icon: GraduationCap,
-            disabled: false,
-          },
-          {
             title: "Retail / POS",
             url: "/facility/retail",
             icon: ShoppingCart,
@@ -228,9 +221,7 @@ export function FacilitySidebar() {
 
   return (
     <GenericSidebar
-      header={
-        <h2 className="text-lg font-semibold">Facility Dashboard</h2>
-      }
+      header={<h2 className="text-lg font-semibold">Facility Dashboard</h2>}
       menuSections={filteredMenuSections}
       onLogout={handleLogout}
     />

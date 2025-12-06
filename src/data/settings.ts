@@ -321,57 +321,6 @@ export const currencySettings: CurrencySettings = {
   decimalSeparator: ".",
 };
 
-export const roles: Role[] = [
-  {
-    id: "role-001",
-    name: "Owner/Admin",
-    permissions: {
-      viewDashboard: true,
-      manageBookings: true,
-      manageClients: true,
-      managePets: true,
-      manageStaff: true,
-      manageFinancials: true,
-      viewReports: true,
-      manageSettings: true,
-      manageIncidents: true,
-      deleteData: true,
-    },
-  },
-  {
-    id: "role-002",
-    name: "Manager",
-    permissions: {
-      viewDashboard: true,
-      manageBookings: true,
-      manageClients: true,
-      managePets: true,
-      manageStaff: false,
-      manageFinancials: true,
-      viewReports: true,
-      manageSettings: false,
-      manageIncidents: true,
-      deleteData: false,
-    },
-  },
-  {
-    id: "role-003",
-    name: "Staff",
-    permissions: {
-      viewDashboard: true,
-      manageBookings: true,
-      manageClients: false,
-      managePets: false,
-      manageStaff: false,
-      manageFinancials: false,
-      viewReports: false,
-      manageSettings: false,
-      manageIncidents: true,
-      deleteData: false,
-    },
-  },
-];
-
 // ========================================
 // NOTIFICATION SETTINGS DATA
 // ========================================

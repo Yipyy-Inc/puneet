@@ -1004,7 +1004,7 @@ export const purchaseOrders: PurchaseOrder[] = [
   },
 ];
 
-export const transactions: Transaction[] = [
+const transactions: Transaction[] = [
   {
     id: "txn-001",
     transactionNumber: "TXN-20240310-001",
@@ -1388,22 +1388,9 @@ export const lowStockAlerts: LowStockAlert[] = [
   },
 ];
 
-export const onlineStoreSettings: OnlineStoreSettings = {
-  enabled: true,
-  syncInventory: true,
-  syncProducts: true,
-  syncPrices: true,
-  lastSyncAt: getDateString(-1) + "T08:00:00",
-  storeUrl: "https://store.doggieville.com",
-  apiConnected: true,
-  autoPublishNewProducts: false,
-  lowStockThreshold: 5,
-  hideOutOfStock: true,
-};
-
 // Helper functions
 
-export function getActiveProducts(): Product[] {
+function getActiveProducts(): Product[] {
   return products.filter((p) => p.status === "active");
 }
 
@@ -1421,10 +1408,6 @@ export function getProductByBarcode(
     }
   }
   return null;
-}
-
-export function getProductById(id: string): Product | undefined {
-  return products.find((p) => p.id === id);
 }
 
 export function getLowStockProducts(): (Product | ProductVariant)[] {
@@ -1476,12 +1459,12 @@ export function getPendingOrders(): PurchaseOrder[] {
   );
 }
 
-export function getTodayTransactions(): Transaction[] {
+function getTodayTransactions(): Transaction[] {
   const today = getDateString(0);
   return transactions.filter((t) => t.createdAt.startsWith(today));
 }
 
-export function getTransactionStats() {
+function getTransactionStats() {
   const todayTransactions = getTodayTransactions();
   const completedToday = todayTransactions.filter(
     (t) => t.status === "completed",

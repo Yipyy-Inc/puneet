@@ -24,7 +24,9 @@ export function HeaderDropdown() {
 
   const getLocale = () => {
     const cookies = document.cookie.split(";");
-    const localeCookie = cookies.find((c) => c.trim().startsWith("NEXT_LOCALE="));
+    const localeCookie = cookies.find((c) =>
+      c.trim().startsWith("NEXT_LOCALE="),
+    );
     return localeCookie ? localeCookie.split("=")[1] : "en";
   };
 

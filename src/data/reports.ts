@@ -51,55 +51,6 @@ export const calculateOccupancyRate = (
   };
 };
 
-export const calculateNoShowRate = (
-  facilityId: number,
-  startDate: string,
-  endDate: string,
-) => {
-  const facilityBookings = bookings.filter(
-    (b) =>
-      b.facilityId === facilityId &&
-      new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate),
-  );
-
-  // In real app, would track actual no-shows. For now, simulate with cancelled bookings
-  const noShows = facilityBookings.filter(
-    (b) => b.status === "cancelled",
-  ).length;
-  const total = facilityBookings.length;
-
-  return {
-    rate: total > 0 ? (noShows / total) * 100 : 0,
-    noShows,
-    total,
-  };
-};
-
-export const calculateCancellationRate = (
-  facilityId: number,
-  startDate: string,
-  endDate: string,
-) => {
-  const facilityBookings = bookings.filter(
-    (b) =>
-      b.facilityId === facilityId &&
-      new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate),
-  );
-
-  const cancellations = facilityBookings.filter(
-    (b) => b.status === "cancelled",
-  ).length;
-  const total = facilityBookings.length;
-
-  return {
-    rate: total > 0 ? (cancellations / total) * 100 : 0,
-    cancellations,
-    total,
-  };
-};
-
 export const calculateAOV = (
   facilityId: number,
   startDate: string,
@@ -212,70 +163,6 @@ export const getTopCustomers = (facilityId: number, limit: number = 10) => {
     .slice(0, limit);
 };
 
-export const calculateLabourCost = (
-  facilityId: number,
-  startDate: string,
-  endDate: string,
-) => {
-  // Mock staff hourly rates and hours worked
-  const staffHours = [
-    {
-      staffName: "Sarah Johnson",
-      role: "Manager",
-      hourlyRate: 25,
-      hoursWorked: 160,
-    },
-    {
-      staffName: "Mike Davis",
-      role: "Staff",
-      hourlyRate: 18,
-      hoursWorked: 140,
-    },
-    {
-      staffName: "Emily Brown",
-      role: "Groomer",
-      hourlyRate: 22,
-      hoursWorked: 120,
-    },
-    {
-      staffName: "Tom Wilson",
-      role: "Front Desk",
-      hourlyRate: 16,
-      hoursWorked: 80,
-    },
-  ];
-
-  const totalCost = staffHours.reduce(
-    (sum, s) => sum + s.hourlyRate * s.hoursWorked,
-    0,
-  );
-  const totalHours = staffHours.reduce((sum, s) => sum + s.hoursWorked, 0);
-
-  // Calculate revenue for the period
-  const facilityBookings = bookings.filter(
-    (b) =>
-      b.facilityId === facilityId &&
-      b.paymentStatus === "paid" &&
-      new Date(b.startDate) >= new Date(startDate) &&
-      new Date(b.startDate) <= new Date(endDate),
-  );
-  const revenue = facilityBookings.reduce((sum, b) => sum + b.totalCost, 0);
-
-  const labourPercentage = revenue > 0 ? (totalCost / revenue) * 100 : 0;
-
-  return {
-    totalCost,
-    totalHours,
-    staffBreakdown: staffHours.map((s) => ({
-      ...s,
-      totalCost: s.hourlyRate * s.hoursWorked,
-    })),
-    revenue,
-    labourPercentage,
-    avgHourlyRate: totalHours > 0 ? totalCost / totalHours : 0,
-  };
-};
-
 export interface OccupancyReportData {
   date: string;
   occupancyRate: number;
@@ -304,39 +191,6 @@ export interface CancellationReportData {
   cancellationTime: string;
   advanceNotice: string; // e.g., "2 days", "1 hour"
 }
-
-export const reportTemplates = {
-  occupancy: {
-    name: "Occupancy Report",
-    description: "Daily kennel occupancy rates and revenue",
-    icon: "chart",
-    category: "operations",
-  },
-  noShow: {
-    name: "No-Show Report",
-    description: "Clients who didn't show up for appointments",
-    icon: "alert",
-    category: "operations",
-  },
-  cancellation: {
-    name: "Cancellation Report",
-    description: "Booking cancellations with reasons",
-    icon: "x-circle",
-    category: "operations",
-  },
-  labourCost: {
-    name: "Labour Cost Report",
-    description: "Staff costs vs revenue analysis",
-    icon: "users",
-    category: "financial",
-  },
-  topCustomers: {
-    name: "Top Customers / CLV Report",
-    description: "Customer lifetime value and spending analysis",
-    icon: "trophy",
-    category: "financial",
-  },
-};
 
 // Generate sample occupancy report data
 export const generateOccupancyReport = (

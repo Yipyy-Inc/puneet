@@ -441,21 +441,6 @@ export const callLogs: CallLog[] = [
   },
 ];
 
-export interface VoicemailSettings {
-  greeting: string;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  transcription: boolean;
-}
-
-export const voicemailSettings: VoicemailSettings = {
-  greeting:
-    "Thank you for calling PawCare Facility. We're unable to take your call right now. Please leave a message and we'll get back to you as soon as possible.",
-  emailNotifications: true,
-  smsNotifications: true,
-  transcription: true,
-};
-
 export interface RoutingRule {
   id: string;
   name: string;

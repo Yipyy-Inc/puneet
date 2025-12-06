@@ -485,20 +485,6 @@ export const configChangeLogs: ConfigChangeLog[] = [
 ];
 
 // Helper functions
-export const getTenantConfig = (tenantId: string) =>
-  tenantModuleConfigs.find((t) => t.tenantId === tenantId);
-
-export const getActiveRemoteFlags = () =>
-  remoteConfigFlags.filter((f) => f.isActive);
-
-export const getGlobalFlags = () =>
-  remoteConfigFlags.filter((f) => f.scope === "global");
-
-export const getTenantFlags = (tenantId: string) =>
-  remoteConfigFlags.filter(
-    (f) => f.scope === "tenant" && f.targetTenants?.includes(tenantId),
-  );
-
 export const getConfigStats = () => {
   const totalTenants = tenantModuleConfigs.length;
   const totalFlags = remoteConfigFlags.length;

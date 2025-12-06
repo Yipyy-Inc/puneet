@@ -16,12 +16,6 @@ import {
   FileText,
   BarChart2,
   Database,
-  Tag,
-  Users,
-  Target,
-  UserPlus,
-  ClipboardList,
-  Trophy,
   Settings,
   CheckSquare,
   AlertTriangle,
@@ -57,7 +51,6 @@ function SidebarLogo() {
 }
 
 export function AppSidebar() {
-
   const menuSections: MenuSection[] = [
     {
       label: "Overview",
@@ -99,59 +92,7 @@ export function AppSidebar() {
         },
       ],
     },
-    {
-      label: "CRM",
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard/crm",
-          icon: Target,
-          disabled: false,
-        },
-        {
-          title: "Leads",
-          url: "/dashboard/crm/leads",
-          icon: UserPlus,
-          disabled: false,
-        },
-        {
-          title: "Deals",
-          url: "/dashboard/crm/deals",
-          icon: DollarSign,
-          disabled: false,
-        },
-        {
-          title: "Contacts",
-          url: "/dashboard/crm/contacts",
-          icon: Users,
-          disabled: false,
-        },
-        {
-          title: "Activities",
-          url: "/dashboard/crm/activities",
-          icon: ClipboardList,
-          disabled: false,
-        },
-        {
-          title: "Onboarding",
-          url: "/dashboard/crm/onboarding",
-          icon: CheckSquare,
-          disabled: false,
-        },
-        {
-          title: "Reports",
-          url: "/dashboard/crm/reports",
-          icon: BarChart2,
-          disabled: false,
-        },
-        {
-          title: "Team",
-          url: "/dashboard/crm/team",
-          icon: Trophy,
-          disabled: false,
-        },
-      ],
-    },
+
     {
       label: "Tenant Management",
       items: [
@@ -298,23 +239,6 @@ export function AppSidebar() {
           title: "Alerts & Notifications",
           url: "/dashboard/system-health/alerts-notifications",
           icon: AlertTriangle,
-          disabled: false,
-        },
-      ],
-    },
-    {
-      label: "Promotions & Discounts",
-      items: [
-        {
-          title: "Promo Code System",
-          url: "/dashboard/promotions/promo-code-system",
-          icon: Tag,
-          disabled: false,
-        },
-        {
-          title: "Performance Metrics",
-          url: "/dashboard/promotions/performance-metrics",
-          icon: TrendingUp,
           disabled: false,
         },
       ],

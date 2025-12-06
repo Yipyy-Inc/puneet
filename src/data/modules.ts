@@ -528,10 +528,3 @@ export const modules: Module[] = [
     updatedAt: "2025-11-27T00:00:00Z",
   },
 ];
-
-// Helper functions
-export function getModulesByCategory(
-  category: "core" | "advanced" | "premium" | "addon",
-): Module[] {
-  return modules.filter((module) => module.category === category);
-}

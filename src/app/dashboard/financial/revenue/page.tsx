@@ -1,6 +1,5 @@
 import { RevenueOverview } from "@/components/financial/RevenueOverview";
 import { FacilityRevenueTable } from "@/components/financial/FacilityRevenueTable";
-import { CommissionTrackingTable } from "@/components/financial/CommissionTrackingTable";
 
 export default function RevenueTrackingPage() {
   return (
@@ -18,7 +17,6 @@ export default function RevenueTrackingPage() {
 
         <RevenueOverview />
         <FacilityRevenueTable />
-        <CommissionTrackingTable />
       </div>
     </div>
   );

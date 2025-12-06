@@ -3,14 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  Scissors,
-  Calendar,
-  Users,
-  Package,
-  Camera,
-  BoxesIcon,
-} from "lucide-react";
+import { Scissors, Calendar, Users, Package, BoxesIcon } from "lucide-react";
 
 const tabs = [
   {
@@ -27,11 +20,6 @@ const tabs = [
     name: "Packages",
     href: "/facility/dashboard/services/grooming/packages",
     icon: Package,
-  },
-  {
-    name: "Photo Albums",
-    href: "/facility/dashboard/services/grooming/photos",
-    icon: Camera,
   },
   {
     name: "Inventory",

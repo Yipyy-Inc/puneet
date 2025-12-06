@@ -842,21 +842,6 @@ export const supportTickets: SupportTicket[] = [
 ];
 
 // Helper functions
-export const getTicketsByStatus = (status: SupportTicket["status"]) =>
-  supportTickets.filter((t) => t.status === status);
-
-export const getTicketsByPriority = (priority: SupportTicket["priority"]) =>
-  supportTickets.filter((t) => t.priority === priority);
-
-export const getTicketsByAgent = (agentId: string) =>
-  supportTickets.filter((t) => t.assignedAgentId === agentId);
-
-export const getAvailableAgents = () =>
-  supportAgents.filter((a) => a.status === "Available" || a.status === "Busy");
-
-export const getSLAConfig = (priority: SupportTicket["priority"]) =>
-  slaConfigs.find((c) => c.priority === priority);
-
 export const getTicketStats = () => {
   const total = supportTickets.length;
   const open = supportTickets.filter((t) => t.status === "Open").length;

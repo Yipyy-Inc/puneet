@@ -323,16 +323,6 @@ export const getIncidentStats = () => {
   return { total, open, critical, thisMonth };
 };
 
-// Get incidents by pet
-export const getIncidentsByPet = (petId: number): Incident[] => {
-  return incidents.filter((incident) => incident.petIds.includes(petId));
-};
-
-// Get incidents by severity
-export const getIncidentsBySeverity = (severity: string): Incident[] => {
-  return incidents.filter((incident) => incident.severity === severity);
-};
-
 // Get pending follow-up tasks
 export const getPendingFollowUpTasks = (): FollowUpTask[] => {
   const allTasks: FollowUpTask[] = [];

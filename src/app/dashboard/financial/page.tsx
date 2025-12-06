@@ -1,10 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RevenueOverview } from "@/components/financial/RevenueOverview";
 import { FacilityRevenueTable } from "@/components/financial/FacilityRevenueTable";
-import { CommissionTrackingTable } from "@/components/financial/CommissionTrackingTable";
-import { TransactionsTable } from "@/components/financial/TransactionsTable";
-import { PaymentProvidersTable } from "@/components/financial/PaymentProvidersTable";
-import { PaymentAnalytics } from "@/components/financial/PaymentAnalytics";
 import { FinancialReports } from "@/components/financial/FinancialReports";
 
 export default function FinancialManagementPage() {
@@ -25,7 +21,6 @@ export default function FinancialManagementPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="revenue">Revenue Tracking</TabsTrigger>
-            <TabsTrigger value="payments">Payment Integration</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -35,13 +30,6 @@ export default function FinancialManagementPage() {
 
           <TabsContent value="revenue" className="space-y-4">
             <FacilityRevenueTable />
-            <CommissionTrackingTable />
-          </TabsContent>
-
-          <TabsContent value="payments" className="space-y-4">
-            <PaymentAnalytics />
-            <TransactionsTable />
-            <PaymentProvidersTable />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">

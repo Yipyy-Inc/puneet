@@ -44,8 +44,14 @@ export default function FacilityConfigPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">{"Facility Configuration"}</h2>
-            <p className="text-muted-foreground">{"Configure global settings that apply to all facilities in the platform, including service availability, pricing structures, booking rules, and operational policies."}</p>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {"Facility Configuration"}
+            </h2>
+            <p className="text-muted-foreground">
+              {
+                "Configure global settings that apply to all facilities in the platform, including service availability, pricing structures, booking rules, and operational policies."
+              }
+            </p>
           </div>
           <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" />
@@ -56,11 +62,11 @@ export default function FacilityConfigPage() {
           <div className="flex items-start space-x-2">
             <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
             <div>
-              <div className="text-yellow-800 font-medium">
-                {"Warning"}
-              </div>
+              <div className="text-yellow-800 font-medium">{"Warning"}</div>
               <div className="text-sm text-yellow-700">
-                {"Some configuration changes may be destructive and could affect existing bookings, pricing, or facility operations. Please review changes carefully before saving."}
+                {
+                  "Some configuration changes may be destructive and could affect existing bookings, pricing, or facility operations. Please review changes carefully before saving."
+                }
               </div>
             </div>
           </div>
