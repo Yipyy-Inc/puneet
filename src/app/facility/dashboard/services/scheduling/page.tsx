@@ -600,23 +600,17 @@ export default function FacilitySchedulingPage() {
 
     const shiftDate = new Date(sickCall.shiftDate);
     const dayOfWeek = shiftDate.getDay();
-    const [shiftStart] = sickCall.shiftTime.split(" - ");
+    const shiftStart = sickCall.shiftTime.split(" - ")[0];
 
-    // Find staff who are available on this day and not the sick staff member
     const availableStaffIds = staffAvailability
       .filter((av) => {
-        if (av.staffId === sickCall.staffId) return false;
-        if (av.dayOfWeek !== dayOfWeek) return false;
-        if (!av.isAvailable) return false;
-        // Check if their availability window covers the shift
+        if (av.dayOfWeek !== dayOfWeek || !av.isAvailable) return false;
         return av.startTime <= shiftStart;
       })
       .map((av) => av.staffId);
 
-    // Get unique staff members who are available
     const uniqueStaffIds = [...new Set(availableStaffIds)];
 
-    // Check if they're already scheduled for that date
     const alreadyScheduledIds = facilitySchedules
       .filter((s) => s.date === sickCall.shiftDate)
       .map((s) => s.staffId);
@@ -624,7 +618,8 @@ export default function FacilitySchedulingPage() {
     return facilityStaff.filter(
       (staff) =>
         uniqueStaffIds.includes(staff.id) &&
-        !alreadyScheduledIds.includes(staff.id),
+        !alreadyScheduledIds.includes(staff.id) &&
+        staff.id !== sickCall.staffId,
     );
   };
 
@@ -716,374 +711,399 @@ export default function FacilitySchedulingPage() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Staff Scheduling - {facility.name}
-          </h2>
-          <p className="text-muted-foreground">
-            Manage staff schedules and shifts
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button onClick={() => handleAddNew()}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Shift
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setIsCopyWeekModalOpen(true)}
-          >
-            <Copy className="mr-2 h-4 w-4" />
-            Copy Week
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => exportSchedulesToCSV(facilitySchedules)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              exportSchedulesToICS(facilitySchedules, facility.name)
-            }
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            ICS
-          </Button>
-        </div>
+    <div className="space-y-6">
+      {/* Action Bar */}
+      <div className="flex items-center justify-end gap-2">
+        <Button onClick={() => handleAddNew()}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Shift
+        </Button>
+        <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)}>
+          <Copy className="mr-2 h-4 w-4" />
+          Copy Week
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => exportSchedulesToCSV(facilitySchedules)}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          CSV
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => exportSchedulesToICS(facilitySchedules, facility.name)}
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          ICS
+        </Button>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Today's Shifts"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todaySchedules.length}</div>
-            <p className="text-xs text-muted-foreground">Active today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Upcoming Shifts"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingSchedules.length}</div>
-            <p className="text-xs text-muted-foreground">Future shifts</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalHours.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Scheduled hours</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Staff Coverage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(facilitySchedules.map((s) => s.staffId)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">Staff members</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs for Schedule and Conflicts */}
-      <Tabs defaultValue="schedule" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="schedule">
-            <Calendar className="h-4 w-4 mr-2" />
+      {/* Tabs */}
+      <Tabs defaultValue="schedule" className="space-y-6">
+        <TabsList className="inline-flex h-auto gap-1 rounded-lg bg-muted p-1">
+          <TabsTrigger
+            value="schedule"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <Calendar className="h-4 w-4" />
             Schedule
           </TabsTrigger>
-          <TabsTrigger value="tasks">
-            <ClipboardList className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="tasks"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <ClipboardList className="h-4 w-4" />
             Shift Tasks
           </TabsTrigger>
-          <TabsTrigger value="sick">
-            <Phone className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="sick"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <Phone className="h-4 w-4" />
             Sick Call-ins
             {getSickCallInsNeedingCoverage().length > 0 && (
-              <Badge variant="destructive" className="ml-2 h-5 px-1.5">
+              <Badge variant="destructive" className="ml-1 h-5 px-1.5">
                 {getSickCallInsNeedingCoverage().length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="swaps">
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="swaps"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
             Shift Swaps
             {getPendingSwapRequests().length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                 {getPendingSwapRequests().length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="conflicts">
-            <AlertTriangle className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="conflicts"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <AlertTriangle className="h-4 w-4" />
             Conflicts
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="schedule" className="space-y-4">
-          {/* View Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === "calendar" ? "default" : "outline"}
-                onClick={() => setViewMode("calendar")}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                Calendar View
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                onClick={() => setViewMode("list")}
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                List View
-              </Button>
-            </div>
-
-            {viewMode === "calendar" && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant={calendarView === "week" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCalendarView("week")}
-                >
-                  Week
-                </Button>
-                <Button
-                  variant={calendarView === "month" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCalendarView("month")}
-                >
-                  Month
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Calendar View - Week/Month */}
-          {viewMode === "calendar" && (
-            <GenericCalendar<(typeof facilitySchedules)[0] & CalendarItem>
-              items={facilitySchedules}
-              config={{
-                title:
-                  calendarView === "week"
-                    ? "Weekly Schedule"
-                    : "Monthly Calendar",
-                onItemClick: handleEdit,
-                onAddClick: handleAddNew,
-                showAddButton: true,
-                rowData:
-                  calendarView === "week"
-                    ? facilityStaff.map(
-                        (staff) =>
-                          ({
-                            id: staff.id,
-                            name: staff.name,
-                            role: staff.role,
-                          }) as CalendarRowData,
-                      )
-                    : undefined,
-                getItemsForDateAndRow:
-                  calendarView === "week"
-                    ? (date, staffId) => {
-                        return getScheduleForDateAndStaff(date, Number(staffId))
-                          ? [getScheduleForDateAndStaff(date, Number(staffId))!]
-                          : [];
-                      }
-                    : undefined,
-                renderRowHeader:
-                  calendarView === "week"
-                    ? (row) => (
-                        <div>
-                          <div>{row.name}</div>
-                          <Badge variant="outline" className="text-xs">
-                            {String(row.role || "")}
-                          </Badge>
-                        </div>
-                      )
-                    : undefined,
-                renderWeekCell:
-                  calendarView === "week"
-                    ? ({ items, date }) => (
-                        <>
-                          {items.length > 0 ? (
-                            items.map((schedule) => (
-                              <div key={schedule.id} className="group relative">
-                                <Badge
-                                  variant="secondary"
-                                  className="cursor-pointer hover:bg-secondary/80"
-                                  onClick={() => handleEdit(schedule)}
-                                >
-                                  {schedule.startTime} - {schedule.endTime}
-                                </Badge>
-                                <div className="absolute hidden group-hover:flex gap-1 top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEdit(schedule);
-                                    }}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedShiftForReport(schedule);
-                                      setIsShiftReportModalOpen(true);
-                                    }}
-                                  >
-                                    <ClipboardList className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 px-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteClick(schedule);
-                                    }}
-                                  >
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-full text-xs"
-                              onClick={() => handleAddNew(formatDate(date))}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </>
-                      )
-                    : ({ items }) => (
-                        <>
-                          {items.slice(0, 3).map((schedule) => (
-                            <div
-                              key={schedule.id}
-                              className="group relative text-xs bg-secondary/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-secondary/80"
-                              onClick={() => handleEdit(schedule)}
-                            >
-                              <div className="font-medium truncate">
-                                {schedule.staffName}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground">
-                                {schedule.startTime}-{schedule.endTime}
-                              </div>
-                            </div>
-                          ))}
-                          {items.length > 3 && (
-                            <div className="text-[10px] text-muted-foreground text-center">
-                              +{items.length - 3} more
-                            </div>
-                          )}
-                        </>
-                      ),
-              }}
-              view={calendarView}
-              initialDate={currentWeekStart}
-            />
-          )}
-
-          {/* List View */}
-          {viewMode === "list" && (
+        <TabsContent value="schedule" className="space-y-6">
+          {/* Stats Section */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader>
-                <CardTitle>All Schedules</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {"Today's Shifts"}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff Name</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {facilitySchedules.map((schedule) => (
-                      <TableRow key={schedule.id}>
-                        <TableCell className="font-medium">
-                          {schedule.staffName}
-                        </TableCell>
-                        <TableCell>{schedule.date}</TableCell>
-                        <TableCell>{schedule.startTime}</TableCell>
-                        <TableCell>{schedule.endTime}</TableCell>
-                        <TableCell>
-                          <StatusBadge type="role" value={schedule.role} />
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge type="status" value={schedule.status} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(schedule)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedShiftForReport(schedule);
-                                setIsShiftReportModalOpen(true);
-                              }}
-                            >
-                              <ClipboardList className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteClick(schedule)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="text-2xl font-bold">
+                  {todaySchedules.length}
+                </div>
+                <p className="text-xs text-muted-foreground">Active today</p>
               </CardContent>
             </Card>
-          )}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {"Upcoming Shifts"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {upcomingSchedules.length}
+                </div>
+                <p className="text-xs text-muted-foreground">Future shifts</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Hours
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {totalHours.toFixed(1)}
+                </div>
+                <p className="text-xs text-muted-foreground">Scheduled hours</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Staff Coverage
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {new Set(facilitySchedules.map((s) => s.staffId)).size}
+                </div>
+                <p className="text-xs text-muted-foreground">Staff members</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* View Toggle */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "calendar" ? "default" : "outline"}
+                  onClick={() => setViewMode("calendar")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  Calendar View
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  onClick={() => setViewMode("list")}
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  List View
+                </Button>
+              </div>
+
+              {viewMode === "calendar" && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={calendarView === "week" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCalendarView("week")}
+                  >
+                    Week
+                  </Button>
+                  <Button
+                    variant={calendarView === "month" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCalendarView("month")}
+                  >
+                    Month
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Calendar View - Week/Month */}
+            {viewMode === "calendar" && (
+              <GenericCalendar<(typeof facilitySchedules)[0] & CalendarItem>
+                items={facilitySchedules}
+                config={{
+                  title:
+                    calendarView === "week"
+                      ? "Weekly Schedule"
+                      : "Monthly Calendar",
+                  onItemClick: handleEdit,
+                  onAddClick: handleAddNew,
+                  showAddButton: true,
+                  rowData:
+                    calendarView === "week"
+                      ? facilityStaff.map(
+                          (staff) =>
+                            ({
+                              id: staff.id,
+                              name: staff.name,
+                              role: staff.role,
+                            }) as CalendarRowData,
+                        )
+                      : undefined,
+                  getItemsForDateAndRow:
+                    calendarView === "week"
+                      ? (date, staffId) => {
+                          return getScheduleForDateAndStaff(
+                            date,
+                            Number(staffId),
+                          )
+                            ? [
+                                getScheduleForDateAndStaff(
+                                  date,
+                                  Number(staffId),
+                                )!,
+                              ]
+                            : [];
+                        }
+                      : undefined,
+                  renderRowHeader:
+                    calendarView === "week"
+                      ? (row) => (
+                          <div>
+                            <div>{row.name}</div>
+                            <Badge variant="outline" className="text-xs">
+                              {String(row.role || "")}
+                            </Badge>
+                          </div>
+                        )
+                      : undefined,
+                  renderWeekCell:
+                    calendarView === "week"
+                      ? ({ items, date }) => (
+                          <>
+                            {items.length > 0 ? (
+                              items.map((schedule) => (
+                                <div
+                                  key={schedule.id}
+                                  className="group relative"
+                                >
+                                  <Badge
+                                    variant="secondary"
+                                    className="cursor-pointer hover:bg-secondary/80"
+                                    onClick={() => handleEdit(schedule)}
+                                  >
+                                    {schedule.startTime} - {schedule.endTime}
+                                  </Badge>
+                                  <div className="absolute hidden group-hover:flex gap-1 top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEdit(schedule);
+                                      }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedShiftForReport(schedule);
+                                        setIsShiftReportModalOpen(true);
+                                      }}
+                                    >
+                                      <ClipboardList className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteClick(schedule);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-full text-xs"
+                                onClick={() => handleAddNew(formatDate(date))}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </>
+                        )
+                      : ({ items }) => (
+                          <>
+                            {items.slice(0, 3).map((schedule) => (
+                              <div
+                                key={schedule.id}
+                                className="group relative text-xs bg-secondary/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-secondary/80"
+                                onClick={() => handleEdit(schedule)}
+                              >
+                                <div className="font-medium truncate">
+                                  {schedule.staffName}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {schedule.startTime}-{schedule.endTime}
+                                </div>
+                              </div>
+                            ))}
+                            {items.length > 3 && (
+                              <div className="text-[10px] text-muted-foreground text-center">
+                                +{items.length - 3} more
+                              </div>
+                            )}
+                          </>
+                        ),
+                }}
+                view={calendarView}
+                initialDate={currentWeekStart}
+              />
+            )}
+
+            {/* List View */}
+            {viewMode === "list" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Schedules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff Name</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Start Time</TableHead>
+                        <TableHead>End Time</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {facilitySchedules.map((schedule) => (
+                        <TableRow key={schedule.id}>
+                          <TableCell className="font-medium">
+                            {schedule.staffName}
+                          </TableCell>
+                          <TableCell>{schedule.date}</TableCell>
+                          <TableCell>{schedule.startTime}</TableCell>
+                          <TableCell>{schedule.endTime}</TableCell>
+                          <TableCell>
+                            <StatusBadge type="role" value={schedule.role} />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              type="status"
+                              value={schedule.status}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(schedule)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedShiftForReport(schedule);
+                                  setIsShiftReportModalOpen(true);
+                                }}
+                              >
+                                <ClipboardList className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteClick(schedule)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Add/Edit Schedule Modal */}
           <Dialog
@@ -1389,12 +1409,15 @@ export default function FacilitySchedulingPage() {
         </TabsContent>
 
         {/* Shift Tasks Tab */}
-        <TabsContent value="tasks" className="space-y-4">
+        <TabsContent value="tasks" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Shift Tasks</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5" />
+                    Shift Tasks
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
                     Tasks assigned to shifts - can be assigned to specific
                     personnel or anyone on shift
@@ -1529,7 +1552,7 @@ export default function FacilitySchedulingPage() {
         </TabsContent>
 
         {/* Sick Call-ins Tab */}
-        <TabsContent value="sick" className="space-y-4">
+        <TabsContent value="sick" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1661,7 +1684,7 @@ export default function FacilitySchedulingPage() {
         </TabsContent>
 
         {/* Shift Swaps Tab */}
-        <TabsContent value="swaps" className="space-y-4">
+        <TabsContent value="swaps" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1817,7 +1840,7 @@ export default function FacilitySchedulingPage() {
         </TabsContent>
 
         {/* Conflicts Tab */}
-        <TabsContent value="conflicts" className="space-y-4">
+        <TabsContent value="conflicts" className="space-y-6">
           <StaffConflictDetector />
         </TabsContent>
       </Tabs>
@@ -2022,7 +2045,7 @@ export default function FacilitySchedulingPage() {
               </Select>
             </div>
 
-            {swapData.targetStaffId && (
+            {swapData.targetStaffId && swapData.targetStaffId !== "anyone" && (
               <div className="space-y-2">
                 <Label>Target Shift</Label>
                 <Select
@@ -2412,7 +2435,6 @@ export default function FacilitySchedulingPage() {
                         variant="outline"
                         className="flex-1"
                         onClick={() => {
-                          // Would send to all available staff
                           setIsFindCoverageModalOpen(false);
                         }}
                       >
@@ -2423,7 +2445,6 @@ export default function FacilitySchedulingPage() {
                         className="flex-1"
                         disabled={!selectedCoverageStaffId}
                         onClick={() => {
-                          // Would assign to selected staff
                           setIsFindCoverageModalOpen(false);
                         }}
                       >

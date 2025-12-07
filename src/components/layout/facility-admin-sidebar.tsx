@@ -81,12 +81,7 @@ export function FacilitySidebar() {
             icon: UserCheck,
             disabled: false,
           },
-          {
-            title: "Scheduling",
-            url: "/facility/scheduling",
-            icon: Clock,
-            disabled: false,
-          },
+
           {
             title: "Services & Pricing",
             url: "/facility/services",
@@ -124,8 +119,14 @@ export function FacilitySidebar() {
           },
           {
             title: "Retail / POS",
-            url: "/facility/retail",
+            url: "/facility/dashboard/services/retail",
             icon: ShoppingCart,
+            disabled: false,
+          },
+          {
+            title: "Scheduling",
+            url: "/facility/dashboard/services/scheduling",
+            icon: Clock,
             disabled: false,
           },
         ],

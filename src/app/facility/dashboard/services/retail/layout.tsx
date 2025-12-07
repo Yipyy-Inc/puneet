@@ -8,22 +8,22 @@ import { ShoppingCart, Package, Warehouse, ClipboardList } from "lucide-react";
 const retailTabs = [
   {
     name: "POS",
-    href: "/facility/retail",
+    href: "/facility/dashboard/services/retail",
     icon: ShoppingCart,
   },
   {
     name: "Products",
-    href: "/facility/retail/products",
+    href: "/facility/dashboard/services/retail/products",
     icon: Package,
   },
   {
     name: "Inventory",
-    href: "/facility/retail/inventory",
+    href: "/facility/dashboard/services/retail/inventory",
     icon: Warehouse,
   },
   {
     name: "Orders",
-    href: "/facility/retail/orders",
+    href: "/facility/dashboard/services/retail/orders",
     icon: ClipboardList,
   },
 ];
@@ -36,8 +36,8 @@ export default function RetailLayout({
   const pathname = usePathname();
 
   const isActiveTab = (href: string) => {
-    if (href === "/facility/retail") {
-      return pathname === "/facility/retail";
+    if (href === "/facility/dashboard/services/retail") {
+      return pathname === "/facility/dashboard/services/retail";
     }
     return pathname.startsWith(href);
   };
