@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +118,9 @@ export function CheckInOutSection() {
   >(null);
   const [selectedItem, setSelectedItem] = useState<UnifiedCheckIn | null>(null);
 
+  // For undo functionality
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Section visibility states
   const [showCheckedIn, setShowCheckedIn] = useState(true);
   const [showScheduled, setShowScheduled] = useState(true);
@@ -191,12 +195,162 @@ export function CheckInOutSection() {
     setCheckInOutMode("view");
   };
 
+  const revertToScheduled = (item: UnifiedCheckIn) => {
+    if (item.serviceType === "boarding") {
+      const previousData = boardingData.find((g) => g.id === item.id);
+      setBoardingData((prev) =>
+        prev.map((guest) => {
+          if (guest.id === item.id) {
+            return {
+              ...guest,
+              status: "scheduled" as const,
+              actualCheckIn: undefined,
+              actualCheckOut: undefined,
+            };
+          }
+          return guest;
+        }),
+      );
+
+      toast.success(`${item.petName} - Reverted to Scheduled`, {
+        description: "Status has been reset",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setBoardingData((prev) =>
+                prev.map((guest) =>
+                  guest.id === item.id ? previousData : guest,
+                ),
+              );
+              toast.info("Action undone");
+            }
+          },
+        },
+        duration: 5000,
+      });
+    } else {
+      const previousData = daycareData.find((c) => c.id === item.id);
+      setDaycareData((prev) =>
+        prev.map((checkIn) => {
+          if (checkIn.id === item.id) {
+            return {
+              ...checkIn,
+              status: "scheduled" as const,
+              checkInTime: "",
+              checkOutTime: null,
+            };
+          }
+          return checkIn;
+        }),
+      );
+
+      toast.success(`${item.petName} - Reverted to Scheduled`, {
+        description: "Status has been reset",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setDaycareData((prev) =>
+                prev.map((checkIn) =>
+                  checkIn.id === item.id ? previousData : checkIn,
+                ),
+              );
+              toast.info("Action undone");
+            }
+          },
+        },
+        duration: 5000,
+      });
+    }
+
+    setCheckInOutMode(null);
+    setSelectedItem(null);
+  };
+
+  const revertToCheckedIn = (item: UnifiedCheckIn) => {
+    if (item.serviceType === "boarding") {
+      const previousData = boardingData.find((g) => g.id === item.id);
+      setBoardingData((prev) =>
+        prev.map((guest) => {
+          if (guest.id === item.id) {
+            return {
+              ...guest,
+              status: "checked-in" as const,
+              actualCheckOut: undefined,
+            };
+          }
+          return guest;
+        }),
+      );
+
+      toast.success(`${item.petName} - Reverted to Checked In`, {
+        description: "Status has been reset",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setBoardingData((prev) =>
+                prev.map((guest) =>
+                  guest.id === item.id ? previousData : guest,
+                ),
+              );
+              toast.info("Action undone");
+            }
+          },
+        },
+        duration: 5000,
+      });
+    } else {
+      const previousData = daycareData.find((c) => c.id === item.id);
+      setDaycareData((prev) =>
+        prev.map((checkIn) => {
+          if (checkIn.id === item.id) {
+            return {
+              ...checkIn,
+              status: "checked-in" as const,
+              checkOutTime: null,
+            };
+          }
+          return checkIn;
+        }),
+      );
+
+      toast.success(`${item.petName} - Reverted to Checked In`, {
+        description: "Status has been reset",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setDaycareData((prev) =>
+                prev.map((checkIn) =>
+                  checkIn.id === item.id ? previousData : checkIn,
+                ),
+              );
+              toast.info("Action undone");
+            }
+          },
+        },
+        duration: 5000,
+      });
+    }
+
+    setCheckInOutMode(null);
+    setSelectedItem(null);
+  };
+
   const confirmCheckInOut = () => {
     if (!selectedItem) return;
 
     const now = new Date().toISOString();
+    const previousStatus = selectedItem.status;
+    const actionLabel =
+      checkInOutMode === "check-in" ? "Checked In" : "Checked Out";
+    const newStatus =
+      checkInOutMode === "check-in" ? "checked-in" : "checked-out";
 
     if (selectedItem.serviceType === "boarding") {
+      const previousData = boardingData.find((g) => g.id === selectedItem.id);
       setBoardingData((prev) =>
         prev.map((guest) => {
           if (guest.id === selectedItem.id) {
@@ -217,7 +371,33 @@ export function CheckInOutSection() {
           return guest;
         }),
       );
+
+      // Show toast with undo
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+
+      toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+        description: `Boarding ${newStatus.replace("-", " ")}`,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setBoardingData((prev) =>
+                prev.map((guest) =>
+                  guest.id === selectedItem.id ? previousData : guest,
+                ),
+              );
+              toast.info("Action undone", {
+                description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
+              });
+            }
+          },
+        },
+        duration: 5000,
+      });
     } else {
+      const previousData = daycareData.find((c) => c.id === selectedItem.id);
       setDaycareData((prev) =>
         prev.map((checkIn) => {
           if (checkIn.id === selectedItem.id) {
@@ -238,6 +418,31 @@ export function CheckInOutSection() {
           return checkIn;
         }),
       );
+
+      // Show toast with undo
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+
+      toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+        description: `Daycare ${newStatus.replace("-", " ")}`,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setDaycareData((prev) =>
+                prev.map((checkIn) =>
+                  checkIn.id === selectedItem.id ? previousData : checkIn,
+                ),
+              );
+              toast.info("Action undone", {
+                description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
+              });
+            }
+          },
+        },
+        duration: 5000,
+      });
     }
 
     setCheckInOutMode(null);
@@ -597,15 +802,26 @@ export function CheckInOutSection() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCheckOut(item)}
-                        className="shrink-0 gap-1"
-                      >
-                        <LogOut className="h-3 w-3" />
-                        Check Out
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleViewDetails(item)}
+                          className="gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCheckOut(item)}
+                          className="gap-1"
+                        >
+                          <LogOut className="h-3 w-3" />
+                          Check Out
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -866,17 +1082,48 @@ export function CheckInOutSection() {
             )}
 
             <DialogFooter>
-              {checkInOutMode === "view" ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCheckInOutMode(null);
-                    setSelectedItem(null);
-                  }}
-                >
-                  Close
-                </Button>
-              ) : (
+              {checkInOutMode === "view" && selectedItem ? (
+                <div className="flex w-full justify-between">
+                  <div className="flex gap-2">
+                    {selectedItem.status === "checked-in" && (
+                      <Button
+                        variant="outline"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => revertToScheduled(selectedItem)}
+                      >
+                        Revert to Scheduled
+                      </Button>
+                    )}
+                    {selectedItem.status === "checked-out" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                          onClick={() => revertToScheduled(selectedItem)}
+                        >
+                          Revert to Scheduled
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          onClick={() => revertToCheckedIn(selectedItem)}
+                        >
+                          Revert to Checked In
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCheckInOutMode(null);
+                      setSelectedItem(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              ) : checkInOutMode !== "view" ? (
                 <>
                   <Button
                     variant="outline"
@@ -900,7 +1147,7 @@ export function CheckInOutSection() {
                       : "Confirm Check Out"}
                   </Button>
                 </>
-              )}
+              ) : null}
             </DialogFooter>
           </DialogContent>
         </Dialog>

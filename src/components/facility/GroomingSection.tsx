@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,16 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Search,
   PawPrint,
@@ -58,6 +69,16 @@ export function GroomingSection() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointmentWithPending | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: "pending" | "start" | "complete" | null;
+    appointment: GroomingAppointmentWithPending | null;
+  }>({ open: false, type: null, appointment: null });
+
+  // For undo functionality
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter visibility states
   const [showScheduled, setShowScheduled] = useState(true);
@@ -151,7 +172,112 @@ export function GroomingSection() {
     [todayAppointments],
   );
 
-  const handleMarkPending = (appointment: GroomingAppointmentWithPending) => {
+  const openConfirmDialog = (
+    type: "pending" | "start" | "complete",
+    appointment: GroomingAppointmentWithPending,
+  ) => {
+    setConfirmDialog({ open: true, type, appointment });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, type: null, appointment: null });
+  };
+
+  const executeAction = (
+    appointment: GroomingAppointmentWithPending,
+    newStatus: GroomingAppointmentWithPending["status"],
+    actionLabel: string,
+  ) => {
+    const previousStatus = appointment.status;
+
+    // Update the status
+    setAppointmentsData((prev) =>
+      prev.map((apt) =>
+        apt.id === appointment.id ? { ...apt, status: newStatus } : apt,
+      ),
+    );
+
+    // Clear any existing undo timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+
+    // Show toast with undo option
+    toast.success(`${appointment.petName} - ${actionLabel}`, {
+      description: `Status changed to ${newStatus.replace("-", " ")}`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setAppointmentsData((prev) =>
+            prev.map((apt) =>
+              apt.id === appointment.id
+                ? { ...apt, status: previousStatus }
+                : apt,
+            ),
+          );
+          toast.info("Action undone", {
+            description: `${appointment.petName} restored to ${previousStatus.replace("-", " ")}`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmDialog.appointment || !confirmDialog.type) return;
+
+    const { appointment, type } = confirmDialog;
+
+    switch (type) {
+      case "pending":
+        executeAction(appointment, "pending", "Marked as pending");
+        break;
+      case "start":
+        executeAction(appointment, "in-progress", "Grooming started");
+        break;
+      case "complete":
+        executeAction(appointment, "completed", "Grooming completed");
+        break;
+    }
+
+    closeConfirmDialog();
+  };
+
+  const revertToScheduled = (appointment: GroomingAppointmentWithPending) => {
+    const previousStatus = appointment.status;
+    setAppointmentsData((prev) =>
+      prev.map((apt) =>
+        apt.id === appointment.id
+          ? { ...apt, status: "scheduled" as const }
+          : apt,
+      ),
+    );
+
+    toast.success(`${appointment.petName} - Reverted to Scheduled`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setAppointmentsData((prev) =>
+            prev.map((apt) =>
+              apt.id === appointment.id
+                ? { ...apt, status: previousStatus }
+                : apt,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedAppointment(null);
+  };
+
+  const revertToPending = (appointment: GroomingAppointmentWithPending) => {
+    const previousStatus = appointment.status;
     setAppointmentsData((prev) =>
       prev.map((apt) =>
         apt.id === appointment.id
@@ -159,9 +285,31 @@ export function GroomingSection() {
           : apt,
       ),
     );
+
+    toast.success(`${appointment.petName} - Reverted to Pending`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setAppointmentsData((prev) =>
+            prev.map((apt) =>
+              apt.id === appointment.id
+                ? { ...apt, status: previousStatus }
+                : apt,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedAppointment(null);
   };
 
-  const handleStartGrooming = (appointment: GroomingAppointmentWithPending) => {
+  const revertToInProgress = (appointment: GroomingAppointmentWithPending) => {
+    const previousStatus = appointment.status;
     setAppointmentsData((prev) =>
       prev.map((apt) =>
         apt.id === appointment.id
@@ -169,18 +317,41 @@ export function GroomingSection() {
           : apt,
       ),
     );
+
+    toast.success(`${appointment.petName} - Reverted to In Progress`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setAppointmentsData((prev) =>
+            prev.map((apt) =>
+              apt.id === appointment.id
+                ? { ...apt, status: previousStatus }
+                : apt,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleMarkPending = (appointment: GroomingAppointmentWithPending) => {
+    openConfirmDialog("pending", appointment);
+  };
+
+  const handleStartGrooming = (appointment: GroomingAppointmentWithPending) => {
+    openConfirmDialog("start", appointment);
   };
 
   const handleCompleteGrooming = (
     appointment: GroomingAppointmentWithPending,
   ) => {
-    setAppointmentsData((prev) =>
-      prev.map((apt) =>
-        apt.id === appointment.id
-          ? { ...apt, status: "completed" as const }
-          : apt,
-      ),
-    );
+    openConfirmDialog("complete", appointment);
   };
 
   const handleViewDetails = (appointment: GroomingAppointmentWithPending) => {
@@ -620,51 +791,148 @@ export function GroomingSection() {
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Close
-              </Button>
-              {selectedAppointment?.status === "scheduled" && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleMarkPending(selectedAppointment);
-                    setShowDialog(false);
-                  }}
-                >
-                  <Hourglass className="h-4 w-4 mr-2" />
-                  Mark Arrived
-                </Button>
-              )}
-              {selectedAppointment?.status === "pending" && (
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    handleStartGrooming(selectedAppointment);
-                    setShowDialog(false);
-                  }}
-                  disabled={!isGroomerAvailable(selectedAppointment.stylistId)}
-                >
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  {isGroomerAvailable(selectedAppointment.stylistId)
-                    ? "Start Grooming"
-                    : `${selectedAppointment.stylistName} is Busy`}
-                </Button>
-              )}
-              {selectedAppointment?.status === "in-progress" && (
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    handleCompleteGrooming(selectedAppointment);
-                    setShowDialog(false);
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete
-                </Button>
-              )}
+              <div className="flex w-full justify-between">
+                <div className="flex gap-2">
+                  {selectedAppointment?.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      onClick={() => revertToScheduled(selectedAppointment)}
+                    >
+                      Revert to Scheduled
+                    </Button>
+                  )}
+                  {selectedAppointment?.status === "in-progress" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => revertToScheduled(selectedAppointment)}
+                      >
+                        Revert to Scheduled
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                        onClick={() => revertToPending(selectedAppointment)}
+                      >
+                        Revert to Pending
+                      </Button>
+                    </>
+                  )}
+                  {selectedAppointment?.status === "completed" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => revertToScheduled(selectedAppointment)}
+                      >
+                        Revert to Scheduled
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        onClick={() => revertToInProgress(selectedAppointment)}
+                      >
+                        Revert to In Progress
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDialog(false)}
+                  >
+                    Close
+                  </Button>
+                  {selectedAppointment?.status === "scheduled" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleMarkPending(selectedAppointment);
+                        setShowDialog(false);
+                      }}
+                    >
+                      <Hourglass className="h-4 w-4 mr-2" />
+                      Mark Arrived
+                    </Button>
+                  )}
+                  {selectedAppointment?.status === "pending" && (
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        handleStartGrooming(selectedAppointment);
+                        setShowDialog(false);
+                      }}
+                      disabled={
+                        !isGroomerAvailable(selectedAppointment.stylistId)
+                      }
+                    >
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      {isGroomerAvailable(selectedAppointment.stylistId)
+                        ? "Start Grooming"
+                        : `${selectedAppointment.stylistName} is Busy`}
+                    </Button>
+                  )}
+                  {selectedAppointment?.status === "in-progress" && (
+                    <Button
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        handleCompleteGrooming(selectedAppointment);
+                        setShowDialog(false);
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Complete
+                    </Button>
+                  )}
+                </div>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => !open && closeConfirmDialog()}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmDialog.type === "pending" && "Mark as Arrived?"}
+                {confirmDialog.type === "start" && "Start Grooming?"}
+                {confirmDialog.type === "complete" && "Complete Grooming?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDialog.type === "pending" &&
+                  `Are you sure you want to mark ${confirmDialog.appointment?.petName}'s appointment as arrived?`}
+                {confirmDialog.type === "start" &&
+                  `Are you sure you want to start grooming for ${confirmDialog.appointment?.petName}? This will mark ${confirmDialog.appointment?.stylistName} as busy.`}
+                {confirmDialog.type === "complete" &&
+                  `Are you sure you want to mark ${confirmDialog.appointment?.petName}'s grooming as complete?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmAction}
+                className={
+                  confirmDialog.type === "complete"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : confirmDialog.type === "start"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : ""
+                }
+              >
+                {confirmDialog.type === "pending" && "Mark Arrived"}
+                {confirmDialog.type === "start" && "Start Grooming"}
+                {confirmDialog.type === "complete" && "Complete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

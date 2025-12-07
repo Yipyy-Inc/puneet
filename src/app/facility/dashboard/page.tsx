@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,9 @@ export default function FacilityDashboard() {
     initialBookings as Booking[],
   );
   const [clients, setClients] = useState(initialClients);
+
+  // For undo functionality
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
@@ -103,7 +107,26 @@ export default function FacilityDashboard() {
     };
     setBookings([...bookings, bookingWithId]);
     setShowNewBooking(false);
-    alert(`Booking #${bookingWithId.id} has been created successfully.`);
+
+    // Clear any existing undo timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+
+    // Show toast with undo option
+    toast.success(`Booking #${bookingWithId.id} created`, {
+      description: `${bookingData.service} booking has been created successfully.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setBookings((prev) => prev.filter((b) => b.id !== bookingWithId.id));
+          toast.info("Booking undone", {
+            description: `Booking #${bookingWithId.id} has been removed.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
   };
 
   const handleCreateClientFromBooking = (newClient: {

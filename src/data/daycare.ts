@@ -14,7 +14,7 @@ export interface DaycareCheckIn {
   checkOutTime: string | null;
   scheduledCheckOut: string;
   rateType: "hourly" | "half-day" | "full-day";
-  status: "checked-in" | "checked-out";
+  status: "checked-in" | "checked-out" | "scheduled";
   notes: string;
   playGroup: string | null;
   photoUrl?: string;

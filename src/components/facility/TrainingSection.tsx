@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,16 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Search,
   PawPrint,
@@ -91,6 +102,16 @@ export function TrainingSection() {
   const [selectedSession, setSelectedSession] =
     useState<TrainingSessionLocal | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: "pending" | "start" | "complete" | null;
+    session: TrainingSessionLocal | null;
+  }>({ open: false, type: null, session: null });
+
+  // For undo functionality
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter visibility states
   const [showScheduled, setShowScheduled] = useState(true);
@@ -231,28 +252,168 @@ export function TrainingSection() {
     [todaySessions],
   );
 
-  const handleMarkPending = (session: TrainingSessionLocal) => {
+  const openConfirmDialog = (
+    type: "pending" | "start" | "complete",
+    session: TrainingSessionLocal,
+  ) => {
+    setConfirmDialog({ open: true, type, session });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, type: null, session: null });
+  };
+
+  const executeAction = (
+    session: TrainingSessionLocal,
+    newStatus: SessionStatus,
+    actionLabel: string,
+  ) => {
+    const previousStatus = session.status;
+
+    // Update the status
+    setSessionsData((prev) =>
+      prev.map((s) => (s.id === session.id ? { ...s, status: newStatus } : s)),
+    );
+
+    // Clear any existing undo timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+
+    // Show toast with undo option
+    toast.success(`${session.className} - ${actionLabel}`, {
+      description: `Status changed to ${newStatus.replace("-", " ")}`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setSessionsData((prev) =>
+            prev.map((s) =>
+              s.id === session.id ? { ...s, status: previousStatus } : s,
+            ),
+          );
+          toast.info("Action undone", {
+            description: `${session.className} restored to ${previousStatus.replace("-", " ")}`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmDialog.session || !confirmDialog.type) return;
+
+    const { session, type } = confirmDialog;
+
+    switch (type) {
+      case "pending":
+        executeAction(session, "pending", "Marked as pending");
+        break;
+      case "start":
+        executeAction(session, "in-progress", "Session started");
+        break;
+      case "complete":
+        executeAction(session, "completed", "Session completed");
+        break;
+    }
+
+    closeConfirmDialog();
+  };
+
+  const revertToScheduled = (session: TrainingSessionLocal) => {
+    const previousStatus = session.status;
+    setSessionsData((prev) =>
+      prev.map((s) =>
+        s.id === session.id ? { ...s, status: "scheduled" as const } : s,
+      ),
+    );
+
+    toast.success(`${session.className} - Reverted to Scheduled`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setSessionsData((prev) =>
+            prev.map((s) =>
+              s.id === session.id ? { ...s, status: previousStatus } : s,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedSession(null);
+  };
+
+  const revertToPending = (session: TrainingSessionLocal) => {
+    const previousStatus = session.status;
     setSessionsData((prev) =>
       prev.map((s) =>
         s.id === session.id ? { ...s, status: "pending" as const } : s,
       ),
     );
+
+    toast.success(`${session.className} - Reverted to Pending`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setSessionsData((prev) =>
+            prev.map((s) =>
+              s.id === session.id ? { ...s, status: previousStatus } : s,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedSession(null);
   };
 
-  const handleStartSession = (session: TrainingSessionLocal) => {
+  const revertToInProgress = (session: TrainingSessionLocal) => {
+    const previousStatus = session.status;
     setSessionsData((prev) =>
       prev.map((s) =>
         s.id === session.id ? { ...s, status: "in-progress" as const } : s,
       ),
     );
+
+    toast.success(`${session.className} - Reverted to In Progress`, {
+      description: "Status has been reset",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setSessionsData((prev) =>
+            prev.map((s) =>
+              s.id === session.id ? { ...s, status: previousStatus } : s,
+            ),
+          );
+          toast.info("Action undone");
+        },
+      },
+      duration: 5000,
+    });
+
+    setShowDialog(false);
+    setSelectedSession(null);
+  };
+
+  const handleMarkPending = (session: TrainingSessionLocal) => {
+    openConfirmDialog("pending", session);
+  };
+
+  const handleStartSession = (session: TrainingSessionLocal) => {
+    openConfirmDialog("start", session);
   };
 
   const handleCompleteSession = (session: TrainingSessionLocal) => {
-    setSessionsData((prev) =>
-      prev.map((s) =>
-        s.id === session.id ? { ...s, status: "completed" as const } : s,
-      ),
-    );
+    openConfirmDialog("complete", session);
   };
 
   const handleViewDetails = (session: TrainingSessionLocal) => {
@@ -662,51 +823,146 @@ export function TrainingSection() {
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Close
-              </Button>
-              {selectedSession?.status === "scheduled" && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleMarkPending(selectedSession);
-                    setShowDialog(false);
-                  }}
-                >
-                  <Hourglass className="h-4 w-4 mr-2" />
-                  Mark Ready
-                </Button>
-              )}
-              {selectedSession?.status === "pending" && (
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    handleStartSession(selectedSession);
-                    setShowDialog(false);
-                  }}
-                  disabled={!isTrainerAvailable(selectedSession.trainerId)}
-                >
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  {isTrainerAvailable(selectedSession.trainerId)
-                    ? "Start Session"
-                    : `${selectedSession.trainerName} is Busy`}
-                </Button>
-              )}
-              {selectedSession?.status === "in-progress" && (
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    handleCompleteSession(selectedSession);
-                    setShowDialog(false);
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete
-                </Button>
-              )}
+              <div className="flex w-full justify-between">
+                <div className="flex gap-2">
+                  {selectedSession?.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      onClick={() => revertToScheduled(selectedSession)}
+                    >
+                      Revert to Scheduled
+                    </Button>
+                  )}
+                  {selectedSession?.status === "in-progress" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => revertToScheduled(selectedSession)}
+                      >
+                        Revert to Scheduled
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                        onClick={() => revertToPending(selectedSession)}
+                      >
+                        Revert to Pending
+                      </Button>
+                    </>
+                  )}
+                  {selectedSession?.status === "completed" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        onClick={() => revertToScheduled(selectedSession)}
+                      >
+                        Revert to Scheduled
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        onClick={() => revertToInProgress(selectedSession)}
+                      >
+                        Revert to In Progress
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDialog(false)}
+                  >
+                    Close
+                  </Button>
+                  {selectedSession?.status === "scheduled" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleMarkPending(selectedSession);
+                        setShowDialog(false);
+                      }}
+                    >
+                      <Hourglass className="h-4 w-4 mr-2" />
+                      Mark Ready
+                    </Button>
+                  )}
+                  {selectedSession?.status === "pending" && (
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        handleStartSession(selectedSession);
+                        setShowDialog(false);
+                      }}
+                      disabled={!isTrainerAvailable(selectedSession.trainerId)}
+                    >
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      {isTrainerAvailable(selectedSession.trainerId)
+                        ? "Start Session"
+                        : `${selectedSession.trainerName} is Busy`}
+                    </Button>
+                  )}
+                  {selectedSession?.status === "in-progress" && (
+                    <Button
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        handleCompleteSession(selectedSession);
+                        setShowDialog(false);
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Complete
+                    </Button>
+                  )}
+                </div>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => !open && closeConfirmDialog()}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmDialog.type === "pending" && "Mark as Ready?"}
+                {confirmDialog.type === "start" && "Start Session?"}
+                {confirmDialog.type === "complete" && "Complete Session?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDialog.type === "pending" &&
+                  `Are you sure you want to mark ${confirmDialog.session?.className} as ready to start?`}
+                {confirmDialog.type === "start" &&
+                  `Are you sure you want to start ${confirmDialog.session?.className}? This will mark ${confirmDialog.session?.trainerName} as busy.`}
+                {confirmDialog.type === "complete" &&
+                  `Are you sure you want to mark ${confirmDialog.session?.className} as complete?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmAction}
+                className={
+                  confirmDialog.type === "complete"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : confirmDialog.type === "start"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : ""
+                }
+              >
+                {confirmDialog.type === "pending" && "Mark Ready"}
+                {confirmDialog.type === "start" && "Start Session"}
+                {confirmDialog.type === "complete" && "Complete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
