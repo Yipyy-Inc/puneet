@@ -33,7 +33,9 @@ import {
   XCircle,
   Clock as ClockIcon,
   User,
+  Settings,
 } from "lucide-react";
+import SchedulingSettings from "@/components/scheduling/SchedulingSettings";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -785,6 +787,13 @@ export default function FacilitySchedulingPage() {
           >
             <AlertTriangle className="h-4 w-4" />
             Conflicts
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <Settings className="h-4 w-4" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -1842,6 +1851,10 @@ export default function FacilitySchedulingPage() {
         {/* Conflicts Tab */}
         <TabsContent value="conflicts" className="space-y-6">
           <StaffConflictDetector />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <SchedulingSettings />
         </TabsContent>
       </Tabs>
 

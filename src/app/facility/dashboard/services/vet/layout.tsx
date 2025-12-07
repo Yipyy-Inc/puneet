@@ -3,47 +3,22 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  ShoppingCart,
-  Package,
-  Warehouse,
-  ClipboardList,
-  Settings,
-} from "lucide-react";
+import { Stethoscope, Calendar, Settings } from "lucide-react";
 
 const tabs = [
   {
-    name: "POS",
-    href: "/facility/dashboard/services/retail",
-    icon: ShoppingCart,
-  },
-  {
-    name: "Products",
-    href: "/facility/dashboard/services/retail/products",
-    icon: Package,
-  },
-  {
-    name: "Inventory",
-    href: "/facility/dashboard/services/retail/inventory",
-    icon: Warehouse,
-  },
-  {
-    name: "Orders",
-    href: "/facility/dashboard/services/retail/orders",
-    icon: ClipboardList,
+    name: "Dashboard",
+    href: "/facility/dashboard/services/vet",
+    icon: Calendar,
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/services/retail/settings",
+    href: "/facility/dashboard/services/vet/settings",
     icon: Settings,
   },
 ];
 
-export default function RetailLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function VetLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
@@ -51,15 +26,15 @@ export default function RetailLayout({
       <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-emerald-500 to-teal-500">
-              <ShoppingCart className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-red-500 to-rose-500">
+              <Stethoscope className="h-5 w-5 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Retail / POS Module
+                Veterinary Module
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage point of sale, products, inventory, and orders
+                Manage veterinary appointments and services
               </p>
             </div>
           </div>
@@ -68,7 +43,7 @@ export default function RetailLayout({
           {tabs.map((tab) => {
             const isActive =
               pathname === tab.href ||
-              (tab.href !== "/facility/dashboard/services/retail" &&
+              (tab.href !== "/facility/dashboard/services/vet" &&
                 pathname.startsWith(tab.href));
             const Icon = tab.icon;
 

@@ -3,7 +3,14 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Sun, LogIn, DollarSign, Package, FileText } from "lucide-react";
+import {
+  Sun,
+  LogIn,
+  DollarSign,
+  Package,
+  FileText,
+  Settings,
+} from "lucide-react";
 
 const tabs = [
   {
@@ -30,6 +37,11 @@ const tabs = [
     name: "Report Cards",
     href: "/facility/dashboard/services/daycare/report-cards",
     icon: FileText,
+  },
+  {
+    name: "Settings",
+    href: "/facility/dashboard/services/daycare/settings",
+    icon: Settings,
   },
 ];
 
