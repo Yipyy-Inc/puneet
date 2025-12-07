@@ -29,6 +29,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 import {
   PawPrint,
@@ -43,7 +56,10 @@ import {
   LayoutGrid,
   Sun,
   Moon,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { clients } from "@/data/clients";
 import { KennelCalendarView } from "./kennel-calendar";
 import {
@@ -453,8 +469,12 @@ export default function KennelViewPage() {
   // Booking/edit form state
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedPetId, setSelectedPetId] = useState<string>("");
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [petPopoverOpen, setPetPopoverOpen] = useState(false);
   const [formCheckIn, setFormCheckIn] = useState("");
   const [formCheckOut, setFormCheckOut] = useState("");
+  const [formCheckInTime, setFormCheckInTime] = useState("");
+  const [formCheckOutTime, setFormCheckOutTime] = useState("");
 
   const selectedClient = useMemo(() => {
     return clients.find((c) => c.id.toString() === selectedClientId);
@@ -594,8 +614,12 @@ export default function KennelViewPage() {
     setSelectedKennel(null);
     setSelectedClientId("");
     setSelectedPetId("");
+    setClientPopoverOpen(false);
+    setPetPopoverOpen(false);
     setFormCheckIn("");
     setFormCheckOut("");
+    setFormCheckInTime("");
+    setFormCheckOutTime("");
   };
 
   const handleSaveBooking = () => {
@@ -1274,67 +1298,149 @@ export default function KennelViewPage() {
                 </div>
               ) : (
                 <>
-                  {/* Client Selection */}
-                  <div className="space-y-2">
-                    <Label>Client</Label>
-                    <Select
-                      value={selectedClientId}
-                      onValueChange={(v) => {
-                        setSelectedClientId(v);
-                        setSelectedPetId("");
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients
-                          .filter(
-                            (c) => c.status === "active" && c.pets.length > 0,
-                          )
-                          .map((client) => (
-                            <SelectItem
-                              key={client.id}
-                              value={client.id.toString()}
-                            >
+                  {/* Client and Pet Selection - Side by Side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Client Selection */}
+                    <div className="space-y-2">
+                      <Label>Client</Label>
+                      <Popover
+                        open={clientPopoverOpen}
+                        onOpenChange={setClientPopoverOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={clientPopoverOpen}
+                            className="w-full justify-between"
+                          >
+                            {selectedClientId ? (
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4" />
-                                {client.name}
+                                {
+                                  clients.find(
+                                    (c) => c.id.toString() === selectedClientId,
+                                  )?.name
+                                }
                               </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                            ) : (
+                              "Select a client..."
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
+                          <Command>
+                            <CommandInput placeholder="Search clients..." />
+                            <CommandList>
+                              <CommandEmpty>No client found.</CommandEmpty>
+                              <CommandGroup>
+                                {clients
+                                  .filter(
+                                    (c) =>
+                                      c.status === "active" &&
+                                      c.pets.length > 0,
+                                  )
+                                  .map((client) => (
+                                    <CommandItem
+                                      key={client.id}
+                                      value={client.name}
+                                      onSelect={() => {
+                                        setSelectedClientId(
+                                          client.id.toString(),
+                                        );
+                                        setSelectedPetId("");
+                                        setClientPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedClientId ===
+                                            client.id.toString()
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      <User className="mr-2 h-4 w-4" />
+                                      {client.name}
+                                    </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
 
-                  {/* Pet Selection */}
-                  <div className="space-y-2">
-                    <Label>Pet</Label>
-                    <Select
-                      value={selectedPetId}
-                      onValueChange={setSelectedPetId}
-                      disabled={!selectedClientId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            selectedClientId
-                              ? "Select a pet"
-                              : "Select a client first"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availablePets.map((pet) => (
-                          <SelectItem key={pet.id} value={pet.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <PawPrint className="h-4 w-4" />
-                              {pet.name} ({pet.breed})
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Pet Selection */}
+                    <div className="space-y-2">
+                      <Label>Pet</Label>
+                      <Popover
+                        open={petPopoverOpen}
+                        onOpenChange={setPetPopoverOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={petPopoverOpen}
+                            className="w-full justify-between"
+                            disabled={!selectedClientId}
+                          >
+                            {selectedPetId ? (
+                              <div className="flex items-center gap-2">
+                                <PawPrint className="h-4 w-4" />
+                                {(() => {
+                                  const pet = availablePets.find(
+                                    (p) => p.id.toString() === selectedPetId,
+                                  );
+                                  return pet
+                                    ? `${pet.name} (${pet.breed})`
+                                    : "";
+                                })()}
+                              </div>
+                            ) : selectedClientId ? (
+                              "Select a pet..."
+                            ) : (
+                              "Select a client first"
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
+                          <Command>
+                            <CommandInput placeholder="Search pets..." />
+                            <CommandList>
+                              <CommandEmpty>No pet found.</CommandEmpty>
+                              <CommandGroup>
+                                {availablePets.map((pet) => (
+                                  <CommandItem
+                                    key={pet.id}
+                                    value={`${pet.name} ${pet.breed}`}
+                                    onSelect={() => {
+                                      setSelectedPetId(pet.id.toString());
+                                      setPetPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedPetId === pet.id.toString()
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    <PawPrint className="mr-2 h-4 w-4" />
+                                    {pet.name} ({pet.breed})
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
 
                   {/* Date Selection */}
@@ -1354,6 +1460,36 @@ export default function KennelViewPage() {
                         value={formCheckOut}
                         onChange={(e) => setFormCheckOut(e.target.value)}
                         min={formCheckIn}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Time Selection (Optional) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>
+                        Check-In Time{" "}
+                        <span className="text-muted-foreground text-xs">
+                          (optional)
+                        </span>
+                      </Label>
+                      <Input
+                        type="time"
+                        value={formCheckInTime}
+                        onChange={(e) => setFormCheckInTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Check-Out Time{" "}
+                        <span className="text-muted-foreground text-xs">
+                          (optional)
+                        </span>
+                      </Label>
+                      <Input
+                        type="time"
+                        value={formCheckOutTime}
+                        onChange={(e) => setFormCheckOutTime(e.target.value)}
                       />
                     </div>
                   </div>
