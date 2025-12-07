@@ -83,6 +83,8 @@ interface NewBookingModalProps {
   onCreateBooking: (booking: BookingData) => void;
   onCreateClient?: (client: NewClientData) => number;
   onAddPetToClient?: (clientId: number, pet: Omit<Pet, "id">) => number;
+  preSelectedClientId?: number;
+  preSelectedPetId?: number;
 }
 
 interface NewClientData {
@@ -269,6 +271,8 @@ export function BookingModal({
   onCreateBooking,
   onCreateClient,
   onAddPetToClient,
+  preSelectedClientId,
+  preSelectedPetId,
 }: NewBookingModalProps) {
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
@@ -277,8 +281,12 @@ export function BookingModal({
   const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
   const [petMode, setPetMode] = useState<"existing" | "new">("existing");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(
+    preSelectedClientId ?? null,
+  );
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(
+    preSelectedPetId ?? null,
+  );
 
   // New client form state
   const [newClientData, setNewClientData] = useState({

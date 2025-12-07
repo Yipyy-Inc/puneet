@@ -1,4 +1,4 @@
-// Extended pet data - photos, vaccinations, report cards
+// Extended pet data - photos, vaccinations, report cards, relationships
 export interface PetPhoto {
   id: string;
   petId: number;
@@ -51,6 +51,133 @@ export interface ReportCard {
   sentToOwner: boolean;
   sentAt?: string;
 }
+
+export interface PetRelationship {
+  id: string;
+  petId: number;
+  relatedPetId: number;
+  relatedPetName: string;
+  relatedPetType: string;
+  relatedPetBreed: string;
+  relationshipType: "friend" | "enemy" | "neutral";
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById: number;
+}
+
+export interface PetTag {
+  id: string;
+  name: string;
+  color: string; // tailwind color class e.g. "bg-blue-500"
+  description?: string;
+}
+
+export interface PetTagAssignment {
+  id: string;
+  petId: number;
+  tagId: string;
+  assignedAt: string;
+  assignedBy: string;
+  assignedById: number;
+}
+
+export interface BanRecord {
+  id: string;
+  entityType: "client" | "pet";
+  entityId: number;
+  isBanned: boolean;
+  reason: string;
+  notes?: string;
+  bannedAt: string;
+  bannedBy: string;
+  bannedById: number;
+  unbannedAt?: string;
+  unbannedBy?: string;
+  unbannedById?: number;
+}
+
+export const petRelationships: PetRelationship[] = [
+  {
+    id: "rel-001",
+    petId: 1, // Buddy
+    relatedPetId: 3, // Max
+    relatedPetName: "Max",
+    relatedPetType: "Dog",
+    relatedPetBreed: "Labrador",
+    relationshipType: "friend",
+    notes: "Best buddies! Love to play together during daycare.",
+    createdAt: "2024-01-20T09:00:00Z",
+    createdBy: "Sarah Johnson",
+    createdById: 1,
+  },
+  {
+    id: "rel-002",
+    petId: 1, // Buddy
+    relatedPetId: 5, // Rocky
+    relatedPetName: "Rocky",
+    relatedPetType: "Dog",
+    relatedPetBreed: "German Shepherd",
+    relationshipType: "enemy",
+    notes:
+      "Keep separated - had a scuffle on 2024-01-15. Buddy gets anxious around Rocky.",
+    createdAt: "2024-01-16T10:30:00Z",
+    createdBy: "Mike Davis",
+    createdById: 2,
+  },
+  {
+    id: "rel-003",
+    petId: 1, // Buddy
+    relatedPetId: 2, // Whiskers
+    relatedPetName: "Whiskers",
+    relatedPetType: "Cat",
+    relatedPetBreed: "Siamese",
+    relationshipType: "neutral",
+    notes: "Same household - tolerates each other but don't interact much.",
+    createdAt: "2024-01-10T08:00:00Z",
+    createdBy: "Sarah Johnson",
+    createdById: 1,
+  },
+  {
+    id: "rel-004",
+    petId: 3, // Max
+    relatedPetId: 1, // Buddy
+    relatedPetName: "Buddy",
+    relatedPetType: "Dog",
+    relatedPetBreed: "Golden Retriever",
+    relationshipType: "friend",
+    notes: "Best buddies! Love to play together during daycare.",
+    createdAt: "2024-01-20T09:00:00Z",
+    createdBy: "Sarah Johnson",
+    createdById: 1,
+  },
+  {
+    id: "rel-005",
+    petId: 3, // Max
+    relatedPetId: 5, // Rocky
+    relatedPetName: "Rocky",
+    relatedPetType: "Dog",
+    relatedPetBreed: "German Shepherd",
+    relationshipType: "friend",
+    notes: "Good playmates, enjoy fetch together.",
+    createdAt: "2024-02-01T11:00:00Z",
+    createdBy: "Sarah Johnson",
+    createdById: 1,
+  },
+  {
+    id: "rel-006",
+    petId: 5, // Rocky
+    relatedPetId: 1, // Buddy
+    relatedPetName: "Buddy",
+    relatedPetType: "Dog",
+    relatedPetBreed: "Golden Retriever",
+    relationshipType: "enemy",
+    notes: "Keep separated - had a scuffle on 2024-01-15.",
+    createdAt: "2024-01-16T10:30:00Z",
+    createdBy: "Mike Davis",
+    createdById: 2,
+  },
+];
 
 export const petPhotos: PetPhoto[] = [
   {
@@ -411,5 +538,172 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-02-01T18:00:00Z",
+  },
+];
+
+// Pet Tags - predefined tags that can be assigned to pets
+export const petTags: PetTag[] = [
+  {
+    id: "tag-001",
+    name: "Aggressive",
+    color: "bg-red-500",
+    description: "Requires extra supervision and careful handling",
+  },
+  {
+    id: "tag-002",
+    name: "Escape Artist",
+    color: "bg-orange-500",
+    description: "Known to attempt escapes, needs secure enclosure",
+  },
+  {
+    id: "tag-003",
+    name: "Anxious",
+    color: "bg-yellow-500",
+    description: "Gets nervous easily, needs calm environment",
+  },
+  {
+    id: "tag-004",
+    name: "Senior",
+    color: "bg-purple-500",
+    description: "Older pet requiring gentler care",
+  },
+  {
+    id: "tag-005",
+    name: "Puppy/Kitten",
+    color: "bg-pink-500",
+    description: "Young pet requiring extra attention",
+  },
+  {
+    id: "tag-006",
+    name: "Medical Needs",
+    color: "bg-blue-500",
+    description: "Has ongoing medical requirements",
+  },
+  {
+    id: "tag-007",
+    name: "VIP",
+    color: "bg-amber-500",
+    description: "High-value client, prioritize service",
+  },
+  {
+    id: "tag-008",
+    name: "First Time",
+    color: "bg-green-500",
+    description: "New to the facility",
+  },
+  {
+    id: "tag-009",
+    name: "Reactive",
+    color: "bg-rose-500",
+    description: "Reactive to other animals",
+  },
+  {
+    id: "tag-010",
+    name: "Special Diet",
+    color: "bg-cyan-500",
+    description: "Has dietary restrictions or special food",
+  },
+];
+
+// Pet Tag Assignments
+export const petTagAssignments: PetTagAssignment[] = [
+  {
+    id: "assign-001",
+    petId: 1, // Buddy
+    tagId: "tag-007", // VIP
+    assignedAt: "2024-01-15T09:00:00Z",
+    assignedBy: "Sarah Johnson",
+    assignedById: 1,
+  },
+  {
+    id: "assign-002",
+    petId: 3, // Max
+    tagId: "tag-006", // Medical Needs
+    assignedAt: "2024-01-20T10:00:00Z",
+    assignedBy: "Sarah Johnson",
+    assignedById: 1,
+  },
+  {
+    id: "assign-003",
+    petId: 3, // Max
+    tagId: "tag-004", // Senior
+    assignedAt: "2024-01-20T10:00:00Z",
+    assignedBy: "Sarah Johnson",
+    assignedById: 1,
+  },
+  {
+    id: "assign-004",
+    petId: 5, // Rocky
+    tagId: "tag-001", // Aggressive
+    assignedAt: "2024-01-16T11:00:00Z",
+    assignedBy: "Mike Davis",
+    assignedById: 2,
+  },
+  {
+    id: "assign-005",
+    petId: 5, // Rocky
+    tagId: "tag-009", // Reactive
+    assignedAt: "2024-01-16T11:00:00Z",
+    assignedBy: "Mike Davis",
+    assignedById: 2,
+  },
+  {
+    id: "assign-006",
+    petId: 2, // Whiskers
+    tagId: "tag-010", // Special Diet
+    assignedAt: "2024-01-10T09:00:00Z",
+    assignedBy: "Sarah Johnson",
+    assignedById: 1,
+  },
+  {
+    id: "assign-007",
+    petId: 14, // Fluffy
+    tagId: "tag-003", // Anxious
+    assignedAt: "2024-02-01T08:00:00Z",
+    assignedBy: "Mike Davis",
+    assignedById: 2,
+  },
+];
+
+// Ban Records for clients and pets
+export const banRecords: BanRecord[] = [
+  {
+    id: "ban-001",
+    entityType: "pet",
+    entityId: 5, // Rocky
+    isBanned: true,
+    reason: "Aggression towards staff",
+    notes:
+      "Bit a staff member on 2024-01-15. Multiple prior incidents of aggressive behavior. Owner has been notified and agrees with the decision.",
+    bannedAt: "2024-01-16T14:00:00Z",
+    bannedBy: "Sarah Johnson",
+    bannedById: 1,
+  },
+  {
+    id: "ban-002",
+    entityType: "client",
+    entityId: 30, // Example banned client
+    isBanned: true,
+    reason: "Unpaid invoices and abusive behavior",
+    notes:
+      "Client has outstanding balance of $450 and was verbally abusive to staff on multiple occasions. Will not be allowed back until balance is paid and apology is made.",
+    bannedAt: "2024-02-10T16:00:00Z",
+    bannedBy: "Manager",
+    bannedById: 1,
+  },
+  {
+    id: "ban-003",
+    entityType: "pet",
+    entityId: 10, // Example previously banned pet
+    isBanned: false,
+    reason: "Excessive barking and disturbing other pets",
+    notes:
+      "Pet was causing stress to other animals. After training, the pet has improved significantly.",
+    bannedAt: "2023-11-01T10:00:00Z",
+    bannedBy: "Mike Davis",
+    bannedById: 2,
+    unbannedAt: "2024-01-05T09:00:00Z",
+    unbannedBy: "Sarah Johnson",
+    unbannedById: 1,
   },
 ];
