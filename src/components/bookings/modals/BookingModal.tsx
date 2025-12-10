@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import {
   Dialog,
   DialogContent,
@@ -116,6 +117,12 @@ interface BookingData {
   bookingMethod: string;
   bookingMethodDetails?: string;
   // Service-specific fields
+  daycareSelectedDates?: string[]; // ISO date strings for multi-date daycare
+  daycareDateTimes?: Array<{
+    date: string;
+    checkInTime: string;
+    checkOutTime: string;
+  }>;
   groomingStyle?: string;
   groomingAddOns?: string[];
   stylistPreference?: string;
@@ -255,9 +262,9 @@ const BOARDING_TYPES = [
 ];
 
 const STEPS: Step[] = [
-  { id: "client", title: "Client", description: "Select or create" },
-  { id: "method", title: "Method", description: "How they booked" },
   { id: "service", title: "Service", description: "Choose service" },
+  { id: "client", title: "Client", description: "Select or create" },
+  { id: "pet", title: "Pet", description: "Select pet(s)" },
   { id: "details", title: "Details", description: "Service info" },
   { id: "confirm", title: "Confirm", description: "Review booking" },
 ];
@@ -321,6 +328,12 @@ export function BookingModal({
   const [checkOutTime, setCheckOutTime] = useState("17:00");
   const [specialRequests, setSpecialRequests] = useState("");
 
+  // Daycare specific - multi-date selection
+  const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
+  const [daycareDateTimes, setDaycareDateTimes] = useState<
+    Array<{ date: string; checkInTime: string; checkOutTime: string }>
+  >([]);
+
   // Grooming specific
   const [groomingStyle, setGroomingStyle] = useState("");
   const [groomingAddOns, setGroomingAddOns] = useState<string[]>([]);
@@ -372,7 +385,8 @@ export function BookingModal({
 
     if (selectedService === "daycare") {
       const daycare = DAYCARE_TYPES.find((d) => d.id === serviceType);
-      basePrice = daycare?.price || 35;
+      const pricePerDay = daycare?.price || 35;
+      basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
       const boarding = BOARDING_TYPES.find((b) => b.id === serviceType);
       basePrice = boarding?.price || 45;
@@ -416,48 +430,59 @@ export function BookingModal({
     vetReason,
     isEmergency,
     discount,
+    daycareSelectedDates.length,
   ]);
 
   // Validation for each step
   const canProceed = useMemo(() => {
     switch (currentStep) {
-      case 0: // Client
+      case 0: // Service
+        return selectedService !== "";
+      case 1: // Client
         if (clientMode === "existing") {
-          if (petMode === "existing") {
-            return selectedClientId !== null && selectedPetId !== null;
-          } else {
-            // Existing client with new pet
-            return (
-              selectedClientId !== null &&
-              newPetData.name.trim() !== "" &&
-              newPetData.breed.trim() !== ""
-            );
-          }
+          return selectedClientId !== null;
         } else {
           return (
             newClientData.name.trim() !== "" &&
-            newClientData.email.trim() !== "" &&
-            newPetData.name.trim() !== "" &&
-            newPetData.breed.trim() !== ""
+            newClientData.email.trim() !== ""
           );
         }
-      case 1: // Method
-        return (
-          bookingMethod !== "" &&
-          (bookingMethod !== "other" || bookingMethodDetails.trim() !== "")
-        );
-      case 2: // Service
-        return selectedService !== "";
+      case 2: // Pet
+        if (clientMode === "existing") {
+          if (petMode === "existing") {
+            return selectedPetId !== null;
+          } else {
+            // Existing client with new pet
+            return (
+              newPetData.name.trim() !== "" && newPetData.breed.trim() !== ""
+            );
+          }
+        } else {
+          // New client with new pet
+          return (
+            newPetData.name.trim() !== "" && newPetData.breed.trim() !== ""
+          );
+        }
       case 3: // Details
-        if (!startDate) return false;
-        if (selectedService === "boarding" && !endDate) return false;
+        if (selectedService === "daycare") {
+          if (daycareSelectedDates.length === 0) return false;
+        }
+        if (selectedService === "boarding") {
+          if (!startDate || !endDate) return false;
+          if (!serviceType) return false;
+        }
+        if (
+          selectedService !== "daycare" &&
+          selectedService !== "boarding" &&
+          !startDate
+        )
+          return false;
         if (selectedService === "grooming" && !groomingStyle) return false;
         if (selectedService === "training" && !trainingType) return false;
         if (selectedService === "vet" && !vetReason) return false;
-        if (
-          (selectedService === "daycare" || selectedService === "boarding") &&
-          !serviceType
-        )
+        // Booking method validation
+        if (!bookingMethod) return false;
+        if (bookingMethod === "other" && !bookingMethodDetails.trim())
           return false;
         return true;
       case 4: // Confirm
@@ -482,6 +507,7 @@ export function BookingModal({
     trainingType,
     vetReason,
     serviceType,
+    daycareSelectedDates.length,
   ]);
 
   const handleNext = () => {
@@ -529,7 +555,10 @@ export function BookingModal({
       facilityId,
       service: selectedService,
       serviceType,
-      startDate,
+      startDate:
+        selectedService === "daycare" && daycareSelectedDates.length > 0
+          ? daycareSelectedDates[0].toISOString().split("T")[0]
+          : startDate,
       endDate: endDate || startDate,
       checkInTime,
       checkOutTime,
@@ -542,6 +571,12 @@ export function BookingModal({
       specialRequests: specialRequests || undefined,
       bookingMethod,
       bookingMethodDetails: bookingMethodDetails || undefined,
+      daycareSelectedDates:
+        daycareSelectedDates.length > 0
+          ? daycareSelectedDates.map((d) => d.toISOString().split("T")[0])
+          : undefined,
+      daycareDateTimes:
+        daycareDateTimes.length > 0 ? daycareDateTimes : undefined,
       groomingStyle: groomingStyle || undefined,
       groomingAddOns: groomingAddOns.length > 0 ? groomingAddOns : undefined,
       stylistPreference: stylistPreference || undefined,
@@ -581,6 +616,8 @@ export function BookingModal({
       allergies: "None",
       specialNeeds: "None",
     });
+    setDaycareSelectedDates([]);
+    setDaycareDateTimes([]);
     setBookingMethod("");
     setBookingMethodDetails("");
     setSelectedService("");
@@ -654,7 +691,7 @@ export function BookingModal({
           </div>
 
           {/* Client list */}
-          <ScrollArea className="h-[200px] border rounded-lg">
+          <ScrollArea className="h-[400px] border rounded-lg">
             <div className="p-2 space-y-1">
               {filteredClients.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
@@ -699,235 +736,6 @@ export function BookingModal({
               )}
             </div>
           </ScrollArea>
-
-          {/* Pet selection */}
-          {selectedClient && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Select Pet</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={petMode === "existing" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setPetMode("existing");
-                      setSelectedPetId(null);
-                    }}
-                    disabled={selectedClient.pets.length === 0}
-                  >
-                    Existing Pet
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={petMode === "new" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setPetMode("new");
-                      setSelectedPetId(null);
-                    }}
-                  >
-                    <Plus className="mr-1 h-3 w-3" />
-                    New Pet
-                  </Button>
-                </div>
-              </div>
-
-              {petMode === "existing" ? (
-                selectedClient.pets.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedClient.pets.map((pet) => (
-                      <div
-                        key={pet.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedPetId === pet.id
-                            ? "border-primary bg-primary/5"
-                            : "hover:border-primary/50"
-                        }`}
-                        onClick={() => setSelectedPetId(pet.id)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <PawPrint className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{pet.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {pet.type} • {pet.breed}
-                            </p>
-                          </div>
-                          {selectedPetId === pet.id && (
-                            <Check className="h-4 w-4 text-primary ml-auto" />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-muted rounded-lg text-center">
-                    <p className="text-sm text-muted-foreground">
-                      This client has no pets registered. Create a new pet
-                      below.
-                    </p>
-                  </div>
-                )
-              ) : (
-                <div className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-base font-semibold">
-                      New Pet for {selectedClient.name}
-                    </Label>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetName">
-                          Pet Name <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="existingClientNewPetName"
-                          value={newPetData.name}
-                          onChange={(e) =>
-                            setNewPetData({
-                              ...newPetData,
-                              name: e.target.value,
-                            })
-                          }
-                          placeholder="Buddy"
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetType">Type</Label>
-                        <Select
-                          value={newPetData.type}
-                          onValueChange={(value) =>
-                            setNewPetData({ ...newPetData, type: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Dog">Dog</SelectItem>
-                            <SelectItem value="Cat">Cat</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetBreed">
-                          Breed <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="existingClientNewPetBreed"
-                          value={newPetData.breed}
-                          onChange={(e) =>
-                            setNewPetData({
-                              ...newPetData,
-                              breed: e.target.value,
-                            })
-                          }
-                          placeholder="Golden Retriever"
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetAge">
-                          Age (years)
-                        </Label>
-                        <Input
-                          id="existingClientNewPetAge"
-                          type="number"
-                          min="0"
-                          value={newPetData.age}
-                          onChange={(e) =>
-                            setNewPetData({
-                              ...newPetData,
-                              age: parseInt(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetWeight">
-                          Weight (kg)
-                        </Label>
-                        <Input
-                          id="existingClientNewPetWeight"
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={newPetData.weight}
-                          onChange={(e) =>
-                            setNewPetData({
-                              ...newPetData,
-                              weight: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="existingClientNewPetColor">Color</Label>
-                        <Input
-                          id="existingClientNewPetColor"
-                          value={newPetData.color}
-                          onChange={(e) =>
-                            setNewPetData({
-                              ...newPetData,
-                              color: e.target.value,
-                            })
-                          }
-                          placeholder="Golden"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="existingClientNewPetAllergies">
-                        Allergies
-                      </Label>
-                      <Input
-                        id="existingClientNewPetAllergies"
-                        value={newPetData.allergies}
-                        onChange={(e) =>
-                          setNewPetData({
-                            ...newPetData,
-                            allergies: e.target.value,
-                          })
-                        }
-                        placeholder="None"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="existingClientNewPetSpecialNeeds">
-                        Special Needs
-                      </Label>
-                      <Textarea
-                        id="existingClientNewPetSpecialNeeds"
-                        value={newPetData.specialNeeds}
-                        onChange={(e) =>
-                          setNewPetData({
-                            ...newPetData,
-                            specialNeeds: e.target.value,
-                          })
-                        }
-                        placeholder="None"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -990,216 +798,369 @@ export function BookingModal({
               </div>
             </div>
           </div>
-
-          {/* New Pet Form */}
-          <div className="p-4 border rounded-lg space-y-4">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-muted-foreground" />
-              <Label className="text-base font-semibold">Pet Information</Label>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetName">
-                    Pet Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="newPetName"
-                    value={newPetData.name}
-                    onChange={(e) =>
-                      setNewPetData({ ...newPetData, name: e.target.value })
-                    }
-                    placeholder="Buddy"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetType">Type</Label>
-                  <Select
-                    value={newPetData.type}
-                    onValueChange={(value) =>
-                      setNewPetData({ ...newPetData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Dog">Dog</SelectItem>
-                      <SelectItem value="Cat">Cat</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetBreed">
-                    Breed <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="newPetBreed"
-                    value={newPetData.breed}
-                    onChange={(e) =>
-                      setNewPetData({ ...newPetData, breed: e.target.value })
-                    }
-                    placeholder="Golden Retriever"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetAge">Age (years)</Label>
-                  <Input
-                    id="newPetAge"
-                    type="number"
-                    min="0"
-                    value={newPetData.age}
-                    onChange={(e) =>
-                      setNewPetData({
-                        ...newPetData,
-                        age: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetWeight">Weight (kg)</Label>
-                  <Input
-                    id="newPetWeight"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={newPetData.weight}
-                    onChange={(e) =>
-                      setNewPetData({
-                        ...newPetData,
-                        weight: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="newPetColor">Color</Label>
-                  <Input
-                    id="newPetColor"
-                    value={newPetData.color}
-                    onChange={(e) =>
-                      setNewPetData({ ...newPetData, color: e.target.value })
-                    }
-                    placeholder="Golden"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newPetAllergies">Allergies</Label>
-                <Input
-                  id="newPetAllergies"
-                  value={newPetData.allergies}
-                  onChange={(e) =>
-                    setNewPetData({ ...newPetData, allergies: e.target.value })
-                  }
-                  placeholder="None"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newPetSpecialNeeds">Special Needs</Label>
-                <Textarea
-                  id="newPetSpecialNeeds"
-                  value={newPetData.specialNeeds}
-                  onChange={(e) =>
-                    setNewPetData({
-                      ...newPetData,
-                      specialNeeds: e.target.value,
-                    })
-                  }
-                  placeholder="None"
-                  rows={2}
-                />
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 
-  // Step 2: Booking Method
-  const renderMethodStep = () => (
+  // Step 2: Pet Selection
+  const renderPetStep = () => (
     <div className="space-y-4">
-      <Label className="text-base">How did the customer book?</Label>
-      <RadioGroup
-        value={bookingMethod}
-        onValueChange={setBookingMethod}
-        className="grid grid-cols-2 gap-3"
-      >
-        {BOOKING_METHODS.map((method) => {
-          const Icon = method.icon;
-          return (
-            <Label
-              key={method.id}
-              htmlFor={method.id}
-              className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                bookingMethod === method.id
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              }`}
-            >
-              <RadioGroupItem value={method.id} id={method.id} />
-              <Icon className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{method.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {method.description}
+      {selectedClient ? (
+        <div className="space-y-3">
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">Booking for</p>
+            <p className="font-medium">{selectedClient.name}</p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Select Pet</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={petMode === "existing" ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setPetMode("existing");
+                  setSelectedPetId(null);
+                }}
+                disabled={selectedClient.pets.length === 0}
+              >
+                Existing Pet
+              </Button>
+              <Button
+                type="button"
+                variant={petMode === "new" ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setPetMode("new");
+                  setSelectedPetId(null);
+                }}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                New Pet
+              </Button>
+            </div>
+          </div>
+
+          {petMode === "existing" ? (
+            selectedClient.pets.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {selectedClient.pets.map((pet) => (
+                  <div
+                    key={pet.id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      selectedPetId === pet.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:border-primary/50"
+                    }`}
+                    onClick={() => setSelectedPetId(pet.id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <PawPrint className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{pet.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {pet.type} • {pet.breed}
+                        </p>
+                      </div>
+                      {selectedPetId === pet.id && (
+                        <Check className="h-4 w-4 text-primary ml-auto" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  This client has no pets registered. Create a new pet below.
                 </p>
               </div>
-            </Label>
-          );
-        })}
-      </RadioGroup>
+            )
+          ) : (
+            <div className="p-4 border rounded-lg space-y-4">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-base font-semibold">
+                  New Pet for {selectedClient.name}
+                </Label>
+              </div>
 
-      {bookingMethod === "other" && (
-        <div className="grid gap-2">
-          <Label htmlFor="methodDetails">
-            Please specify <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="methodDetails"
-            value={bookingMethodDetails}
-            onChange={(e) => setBookingMethodDetails(e.target.value)}
-            placeholder="e.g., Walk-in referral, Social media message..."
-          />
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="petName">
+                      Pet Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="petName"
+                      value={newPetData.name}
+                      onChange={(e) =>
+                        setNewPetData({
+                          ...newPetData,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="Buddy"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="petType">Type</Label>
+                    <Select
+                      value={newPetData.type}
+                      onValueChange={(value) =>
+                        setNewPetData({ ...newPetData, type: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Dog">Dog</SelectItem>
+                        <SelectItem value="Cat">Cat</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="petBreed">
+                      Breed <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="petBreed"
+                      value={newPetData.breed}
+                      onChange={(e) =>
+                        setNewPetData({
+                          ...newPetData,
+                          breed: e.target.value,
+                        })
+                      }
+                      placeholder="Golden Retriever"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="petAge">Age (years)</Label>
+                    <Input
+                      id="petAge"
+                      type="number"
+                      min="0"
+                      value={newPetData.age}
+                      onChange={(e) =>
+                        setNewPetData({
+                          ...newPetData,
+                          age: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="petWeight">Weight (kg)</Label>
+                    <Input
+                      id="petWeight"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={newPetData.weight}
+                      onChange={(e) =>
+                        setNewPetData({
+                          ...newPetData,
+                          weight: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="petColor">Color</Label>
+                    <Input
+                      id="petColor"
+                      value={newPetData.color}
+                      onChange={(e) =>
+                        setNewPetData({
+                          ...newPetData,
+                          color: e.target.value,
+                        })
+                      }
+                      placeholder="Golden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="petAllergies">Allergies</Label>
+                  <Input
+                    id="petAllergies"
+                    value={newPetData.allergies}
+                    onChange={(e) =>
+                      setNewPetData({
+                        ...newPetData,
+                        allergies: e.target.value,
+                      })
+                    }
+                    placeholder="None"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="petSpecialNeeds">Special Needs</Label>
+                  <Textarea
+                    id="petSpecialNeeds"
+                    value={newPetData.specialNeeds}
+                    onChange={(e) =>
+                      setNewPetData({
+                        ...newPetData,
+                        specialNeeds: e.target.value,
+                      })
+                    }
+                    placeholder="None"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      ) : (
+        <div className="p-4 border rounded-lg space-y-4">
+          <div className="flex items-center gap-2">
+            <Heart className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-base font-semibold">Pet Information</Label>
+          </div>
 
-      {bookingMethod === "email" && (
-        <div className="grid gap-2">
-          <Label htmlFor="emailDetails">Email Reference (Optional)</Label>
-          <Input
-            id="emailDetails"
-            value={bookingMethodDetails}
-            onChange={(e) => setBookingMethodDetails(e.target.value)}
-            placeholder="Subject line or email date for reference..."
-          />
-        </div>
-      )}
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="newPetName">
+                  Pet Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="newPetName"
+                  value={newPetData.name}
+                  onChange={(e) =>
+                    setNewPetData({ ...newPetData, name: e.target.value })
+                  }
+                  placeholder="Buddy"
+                />
+              </div>
 
-      {bookingMethod === "phone" && (
-        <div className="grid gap-2">
-          <Label htmlFor="phoneDetails">Call Notes (Optional)</Label>
-          <Textarea
-            id="phoneDetails"
-            value={bookingMethodDetails}
-            onChange={(e) => setBookingMethodDetails(e.target.value)}
-            placeholder="Any notes from the phone call..."
-            rows={2}
-          />
+              <div className="grid gap-2">
+                <Label htmlFor="newPetType">Type</Label>
+                <Select
+                  value={newPetData.type}
+                  onValueChange={(value) =>
+                    setNewPetData({ ...newPetData, type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Dog">Dog</SelectItem>
+                    <SelectItem value="Cat">Cat</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="newPetBreed">
+                  Breed <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="newPetBreed"
+                  value={newPetData.breed}
+                  onChange={(e) =>
+                    setNewPetData({ ...newPetData, breed: e.target.value })
+                  }
+                  placeholder="Golden Retriever"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="newPetAge">Age (years)</Label>
+                <Input
+                  id="newPetAge"
+                  type="number"
+                  min="0"
+                  value={newPetData.age}
+                  onChange={(e) =>
+                    setNewPetData({
+                      ...newPetData,
+                      age: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="newPetWeight">Weight (kg)</Label>
+                <Input
+                  id="newPetWeight"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={newPetData.weight}
+                  onChange={(e) =>
+                    setNewPetData({
+                      ...newPetData,
+                      weight: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="newPetColor">Color</Label>
+                <Input
+                  id="newPetColor"
+                  value={newPetData.color}
+                  onChange={(e) =>
+                    setNewPetData({ ...newPetData, color: e.target.value })
+                  }
+                  placeholder="Golden"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="newPetAllergies">Allergies</Label>
+              <Input
+                id="newPetAllergies"
+                value={newPetData.allergies}
+                onChange={(e) =>
+                  setNewPetData({ ...newPetData, allergies: e.target.value })
+                }
+                placeholder="None"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="newPetSpecialNeeds">Special Needs</Label>
+              <Textarea
+                id="newPetSpecialNeeds"
+                value={newPetData.specialNeeds}
+                onChange={(e) =>
+                  setNewPetData({
+                    ...newPetData,
+                    specialNeeds: e.target.value,
+                  })
+                }
+                placeholder="None"
+                rows={2}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1259,109 +1220,170 @@ export function BookingModal({
   const renderDetailsStep = () => {
     return (
       <div className="space-y-4">
-        {/* Common date/time fields */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="startDate">
-              {selectedService === "boarding" ? "Check-in Date" : "Date"}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
+        {/* Booking Method */}
+        <div className="space-y-3">
+          <Label className="text-base">How did the customer book?</Label>
+          <RadioGroup
+            value={bookingMethod}
+            onValueChange={setBookingMethod}
+            className="grid grid-cols-2 gap-3"
+          >
+            {BOOKING_METHODS.map((method) => {
+              const Icon = method.icon;
+              return (
+                <Label
+                  key={method.id}
+                  htmlFor={method.id}
+                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                    bookingMethod === method.id
+                      ? "border-primary bg-primary/5"
+                      : "hover:border-primary/50"
+                  }`}
+                >
+                  <RadioGroupItem value={method.id} id={method.id} />
+                  <Icon className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{method.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {method.description}
+                    </p>
+                  </div>
+                </Label>
+              );
+            })}
+          </RadioGroup>
 
-          {selectedService === "boarding" && (
+          {bookingMethod === "other" && (
             <div className="grid gap-2">
-              <Label htmlFor="endDate">
-                Check-out Date <span className="text-destructive">*</span>
+              <Label htmlFor="methodDetails">
+                Please specify <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate}
-              />
-            </div>
-          )}
-
-          {(selectedService === "daycare" ||
-            selectedService === "boarding") && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="checkInTime">Check-in Time</Label>
-                <Input
-                  id="checkInTime"
-                  type="time"
-                  value={checkInTime}
-                  onChange={(e) => setCheckInTime(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="checkOutTime">Check-out Time</Label>
-                <Input
-                  id="checkOutTime"
-                  type="time"
-                  value={checkOutTime}
-                  onChange={(e) => setCheckOutTime(e.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          {(selectedService === "grooming" ||
-            selectedService === "training" ||
-            selectedService === "vet") && (
-            <div className="grid gap-2">
-              <Label htmlFor="appointmentTime">Appointment Time</Label>
-              <Input
-                id="appointmentTime"
-                type="time"
-                value={checkInTime}
-                onChange={(e) => setCheckInTime(e.target.value)}
+                id="methodDetails"
+                value={bookingMethodDetails}
+                onChange={(e) => setBookingMethodDetails(e.target.value)}
+                placeholder="Describe how they contacted you..."
               />
             </div>
           )}
         </div>
 
-        <Separator />
+        {selectedService !== "daycare" && (
+          <>
+            <Separator />
+
+            {/* Common date/time fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">
+                  {selectedService === "boarding" ? "Check-in Date" : "Date"}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+
+              {selectedService === "boarding" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="endDate">
+                    Check-out Date <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate}
+                  />
+                </div>
+              )}
+
+              {selectedService === "boarding" && (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="checkInTime">Check-in Time</Label>
+                    <Input
+                      id="checkInTime"
+                      type="time"
+                      value={checkInTime}
+                      onChange={(e) => setCheckInTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="checkOutTime">Check-out Time</Label>
+                    <Input
+                      id="checkOutTime"
+                      type="time"
+                      value={checkOutTime}
+                      onChange={(e) => setCheckOutTime(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {(selectedService === "grooming" ||
+                selectedService === "training" ||
+                selectedService === "vet") && (
+                <div className="grid gap-2">
+                  <Label htmlFor="appointmentTime">Appointment Time</Label>
+                  <Input
+                    id="appointmentTime"
+                    type="time"
+                    value={checkInTime}
+                    onChange={(e) => setCheckInTime(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <Separator />
+          </>
+        )}
 
         {/* Service-specific fields */}
         {selectedService === "daycare" && (
           <div className="space-y-4">
-            <Label className="text-base">
-              Daycare Type <span className="text-destructive">*</span>
-            </Label>
-            <RadioGroup
-              value={serviceType}
-              onValueChange={setServiceType}
-              className="grid grid-cols-2 gap-3"
-            >
-              {DAYCARE_TYPES.map((type) => (
-                <Label
-                  key={type.id}
-                  htmlFor={`daycare-${type.id}`}
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    serviceType === type.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={type.id} id={`daycare-${type.id}`} />
-                  <div className="flex-1">
-                    <p className="font-medium">{type.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {type.hours} hours
-                    </p>
-                  </div>
-                  <p className="font-semibold">${type.price}</p>
-                </Label>
-              ))}
-            </RadioGroup>
+            <div>
+              <Label className="text-base">Select Daycare Days</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                Daycare type (Half Day or Full Day) will be automatically
+                determined based on check-in/out times
+              </p>
+              <DateSelectionCalendar
+                mode="multi"
+                selectedDates={daycareSelectedDates}
+                onSelectionChange={setDaycareSelectedDates}
+                minDate={new Date()}
+                showTimeSelection
+                dateTimes={daycareDateTimes}
+                onDateTimesChange={(times) => {
+                  setDaycareDateTimes(times);
+                  // Auto-determine daycare type based on first date's hours
+                  if (times.length > 0) {
+                    const firstTime = times[0];
+                    const checkIn = firstTime.checkInTime.split(":");
+                    const checkOut = firstTime.checkOutTime.split(":");
+                    const checkInMinutes =
+                      parseInt(checkIn[0]) * 60 + parseInt(checkIn[1]);
+                    const checkOutMinutes =
+                      parseInt(checkOut[0]) * 60 + parseInt(checkOut[1]);
+                    const hoursSpent = (checkOutMinutes - checkInMinutes) / 60;
+
+                    if (hoursSpent <= 5) {
+                      setServiceType("half_day");
+                    } else {
+                      setServiceType("full_day");
+                    }
+                  }
+                }}
+                defaultCheckInTime="08:00"
+                defaultCheckOutTime="17:00"
+              />
+            </div>
           </div>
         )}
 
@@ -1771,11 +1793,45 @@ export function BookingModal({
                 <Calendar className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Date</p>
-                <p className="font-medium">
-                  {startDate}
-                  {endDate && endDate !== startDate && ` → ${endDate}`}
+                <p className="text-sm text-muted-foreground">
+                  {selectedService === "daycare" &&
+                  daycareSelectedDates.length > 0
+                    ? "Selected Days"
+                    : "Date"}
                 </p>
+                {selectedService === "daycare" &&
+                daycareSelectedDates.length > 0 ? (
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {daycareSelectedDates.length} day
+                      {daycareSelectedDates.length !== 1 ? "s" : ""} selected
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {daycareSelectedDates.slice(0, 5).map((date, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {date.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </Badge>
+                      ))}
+                      {daycareSelectedDates.length > 5 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{daycareSelectedDates.length - 5} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="font-medium">
+                    {startDate}
+                    {endDate && endDate !== startDate && ` → ${endDate}`}
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Time</p>
@@ -1880,9 +1936,9 @@ export function BookingModal({
 
         <ScrollArea className="flex-1 min-h-0 pr-4">
           <StepperContent className="pb-4">
-            {currentStep === 0 && renderClientStep()}
-            {currentStep === 1 && renderMethodStep()}
-            {currentStep === 2 && renderServiceStep()}
+            {currentStep === 0 && renderServiceStep()}
+            {currentStep === 1 && renderClientStep()}
+            {currentStep === 2 && renderPetStep()}
             {currentStep === 3 && renderDetailsStep()}
             {currentStep === 4 && renderConfirmStep()}
           </StepperContent>
