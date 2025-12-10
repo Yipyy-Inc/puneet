@@ -11,7 +11,13 @@ import { PawPrint, Search, Plus } from "lucide-react";
 import { facilities } from "@/data/facilities";
 import { bookings as initialBookings, type Booking } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
-import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import {
+  BookingModal,
+  type BookingData,
+  type NewClientData,
+  type Pet,
+  type Client,
+} from "@/components/bookings/modals/BookingModal";
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
@@ -27,7 +33,7 @@ export default function FacilityDashboard() {
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
   );
-  const [clients, setClients] = useState(initialClients);
+  const [clients, setClients] = useState(initialClients as Client[]);
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -69,28 +75,15 @@ export default function FacilityDashboard() {
   }
 
   // Handlers for creating new entities
-  const handleCreateBooking = (bookingData: {
-    clientId: number;
-    petId: number;
-    facilityId: number;
-    service: string;
-    startDate: string;
-    endDate: string;
-    status: "pending" | "confirmed";
-    basePrice: number;
-    discount: number;
-    discountReason?: string;
-    totalCost: number;
-    paymentStatus: "pending" | "paid";
-    specialRequests?: string;
-    checkInTime?: string;
-    checkOutTime?: string;
-  }) => {
+  const handleCreateBooking = (bookingData: BookingData) => {
+    const petId = Array.isArray(bookingData.petId)
+      ? bookingData.petId[0]
+      : bookingData.petId;
     const maxId = Math.max(...bookings.map((b) => b.id), 0);
     const bookingWithId: Booking = {
       id: maxId + 1,
       clientId: bookingData.clientId,
-      petId: bookingData.petId,
+      petId: petId,
       facilityId: bookingData.facilityId,
       service: bookingData.service,
       startDate: bookingData.startDate,
@@ -129,24 +122,7 @@ export default function FacilityDashboard() {
     });
   };
 
-  const handleCreateClientFromBooking = (newClient: {
-    name: string;
-    email: string;
-    phone?: string;
-    status: string;
-    facility: string;
-    pets: Array<{
-      name: string;
-      type: string;
-      breed: string;
-      age: number;
-      weight: number;
-      color: string;
-      microchip: string;
-      allergies: string;
-      specialNeeds: string;
-    }>;
-  }): number => {
+  const handleCreateClientFromBooking = (newClient: NewClientData): number => {
     const maxClientId = Math.max(...clients.map((c) => c.id), 0);
     const maxPetId = Math.max(
       ...clients.flatMap((c) => c.pets.map((p) => p.id)),
@@ -156,6 +132,7 @@ export default function FacilityDashboard() {
     const petsWithIds = newClient.pets.map((pet, index) => ({
       id: maxPetId + index + 1,
       ...pet,
+      type: pet.type,
     }));
 
     const clientWithId = {
@@ -186,17 +163,7 @@ export default function FacilityDashboard() {
 
   const handleAddPetToClient = (
     clientId: number,
-    pet: {
-      name: string;
-      type: string;
-      breed: string;
-      age: number;
-      weight: number;
-      color: string;
-      microchip: string;
-      allergies: string;
-      specialNeeds: string;
-    },
+    pet: Omit<Pet, "id">,
   ): number => {
     const maxPetId = Math.max(
       ...clients.flatMap((c) => c.pets.map((p) => p.id)),

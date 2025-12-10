@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
+import { DaycareDetails, BoardingDetails } from "./service-details";
 import {
   Dialog,
   DialogContent,
@@ -13,24 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Stepper,
-  StepperContent,
-  StepperNavigation,
-  type Step,
-} from "@/components/ui/stepper";
+import { type Step } from "@/components/ui/stepper";
 import {
   Plus,
   Search,
@@ -39,7 +27,6 @@ import {
   Mail,
   MessageSquare,
   Users,
-  Heart,
   Calendar,
   Bed,
   Sun,
@@ -52,7 +39,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Types
-interface Pet {
+export interface Pet {
   id: number;
   name: string;
   type: string;
@@ -63,9 +50,10 @@ interface Pet {
   microchip: string;
   allergies: string;
   specialNeeds: string;
+  imageUrl?: string;
 }
 
-interface Client {
+export interface Client {
   id: number;
   name: string;
   email: string;
@@ -75,7 +63,7 @@ interface Client {
   pets: Pet[];
 }
 
-interface NewBookingModalProps {
+export interface NewBookingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clients: Client[];
@@ -88,7 +76,7 @@ interface NewBookingModalProps {
   preSelectedPetId?: number;
 }
 
-interface NewClientData {
+export interface NewClientData {
   name: string;
   email: string;
   phone?: string;
@@ -97,9 +85,31 @@ interface NewClientData {
   pets: Omit<Pet, "id">[];
 }
 
-interface BookingData {
+interface FeedingScheduleItem {
+  id: string;
+  time: string;
+  amount: string;
+  unit: string;
+  type: string;
+  source: string;
+  instructions: string;
+  notes: string;
+}
+
+interface MedicationItem {
+  id: string;
+  time: string;
+  amount: string;
+  unit: string;
+  type: string;
+  source: string;
+  instructions: string;
+  notes: string;
+}
+
+export interface BookingData {
   clientId: number;
-  petId: number;
+  petId: number | number[];
   facilityId: number;
   service: string;
   serviceType?: string;
@@ -133,9 +143,10 @@ interface BookingData {
   vetSymptoms?: string;
   isEmergency?: boolean;
   kennel?: string;
-  feedingSchedule?: string;
+  feedingSchedule?: FeedingScheduleItem[];
   walkSchedule?: string;
-  medications?: string;
+  medications?: MedicationItem[];
+  extraServices?: Array<{ serviceId: string; quantity: number }>;
 }
 
 // Service definitions with their specific flows
@@ -263,8 +274,7 @@ const BOARDING_TYPES = [
 
 const STEPS: Step[] = [
   { id: "service", title: "Service", description: "Choose service" },
-  { id: "client", title: "Client", description: "Select or create" },
-  { id: "pet", title: "Pet", description: "Select pet(s)" },
+  { id: "client-pet", title: "Client & Pet", description: "Select or create" },
   { id: "details", title: "Details", description: "Service info" },
   { id: "confirm", title: "Confirm", description: "Review booking" },
 ];
@@ -291,8 +301,8 @@ export function BookingModal({
   const [selectedClientId, setSelectedClientId] = useState<number | null>(
     preSelectedClientId ?? null,
   );
-  const [selectedPetId, setSelectedPetId] = useState<number | null>(
-    preSelectedPetId ?? null,
+  const [selectedPetIds, setSelectedPetIds] = useState<number[]>(
+    preSelectedPetId ? [preSelectedPetId] : [],
   );
 
   // New client form state
@@ -301,7 +311,7 @@ export function BookingModal({
     email: "",
     phone: "",
   });
-  const [newPetData, setNewPetData] = useState({
+  const [newPetData, setNewPetData] = useState<Omit<Pet, "id">>({
     name: "",
     type: "Dog",
     breed: "",
@@ -326,7 +336,6 @@ export function BookingModal({
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("08:00");
   const [checkOutTime, setCheckOutTime] = useState("17:00");
-  const [specialRequests, setSpecialRequests] = useState("");
 
   // Daycare specific - multi-date selection
   const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
@@ -360,13 +369,18 @@ export function BookingModal({
 
   // Boarding specific
   const [kennel, setKennel] = useState("");
-  const [feedingSchedule, setFeedingSchedule] = useState("");
+  const [assignedRoom, setAssignedRoom] = useState("");
+  const [feedingSchedule, setFeedingSchedule] = useState<FeedingScheduleItem[]>(
+    [],
+  );
   const [walkSchedule, setWalkSchedule] = useState("");
-  const [medications, setMedications] = useState("");
-
-  // Pricing
-  const [discount, setDiscount] = useState(0);
-  const [discountReason, setDiscountReason] = useState("");
+  const [medications, setMedications] = useState<MedicationItem[]>([]);
+  const [feedingMedicationTab, setFeedingMedicationTab] = useState<
+    "feeding" | "medication"
+  >("feeding");
+  const [extraServices, setExtraServices] = useState<
+    Array<{ serviceId: string; quantity: number }>
+  >([]);
 
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
@@ -384,9 +398,11 @@ export function BookingModal({
     return clients.find((c) => c.id === selectedClientId);
   }, [clients, selectedClientId]);
 
-  const selectedPet = useMemo(() => {
-    return selectedClient?.pets.find((p) => p.id === selectedPetId);
-  }, [selectedClient, selectedPetId]);
+  const selectedPets = useMemo(() => {
+    return (
+      selectedClient?.pets.filter((p) => selectedPetIds.includes(p.id)) || []
+    );
+  }, [selectedClient, selectedPetIds]);
 
   // Calculate total price
   const calculatePrice = useMemo(() => {
@@ -424,8 +440,7 @@ export function BookingModal({
 
     return {
       basePrice,
-      discount,
-      total: Math.max(basePrice - discount, 0),
+      total: basePrice,
     };
   }, [
     selectedService,
@@ -437,7 +452,6 @@ export function BookingModal({
     trainingType,
     vetReason,
     isEmergency,
-    discount,
     daycareSelectedDates.length,
   ]);
 
@@ -446,32 +460,9 @@ export function BookingModal({
     switch (currentStep) {
       case 0: // Service
         return selectedService !== "";
-      case 1: // Client
-        if (clientMode === "existing") {
-          return selectedClientId !== null;
-        } else {
-          return (
-            newClientData.name.trim() !== "" &&
-            newClientData.email.trim() !== ""
-          );
-        }
-      case 2: // Pet
-        if (clientMode === "existing") {
-          if (petMode === "existing") {
-            return selectedPetId !== null;
-          } else {
-            // Existing client with new pet
-            return (
-              newPetData.name.trim() !== "" && newPetData.breed.trim() !== ""
-            );
-          }
-        } else {
-          // New client with new pet
-          return (
-            newPetData.name.trim() !== "" && newPetData.breed.trim() !== ""
-          );
-        }
-      case 3: // Details
+      case 1: // Client & Pet
+        return selectedClientId !== null && selectedPetIds.length > 0;
+      case 2: // Details
         if (selectedService === "daycare") {
           if (daycareSelectedDates.length === 0) return false;
         }
@@ -488,24 +479,22 @@ export function BookingModal({
         if (selectedService === "grooming" && !groomingStyle) return false;
         if (selectedService === "training" && !trainingType) return false;
         if (selectedService === "vet" && !vetReason) return false;
-        // Booking method validation
-        if (!bookingMethod) return false;
-        if (bookingMethod === "other" && !bookingMethodDetails.trim())
-          return false;
+        // Booking method validation (only for non-daycare/boarding services with stepper)
+        if (selectedService !== "daycare" && selectedService !== "boarding") {
+          if (!bookingMethod) return false;
+          if (bookingMethod === "other" && !bookingMethodDetails.trim())
+            return false;
+        }
         return true;
-      case 4: // Confirm
+      case 3: // Confirm
         return true;
       default:
         return false;
     }
   }, [
     currentStep,
-    clientMode,
-    petMode,
     selectedClientId,
-    selectedPetId,
-    newClientData,
-    newPetData,
+    selectedPetIds,
     bookingMethod,
     bookingMethodDetails,
     selectedService,
@@ -515,8 +504,8 @@ export function BookingModal({
     groomingStyle,
     trainingType,
     vetReason,
+    daycareSelectedDates,
     serviceType,
-    daycareSelectedDates.length,
   ]);
 
   const handleNext = () => {
@@ -533,7 +522,8 @@ export function BookingModal({
 
   const handleComplete = () => {
     let clientId = selectedClientId;
-    let petId = selectedPetId;
+    let petId: number | number[] =
+      selectedPetIds.length === 1 ? selectedPetIds[0] : selectedPetIds;
 
     // If creating new client, call the create callback
     if (clientMode === "new" && onCreateClient) {
@@ -584,11 +574,9 @@ export function BookingModal({
           : checkOutTime,
       status: "pending",
       basePrice: calculatePrice.basePrice,
-      discount,
-      discountReason: discountReason || undefined,
+      discount: 0,
       totalCost: calculatePrice.total,
       paymentStatus: "pending",
-      specialRequests: specialRequests || undefined,
       bookingMethod,
       bookingMethodDetails: bookingMethodDetails || undefined,
       daycareSelectedDates:
@@ -610,6 +598,7 @@ export function BookingModal({
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
+      extraServices: extraServices.length > 0 ? extraServices : undefined,
     };
 
     onCreateBooking(booking);
@@ -623,7 +612,7 @@ export function BookingModal({
     setPetMode("existing");
     setSearchQuery("");
     setSelectedClientId(null);
-    setSelectedPetId(null);
+    setSelectedPetIds([]);
     setNewClientData({ name: "", email: "", phone: "" });
     setNewPetData({
       name: "",
@@ -649,7 +638,6 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
-    setSpecialRequests("");
     setGroomingStyle("");
     setGroomingAddOns([]);
     setStylistPreference("");
@@ -660,11 +648,11 @@ export function BookingModal({
     setVetSymptoms("");
     setIsEmergency(false);
     setKennel("");
-    setFeedingSchedule("");
+    setAssignedRoom("");
+    setFeedingSchedule([]);
     setWalkSchedule("");
-    setMedications("");
-    setDiscount(0);
-    setDiscountReason("");
+    setMedications([]);
+    setExtraServices([]);
   };
 
   const toggleGroomingAddon = (addonId: string) => {
@@ -675,521 +663,164 @@ export function BookingModal({
     );
   };
 
-  // Step 1: Client Selection
-  const renderClientStep = () => (
-    <div className="space-y-4">
-      {/* Toggle between existing and new client */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={clientMode === "existing" ? "default" : "outline"}
-          onClick={() => setClientMode("existing")}
-          className="flex-1"
-        >
-          <User className="mr-2 h-4 w-4" />
-          Existing Client
-        </Button>
-        <Button
-          type="button"
-          variant={clientMode === "new" ? "default" : "outline"}
-          onClick={() => setClientMode("new")}
-          className="flex-1"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New Client
-        </Button>
+  // Combined Step: Client & Pet Selection
+  const renderClientPetStep = () => (
+    <div className="space-y-6">
+      {/* Client Selection */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Select Client</h3>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Client list */}
+        <div className="max-h-[300px] overflow-y-auto border rounded-lg">
+          <div className="p-2 space-y-1">
+            {filteredClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No clients found
+              </p>
+            ) : (
+              filteredClients.map((client) => (
+                <div
+                  key={client.id}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedClientId === client.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                  onClick={() => {
+                    setSelectedClientId(client.id);
+                    setSelectedPetIds([]);
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{client.name}</p>
+                      <p
+                        className={`text-sm ${selectedClientId === client.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                      >
+                        {client.email}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        selectedClientId === client.id ? "secondary" : "outline"
+                      }
+                    >
+                      {client.pets.length} pet
+                      {client.pets.length !== 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
-      {clientMode === "existing" ? (
-        <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      <Separator />
 
-          {/* Client list */}
-          <ScrollArea className="h-[400px] border rounded-lg">
-            <div className="p-2 space-y-1">
-              {filteredClients.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No clients found
-                </p>
-              ) : (
-                filteredClients.map((client) => (
-                  <div
-                    key={client.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedClientId === client.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => {
-                      setSelectedClientId(client.id);
-                      setSelectedPetId(null);
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        <p
-                          className={`text-sm ${selectedClientId === client.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                        >
-                          {client.email}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          selectedClientId === client.id
-                            ? "secondary"
-                            : "outline"
-                        }
+      {/* Pet Selection */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Select Pet(s)</h3>
+        {selectedClient ? (
+          <div className="space-y-3">
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">Booking for</p>
+              <p className="font-medium">{selectedClient.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedPetIds.length} pet
+                {selectedPetIds.length !== 1 ? "s" : ""} selected
+              </p>
+            </div>
+
+            {selectedClient.pets.length > 0 ? (
+              <div className="max-h-[400px] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3 pr-2">
+                  {selectedClient.pets.map((pet) => {
+                    const isSelected = selectedPetIds.includes(pet.id);
+                    return (
+                      <div
+                        key={pet.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                            : "hover:border-primary/50"
+                        }`}
+                        onClick={() => {
+                          setSelectedPetIds((prev) =>
+                            prev.includes(pet.id)
+                              ? prev.filter((id) => id !== pet.id)
+                              : [...prev, pet.id],
+                          );
+                        }}
                       >
-                        {client.pets.length} pet
-                        {client.pets.length !== 1 ? "s" : ""}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* New Client Form */}
-          <div className="p-4 border rounded-lg space-y-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <Label className="text-base font-semibold">
-                Client Information
-              </Label>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="newClientName">
-                  Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="newClientName"
-                  value={newClientData.name}
-                  onChange={(e) =>
-                    setNewClientData({ ...newClientData, name: e.target.value })
-                  }
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newClientEmail">
-                  Email <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="newClientEmail"
-                  type="email"
-                  value={newClientData.email}
-                  onChange={(e) =>
-                    setNewClientData({
-                      ...newClientData,
-                      email: e.target.value,
-                    })
-                  }
-                  placeholder="john@example.com"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newClientPhone">Phone</Label>
-                <Input
-                  id="newClientPhone"
-                  type="tel"
-                  value={newClientData.phone}
-                  onChange={(e) =>
-                    setNewClientData({
-                      ...newClientData,
-                      phone: e.target.value,
-                    })
-                  }
-                  placeholder="123-456-7890"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // Step 2: Pet Selection
-  const renderPetStep = () => (
-    <div className="space-y-4">
-      {selectedClient ? (
-        <div className="space-y-3">
-          <div className="p-3 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground">Booking for</p>
-            <p className="font-medium">{selectedClient.name}</p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Label>Select Pet</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={petMode === "existing" ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setPetMode("existing");
-                  setSelectedPetId(null);
-                }}
-                disabled={selectedClient.pets.length === 0}
-              >
-                Existing Pet
-              </Button>
-              <Button
-                type="button"
-                variant={petMode === "new" ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setPetMode("new");
-                  setSelectedPetId(null);
-                }}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                New Pet
-              </Button>
-            </div>
-          </div>
-
-          {petMode === "existing" ? (
-            selectedClient.pets.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {selectedClient.pets.map((pet) => (
-                  <div
-                    key={pet.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedPetId === pet.id
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-primary/50"
-                    }`}
-                    onClick={() => setSelectedPetId(pet.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <PawPrint className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{pet.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {pet.type} • {pet.breed}
-                        </p>
+                        <div className="flex gap-3">
+                          {pet.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={pet.imageUrl}
+                              alt={pet.name}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
+                              <PawPrint className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">
+                                  {pet.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {pet.type} • {pet.breed}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
+                                  {pet.weight}kg
+                                </p>
+                              </div>
+                              {isSelected && (
+                                <Check className="h-5 w-5 text-primary shrink-0" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      {selectedPetId === pet.id && (
-                        <Check className="h-4 w-4 text-primary ml-auto" />
-                      )}
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="p-4 bg-muted rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">
-                  This client has no pets registered. Create a new pet below.
+                  This client has no pets registered.
                 </p>
               </div>
-            )
-          ) : (
-            <div className="p-4 border rounded-lg space-y-4">
-              <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-base font-semibold">
-                  New Pet for {selectedClient.name}
-                </Label>
-              </div>
-
-              <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="petName">
-                      Pet Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="petName"
-                      value={newPetData.name}
-                      onChange={(e) =>
-                        setNewPetData({
-                          ...newPetData,
-                          name: e.target.value,
-                        })
-                      }
-                      placeholder="Buddy"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="petType">Type</Label>
-                    <Select
-                      value={newPetData.type}
-                      onValueChange={(value) =>
-                        setNewPetData({ ...newPetData, type: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Dog">Dog</SelectItem>
-                        <SelectItem value="Cat">Cat</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="petBreed">
-                      Breed <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="petBreed"
-                      value={newPetData.breed}
-                      onChange={(e) =>
-                        setNewPetData({
-                          ...newPetData,
-                          breed: e.target.value,
-                        })
-                      }
-                      placeholder="Golden Retriever"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="petAge">Age (years)</Label>
-                    <Input
-                      id="petAge"
-                      type="number"
-                      min="0"
-                      value={newPetData.age}
-                      onChange={(e) =>
-                        setNewPetData({
-                          ...newPetData,
-                          age: parseInt(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="petWeight">Weight (kg)</Label>
-                    <Input
-                      id="petWeight"
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={newPetData.weight}
-                      onChange={(e) =>
-                        setNewPetData({
-                          ...newPetData,
-                          weight: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="petColor">Color</Label>
-                    <Input
-                      id="petColor"
-                      value={newPetData.color}
-                      onChange={(e) =>
-                        setNewPetData({
-                          ...newPetData,
-                          color: e.target.value,
-                        })
-                      }
-                      placeholder="Golden"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="petAllergies">Allergies</Label>
-                  <Input
-                    id="petAllergies"
-                    value={newPetData.allergies}
-                    onChange={(e) =>
-                      setNewPetData({
-                        ...newPetData,
-                        allergies: e.target.value,
-                      })
-                    }
-                    placeholder="None"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="petSpecialNeeds">Special Needs</Label>
-                  <Textarea
-                    id="petSpecialNeeds"
-                    value={newPetData.specialNeeds}
-                    onChange={(e) =>
-                      setNewPetData({
-                        ...newPetData,
-                        specialNeeds: e.target.value,
-                      })
-                    }
-                    placeholder="None"
-                    rows={2}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="p-4 border rounded-lg space-y-4">
-          <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-muted-foreground" />
-            <Label className="text-base font-semibold">Pet Information</Label>
+            )}
           </div>
-
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="newPetName">
-                  Pet Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="newPetName"
-                  value={newPetData.name}
-                  onChange={(e) =>
-                    setNewPetData({ ...newPetData, name: e.target.value })
-                  }
-                  placeholder="Buddy"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newPetType">Type</Label>
-                <Select
-                  value={newPetData.type}
-                  onValueChange={(value) =>
-                    setNewPetData({ ...newPetData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Dog">Dog</SelectItem>
-                    <SelectItem value="Cat">Cat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="newPetBreed">
-                  Breed <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="newPetBreed"
-                  value={newPetData.breed}
-                  onChange={(e) =>
-                    setNewPetData({ ...newPetData, breed: e.target.value })
-                  }
-                  placeholder="Golden Retriever"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newPetAge">Age (years)</Label>
-                <Input
-                  id="newPetAge"
-                  type="number"
-                  min="0"
-                  value={newPetData.age}
-                  onChange={(e) =>
-                    setNewPetData({
-                      ...newPetData,
-                      age: parseInt(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="newPetWeight">Weight (kg)</Label>
-                <Input
-                  id="newPetWeight"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={newPetData.weight}
-                  onChange={(e) =>
-                    setNewPetData({
-                      ...newPetData,
-                      weight: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="newPetColor">Color</Label>
-                <Input
-                  id="newPetColor"
-                  value={newPetData.color}
-                  onChange={(e) =>
-                    setNewPetData({ ...newPetData, color: e.target.value })
-                  }
-                  placeholder="Golden"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="newPetAllergies">Allergies</Label>
-              <Input
-                id="newPetAllergies"
-                value={newPetData.allergies}
-                onChange={(e) =>
-                  setNewPetData({ ...newPetData, allergies: e.target.value })
-                }
-                placeholder="None"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="newPetSpecialNeeds">Special Needs</Label>
-              <Textarea
-                id="newPetSpecialNeeds"
-                value={newPetData.specialNeeds}
-                onChange={(e) =>
-                  setNewPetData({
-                    ...newPetData,
-                    specialNeeds: e.target.value,
-                  })
-                }
-                placeholder="None"
-                rows={2}
-              />
-            </div>
+        ) : (
+          <div className="p-4 bg-muted rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              Please select a client first
+            </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
-  // Step 3: Service Selection
+  // Service Selection
   const renderServiceStep = () => (
     <div className="space-y-4">
       <Label className="text-base">Select a service</Label>
@@ -1243,54 +874,6 @@ export function BookingModal({
   const renderDetailsStep = () => {
     return (
       <div className="space-y-4">
-        {/* Booking Method */}
-        <div className="space-y-3">
-          <Label className="text-base">How did the customer book?</Label>
-          <RadioGroup
-            value={bookingMethod}
-            onValueChange={setBookingMethod}
-            className="grid grid-cols-2 gap-3"
-          >
-            {BOOKING_METHODS.map((method) => {
-              const Icon = method.icon;
-              return (
-                <Label
-                  key={method.id}
-                  htmlFor={method.id}
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    bookingMethod === method.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={method.id} id={method.id} />
-                  <Icon className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{method.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {method.description}
-                    </p>
-                  </div>
-                </Label>
-              );
-            })}
-          </RadioGroup>
-
-          {bookingMethod === "other" && (
-            <div className="grid gap-2">
-              <Label htmlFor="methodDetails">
-                Please specify <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="methodDetails"
-                value={bookingMethodDetails}
-                onChange={(e) => setBookingMethodDetails(e.target.value)}
-                placeholder="Describe how they contacted you..."
-              />
-            </div>
-          )}
-        </div>
-
         {selectedService !== "daycare" && selectedService !== "boarding" && (
           <>
             <Separator />
@@ -1330,165 +913,56 @@ export function BookingModal({
 
         {/* Service-specific fields */}
         {selectedService === "daycare" && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-base">Select Daycare Days</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Daycare type (Half Day or Full Day) will be automatically
-                determined based on check-in/out times
-              </p>
-              <DateSelectionCalendar
-                mode="multi"
-                selectedDates={daycareSelectedDates}
-                onSelectionChange={setDaycareSelectedDates}
-                minDate={new Date()}
-                showTimeSelection
-                dateTimes={daycareDateTimes}
-                onDateTimesChange={(times) => {
-                  setDaycareDateTimes(times);
-                  // Auto-determine daycare type based on first date's hours
-                  if (times.length > 0) {
-                    const firstTime = times[0];
-                    const checkIn = firstTime.checkInTime.split(":");
-                    const checkOut = firstTime.checkOutTime.split(":");
-                    const checkInMinutes =
-                      parseInt(checkIn[0]) * 60 + parseInt(checkIn[1]);
-                    const checkOutMinutes =
-                      parseInt(checkOut[0]) * 60 + parseInt(checkOut[1]);
-                    const hoursSpent = (checkOutMinutes - checkInMinutes) / 60;
-
-                    if (hoursSpent <= 5) {
-                      setServiceType("half_day");
-                    } else {
-                      setServiceType("full_day");
-                    }
-                  }
-                }}
-                defaultCheckInTime="08:00"
-                defaultCheckOutTime="17:00"
-              />
-            </div>
-          </div>
+          <DaycareDetails
+            daycareSelectedDates={daycareSelectedDates}
+            setDaycareSelectedDates={setDaycareSelectedDates}
+            daycareDateTimes={daycareDateTimes}
+            setDaycareDateTimes={setDaycareDateTimes}
+            setServiceType={setServiceType}
+            feedingSchedule={feedingSchedule}
+            setFeedingSchedule={setFeedingSchedule}
+            medications={medications}
+            setMedications={setMedications}
+            feedingMedicationTab={feedingMedicationTab}
+            setFeedingMedicationTab={setFeedingMedicationTab}
+            bookingMethod={bookingMethod}
+            setBookingMethod={setBookingMethod}
+            bookingMethodDetails={bookingMethodDetails}
+            setBookingMethodDetails={setBookingMethodDetails}
+            assignedRoom={assignedRoom}
+            setAssignedRoom={setAssignedRoom}
+            extraServices={extraServices}
+            setExtraServices={setExtraServices}
+          />
         )}
 
         {selectedService === "boarding" && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-base">
-                Select Check-in and Check-out Dates
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Choose your check-in date and check-out date, then set the times
-              </p>
-              <DateSelectionCalendar
-                mode="range"
-                rangeStart={boardingRangeStart}
-                rangeEnd={boardingRangeEnd}
-                onRangeChange={(start, end) => {
-                  setBoardingRangeStart(start);
-                  setBoardingRangeEnd(end);
-                  // Update legacy state for backward compatibility
-                  if (start) {
-                    setStartDate(start.toISOString().split("T")[0]);
-                  }
-                  if (end) {
-                    setEndDate(end.toISOString().split("T")[0]);
-                  }
-                }}
-                minDate={new Date()}
-                showTimeSelection
-                dateTimes={boardingDateTimes}
-                onDateTimesChange={(times) => {
-                  setBoardingDateTimes(times);
-                  // Update legacy state for backward compatibility
-                  if (times.length > 0) {
-                    setCheckInTime(times[0].checkInTime);
-                  }
-                  if (times.length > 1) {
-                    setCheckOutTime(times[times.length - 1].checkOutTime);
-                  }
-                }}
-                defaultCheckInTime="14:00"
-                defaultCheckOutTime="11:00"
-              />
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label className="text-base">
-                Boarding Type <span className="text-destructive">*</span>
-              </Label>
-              <RadioGroup
-                value={serviceType}
-                onValueChange={setServiceType}
-                className="grid gap-3 mt-2"
-              >
-                {BOARDING_TYPES.map((type) => (
-                  <Label
-                    key={type.id}
-                    htmlFor={`boarding-${type.id}`}
-                    className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                      serviceType === type.id
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-primary/50"
-                    }`}
-                  >
-                    <RadioGroupItem
-                      value={type.id}
-                      id={`boarding-${type.id}`}
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">{type.name}</p>
-                    </div>
-                    <p className="font-semibold">${type.price}/night</p>
-                  </Label>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="kennel">Kennel/Room Assignment</Label>
-              <Input
-                id="kennel"
-                value={kennel}
-                onChange={(e) => setKennel(e.target.value)}
-                placeholder="e.g., K-12, Suite A"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="feedingSchedule">Feeding Schedule</Label>
-              <Textarea
-                id="feedingSchedule"
-                value={feedingSchedule}
-                onChange={(e) => setFeedingSchedule(e.target.value)}
-                placeholder="e.g., 1 cup morning, 1 cup evening..."
-                rows={2}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="walkSchedule">Walk Schedule</Label>
-              <Input
-                id="walkSchedule"
-                value={walkSchedule}
-                onChange={(e) => setWalkSchedule(e.target.value)}
-                placeholder="e.g., 3 times daily, 15 min each"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="medications">Medications</Label>
-              <Textarea
-                id="medications"
-                value={medications}
-                onChange={(e) => setMedications(e.target.value)}
-                placeholder="List any medications and dosing instructions..."
-                rows={2}
-              />
-            </div>
-          </div>
+          <BoardingDetails
+            boardingRangeStart={boardingRangeStart}
+            boardingRangeEnd={boardingRangeEnd}
+            setBoardingRangeStart={setBoardingRangeStart}
+            setBoardingRangeEnd={setBoardingRangeEnd}
+            boardingDateTimes={boardingDateTimes}
+            setBoardingDateTimes={setBoardingDateTimes}
+            setStartDate={setStartDate}
+            setEndDate={setEndDate}
+            setCheckInTime={setCheckInTime}
+            setCheckOutTime={setCheckOutTime}
+            serviceType={serviceType}
+            setServiceType={setServiceType}
+            feedingSchedule={feedingSchedule}
+            setFeedingSchedule={setFeedingSchedule}
+            medications={medications}
+            setMedications={setMedications}
+            feedingMedicationTab={feedingMedicationTab}
+            setFeedingMedicationTab={setFeedingMedicationTab}
+            bookingMethod={bookingMethod}
+            setBookingMethod={setBookingMethod}
+            bookingMethodDetails={bookingMethodDetails}
+            setBookingMethodDetails={setBookingMethodDetails}
+            extraServices={extraServices}
+            setExtraServices={setExtraServices}
+          />
         )}
 
         {selectedService === "grooming" && (
@@ -1670,59 +1144,76 @@ export function BookingModal({
           </div>
         )}
 
-        <Separator />
+        {/* Booking Method for grooming, training, vet services */}
+        {selectedService !== "daycare" &&
+          selectedService !== "boarding" &&
+          selectedService !== "" && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-base">
+                  How did the customer book?{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <RadioGroup
+                  value={bookingMethod}
+                  onValueChange={setBookingMethod}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  {BOOKING_METHODS.map((method) => {
+                    const Icon = method.icon;
+                    return (
+                      <Label
+                        key={method.id}
+                        htmlFor={method.id}
+                        className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                          bookingMethod === method.id
+                            ? "border-primary bg-primary/5"
+                            : "hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem value={method.id} id={method.id} />
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{method.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {method.description}
+                          </p>
+                        </div>
+                      </Label>
+                    );
+                  })}
+                </RadioGroup>
 
-        {/* Special requests (common) */}
-        <div className="grid gap-2">
-          <Label htmlFor="specialRequests">Special Requests</Label>
-          <Textarea
-            id="specialRequests"
-            value={specialRequests}
-            onChange={(e) => setSpecialRequests(e.target.value)}
-            placeholder="Any additional notes or special requests..."
-            rows={2}
-          />
-        </div>
-
-        {/* Discount */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="discount">Discount ($)</Label>
-            <Input
-              id="discount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={discount}
-              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-            />
-          </div>
-          {discount > 0 && (
-            <div className="grid gap-2">
-              <Label htmlFor="discountReason">Discount Reason</Label>
-              <Input
-                id="discountReason"
-                value={discountReason}
-                onChange={(e) => setDiscountReason(e.target.value)}
-                placeholder="e.g., Loyalty discount"
-              />
-            </div>
+                {bookingMethod === "other" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="methodDetails">
+                      Please specify <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="methodDetails"
+                      value={bookingMethodDetails}
+                      onChange={(e) => setBookingMethodDetails(e.target.value)}
+                      placeholder="Describe how they contacted you..."
+                    />
+                  </div>
+                )}
+              </div>
+            </>
           )}
-        </div>
       </div>
     );
   };
 
-  // Step 5: Confirmation
   const renderConfirmStep = () => {
     const displayClient =
       clientMode === "existing" ? selectedClient : newClientData;
-    const displayPet =
+    const displayPets =
       clientMode === "existing"
         ? petMode === "existing"
-          ? selectedPet
-          : newPetData
-        : newPetData;
+          ? selectedPets
+          : [newPetData]
+        : [newPetData];
     const serviceInfo = SERVICE_CATEGORIES.find(
       (s) => s.id === selectedService,
     );
@@ -1747,10 +1238,20 @@ export function BookingModal({
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Pet</p>
-                <p className="font-medium">{displayPet?.name || "Unknown"}</p>
                 <p className="text-sm text-muted-foreground">
-                  {displayPet?.type} • {displayPet?.breed}
+                  Pet{displayPets.length > 1 ? "s" : ""}
+                </p>
+                <p className="font-medium">
+                  {displayPets
+                    .map(
+                      (p: Pet | (Omit<Pet, "id"> & { name: string })) =>
+                        p?.name,
+                    )
+                    .filter(Boolean)
+                    .join(", ") || "Unknown"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {displayPets.length} selected
                 </p>
               </div>
             </div>
@@ -1890,6 +1391,111 @@ export function BookingModal({
               </div>
             </div>
 
+            {/* Room Assignment for Daycare */}
+            {selectedService === "daycare" && assignedRoom && (
+              <>
+                <Separator />
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Bed className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Assigned Room
+                    </p>
+                    <p className="font-medium capitalize">
+                      {assignedRoom.replace(/-/g, " ")}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Room Type for Boarding */}
+            {selectedService === "boarding" && serviceType && (
+              <>
+                <Separator />
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Bed className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Room Type</p>
+                    <p className="font-medium capitalize">
+                      {serviceType.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Feeding Schedule */}
+            {(selectedService === "daycare" ||
+              selectedService === "boarding") &&
+              feedingSchedule.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Feeding Schedule
+                    </p>
+                    <div className="space-y-1">
+                      {feedingSchedule.map((item, idx) => (
+                        <p key={idx} className="text-sm">
+                          {item.time} - {item.amount} {item.unit} of{" "}
+                          {item.type.replace(/_/g, " ")}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+            {/* Medications */}
+            {(selectedService === "daycare" ||
+              selectedService === "boarding") &&
+              medications.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Medications
+                    </p>
+                    <div className="space-y-1">
+                      {medications.map((item, idx) => (
+                        <p key={idx} className="text-sm">
+                          {item.time} - {item.amount} {item.unit} ({item.type})
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+            {/* Extra Services */}
+            {(selectedService === "daycare" ||
+              selectedService === "boarding") &&
+              extraServices.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Extra Services
+                    </p>
+                    <div className="space-y-1">
+                      {extraServices.map((item, idx) => (
+                        <p key={idx} className="text-sm">
+                          {item.serviceId
+                            .replace(/-/g, " ")
+                            .replace(/\b\w/g, (l) => l.toUpperCase())}{" "}
+                          × {item.quantity}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
             {/* Add-ons for grooming */}
             {groomingAddOns.length > 0 && (
               <>
@@ -1912,38 +1518,13 @@ export function BookingModal({
               </>
             )}
 
-            {/* Special Requests */}
-            {specialRequests && (
-              <>
-                <Separator />
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Special Requests
-                  </p>
-                  <p className="text-sm">{specialRequests}</p>
-                </div>
-              </>
-            )}
-
+            {/* Pricing */}
             <Separator />
 
             {/* Pricing Summary */}
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Base Price</span>
-                <span>${calculatePrice.basePrice.toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>
-                    Discount {discountReason && `(${discountReason})`}
-                  </span>
-                  <span>-${discount.toFixed(2)}</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
+              <div className="flex justify-between font-semibold">
+                <span>Total Price</span>
                 <span>${calculatePrice.total.toFixed(2)}</span>
               </div>
             </div>
@@ -1969,8 +1550,8 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-7xl h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             New Booking
@@ -1980,27 +1561,244 @@ export function BookingModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Stepper steps={STEPS} currentStep={currentStep} />
+        <div className="flex-1 flex min-h-0">
+          {/* Side Navigation Tabs */}
+          <div className="w-80 border-r bg-muted/30 flex flex-col">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-2">
+                {STEPS.map((step, idx) => {
+                  const isActive = currentStep === idx;
+                  const isCompleted = currentStep > idx;
+                  const displayClient =
+                    clientMode === "existing" ? selectedClient : newClientData;
+                  const displayPet =
+                    clientMode === "existing"
+                      ? petMode === "existing"
+                        ? selectedPets[0]
+                        : newPetData
+                      : newPetData;
+                  const serviceInfo = SERVICE_CATEGORIES.find(
+                    (s) => s.id === selectedService,
+                  );
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
-          <StepperContent className="pb-4">
-            {currentStep === 0 && renderServiceStep()}
-            {currentStep === 1 && renderClientStep()}
-            {currentStep === 2 && renderPetStep()}
-            {currentStep === 3 && renderDetailsStep()}
-            {currentStep === 4 && renderConfirmStep()}
-          </StepperContent>
-        </ScrollArea>
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => {
+                        if (isCompleted || idx < currentStep) {
+                          setCurrentStep(idx);
+                        }
+                      }}
+                      disabled={!isCompleted && idx > currentStep}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : isCompleted
+                            ? "bg-background hover:bg-muted border-border cursor-pointer"
+                            : "bg-muted/50 border-dashed border-muted-foreground/30 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold ${
+                            isActive
+                              ? "bg-primary-foreground text-primary"
+                              : isCompleted
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted-foreground/20 text-muted-foreground"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            idx + 1
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`font-medium text-sm mb-0.5 ${
+                              isActive
+                                ? ""
+                                : isCompleted
+                                  ? ""
+                                  : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.title}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              isActive
+                                ? "text-primary-foreground/80"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.description}
+                          </p>
 
-        <StepperNavigation
-          currentStep={currentStep}
-          totalSteps={STEPS.length}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-          onComplete={handleComplete}
-          canProceed={canProceed}
-          completeLabel="Create Booking"
-        />
+                          {/* Display entered data */}
+                          {isCompleted && (
+                            <div className="mt-2 pt-2 border-t border-current/20">
+                              {idx === 0 && selectedService && (
+                                <div className="text-xs space-y-1">
+                                  <p className="font-medium truncate">
+                                    {serviceInfo?.name}
+                                  </p>
+                                  {serviceType && (
+                                    <p className="text-current/70 capitalize truncate">
+                                      {serviceType.replace(/_/g, " ")}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              {idx === 1 && displayClient && (
+                                <div className="text-xs space-y-2">
+                                  <div>
+                                    <p className="font-medium truncate">
+                                      {displayClient.name}
+                                    </p>
+                                    <p className="text-current/70 truncate">
+                                      {displayClient.email}
+                                    </p>
+                                  </div>
+                                  {selectedPets.length > 0 && (
+                                    <div>
+                                      <p className="font-medium truncate">
+                                        {selectedPets.length} pet
+                                        {selectedPets.length > 1 ? "s" : ""}
+                                      </p>
+                                      <p className="text-current/70 truncate">
+                                        {selectedPets
+                                          .map((p: Pet) => p.name)
+                                          .join(", ")}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {petMode === "new" && displayPet && (
+                                    <div>
+                                      <p className="font-medium truncate">
+                                        {displayPet.name}
+                                      </p>
+                                      <p className="text-current/70 truncate">
+                                        {displayPet.type} • {displayPet.breed}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {idx === 2 && bookingMethod && (
+                                <div className="text-xs space-y-1">
+                                  <p className="font-medium truncate">
+                                    {
+                                      BOOKING_METHODS.find(
+                                        (m) => m.id === bookingMethod,
+                                      )?.name
+                                    }
+                                  </p>
+                                  {selectedService === "daycare" &&
+                                    daycareSelectedDates.length > 0 && (
+                                      <p className="text-current/70 truncate">
+                                        {daycareSelectedDates.length} day
+                                        {daycareSelectedDates.length !== 1
+                                          ? "s"
+                                          : ""}
+                                      </p>
+                                    )}
+                                  {selectedService === "boarding" &&
+                                    boardingRangeStart &&
+                                    boardingRangeEnd && (
+                                      <p className="text-current/70 truncate">
+                                        {boardingRangeStart.toLocaleDateString(
+                                          "en-US",
+                                          { month: "short", day: "numeric" },
+                                        )}{" "}
+                                        -{" "}
+                                        {boardingRangeEnd.toLocaleDateString(
+                                          "en-US",
+                                          { month: "short", day: "numeric" },
+                                        )}
+                                      </p>
+                                    )}
+                                  {startDate &&
+                                    selectedService !== "daycare" &&
+                                    selectedService !== "boarding" && (
+                                      <p className="text-current/70 truncate">
+                                        {startDate}
+                                      </p>
+                                    )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            {/* Price Summary at Bottom */}
+            <div className="p-4 border-t bg-background">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span>Total Price</span>
+                  <span>${calculatePrice.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-scroll">
+            <ScrollArea className="flex-1">
+              <div className="p-6">
+                {currentStep === 0 && renderServiceStep()}
+                {currentStep === 1 && renderClientPetStep()}
+                {currentStep === 2 && renderDetailsStep()}
+                {currentStep === 3 && renderConfirmStep()}
+              </div>
+            </ScrollArea>
+
+            {/* Navigation Buttons */}
+            <div className="p-4 border-t bg-background flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+              >
+                Previous
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                {currentStep < STEPS.length - 1 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!canProceed}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleComplete}
+                    disabled={!canProceed}
+                  >
+                    Create Booking
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

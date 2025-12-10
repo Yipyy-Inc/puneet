@@ -7,73 +7,13 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { BookingModal } from "@/components/bookings/modals/BookingModal";
-
-interface Client {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  status: string;
-  facility: string;
-  pets: Pet[];
-}
-
-interface Pet {
-  id: number;
-  name: string;
-  type: string;
-  breed: string;
-  age: number;
-  weight: number;
-  color: string;
-  microchip: string;
-  allergies: string;
-  specialNeeds: string;
-}
-
-interface NewClientData {
-  name: string;
-  email: string;
-  phone?: string;
-  status: string;
-  facility: string;
-  pets: Omit<Pet, "id">[];
-}
-
-interface BookingData {
-  clientId: number;
-  petId: number;
-  facilityId: number;
-  service: string;
-  serviceType?: string;
-  startDate: string;
-  endDate: string;
-  checkInTime?: string;
-  checkOutTime?: string;
-  status: "pending" | "confirmed";
-  basePrice: number;
-  discount: number;
-  discountReason?: string;
-  totalCost: number;
-  paymentStatus: "pending" | "paid";
-  specialRequests?: string;
-  bookingMethod: string;
-  bookingMethodDetails?: string;
-  groomingStyle?: string;
-  groomingAddOns?: string[];
-  stylistPreference?: string;
-  trainingType?: string;
-  trainerId?: string;
-  trainingGoals?: string;
-  vetReason?: string;
-  vetSymptoms?: string;
-  isEmergency?: boolean;
-  kennel?: string;
-  feedingSchedule?: string;
-  walkSchedule?: string;
-  medications?: string;
-}
+import {
+  BookingModal,
+  type Client,
+  type Pet,
+  type NewClientData,
+  type BookingData,
+} from "@/components/bookings/modals/BookingModal";
 
 interface BookingModalConfig {
   clients: Client[];
