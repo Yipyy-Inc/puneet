@@ -334,6 +334,15 @@ export function BookingModal({
     Array<{ date: string; checkInTime: string; checkOutTime: string }>
   >([]);
 
+  // Boarding specific - date range selection
+  const [boardingRangeStart, setBoardingRangeStart] = useState<Date | null>(
+    null,
+  );
+  const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(null);
+  const [boardingDateTimes, setBoardingDateTimes] = useState<
+    Array<{ date: string; checkInTime: string; checkOutTime: string }>
+  >([]);
+
   // Grooming specific
   const [groomingStyle, setGroomingStyle] = useState("");
   const [groomingAddOns, setGroomingAddOns] = useState<string[]>([]);
@@ -390,11 +399,10 @@ export function BookingModal({
     } else if (selectedService === "boarding") {
       const boarding = BOARDING_TYPES.find((b) => b.id === serviceType);
       basePrice = boarding?.price || 45;
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+      if (boardingRangeStart && boardingRangeEnd) {
         const days = Math.ceil(
-          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+          (boardingRangeEnd.getTime() - boardingRangeStart.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
         basePrice = basePrice * Math.max(days, 1);
       }
@@ -422,8 +430,8 @@ export function BookingModal({
   }, [
     selectedService,
     serviceType,
-    startDate,
-    endDate,
+    boardingRangeStart,
+    boardingRangeEnd,
     groomingStyle,
     groomingAddOns,
     trainingType,
@@ -468,7 +476,7 @@ export function BookingModal({
           if (daycareSelectedDates.length === 0) return false;
         }
         if (selectedService === "boarding") {
-          if (!startDate || !endDate) return false;
+          if (!boardingRangeStart || !boardingRangeEnd) return false;
           if (!serviceType) return false;
         }
         if (
@@ -502,7 +510,8 @@ export function BookingModal({
     bookingMethodDetails,
     selectedService,
     startDate,
-    endDate,
+    boardingRangeStart,
+    boardingRangeEnd,
     groomingStyle,
     trainingType,
     vetReason,
@@ -558,10 +567,21 @@ export function BookingModal({
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
           ? daycareSelectedDates[0].toISOString().split("T")[0]
-          : startDate,
-      endDate: endDate || startDate,
-      checkInTime,
-      checkOutTime,
+          : selectedService === "boarding" && boardingRangeStart
+            ? boardingRangeStart.toISOString().split("T")[0]
+            : startDate,
+      endDate:
+        selectedService === "boarding" && boardingRangeEnd
+          ? boardingRangeEnd.toISOString().split("T")[0]
+          : endDate || startDate,
+      checkInTime:
+        selectedService === "boarding" && boardingDateTimes.length > 0
+          ? boardingDateTimes[0].checkInTime
+          : checkInTime,
+      checkOutTime:
+        selectedService === "boarding" && boardingDateTimes.length > 0
+          ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
+          : checkOutTime,
       status: "pending",
       basePrice: calculatePrice.basePrice,
       discount,
@@ -618,6 +638,9 @@ export function BookingModal({
     });
     setDaycareSelectedDates([]);
     setDaycareDateTimes([]);
+    setBoardingRangeStart(null);
+    setBoardingRangeEnd(null);
+    setBoardingDateTimes([]);
     setBookingMethod("");
     setBookingMethodDetails("");
     setSelectedService("");
@@ -1268,7 +1291,7 @@ export function BookingModal({
           )}
         </div>
 
-        {selectedService !== "daycare" && (
+        {selectedService !== "daycare" && selectedService !== "boarding" && (
           <>
             <Separator />
 
@@ -1276,8 +1299,7 @@ export function BookingModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="startDate">
-                  {selectedService === "boarding" ? "Check-in Date" : "Date"}{" "}
-                  <span className="text-destructive">*</span>
+                  Date <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="startDate"
@@ -1286,44 +1308,6 @@ export function BookingModal({
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
-
-              {selectedService === "boarding" && (
-                <div className="grid gap-2">
-                  <Label htmlFor="endDate">
-                    Check-out Date <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate}
-                  />
-                </div>
-              )}
-
-              {selectedService === "boarding" && (
-                <>
-                  <div className="grid gap-2">
-                    <Label htmlFor="checkInTime">Check-in Time</Label>
-                    <Input
-                      id="checkInTime"
-                      type="time"
-                      value={checkInTime}
-                      onChange={(e) => setCheckInTime(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="checkOutTime">Check-out Time</Label>
-                    <Input
-                      id="checkOutTime"
-                      type="time"
-                      value={checkOutTime}
-                      onChange={(e) => setCheckOutTime(e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
 
               {(selectedService === "grooming" ||
                 selectedService === "training" ||
@@ -1389,6 +1373,48 @@ export function BookingModal({
 
         {selectedService === "boarding" && (
           <div className="space-y-4">
+            <div>
+              <Label className="text-base">
+                Select Check-in and Check-out Dates
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                Choose your check-in date and check-out date, then set the times
+              </p>
+              <DateSelectionCalendar
+                mode="range"
+                rangeStart={boardingRangeStart}
+                rangeEnd={boardingRangeEnd}
+                onRangeChange={(start, end) => {
+                  setBoardingRangeStart(start);
+                  setBoardingRangeEnd(end);
+                  // Update legacy state for backward compatibility
+                  if (start) {
+                    setStartDate(start.toISOString().split("T")[0]);
+                  }
+                  if (end) {
+                    setEndDate(end.toISOString().split("T")[0]);
+                  }
+                }}
+                minDate={new Date()}
+                showTimeSelection
+                dateTimes={boardingDateTimes}
+                onDateTimesChange={(times) => {
+                  setBoardingDateTimes(times);
+                  // Update legacy state for backward compatibility
+                  if (times.length > 0) {
+                    setCheckInTime(times[0].checkInTime);
+                  }
+                  if (times.length > 1) {
+                    setCheckOutTime(times[times.length - 1].checkOutTime);
+                  }
+                }}
+                defaultCheckInTime="14:00"
+                defaultCheckOutTime="11:00"
+              />
+            </div>
+
+            <Separator />
+
             <div>
               <Label className="text-base">
                 Boarding Type <span className="text-destructive">*</span>
@@ -1826,6 +1852,22 @@ export function BookingModal({
                       )}
                     </div>
                   </div>
+                ) : selectedService === "boarding" &&
+                  boardingRangeStart &&
+                  boardingRangeEnd ? (
+                  <p className="font-medium">
+                    {boardingRangeStart.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}{" "}
+                    →{" "}
+                    {boardingRangeEnd.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
                 ) : (
                   <p className="font-medium">
                     {startDate}
@@ -1836,8 +1878,14 @@ export function BookingModal({
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Time</p>
                 <p className="font-medium">
-                  {checkInTime}
-                  {checkOutTime && ` - ${checkOutTime}`}
+                  {selectedService === "boarding" &&
+                  boardingDateTimes.length > 0
+                    ? `Check-in: ${boardingDateTimes[0]?.checkInTime || checkInTime}`
+                    : checkInTime}
+                  {selectedService === "boarding" &&
+                  boardingDateTimes.length > 0
+                    ? ` / Check-out: ${boardingDateTimes[boardingDateTimes.length - 1]?.checkOutTime || checkOutTime}`
+                    : checkOutTime && ` - ${checkOutTime}`}
                 </p>
               </div>
             </div>
