@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   Hourglass,
 } from "lucide-react";
 import { trainingSessions, trainers, enrollments } from "@/data/training";
+import { clients } from "@/data/clients";
 
 type SessionStatus = "scheduled" | "pending" | "in-progress" | "completed";
 
@@ -95,6 +97,11 @@ const petImages: Record<number, string> = {
 
 const getPetImage = (petId: number): string | null => {
   return petImages[petId] || null;
+};
+
+// Helper function to find client for a pet
+const findClientForPet = (petId: number) => {
+  return clients.find((client) => client.pets.some((pet) => pet.id === petId));
 };
 
 export function TrainingSection() {
@@ -642,7 +649,8 @@ export function TrainingSection() {
               return (
                 <div
                   key={session.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors`}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors cursor-pointer`}
+                  onClick={() => handleViewDetails(session)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
@@ -696,14 +704,6 @@ export function TrainingSection() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {getActionButton(session)}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleViewDetails(session)}
-                      className="gap-1"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
                   </div>
                 </div>
               );
@@ -775,40 +775,68 @@ export function TrainingSection() {
                     </p>
                     <div className="space-y-2">
                       {getSessionEnrollments(selectedSession.attendees).map(
-                        (enrollment) => (
-                          <div
-                            key={enrollment.id}
-                            className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
-                          >
-                            {getPetImage(enrollment.petId) ? (
-                              <div className="h-8 w-8 rounded-full overflow-hidden shrink-0">
-                                <Image
-                                  src={getPetImage(enrollment.petId)!}
-                                  alt={enrollment.petName}
-                                  width={32}
-                                  height={32}
-                                  className="h-full w-full object-cover"
-                                />
+                        (enrollment) => {
+                          const client = findClientForPet(enrollment.petId);
+                          return (
+                            <div
+                              key={enrollment.id}
+                              className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
+                            >
+                              {getPetImage(enrollment.petId) ? (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="h-8 w-8 rounded-full overflow-hidden">
+                                    <Image
+                                      src={getPetImage(enrollment.petId)!}
+                                      alt={enrollment.petName}
+                                      width={32}
+                                      height={32}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </div>
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <PawPrint className="h-4 w-4 text-primary" />
+                                  </div>
+                                </Link>
+                              )}
+                              <div className="min-w-0">
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                      : "#"
+                                  }
+                                  className="font-medium text-sm hover:underline"
+                                >
+                                  {enrollment.petName}
+                                </Link>
+                                <p className="text-xs text-muted-foreground">
+                                  {enrollment.ownerName} • {enrollment.petBreed}
+                                </p>
                               </div>
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                <PawPrint className="h-4 w-4 text-primary" />
+                              <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                {enrollment.ownerPhone}
                               </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm">
-                                {enrollment.petName}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {enrollment.ownerName} • {enrollment.petBreed}
-                              </p>
                             </div>
-                            <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {enrollment.ownerPhone}
-                            </div>
-                          </div>
-                        ),
+                          );
+                        },
                       )}
                     </div>
                   </div>
@@ -825,6 +853,9 @@ export function TrainingSection() {
             <DialogFooter>
               <div className="flex w-full justify-between">
                 <div className="flex gap-2">
+                  <Link href="/facility/dashboard/bookings">
+                    <Button variant="outline">Booking Details</Button>
+                  </Link>
                   {selectedSession?.status === "pending" && (
                     <Button
                       variant="outline"

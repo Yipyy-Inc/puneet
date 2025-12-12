@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ import {
   GroomingStatus,
   stylists,
 } from "@/data/grooming";
+import { clients } from "@/data/clients";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
@@ -62,6 +64,11 @@ const petImages: Record<number, string> = {
 
 const getPetImage = (petId: number): string | null => {
   return petImages[petId] || null;
+};
+
+// Helper function to find client for a pet
+const findClientForPet = (petId: number) => {
+  return clients.find((client) => client.pets.some((pet) => pet.id === petId));
 };
 
 export function GroomingSection() {
@@ -574,34 +581,61 @@ export function GroomingSection() {
           ) : (
             displayedAppointments.map((appointment) => {
               const styles = getCardStyles(appointment.status);
+              const client = findClientForPet(appointment.petId);
               return (
                 <div
                   key={appointment.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors`}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors cursor-pointer`}
+                  onClick={() => handleViewDetails(appointment)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {getPetImage(appointment.petId) ? (
-                      <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
-                        <Image
-                          src={getPetImage(appointment.petId)!}
-                          alt={appointment.petName}
-                          width={40}
-                          height={40}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className={`h-10 w-10 rounded-full ${styles.iconBg} flex items-center justify-center shrink-0`}
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                            : "#"
+                        }
+                        className="shrink-0"
                       >
-                        <PawPrint className={`h-5 w-5 ${styles.icon}`} />
-                      </div>
+                        <div className="h-10 w-10 rounded-full overflow-hidden">
+                          <Image
+                            src={getPetImage(appointment.petId)!}
+                            alt={appointment.petName}
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                            : "#"
+                        }
+                        className="shrink-0"
+                      >
+                        <div
+                          className={`h-10 w-10 rounded-full ${styles.iconBg} flex items-center justify-center`}
+                        >
+                          <PawPrint className={`h-5 w-5 ${styles.icon}`} />
+                        </div>
+                      </Link>
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium truncate">
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                              : "#"
+                          }
+                          className="font-medium truncate hover:underline"
+                        >
                           {appointment.petName}
-                        </p>
+                        </Link>
                         {getStatusBadge(appointment.status)}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
@@ -633,14 +667,6 @@ export function GroomingSection() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {getActionButton(appointment)}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleViewDetails(appointment)}
-                      className="gap-1"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
                   </div>
                 </div>
               );
@@ -664,26 +690,59 @@ export function GroomingSection() {
             {selectedAppointment && (
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  {getPetImage(selectedAppointment.petId) ? (
-                    <div className="h-12 w-12 rounded-full overflow-hidden">
-                      <Image
-                        src={getPetImage(selectedAppointment.petId)!}
-                        alt={selectedAppointment.petName}
-                        width={48}
-                        height={48}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <PawPrint className="h-6 w-6 text-primary" />
-                    </div>
-                  )}
+                  {(() => {
+                    const client = findClientForPet(selectedAppointment.petId);
+                    return getPetImage(selectedAppointment.petId) ? (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                            : "#"
+                        }
+                      >
+                        <div className="h-12 w-12 rounded-full overflow-hidden">
+                          <Image
+                            src={getPetImage(selectedAppointment.petId)!}
+                            alt={selectedAppointment.petName}
+                            width={48}
+                            height={48}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                            : "#"
+                        }
+                      >
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <PawPrint className="h-6 w-6 text-primary" />
+                        </div>
+                      </Link>
+                    );
+                  })()}
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-lg">
-                        {selectedAppointment.petName}
-                      </p>
+                      {(() => {
+                        const client = findClientForPet(
+                          selectedAppointment.petId,
+                        );
+                        return (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                                : "#"
+                            }
+                            className="font-semibold text-lg hover:underline"
+                          >
+                            {selectedAppointment.petName}
+                          </Link>
+                        );
+                      })()}
                       {getStatusBadge(selectedAppointment.status)}
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -793,6 +852,9 @@ export function GroomingSection() {
             <DialogFooter>
               <div className="flex w-full justify-between">
                 <div className="flex gap-2">
+                  <Link href="/facility/dashboard/bookings">
+                    <Button variant="outline">Booking Details</Button>
+                  </Link>
                   {selectedAppointment?.status === "pending" && (
                     <Button
                       variant="outline"

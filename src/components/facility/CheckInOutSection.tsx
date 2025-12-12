@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import { boardingGuests, BoardingGuest } from "@/data/boarding";
 import { daycareCheckIns, DaycareCheckIn } from "@/data/daycare";
+import { clients } from "@/data/clients";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -120,6 +122,13 @@ export function CheckInOutSection() {
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper function to find client for a pet
+  const findClientForPet = (petId: number) => {
+    return clients.find((client) =>
+      client.pets.some((pet) => pet.id === petId),
+    );
+  };
 
   // Section visibility states
   const [showCheckedIn, setShowCheckedIn] = useState(true);
@@ -656,56 +665,88 @@ export function CheckInOutSection() {
                     No arrivals scheduled
                   </p>
                 ) : (
-                  scheduledArrivals.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {getPetImage(item.petId) ? (
-                          <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
-                            <Image
-                              src={getPetImage(item.petId)!}
-                              alt={item.petName}
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center shrink-0">
-                            <PawPrint className="h-5 w-5 text-orange-600" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium truncate">
-                              {item.petName}
-                            </p>
-                            {getServiceBadge(item.serviceType)}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {item.ownerName} • {item.petBreed}
-                          </p>
-                          {item.serviceType === "boarding" &&
-                            item.totalNights && (
-                              <p className="text-xs text-muted-foreground">
-                                {item.totalNights} night
-                                {item.totalNights > 1 ? "s" : ""}
-                              </p>
-                            )}
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleCheckIn(item)}
-                        className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
+                  scheduledArrivals.map((item) => {
+                    const client = findClientForPet(item.petId);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(item)}
                       >
-                        <LogIn className="h-3 w-3" />
-                        Check In
-                      </Button>
-                    </div>
-                  ))
+                        <div className="flex items-center gap-3 min-w-0">
+                          {getPetImage(item.petId) ? (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                                <Image
+                                  src={getPetImage(item.petId)!}
+                                  alt={item.petName}
+                                  width={40}
+                                  height={40}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            </Link>
+                          ) : (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                <PawPrint className="h-5 w-5 text-orange-600" />
+                              </div>
+                            </Link>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                    : "#"
+                                }
+                                className="font-medium truncate hover:underline"
+                              >
+                                {item.petName}
+                              </Link>
+                              {getServiceBadge(item.serviceType)}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {item.ownerName} • {item.petBreed}
+                            </p>
+                            {item.serviceType === "boarding" &&
+                              item.totalNights && (
+                                <p className="text-xs text-muted-foreground">
+                                  {item.totalNights} night
+                                  {item.totalNights > 1 ? "s" : ""}
+                                </p>
+                              )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckIn(item);
+                          }}
+                          className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <LogIn className="h-3 w-3" />
+                          Check In
+                        </Button>
+                      </div>
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
@@ -743,87 +784,110 @@ export function CheckInOutSection() {
                       : "No pets currently checked in"}
                   </p>
                 ) : (
-                  displayedPets.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {getPetImage(item.petId) ? (
-                          <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
-                            <Image
-                              src={getPetImage(item.petId)!}
-                              alt={item.petName}
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <PawPrint className="h-5 w-5 text-primary" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium truncate">
-                              {item.petName}
+                  displayedPets.map((item) => {
+                    const client = findClientForPet(item.petId);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(item)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {getPetImage(item.petId) ? (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                                <Image
+                                  src={getPetImage(item.petId)!}
+                                  alt={item.petName}
+                                  width={40}
+                                  height={40}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            </Link>
+                          ) : (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <PawPrint className="h-5 w-5 text-primary" />
+                              </div>
+                            </Link>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                    : "#"
+                                }
+                                className="font-medium truncate hover:underline"
+                              >
+                                {item.petName}
+                              </Link>
+                              {getServiceBadge(item.serviceType)}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {item.ownerName} • {item.petBreed}
                             </p>
-                            {getServiceBadge(item.serviceType)}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {item.ownerName} • {item.petBreed}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                            <Clock className="h-3 w-3" />
-                            <span>In: {formatTime(item.checkInTime)}</span>
-                            <span>•</span>
-                            <span>
-                              Out:{" "}
-                              {formatExpectedDeparture(
-                                item.scheduledCheckOut,
-                                item.serviceType,
-                              )}
-                            </span>
-                            {item.serviceType === "boarding" &&
-                              item.kennelName && (
-                                <>
-                                  <span>•</span>
-                                  <span>{item.kennelName}</span>
-                                </>
-                              )}
-                            {item.serviceType === "daycare" &&
-                              item.playGroup && (
-                                <>
-                                  <span>•</span>
-                                  <span>{item.playGroup}</span>
-                                </>
-                              )}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                              <Clock className="h-3 w-3" />
+                              <span>In: {formatTime(item.checkInTime)}</span>
+                              <span>•</span>
+                              <span>
+                                Out:{" "}
+                                {formatExpectedDeparture(
+                                  item.scheduledCheckOut,
+                                  item.serviceType,
+                                )}
+                              </span>
+                              {item.serviceType === "boarding" &&
+                                item.kennelName && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{item.kennelName}</span>
+                                  </>
+                                )}
+                              {item.serviceType === "daycare" &&
+                                item.playGroup && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{item.playGroup}</span>
+                                  </>
+                                )}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCheckOut(item);
+                            }}
+                            className="gap-1"
+                          >
+                            <LogOut className="h-3 w-3" />
+                            Check Out
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleViewDetails(item)}
-                          className="gap-1"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCheckOut(item)}
-                          className="gap-1"
-                        >
-                          <LogOut className="h-3 w-3" />
-                          Check Out
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
@@ -860,58 +924,79 @@ export function CheckInOutSection() {
                     No checkouts today
                   </p>
                 ) : (
-                  checkedOutToday.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100/50 dark:hover:bg-gray-950/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {getPetImage(item.petId) ? (
-                          <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
-                            <Image
-                              src={getPetImage(item.petId)!}
-                              alt={item.petName}
-                              width={40}
-                              height={40}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center shrink-0">
-                            <PawPrint className="h-5 w-5 text-gray-600" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium truncate">
-                              {item.petName}
+                  checkedOutToday.map((item) => {
+                    const client = findClientForPet(item.petId);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100/50 dark:hover:bg-gray-950/30 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(item)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {getPetImage(item.petId) ? (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                                <Image
+                                  src={getPetImage(item.petId)!}
+                                  alt={item.petName}
+                                  width={40}
+                                  height={40}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            </Link>
+                          ) : (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="shrink-0"
+                            >
+                              <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                                <PawPrint className="h-5 w-5 text-gray-600" />
+                              </div>
+                            </Link>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                    : "#"
+                                }
+                                className="font-medium truncate hover:underline"
+                              >
+                                {item.petName}
+                              </Link>
+                              {getServiceBadge(item.serviceType)}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {item.ownerName} • {item.petBreed}
                             </p>
-                            {getServiceBadge(item.serviceType)}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {item.ownerName} • {item.petBreed}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              Out:{" "}
-                              {item.checkOutTime
-                                ? formatTime(item.checkOutTime)
-                                : "—"}
-                            </span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                Out:{" "}
+                                {item.checkOutTime
+                                  ? formatTime(item.checkOutTime)
+                                  : "—"}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleViewDetails(item)}
-                        className="shrink-0 gap-1"
-                      >
-                        View
-                      </Button>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
@@ -958,26 +1043,57 @@ export function CheckInOutSection() {
             {selectedItem && (
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  {getPetImage(selectedItem.petId) ? (
-                    <div className="h-12 w-12 rounded-full overflow-hidden">
-                      <Image
-                        src={getPetImage(selectedItem.petId)!}
-                        alt={selectedItem.petName}
-                        width={48}
-                        height={48}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <PawPrint className="h-6 w-6 text-primary" />
-                    </div>
-                  )}
+                  {(() => {
+                    const client = findClientForPet(selectedItem.petId);
+                    return getPetImage(selectedItem.petId) ? (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                            : "#"
+                        }
+                      >
+                        <div className="h-12 w-12 rounded-full overflow-hidden">
+                          <Image
+                            src={getPetImage(selectedItem.petId)!}
+                            alt={selectedItem.petName}
+                            width={48}
+                            height={48}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                            : "#"
+                        }
+                      >
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <PawPrint className="h-6 w-6 text-primary" />
+                        </div>
+                      </Link>
+                    );
+                  })()}
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-lg">
-                        {selectedItem.petName}
-                      </p>
+                      {(() => {
+                        const client = findClientForPet(selectedItem.petId);
+                        return (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                : "#"
+                            }
+                            className="font-semibold text-lg hover:underline"
+                          >
+                            {selectedItem.petName}
+                          </Link>
+                        );
+                      })()}
                       {getServiceBadge(selectedItem.serviceType)}
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -1085,6 +1201,9 @@ export function CheckInOutSection() {
               {checkInOutMode === "view" && selectedItem ? (
                 <div className="flex w-full justify-between">
                   <div className="flex gap-2">
+                    <Link href="/facility/dashboard/bookings">
+                      <Button variant="outline">Booking Details</Button>
+                    </Link>
                     {selectedItem.status === "checked-in" && (
                       <Button
                         variant="outline"
