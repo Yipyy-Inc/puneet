@@ -460,7 +460,6 @@ export default function KennelViewPage() {
   const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [serviceType, setServiceType] = useState<ServiceType>("boarding");
-  const [daycareViewMode, setDaycareViewMode] = useState<ViewMode>("list");
   const [daycareSpots] = useState<DaycareSpot[]>(initialDaycareSpots);
   const [daycareReservations] = useState<DaycareReservation[]>(
     initialDaycareReservations,
@@ -764,21 +763,19 @@ export default function KennelViewPage() {
             ) : (
               <>
                 <Button
-                  variant={daycareViewMode === "list" ? "secondary" : "ghost"}
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   className="rounded-none gap-2"
-                  onClick={() => setDaycareViewMode("list")}
+                  onClick={() => setViewMode("list")}
                 >
                   <List className="h-4 w-4" />
                   List
                 </Button>
                 <Button
-                  variant={
-                    daycareViewMode === "calendar" ? "secondary" : "ghost"
-                  }
+                  variant={viewMode === "calendar" ? "secondary" : "ghost"}
                   size="sm"
                   className="rounded-none gap-2"
-                  onClick={() => setDaycareViewMode("calendar")}
+                  onClick={() => setViewMode("calendar")}
                 >
                   <LayoutGrid className="h-4 w-4" />
                   Calendar
@@ -1143,7 +1140,7 @@ export default function KennelViewPage() {
             </Card>
           </div>
 
-          {daycareViewMode === "calendar" ? (
+          {viewMode === "calendar" ? (
             <Card className="p-4">
               <DaycareCalendarView
                 spots={filteredDaycareSpots}
