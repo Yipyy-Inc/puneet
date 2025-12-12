@@ -1,16 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { User, Calendar, Bed } from "lucide-react";
+import { User, Calendar, Bed, PawPrint } from "lucide-react";
 import type { Pet, Client } from "@/lib/types";
-
-const SERVICE_CATEGORIES = [
-  { id: "daycare", name: "Daycare" },
-  { id: "boarding", name: "Boarding" },
-  { id: "grooming", name: "Grooming" },
-  { id: "training", name: "Training" },
-  { id: "vet", name: "Veterinary" },
-];
+import { SERVICE_CATEGORIES } from "../constants";
 
 const BOOKING_METHODS = [
   { id: "phone", name: "Phone Call" },
@@ -45,18 +38,9 @@ const TRAINING_TYPES = [
   { id: "agility", name: "Agility Training" },
 ];
 
-const VET_REASONS = [
-  { id: "wellness_check", name: "Wellness Check" },
-  { id: "vaccination", name: "Vaccination" },
-  { id: "sick_visit", name: "Sick Visit" },
-  { id: "follow_up", name: "Follow-up Visit" },
-  { id: "dental", name: "Dental Cleaning" },
-  { id: "surgery_consult", name: "Surgery Consultation" },
-  { id: "emergency", name: "Emergency" },
-];
-
 interface FeedingScheduleItem {
   id: string;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -68,6 +52,7 @@ interface FeedingScheduleItem {
 
 interface MedicationItem {
   id: string;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -97,8 +82,6 @@ interface ConfirmStepProps {
   groomingStyle: string;
   groomingAddOns: string[];
   trainingType: string;
-  vetReason: string;
-  isEmergency: boolean;
   bookingMethod: string;
   bookingMethodDetails: string;
   roomAssignments: Array<{ petId: number; roomId: string }>;
@@ -124,8 +107,6 @@ export function ConfirmStep({
   groomingStyle,
   groomingAddOns,
   trainingType,
-  vetReason,
-  isEmergency,
   bookingMethod,
   bookingMethodDetails,
   roomAssignments,
@@ -145,8 +126,18 @@ export function ConfirmStep({
         <CardContent className="pt-6 space-y-4">
           {/* Client & Pet */}
           <div className="flex items-start gap-4">
-            <div className="p-2 bg-muted rounded-lg">
-              <User className="h-5 w-5" />
+            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+              {displayClient?.imageUrl ? (
+                <img
+                  src={displayClient.imageUrl}
+                  alt={displayClient.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">Client</p>
@@ -155,19 +146,31 @@ export function ConfirmStep({
                 {displayClient?.email}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <p className="text-sm text-muted-foreground">
                 Pet{displayPets.length > 1 ? "s" : ""}
               </p>
-              <p className="font-medium">
-                {displayPets
-                  .map(
-                    (p: Pet | (Omit<Pet, "id"> & { name: string })) => p?.name,
-                  )
-                  .filter(Boolean)
-                  .join(", ") || "Unknown"}
-              </p>
-              <p className="text-sm text-muted-foreground">
+              <div className="flex gap-2 justify-end mt-1">
+                {displayPets.slice(0, 3).map((pet) => (
+                  <div
+                    key={pet.id}
+                    className="relative w-10 h-10 rounded-lg overflow-hidden bg-muted border-2 border-background"
+                    title={pet.name}
+                  >
+                    <div className="w-full h-full flex items-center justify-center">
+                      <PawPrint className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                ))}
+                {displayPets.length > 3 && (
+                  <div className="w-10 h-10 rounded-lg bg-muted border-2 border-background flex items-center justify-center">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      +{displayPets.length - 3}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
                 {displayPets.length} selected
               </p>
             </div>
@@ -195,8 +198,18 @@ export function ConfirmStep({
 
           {/* Service */}
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-muted rounded-lg">
-              {serviceInfo && <User className="h-5 w-5" />}
+            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
+              {serviceInfo?.image ? (
+                <img
+                  src={serviceInfo.image}
+                  alt={serviceInfo.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">Service</p>
@@ -214,16 +227,6 @@ export function ConfirmStep({
               {trainingType && (
                 <p className="text-sm text-muted-foreground">
                   {TRAINING_TYPES.find((t) => t.id === trainingType)?.name}
-                </p>
-              )}
-              {vetReason && (
-                <p className="text-sm text-muted-foreground">
-                  {VET_REASONS.find((v) => v.id === vetReason)?.name}
-                  {isEmergency && (
-                    <Badge variant="destructive" className="ml-2">
-                      Emergency
-                    </Badge>
-                  )}
                 </p>
               )}
             </div>
@@ -356,15 +359,46 @@ export function ConfirmStep({
               <>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Feeding Schedule
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-3">
                     {feedingSchedule.map((item, idx) => (
-                      <p key={idx} className="text-sm">
-                        {item.time} - {item.amount} {item.unit} of{" "}
-                        {item.type.replace(/_/g, " ")}
-                      </p>
+                      <Card key={idx} className="p-3">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium text-sm">
+                              {item.name || `Schedule ${idx + 1}`}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {item.time}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <div>
+                              <span className="font-medium">Amount:</span>{" "}
+                              {item.amount} {item.unit}
+                            </div>
+                            <div>
+                              <span className="font-medium">Type:</span>{" "}
+                              {item.type.replace(/_/g, " ")}
+                            </div>
+                            <div>
+                              <span className="font-medium">Source:</span>{" "}
+                              {item.source.replace(/_/g, " ")}
+                            </div>
+                            <div>
+                              <span className="font-medium">Instructions:</span>{" "}
+                              {item.instructions.replace(/_/g, " ")}
+                            </div>
+                          </div>
+                          {item.notes && (
+                            <p className="text-xs text-muted-foreground italic">
+                              &ldquo;{item.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
@@ -377,14 +411,46 @@ export function ConfirmStep({
               <>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Medications
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-3">
                     {medications.map((item, idx) => (
-                      <p key={idx} className="text-sm">
-                        {item.time} - {item.amount} {item.unit} ({item.type})
-                      </p>
+                      <Card key={idx} className="p-3">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium text-sm">
+                              {item.name || `Medication ${idx + 1}`}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {item.time}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <div>
+                              <span className="font-medium">Dosage:</span>{" "}
+                              {item.amount} {item.unit}
+                            </div>
+                            <div>
+                              <span className="font-medium">Type:</span>{" "}
+                              {item.type.replace(/_/g, " ")}
+                            </div>
+                            <div>
+                              <span className="font-medium">Source:</span>{" "}
+                              {item.source.replace(/_/g, " ")}
+                            </div>
+                            <div>
+                              <span className="font-medium">Instructions:</span>{" "}
+                              {item.instructions.replace(/_/g, " ")}
+                            </div>
+                          </div>
+                          {item.notes && (
+                            <p className="text-xs text-muted-foreground italic">
+                              &ldquo;{item.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </Card>
                     ))}
                   </div>
                 </div>

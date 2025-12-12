@@ -7,13 +7,13 @@ import {
   Bed,
   Scissors,
   GraduationCap,
-  Stethoscope,
 } from "lucide-react";
 import { type Step } from "@/components/ui/stepper";
 
 export const SERVICE_CATEGORIES = [
   {
     id: "daycare",
+    image: "/services/daycare.jpg",
     name: "Daycare",
     icon: Sun,
     description: "Full or half day supervised care",
@@ -21,6 +21,7 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "boarding",
+    image: "/services/boarding.jpg",
     name: "Boarding",
     icon: Bed,
     description: "Overnight stays with full care",
@@ -28,6 +29,7 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "grooming",
+    image: "/services/grooming.jpg",
     name: "Grooming",
     icon: Scissors,
     description: "Bath, grooming, and styling services",
@@ -35,17 +37,11 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "training",
+    image: "/services/training.jpg",
     name: "Training",
     icon: GraduationCap,
     description: "Obedience and specialized training",
     basePrice: 85,
-  },
-  {
-    id: "vet",
-    name: "Veterinary",
-    icon: Stethoscope,
-    description: "Health checkups and medical care",
-    basePrice: 75,
   },
 ];
 
@@ -110,16 +106,6 @@ export const TRAINING_TYPES = [
     sessions: 1,
   },
   { id: "agility", name: "Agility Training", price: 300, sessions: 6 },
-];
-
-export const VET_REASONS = [
-  { id: "wellness_check", name: "Wellness Check", price: 75 },
-  { id: "vaccination", name: "Vaccination", price: 45 },
-  { id: "sick_visit", name: "Sick Visit", price: 95 },
-  { id: "follow_up", name: "Follow-up Visit", price: 50 },
-  { id: "dental", name: "Dental Cleaning", price: 200 },
-  { id: "surgery_consult", name: "Surgery Consultation", price: 125 },
-  { id: "emergency", name: "Emergency", price: 150 },
 ];
 
 export const DAYCARE_TYPES = [

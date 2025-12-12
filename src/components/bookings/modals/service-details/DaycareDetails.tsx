@@ -22,6 +22,7 @@ import { Pet } from "@/lib/types";
 interface FeedingScheduleItem {
   id: string;
   petId?: number;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -34,6 +35,7 @@ interface FeedingScheduleItem {
 interface MedicationItem {
   id: string;
   petId?: number;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -671,6 +673,18 @@ export function DaycareDetails({
                             Remove
                           </Button>
                         </div>
+                        <div>
+                          <Label className="text-xs">Schedule Name</Label>
+                          <Input
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...feedingSchedule];
+                              updated[index].name = e.target.value;
+                              setFeedingSchedule(updated);
+                            }}
+                            placeholder="e.g., Morning Feeding"
+                          />
+                        </div>
                         {selectedPets.length > 1 && (
                           <div>
                             <Label className="text-xs">Pet</Label>
@@ -855,6 +869,7 @@ export function DaycareDetails({
                             selectedPets.length === 1
                               ? selectedPets[0].id
                               : undefined,
+                          name: "",
                           time: "",
                           amount: "",
                           unit: "",
@@ -898,6 +913,18 @@ export function DaycareDetails({
                           >
                             Remove
                           </Button>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Medication Name</Label>
+                          <Input
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...medications];
+                              updated[index].name = e.target.value;
+                              setMedications(updated);
+                            }}
+                            placeholder="e.g., Heartworm Prevention"
+                          />
                         </div>
                         {selectedPets.length > 1 && (
                           <div>
@@ -1089,6 +1116,7 @@ export function DaycareDetails({
                             selectedPets.length === 1
                               ? selectedPets[0].id
                               : undefined,
+                          name: "",
                           time: "",
                           amount: "",
                           unit: "",

@@ -44,16 +44,6 @@ const TRAINING_TYPES = [
   { id: "agility", name: "Agility Training", price: 300, sessions: 6 },
 ];
 
-const VET_REASONS = [
-  { id: "wellness_check", name: "Wellness Check", price: 75 },
-  { id: "vaccination", name: "Vaccination", price: 45 },
-  { id: "sick_visit", name: "Sick Visit", price: 95 },
-  { id: "follow_up", name: "Follow-up Visit", price: 50 },
-  { id: "dental", name: "Dental Cleaning", price: 200 },
-  { id: "surgery_consult", name: "Surgery Consultation", price: 125 },
-  { id: "emergency", name: "Emergency", price: 150 },
-];
-
 const BOOKING_METHODS = [
   {
     id: "phone",
@@ -141,13 +131,6 @@ interface DetailsStepProps {
   setTrainerId: (value: string) => void;
   trainingGoals: string;
   setTrainingGoals: (value: string) => void;
-  // Vet
-  vetReason: string;
-  setVetReason: (value: string) => void;
-  vetSymptoms: string;
-  setVetSymptoms: (value: string) => void;
-  isEmergency: boolean;
-  setIsEmergency: (value: boolean) => void;
   // Common
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (value: FeedingScheduleItem[]) => void;
@@ -201,12 +184,6 @@ export function DetailsStep({
   setTrainerId,
   trainingGoals,
   setTrainingGoals,
-  vetReason,
-  setVetReason,
-  vetSymptoms,
-  setVetSymptoms,
-  isEmergency,
-  setIsEmergency,
   feedingSchedule,
   setFeedingSchedule,
   medications,
@@ -248,8 +225,7 @@ export function DetailsStep({
             </div>
 
             {(selectedService === "grooming" ||
-              selectedService === "training" ||
-              selectedService === "vet") && (
+              selectedService === "training") && (
               <div className="grid gap-2">
                 <Label htmlFor="appointmentTime">Appointment Time</Label>
                 <Input
@@ -445,63 +421,7 @@ export function DetailsStep({
         </div>
       )}
 
-      {selectedService === "vet" && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg">
-            <Checkbox
-              id="emergency"
-              checked={isEmergency}
-              onCheckedChange={(checked) => setIsEmergency(checked === true)}
-            />
-            <Label
-              htmlFor="emergency"
-              className="text-destructive font-medium cursor-pointer"
-            >
-              This is an emergency (+$50)
-            </Label>
-          </div>
-
-          <div>
-            <Label className="text-base">
-              Reason for Visit <span className="text-destructive">*</span>
-            </Label>
-            <RadioGroup
-              value={vetReason}
-              onValueChange={setVetReason}
-              className="grid gap-2 mt-2"
-            >
-              {VET_REASONS.map((reason) => (
-                <Label
-                  key={reason.id}
-                  htmlFor={`vet-${reason.id}`}
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    vetReason === reason.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={reason.id} id={`vet-${reason.id}`} />
-                  <span className="flex-1 font-medium">{reason.name}</span>
-                  <span className="font-semibold">${reason.price}</span>
-                </Label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="symptoms">Symptoms/Notes</Label>
-            <Textarea
-              id="symptoms"
-              value={vetSymptoms}
-              onChange={(e) => setVetSymptoms(e.target.value)}
-              placeholder="Describe any symptoms or concerns..."
-              rows={3}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Booking Method for grooming, training, vet services */}
+      {/* Booking Method for grooming, training services */}
       {selectedService !== "daycare" &&
         selectedService !== "boarding" &&
         selectedService !== "" && (

@@ -18,7 +18,6 @@ import {
   GROOMING_STYLES,
   GROOMING_ADDONS,
   TRAINING_TYPES,
-  VET_REASONS,
   DAYCARE_TYPES,
   BOARDING_TYPES,
   STEPS,
@@ -32,6 +31,7 @@ import { Client, Pet } from "@/lib/types";
 export interface FeedingScheduleItem {
   id: string;
   petId?: number;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -44,6 +44,7 @@ export interface FeedingScheduleItem {
 export interface MedicationItem {
   id: string;
   petId?: number;
+  name: string;
   time: string;
   amount: string;
   unit: string;
@@ -166,11 +167,6 @@ export function BookingModal({
   const [trainingType, setTrainingType] = useState("");
   const [trainerId, setTrainerId] = useState("");
   const [trainingGoals, setTrainingGoals] = useState("");
-
-  // Vet specific
-  const [vetReason, setVetReason] = useState("");
-  const [vetSymptoms, setVetSymptoms] = useState("");
-  const [isEmergency, setIsEmergency] = useState(false);
 
   // Boarding specific
   const [kennel, setKennel] = useState("");
@@ -305,10 +301,6 @@ export function BookingModal({
     } else if (selectedService === "training") {
       const training = TRAINING_TYPES.find((t) => t.id === trainingType);
       basePrice = training?.price || 85;
-    } else if (selectedService === "vet") {
-      const vet = VET_REASONS.find((v) => v.id === vetReason);
-      basePrice = vet?.price || 75;
-      if (isEmergency) basePrice += 50;
     }
 
     return {
@@ -323,8 +315,6 @@ export function BookingModal({
     groomingStyle,
     groomingAddOns,
     trainingType,
-    vetReason,
-    isEmergency,
     daycareSelectedDates.length,
   ]);
 
@@ -344,7 +334,6 @@ export function BookingModal({
         if (!startDate) return false;
         if (selectedService === "grooming" && !groomingStyle) return false;
         if (selectedService === "training" && !trainingType) return false;
-        if (selectedService === "vet" && !vetReason) return false;
         if (!bookingMethod) return false;
         if (bookingMethod === "other" && !bookingMethodDetails.trim())
           return false;
@@ -365,7 +354,6 @@ export function BookingModal({
     startDate,
     groomingStyle,
     trainingType,
-    vetReason,
     isSubStepComplete,
   ]);
 
@@ -461,9 +449,7 @@ export function BookingModal({
       trainingType: trainingType || undefined,
       trainerId: trainerId || undefined,
       trainingGoals: trainingGoals || undefined,
-      vetReason: vetReason || undefined,
-      vetSymptoms: vetSymptoms || undefined,
-      isEmergency: isEmergency || undefined,
+
       kennel: kennel || undefined,
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
@@ -501,9 +487,7 @@ export function BookingModal({
     setTrainingType("");
     setTrainerId("");
     setTrainingGoals("");
-    setVetReason("");
-    setVetSymptoms("");
-    setIsEmergency(false);
+
     setKennel("");
     setRoomAssignments([]);
     setFeedingSchedule([]);
@@ -807,12 +791,6 @@ export function BookingModal({
                     setTrainerId={setTrainerId}
                     trainingGoals={trainingGoals}
                     setTrainingGoals={setTrainingGoals}
-                    vetReason={vetReason}
-                    setVetReason={setVetReason}
-                    vetSymptoms={vetSymptoms}
-                    setVetSymptoms={setVetSymptoms}
-                    isEmergency={isEmergency}
-                    setIsEmergency={setIsEmergency}
                     feedingSchedule={feedingSchedule}
                     setFeedingSchedule={setFeedingSchedule}
                     medications={medications}
@@ -845,8 +823,6 @@ export function BookingModal({
                     groomingStyle={groomingStyle}
                     groomingAddOns={groomingAddOns}
                     trainingType={trainingType}
-                    vetReason={vetReason}
-                    isEmergency={isEmergency}
                     bookingMethod={bookingMethod}
                     bookingMethodDetails={bookingMethodDetails}
                     roomAssignments={roomAssignments}
