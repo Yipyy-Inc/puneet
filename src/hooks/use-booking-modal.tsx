@@ -9,11 +9,10 @@ import {
 } from "react";
 import {
   BookingModal,
-  type Client,
-  type Pet,
-  type NewClientData,
   type BookingData,
 } from "@/components/bookings/modals/BookingModal";
+
+import { Client } from "@/lib/types";
 
 interface BookingModalConfig {
   clients: Client[];
@@ -22,8 +21,6 @@ interface BookingModalConfig {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   onCreateBooking: (booking: BookingData) => void;
-  onCreateClient?: (client: NewClientData) => number;
-  onAddPetToClient?: (clientId: number, pet: Omit<Pet, "id">) => number;
 }
 
 interface BookingModalContextValue {
@@ -67,8 +64,6 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           facilityId={config.facilityId}
           facilityName={config.facilityName}
           onCreateBooking={config.onCreateBooking}
-          onCreateClient={config.onCreateClient}
-          onAddPetToClient={config.onAddPetToClient}
           preSelectedClientId={config.preSelectedClientId}
           preSelectedPetId={config.preSelectedPetId}
         />

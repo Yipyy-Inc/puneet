@@ -14,10 +14,10 @@ import { clients as initialClients } from "@/data/clients";
 import {
   BookingModal,
   type BookingData,
-  type NewClientData,
-  type Pet,
-  type Client,
 } from "@/components/bookings/modals/BookingModal";
+
+import { Client } from "@/lib/types";
+
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
@@ -33,7 +33,7 @@ export default function FacilityDashboard() {
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
   );
-  const [clients, setClients] = useState(initialClients as Client[]);
+  const clients = initialClients as Client[];
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,73 +120,6 @@ export default function FacilityDashboard() {
       },
       duration: 5000,
     });
-  };
-
-  const handleCreateClientFromBooking = (newClient: NewClientData): number => {
-    const maxClientId = Math.max(...clients.map((c) => c.id), 0);
-    const maxPetId = Math.max(
-      ...clients.flatMap((c) => c.pets.map((p) => p.id)),
-      0,
-    );
-
-    const petsWithIds = newClient.pets.map((pet, index) => ({
-      id: maxPetId + index + 1,
-      ...pet,
-      type: pet.type,
-    }));
-
-    const clientWithId = {
-      id: maxClientId + 1,
-      name: newClient.name,
-      email: newClient.email,
-      phone: newClient.phone || "",
-      status: newClient.status,
-      facility: newClient.facility,
-      address: {
-        street: "",
-        city: "",
-        state: "",
-        zip: "",
-        country: "",
-      },
-      emergencyContact: {
-        name: "",
-        relationship: "",
-        phone: "",
-        email: "",
-      },
-      pets: petsWithIds,
-    };
-    setClients([...clients, clientWithId]);
-    return clientWithId.id;
-  };
-
-  const handleAddPetToClient = (
-    clientId: number,
-    pet: Omit<Pet, "id">,
-  ): number => {
-    const maxPetId = Math.max(
-      ...clients.flatMap((c) => c.pets.map((p) => p.id)),
-      0,
-    );
-
-    const petWithId = {
-      id: maxPetId + 1,
-      ...pet,
-    };
-
-    const updatedClients = clients.map((client) => {
-      if (client.id === clientId) {
-        return {
-          ...client,
-          pets: [...client.pets, petWithId],
-        };
-      }
-      return client;
-    });
-
-    setClients(updatedClients);
-    return petWithId.id;
   };
 
   return (
@@ -289,8 +222,6 @@ export default function FacilityDashboard() {
         facilityId={facilityId}
         facilityName={facility.name}
         onCreateBooking={handleCreateBooking}
-        onCreateClient={handleCreateClientFromBooking}
-        onAddPetToClient={handleAddPetToClient}
       />
     </div>
   );

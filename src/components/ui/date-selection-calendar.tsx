@@ -399,50 +399,6 @@ export function DateSelectionCalendar({
 
   return (
     <div className={cn("space-y-2", className)}>
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between px-0.5">
-        <div className="flex items-center gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handlePrevMonth}
-          >
-            <ChevronLeft className="h-3 w-3" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleNextMonth}
-          >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs font-semibold">
-            {currentMonth.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-6 text-[10px] px-2"
-          onClick={handleToday}
-        >
-          Today
-        </Button>
-      </div>
-
       {/* Recurring Pattern Selector */}
       {mode === "recurring" && (
         <div className="space-y-2.5 p-3 border rounded-lg bg-muted/30">
@@ -485,32 +441,77 @@ export function DateSelectionCalendar({
       {/* Calendar Grid and Time Selection Side by Side */}
       <div className="grid grid-cols-2 gap-4">
         {/* Calendar Grid Column */}
-        <div>
+        <div className="relative">
           {mode !== "recurring" && (
-            <div className="border rounded-lg p-2">
-              {/* Days of week header */}
-              <div className="grid grid-cols-7 gap-0.5 mb-0.5">
-                {DAYS_OF_WEEK.map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-[10px] font-medium text-muted-foreground py-0.5"
+            <>
+              {/* Calendar Header - overlaid on calendar */}
+              <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between bg-background/95 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm">
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handlePrevMonth}
                   >
-                    {day}
-                  </div>
-                ))}
-              </div>
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleNextMonth}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
 
-              {/* Date grid */}
-              <div className="space-y-0">
-                {monthGrid.map((week, weekIndex) => (
-                  <div key={weekIndex} className="grid grid-cols-7 gap-2">
-                    {week.map((date, dateIndex) => (
-                      <div key={dateIndex}>{renderDateCell(date)}</div>
-                    ))}
-                  </div>
-                ))}
+                <div className="flex items-center gap-1">
+                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs font-semibold">
+                    {currentMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={handleToday}
+                >
+                  Today
+                </Button>
               </div>
-            </div>
+              <div className="border rounded-lg p-2 pt-10">
+                {/* Days of week header */}
+                <div className="grid grid-cols-7 gap-0.5 mb-0.5">
+                  {DAYS_OF_WEEK.map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-[10px] font-medium text-muted-foreground py-0.5"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Date grid */}
+                <div className="space-y-0">
+                  {monthGrid.map((week, weekIndex) => (
+                    <div key={weekIndex} className="grid grid-cols-7 gap-2">
+                      {week.map((date, dateIndex) => (
+                        <div key={dateIndex}>{renderDateCell(date)}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
