@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { DaycareDetails, BoardingDetails } from "./service-details";
 import {
@@ -279,6 +279,24 @@ const STEPS: Step[] = [
   { id: "confirm", title: "Confirm", description: "Review booking" },
 ];
 
+const DAYCARE_SUB_STEPS = [
+  { id: 0, title: "Schedule", description: "Select dates and times" },
+  { id: 1, title: "Room Assignment", description: "Assign to room" },
+  { id: 2, title: "Extra Services", description: "Add-on services" },
+  { id: 3, title: "Feeding", description: "Feeding instructions" },
+  { id: 4, title: "Medication", description: "Medication details" },
+  { id: 5, title: "Booking Method", description: "How they booked" },
+];
+
+const BOARDING_SUB_STEPS = [
+  { id: 0, title: "Schedule", description: "Select dates" },
+  { id: 1, title: "Room Type", description: "Choose room" },
+  { id: 2, title: "Extra Services", description: "Add-on services" },
+  { id: 3, title: "Feeding", description: "Feeding instructions" },
+  { id: 4, title: "Medication", description: "Medication details" },
+  { id: 5, title: "Booking Method", description: "How they booked" },
+];
+
 export function BookingModal({
   open,
   onOpenChange,
@@ -293,6 +311,7 @@ export function BookingModal({
 }: NewBookingModalProps) {
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
+  const [currentSubStep, setCurrentSubStep] = useState(0);
 
   // Client selection state
   const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
@@ -382,6 +401,72 @@ export function BookingModal({
     Array<{ serviceId: string; quantity: number }>
   >([]);
 
+  // Get current sub-steps based on selected service
+  const currentSubSteps = useMemo(() => {
+    if (selectedService === "daycare") return DAYCARE_SUB_STEPS;
+    if (selectedService === "boarding") return BOARDING_SUB_STEPS;
+    return [];
+  }, [selectedService]);
+
+  // Check if current sub-step is complete
+  const isSubStepComplete = useCallback(
+    (stepIndex: number) => {
+      if (selectedService === "daycare") {
+        switch (stepIndex) {
+          case 0:
+            return daycareSelectedDates.length > 0;
+          case 1:
+            return assignedRoom !== "";
+          case 2:
+            return true;
+          case 3:
+            return true;
+          case 4:
+            return true;
+          case 5:
+            if (!bookingMethod) return false;
+            if (bookingMethod === "other" && !bookingMethodDetails.trim())
+              return false;
+            return true;
+          default:
+            return false;
+        }
+      }
+      if (selectedService === "boarding") {
+        switch (stepIndex) {
+          case 0:
+            return boardingRangeStart !== null && boardingRangeEnd !== null;
+          case 1:
+            return serviceType !== "";
+          case 2:
+            return true;
+          case 3:
+            return true;
+          case 4:
+            return true;
+          case 5:
+            if (!bookingMethod) return false;
+            if (bookingMethod === "other" && !bookingMethodDetails.trim())
+              return false;
+            return true;
+          default:
+            return false;
+        }
+      }
+      return true;
+    },
+    [
+      selectedService,
+      daycareSelectedDates,
+      assignedRoom,
+      bookingMethod,
+      bookingMethodDetails,
+      boardingRangeStart,
+      boardingRangeEnd,
+      serviceType,
+    ],
+  );
+
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
     if (!searchQuery.trim()) return clients;
@@ -463,28 +548,18 @@ export function BookingModal({
       case 1: // Client & Pet
         return selectedClientId !== null && selectedPetIds.length > 0;
       case 2: // Details
-        if (selectedService === "daycare") {
-          if (daycareSelectedDates.length === 0) return false;
+        // For daycare/boarding, check current sub-step completion
+        if (selectedService === "daycare" || selectedService === "boarding") {
+          return isSubStepComplete(currentSubStep);
         }
-        if (selectedService === "boarding") {
-          if (!boardingRangeStart || !boardingRangeEnd) return false;
-          if (!serviceType) return false;
-        }
-        if (
-          selectedService !== "daycare" &&
-          selectedService !== "boarding" &&
-          !startDate
-        )
-          return false;
+        // For other services, original logic
+        if (!startDate) return false;
         if (selectedService === "grooming" && !groomingStyle) return false;
         if (selectedService === "training" && !trainingType) return false;
         if (selectedService === "vet" && !vetReason) return false;
-        // Booking method validation (only for non-daycare/boarding services with stepper)
-        if (selectedService !== "daycare" && selectedService !== "boarding") {
-          if (!bookingMethod) return false;
-          if (bookingMethod === "other" && !bookingMethodDetails.trim())
-            return false;
-        }
+        if (!bookingMethod) return false;
+        if (bookingMethod === "other" && !bookingMethodDetails.trim())
+          return false;
         return true;
       case 3: // Confirm
         return true;
@@ -493,30 +568,58 @@ export function BookingModal({
     }
   }, [
     currentStep,
+    currentSubStep,
     selectedClientId,
     selectedPetIds,
     bookingMethod,
     bookingMethodDetails,
     selectedService,
     startDate,
-    boardingRangeStart,
-    boardingRangeEnd,
     groomingStyle,
     trainingType,
     vetReason,
-    daycareSelectedDates,
-    serviceType,
+    isSubStepComplete,
   ]);
 
   const handleNext = () => {
+    // Handle sub-steps for daycare/boarding on details step
+    if (
+      currentStep === 2 &&
+      (selectedService === "daycare" || selectedService === "boarding")
+    ) {
+      if (currentSubStep < currentSubSteps.length - 1) {
+        setCurrentSubStep(currentSubStep + 1);
+        return;
+      }
+    }
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
+      setCurrentSubStep(0);
     }
   };
 
   const handlePrevious = () => {
+    // Handle sub-steps for daycare/boarding on details step
+    if (
+      currentStep === 2 &&
+      (selectedService === "daycare" || selectedService === "boarding")
+    ) {
+      if (currentSubStep > 0) {
+        setCurrentSubStep(currentSubStep - 1);
+        return;
+      }
+    }
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      // Reset to last sub-step if going back to details with daycare/boarding
+      if (
+        currentStep - 1 === 2 &&
+        (selectedService === "daycare" || selectedService === "boarding")
+      ) {
+        setCurrentSubStep(currentSubSteps.length - 1);
+      } else {
+        setCurrentSubStep(0);
+      }
     }
   };
 
@@ -608,6 +711,7 @@ export function BookingModal({
 
   const resetForm = () => {
     setCurrentStep(0);
+    setCurrentSubStep(0);
     setClientMode("existing");
     setPetMode("existing");
     setSearchQuery("");
@@ -838,6 +942,7 @@ export function BookingModal({
               onClick={() => {
                 setSelectedService(service.id);
                 setServiceType("");
+                setCurrentSubStep(0);
               }}
             >
               <div className="flex items-center gap-3">
@@ -914,6 +1019,7 @@ export function BookingModal({
         {/* Service-specific fields */}
         {selectedService === "daycare" && (
           <DaycareDetails
+            currentSubStep={currentSubStep}
             daycareSelectedDates={daycareSelectedDates}
             setDaycareSelectedDates={setDaycareSelectedDates}
             daycareDateTimes={daycareDateTimes}
@@ -938,6 +1044,7 @@ export function BookingModal({
 
         {selectedService === "boarding" && (
           <BoardingDetails
+            currentSubStep={currentSubStep}
             boardingRangeStart={boardingRangeStart}
             boardingRangeEnd={boardingRangeEnd}
             setBoardingRangeStart={setBoardingRangeStart}
@@ -1580,159 +1687,210 @@ export function BookingModal({
                   const serviceInfo = SERVICE_CATEGORIES.find(
                     (s) => s.id === selectedService,
                   );
+                  const showSubSteps =
+                    idx === 2 &&
+                    isActive &&
+                    (selectedService === "daycare" ||
+                      selectedService === "boarding");
 
                   return (
-                    <button
-                      key={step.id}
-                      onClick={() => {
-                        if (isCompleted || idx < currentStep) {
-                          setCurrentStep(idx);
-                        }
-                      }}
-                      disabled={!isCompleted && idx > currentStep}
-                      className={`w-full text-left p-3 rounded-lg border transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                          : isCompleted
-                            ? "bg-background hover:bg-muted border-border cursor-pointer"
-                            : "bg-muted/50 border-dashed border-muted-foreground/30 cursor-not-allowed opacity-60"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold ${
-                            isActive
-                              ? "bg-primary-foreground text-primary"
-                              : isCompleted
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted-foreground/20 text-muted-foreground"
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            idx + 1
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`font-medium text-sm mb-0.5 ${
+                    <div key={step.id}>
+                      <button
+                        onClick={() => {
+                          if (isCompleted || idx < currentStep) {
+                            setCurrentStep(idx);
+                            setCurrentSubStep(0);
+                          }
+                        }}
+                        disabled={!isCompleted && idx > currentStep}
+                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          isActive
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : isCompleted
+                              ? "bg-background hover:bg-muted border-border cursor-pointer"
+                              : "bg-muted/50 border-dashed border-muted-foreground/30 cursor-not-allowed opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold ${
                               isActive
-                                ? ""
+                                ? "bg-primary-foreground text-primary"
                                 : isCompleted
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted-foreground/20 text-muted-foreground"
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              idx + 1
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`font-medium text-sm mb-0.5 ${
+                                isActive
                                   ? ""
+                                  : isCompleted
+                                    ? ""
+                                    : "text-muted-foreground"
+                              }`}
+                            >
+                              {step.title}
+                            </p>
+                            <p
+                              className={`text-xs ${
+                                isActive
+                                  ? "text-primary-foreground/80"
                                   : "text-muted-foreground"
-                            }`}
-                          >
-                            {step.title}
-                          </p>
-                          <p
-                            className={`text-xs ${
-                              isActive
-                                ? "text-primary-foreground/80"
-                                : "text-muted-foreground"
-                            }`}
-                          >
-                            {step.description}
-                          </p>
+                              }`}
+                            >
+                              {step.description}
+                            </p>
 
-                          {/* Display entered data */}
-                          {isCompleted && (
-                            <div className="mt-2 pt-2 border-t border-current/20">
-                              {idx === 0 && selectedService && (
-                                <div className="text-xs space-y-1">
-                                  <p className="font-medium truncate">
-                                    {serviceInfo?.name}
-                                  </p>
-                                  {serviceType && (
-                                    <p className="text-current/70 capitalize truncate">
-                                      {serviceType.replace(/_/g, " ")}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                              {idx === 1 && displayClient && (
-                                <div className="text-xs space-y-2">
-                                  <div>
+                            {/* Display entered data */}
+                            {isCompleted && (
+                              <div className="mt-2 pt-2 border-t border-current/20">
+                                {idx === 0 && selectedService && (
+                                  <div className="text-xs space-y-1">
                                     <p className="font-medium truncate">
-                                      {displayClient.name}
+                                      {serviceInfo?.name}
                                     </p>
-                                    <p className="text-current/70 truncate">
-                                      {displayClient.email}
-                                    </p>
+                                    {serviceType && (
+                                      <p className="text-current/70 capitalize truncate">
+                                        {serviceType.replace(/_/g, " ")}
+                                      </p>
+                                    )}
                                   </div>
-                                  {selectedPets.length > 0 && (
+                                )}
+                                {idx === 1 && displayClient && (
+                                  <div className="text-xs space-y-2">
                                     <div>
                                       <p className="font-medium truncate">
-                                        {selectedPets.length} pet
-                                        {selectedPets.length > 1 ? "s" : ""}
+                                        {displayClient.name}
                                       </p>
                                       <p className="text-current/70 truncate">
-                                        {selectedPets
-                                          .map((p: Pet) => p.name)
-                                          .join(", ")}
+                                        {displayClient.email}
                                       </p>
                                     </div>
-                                  )}
-                                  {petMode === "new" && displayPet && (
-                                    <div>
-                                      <p className="font-medium truncate">
-                                        {displayPet.name}
-                                      </p>
-                                      <p className="text-current/70 truncate">
-                                        {displayPet.type} • {displayPet.breed}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              {idx === 2 && bookingMethod && (
-                                <div className="text-xs space-y-1">
-                                  <p className="font-medium truncate">
-                                    {
-                                      BOOKING_METHODS.find(
-                                        (m) => m.id === bookingMethod,
-                                      )?.name
-                                    }
-                                  </p>
-                                  {selectedService === "daycare" &&
-                                    daycareSelectedDates.length > 0 && (
-                                      <p className="text-current/70 truncate">
-                                        {daycareSelectedDates.length} day
-                                        {daycareSelectedDates.length !== 1
-                                          ? "s"
-                                          : ""}
-                                      </p>
+                                    {selectedPets.length > 0 && (
+                                      <div>
+                                        <p className="font-medium truncate">
+                                          {selectedPets.length} pet
+                                          {selectedPets.length > 1 ? "s" : ""}
+                                        </p>
+                                        <p className="text-current/70 truncate">
+                                          {selectedPets
+                                            .map((p: Pet) => p.name)
+                                            .join(", ")}
+                                        </p>
+                                      </div>
                                     )}
-                                  {selectedService === "boarding" &&
-                                    boardingRangeStart &&
-                                    boardingRangeEnd && (
-                                      <p className="text-current/70 truncate">
-                                        {boardingRangeStart.toLocaleDateString(
-                                          "en-US",
-                                          { month: "short", day: "numeric" },
-                                        )}{" "}
-                                        -{" "}
-                                        {boardingRangeEnd.toLocaleDateString(
-                                          "en-US",
-                                          { month: "short", day: "numeric" },
-                                        )}
-                                      </p>
+                                    {petMode === "new" && displayPet && (
+                                      <div>
+                                        <p className="font-medium truncate">
+                                          {displayPet.name}
+                                        </p>
+                                        <p className="text-current/70 truncate">
+                                          {displayPet.type} • {displayPet.breed}
+                                        </p>
+                                      </div>
                                     )}
-                                  {startDate &&
-                                    selectedService !== "daycare" &&
-                                    selectedService !== "boarding" && (
-                                      <p className="text-current/70 truncate">
-                                        {startDate}
-                                      </p>
-                                    )}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                  </div>
+                                )}
+                                {idx === 2 && bookingMethod && (
+                                  <div className="text-xs space-y-1">
+                                    <p className="font-medium truncate">
+                                      {
+                                        BOOKING_METHODS.find(
+                                          (m) => m.id === bookingMethod,
+                                        )?.name
+                                      }
+                                    </p>
+                                    {selectedService === "daycare" &&
+                                      daycareSelectedDates.length > 0 && (
+                                        <p className="text-current/70 truncate">
+                                          {daycareSelectedDates.length} day
+                                          {daycareSelectedDates.length !== 1
+                                            ? "s"
+                                            : ""}
+                                        </p>
+                                      )}
+                                    {selectedService === "boarding" &&
+                                      boardingRangeStart &&
+                                      boardingRangeEnd && (
+                                        <p className="text-current/70 truncate">
+                                          {boardingRangeStart.toLocaleDateString(
+                                            "en-US",
+                                            { month: "short", day: "numeric" },
+                                          )}{" "}
+                                          -{" "}
+                                          {boardingRangeEnd.toLocaleDateString(
+                                            "en-US",
+                                            { month: "short", day: "numeric" },
+                                          )}
+                                        </p>
+                                      )}
+                                    {startDate &&
+                                      selectedService !== "daycare" &&
+                                      selectedService !== "boarding" && (
+                                        <p className="text-current/70 truncate">
+                                          {startDate}
+                                        </p>
+                                      )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+
+                      {/* Sub-steps for Details step when daycare/boarding */}
+                      {showSubSteps && (
+                        <div className="ml-6 mt-2 pl-4 border-l-2 border-primary/30 space-y-1">
+                          {currentSubSteps.map((subStep, subIdx) => {
+                            const isSubActive = currentSubStep === subIdx;
+                            const isSubCompleted = isSubStepComplete(subIdx);
+
+                            return (
+                              <button
+                                key={subStep.id}
+                                type="button"
+                                onClick={() => setCurrentSubStep(subIdx)}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
+                                  isSubActive
+                                    ? "bg-primary/20 text-primary font-medium"
+                                    : isSubCompleted
+                                      ? "text-foreground hover:bg-muted"
+                                      : "text-muted-foreground hover:bg-muted"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
+                                      isSubActive
+                                        ? "bg-primary text-primary-foreground"
+                                        : isSubCompleted
+                                          ? "bg-primary text-primary-foreground"
+                                          : "bg-muted-foreground/20 text-muted-foreground"
+                                    }`}
+                                  >
+                                    {isSubCompleted && !isSubActive ? (
+                                      <Check className="h-2.5 w-2.5" />
+                                    ) : (
+                                      subIdx + 1
+                                    )}
+                                  </div>
+                                  <span>{subStep.title}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

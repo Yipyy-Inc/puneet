@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -148,15 +147,6 @@ const BOARDING_TYPES = [
   },
 ];
 
-const BOARDING_STEPS = [
-  { id: 0, title: "Schedule", description: "Select dates" },
-  { id: 1, title: "Room Type", description: "Choose room" },
-  { id: 2, title: "Extra Services", description: "Add-on services" },
-  { id: 3, title: "Feeding", description: "Feeding instructions" },
-  { id: 4, title: "Medication", description: "Medication details" },
-  { id: 5, title: "Booking Method", description: "How they booked" },
-];
-
 const BOOKING_METHODS = [
   {
     id: "phone",
@@ -181,6 +171,7 @@ const BOOKING_METHODS = [
 ];
 
 interface BoardingDetailsProps {
+  currentSubStep: number;
   boardingRangeStart: Date | null;
   boardingRangeEnd: Date | null;
   setBoardingRangeStart: (date: Date | null) => void;
@@ -216,6 +207,7 @@ interface BoardingDetailsProps {
 }
 
 export function BoardingDetails({
+  currentSubStep,
   boardingRangeStart,
   boardingRangeEnd,
   setBoardingRangeStart,
@@ -239,97 +231,8 @@ export function BoardingDetails({
   extraServices,
   setExtraServices,
 }: BoardingDetailsProps) {
-  const [currentSubStep, setCurrentSubStep] = useState(0);
-
-  const isStepComplete = (stepIndex: number) => {
-    switch (stepIndex) {
-      case 0: // Schedule
-        return boardingRangeStart !== null && boardingRangeEnd !== null;
-      case 1: // Room Type
-        return serviceType !== "";
-      case 2: // Extra Services
-        return true; // Optional
-      case 3: // Feeding
-        return true; // Optional
-      case 4: // Medication
-        return true; // Optional
-      case 5: // Booking Method
-        if (!bookingMethod) return false;
-        if (bookingMethod === "other" && !bookingMethodDetails.trim())
-          return false;
-        return true;
-      default:
-        return false;
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Horizontal Stepper - Acts as Tabs */}
-      <div className="relative">
-        <div className="flex items-center justify-between">
-          {BOARDING_STEPS.map((step, index) => {
-            const isActive = currentSubStep === index;
-            const isCompleted = isStepComplete(index);
-
-            return (
-              <div key={step.id} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentSubStep(index)}
-                    className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all hover:scale-105",
-                      isActive &&
-                        "border-primary bg-primary text-primary-foreground shadow-md",
-                      !isActive &&
-                        isCompleted &&
-                        "border-primary bg-primary text-primary-foreground",
-                      !isActive &&
-                        !isCompleted &&
-                        "border-muted-foreground/30 bg-background text-muted-foreground hover:border-primary/50",
-                    )}
-                  >
-                    {isCompleted && !isActive ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <span className="text-sm font-medium">{index + 1}</span>
-                    )}
-                  </button>
-                  <div className="mt-2 text-center">
-                    <p
-                      className={cn(
-                        "text-sm font-medium",
-                        isActive && "text-foreground",
-                        !isActive && isCompleted && "text-primary",
-                        !isActive && !isCompleted && "text-muted-foreground",
-                      )}
-                    >
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">
-                      {step.description}
-                    </p>
-                  </div>
-                </div>
-                {index < BOARDING_STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 mx-2 mb-8 transition-all",
-                      currentSubStep > index
-                        ? "bg-primary"
-                        : "bg-muted-foreground/30",
-                    )}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <Separator />
-
       {/* Step Content */}
       <div className="min-h-[400px]">
         {currentSubStep === 0 && (
