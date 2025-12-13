@@ -63,6 +63,7 @@ export interface NewBookingModalProps {
   onCreateBooking: (booking: BookingData) => void;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
+  preSelectedService?: string;
 }
 
 export interface BookingData {
@@ -115,9 +116,10 @@ export function BookingModal({
   onCreateBooking,
   preSelectedClientId,
   preSelectedPetId,
+  preSelectedService,
 }: NewBookingModalProps) {
   // Step management
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(preSelectedService ? 1 : 0);
   const [currentSubStep, setCurrentSubStep] = useState(0);
 
   // Client selection state
@@ -134,10 +136,14 @@ export function BookingModal({
   const [bookingMethodDetails, setBookingMethodDetails] = useState("");
 
   // Service selection state
-  const [selectedService, setSelectedService] = useState<string>("");
+  const [selectedService, setSelectedService] = useState<string>(
+    preSelectedService ?? "",
+  );
 
   // Service-specific state
-  const [serviceType, setServiceType] = useState<string>("");
+  const [serviceType, setServiceType] = useState<string>(
+    preSelectedService === "daycare" ? "full_day" : "",
+  );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("08:00");

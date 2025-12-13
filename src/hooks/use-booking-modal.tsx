@@ -20,6 +20,7 @@ interface BookingModalConfig {
   facilityName: string;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
+  preSelectedService?: string;
   onCreateBooking: (booking: BookingData) => void;
 }
 
@@ -57,7 +58,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
       {children}
       {config && (
         <BookingModal
-          key={`${config.preSelectedClientId ?? "none"}-${config.preSelectedPetId ?? "none"}`}
+          key={`${config.preSelectedClientId ?? "none"}-${config.preSelectedPetId ?? "none"}-${config.preSelectedService ?? "none"}`}
           open={isOpen}
           onOpenChange={handleOpenChange}
           clients={config.clients}
@@ -66,6 +67,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           onCreateBooking={config.onCreateBooking}
           preSelectedClientId={config.preSelectedClientId}
           preSelectedPetId={config.preSelectedPetId}
+          preSelectedService={config.preSelectedService}
         />
       )}
     </BookingModalContext.Provider>
