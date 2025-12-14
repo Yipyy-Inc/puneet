@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { bookings as initialBookings, type Booking } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -126,13 +127,28 @@ const isPast = (dateString: string): boolean => {
 };
 
 export default function FacilityBookingsPage() {
+  const searchParams = useSearchParams();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
   );
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  // Handle URL parameters for highlighting specific bookings
+  const highlightBookingId = searchParams.get("highlight");
+  const facilityBookings = bookings.filter(
+    (booking) => booking.facilityId === facilityId,
+  );
+  const bookingToHighlight = highlightBookingId
+    ? facilityBookings.find(
+        (booking) => booking.id.toString() === highlightBookingId,
+      )
+    : null;
+
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(
+    bookingToHighlight || null,
+  );
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(
     null,
@@ -143,16 +159,24 @@ export default function FacilityBookingsPage() {
   const [refundingBooking, setRefundingBooking] = useState<Booking | null>(
     null,
   );
-  const [activeTab, setActiveTab] = useState("all");
+
+  // Determine initial active tab based on highlighted booking
+  const getInitialActiveTab = () => {
+    if (bookingToHighlight) {
+      if (isToday(bookingToHighlight.startDate)) return "today";
+      if (isUpcoming(bookingToHighlight.startDate)) return "upcoming";
+      if (isPast(bookingToHighlight.startDate)) return "past";
+      if (bookingToHighlight.status === "pending") return "pending";
+    }
+    return "all";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialActiveTab());
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
 
   if (!facility) {
     return <div>Facility not found</div>;
   }
-
-  const facilityBookings = bookings.filter(
-    (booking) => booking.facilityId === facilityId,
-  );
 
   // Filter bookings by tab
   const allBookings = facilityBookings;

@@ -7,8 +7,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
-import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
+import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -37,15 +36,9 @@ export default async function DashboardLayout({
             <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted transition-colors" />
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <NotificationsDropdown />
-
-            {/* Divider */}
-            <div className="h-8 w-px bg-border/50" />
-
-            {/* User Dropdown */}
-            <HeaderDropdown />
+          <div className="flex items-center">
+            {/* User Profile & Notifications */}
+            <UserProfileSheet />
           </div>
         </header>
         <main className="flex-1">{children}</main>
