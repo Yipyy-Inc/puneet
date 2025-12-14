@@ -5,13 +5,6 @@ import { User, Calendar, Bed, PawPrint } from "lucide-react";
 import type { Pet, Client } from "@/lib/types";
 import { SERVICE_CATEGORIES } from "../constants";
 
-const BOOKING_METHODS = [
-  { id: "phone", name: "Phone Call" },
-  { id: "email", name: "Email" },
-  { id: "in_person", name: "In Person" },
-  { id: "other", name: "Other" },
-];
-
 const GROOMING_STYLES = [
   { id: "bath_brush", name: "Bath & Brush", price: 40 },
   { id: "full_groom", name: "Full Groom", price: 65 },
@@ -82,8 +75,6 @@ interface ConfirmStepProps {
   groomingStyle: string;
   groomingAddOns: string[];
   trainingType: string;
-  bookingMethod: string;
-  bookingMethodDetails: string;
   roomAssignments: Array<{ petId: number; roomId: string }>;
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
@@ -107,8 +98,6 @@ export function ConfirmStep({
   groomingStyle,
   groomingAddOns,
   trainingType,
-  bookingMethod,
-  bookingMethodDetails,
   roomAssignments,
   feedingSchedule,
   medications,
@@ -118,7 +107,6 @@ export function ConfirmStep({
   const displayClient = selectedClient;
   const displayPets = selectedPets;
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
-  const methodInfo = BOOKING_METHODS.find((m) => m.id === bookingMethod);
 
   return (
     <div className="space-y-4">
@@ -173,24 +161,6 @@ export function ConfirmStep({
               <p className="text-sm text-muted-foreground mt-1">
                 {displayPets.length} selected
               </p>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Booking Method */}
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-muted rounded-lg">
-              {methodInfo && <User className="h-5 w-5" />}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Booking Method</p>
-              <p className="font-medium">{methodInfo?.name}</p>
-              {bookingMethodDetails && (
-                <p className="text-sm text-muted-foreground">
-                  {bookingMethodDetails}
-                </p>
-              )}
             </div>
           </div>
 

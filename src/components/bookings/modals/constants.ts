@@ -1,13 +1,4 @@
-import {
-  Phone,
-  Mail,
-  Users,
-  MessageSquare,
-  Sun,
-  Bed,
-  Scissors,
-  GraduationCap,
-} from "lucide-react";
+import { Sun, Bed, Scissors, GraduationCap } from "lucide-react";
 import { type Step } from "@/components/ui/stepper";
 
 export const SERVICE_CATEGORIES = [
@@ -42,33 +33,6 @@ export const SERVICE_CATEGORIES = [
     icon: GraduationCap,
     description: "Obedience and specialized training",
     basePrice: 85,
-  },
-];
-
-export const BOOKING_METHODS = [
-  {
-    id: "phone",
-    name: "Phone Call",
-    icon: Phone,
-    description: "Customer called in",
-  },
-  {
-    id: "email",
-    name: "Email",
-    icon: Mail,
-    description: "Customer emailed request",
-  },
-  {
-    id: "in_person",
-    name: "In Person",
-    icon: Users,
-    description: "Customer is at the facility",
-  },
-  {
-    id: "other",
-    name: "Other",
-    icon: MessageSquare,
-    description: "Other booking method",
   },
 ];
 
@@ -131,7 +95,6 @@ export const DAYCARE_SUB_STEPS = [
   { id: 1, title: "Room Assignment", description: "Assign to room" },
   { id: 2, title: "Extra Services", description: "Add-on services" },
   { id: 3, title: "Feeding & Medication", description: "Care instructions" },
-  { id: 4, title: "Booking Method", description: "How they booked" },
 ];
 
 export const BOARDING_SUB_STEPS = [
@@ -139,5 +102,4 @@ export const BOARDING_SUB_STEPS = [
   { id: 1, title: "Room Type", description: "Choose room" },
   { id: 2, title: "Extra Services", description: "Add-on services" },
   { id: 3, title: "Feeding & Medication", description: "Care instructions" },
-  { id: 4, title: "Booking Method", description: "How they booked" },
 ];

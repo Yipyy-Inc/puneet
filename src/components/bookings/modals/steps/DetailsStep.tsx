@@ -44,45 +44,10 @@ const TRAINING_TYPES = [
   { id: "agility", name: "Agility Training", price: 300, sessions: 6 },
 ];
 
-const BOOKING_METHODS = [
-  {
-    id: "phone",
-    name: "Phone Call",
-    icon: "Phone" as const,
-    description: "Customer called in",
-  },
-  {
-    id: "email",
-    name: "Email",
-    icon: "Mail" as const,
-    description: "Customer emailed request",
-  },
-  {
-    id: "in_person",
-    name: "In Person",
-    icon: "Users" as const,
-    description: "Customer is at the facility",
-  },
-  {
-    id: "other",
-    name: "Other",
-    icon: "MessageSquare" as const,
-    description: "Other booking method",
-  },
-];
-
-import { Phone, Mail, Users, MessageSquare } from "lucide-react";
-
-const ICON_MAP = {
-  Phone,
-  Mail,
-  Users,
-  MessageSquare,
-};
-
 interface DetailsStepProps {
   selectedService: string;
   currentSubStep: number;
+  isSubStepComplete?: (stepIndex: number) => boolean;
   startDate: string;
   setStartDate: (value: string) => void;
   checkInTime: string;
@@ -138,10 +103,6 @@ interface DetailsStepProps {
   setMedications: (value: MedicationItem[]) => void;
   feedingMedicationTab: "feeding" | "medication";
   setFeedingMedicationTab: (value: "feeding" | "medication") => void;
-  bookingMethod: string;
-  setBookingMethod: (value: string) => void;
-  bookingMethodDetails: string;
-  setBookingMethodDetails: (value: string) => void;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   setExtraServices: (
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
@@ -152,6 +113,7 @@ interface DetailsStepProps {
 export function DetailsStep({
   selectedService,
   currentSubStep,
+  isSubStepComplete,
   startDate,
   setStartDate,
   checkInTime,
@@ -188,10 +150,6 @@ export function DetailsStep({
   setFeedingSchedule,
   medications,
   setMedications,
-  bookingMethod,
-  setBookingMethod,
-  bookingMethodDetails,
-  setBookingMethodDetails,
   extraServices,
   setExtraServices,
   selectedPets,
@@ -246,6 +204,7 @@ export function DetailsStep({
       {selectedService === "daycare" && (
         <DaycareDetails
           currentSubStep={currentSubStep}
+          isSubStepComplete={isSubStepComplete}
           daycareSelectedDates={daycareSelectedDates}
           setDaycareSelectedDates={setDaycareSelectedDates}
           daycareDateTimes={daycareDateTimes}
@@ -255,10 +214,6 @@ export function DetailsStep({
           setFeedingSchedule={setFeedingSchedule}
           medications={medications}
           setMedications={setMedications}
-          bookingMethod={bookingMethod}
-          setBookingMethod={setBookingMethod}
-          bookingMethodDetails={bookingMethodDetails}
-          setBookingMethodDetails={setBookingMethodDetails}
           roomAssignments={roomAssignments}
           setRoomAssignments={setRoomAssignments}
           extraServices={extraServices}
@@ -270,6 +225,7 @@ export function DetailsStep({
       {selectedService === "boarding" && (
         <BoardingDetails
           currentSubStep={currentSubStep}
+          isSubStepComplete={isSubStepComplete}
           boardingRangeStart={boardingRangeStart}
           setBoardingRangeStart={setBoardingRangeStart}
           boardingRangeEnd={boardingRangeEnd}
@@ -288,10 +244,6 @@ export function DetailsStep({
           setFeedingSchedule={setFeedingSchedule}
           medications={medications}
           setMedications={setMedications}
-          bookingMethod={bookingMethod}
-          setBookingMethod={setBookingMethod}
-          bookingMethodDetails={bookingMethodDetails}
-          setBookingMethodDetails={setBookingMethodDetails}
           extraServices={extraServices}
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}
@@ -420,64 +372,6 @@ export function DetailsStep({
           </div>
         </div>
       )}
-
-      {/* Booking Method for grooming, training services */}
-      {selectedService !== "daycare" &&
-        selectedService !== "boarding" &&
-        selectedService !== "" && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <Label className="text-base">
-                How did the customer book?{" "}
-                <span className="text-destructive">*</span>
-              </Label>
-              <RadioGroup
-                value={bookingMethod}
-                onValueChange={setBookingMethod}
-                className="grid grid-cols-2 gap-3"
-              >
-                {BOOKING_METHODS.map((method) => {
-                  const Icon = ICON_MAP[method.icon];
-                  return (
-                    <Label
-                      key={method.id}
-                      htmlFor={method.id}
-                      className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                        bookingMethod === method.id
-                          ? "border-primary bg-primary/5"
-                          : "hover:border-primary/50"
-                      }`}
-                    >
-                      <RadioGroupItem value={method.id} id={method.id} />
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{method.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {method.description}
-                        </p>
-                      </div>
-                    </Label>
-                  );
-                })}
-              </RadioGroup>
-
-              {bookingMethod === "other" && (
-                <div className="grid gap-2">
-                  <Label htmlFor="methodDetails">
-                    Please specify <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="methodDetails"
-                    value={bookingMethodDetails}
-                    onChange={(e) => setBookingMethodDetails(e.target.value)}
-                    placeholder="Describe how they contacted you..."
-                  />
-                </div>
-              )}
-            </div>
-          </>
-        )}
     </div>
   );
 }

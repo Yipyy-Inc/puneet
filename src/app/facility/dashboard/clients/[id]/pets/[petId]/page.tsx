@@ -48,6 +48,8 @@ import {
   AlertTriangle,
   Users,
 } from "lucide-react";
+import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import type { BookingData } from "@/components/bookings/modals/BookingModal";
 
 interface Pet {
   id: number;
@@ -71,6 +73,7 @@ export default function PetDetailPage({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   const client = clients.find((c) => c.id === parseInt(id));
   const pet = client?.pets.find((p) => p.id === parseInt(petId));
@@ -186,6 +189,13 @@ export default function PetDetailPage({
     setIsEditing(false);
   };
 
+  const handleCreateBooking = (bookingData: BookingData) => {
+    // In a real app, this would save to the backend
+    console.log("Creating booking:", bookingData);
+    // For now, just close the modal
+    setBookingModalOpen(false);
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       {/* Header */}
@@ -243,6 +253,14 @@ export default function PetDetailPage({
               >
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBookingModalOpen(true)}
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Book
               </Button>
               <Button variant="outline" size="sm">
                 <FileText className="h-4 w-4 mr-1" />
@@ -1022,6 +1040,17 @@ export default function PetDetailPage({
           )}
         </TabsContent>
       </Tabs>
+
+      <BookingModal
+        open={bookingModalOpen}
+        onOpenChange={setBookingModalOpen}
+        clients={clients}
+        facilityId={1} // Assuming facility ID is 1
+        facilityName="Sample Facility"
+        onCreateBooking={handleCreateBooking}
+        preSelectedClientId={parseInt(id)}
+        preSelectedPetId={parseInt(petId)}
+      />
     </div>
   );
 }

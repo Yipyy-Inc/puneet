@@ -2,19 +2,11 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import {
-  SERVICE_CATEGORIES,
-  BOOKING_METHODS,
   GROOMING_STYLES,
   GROOMING_ADDONS,
   TRAINING_TYPES,
@@ -25,7 +17,7 @@ import {
   BOARDING_SUB_STEPS,
 } from "./constants";
 
-import { Client, Pet } from "@/lib/types";
+import { Client } from "@/lib/types";
 
 // Types
 export interface FeedingScheduleItem {
@@ -83,8 +75,7 @@ export interface BookingData {
   totalCost: number;
   paymentStatus: "pending" | "paid";
   specialRequests?: string;
-  bookingMethod: string;
-  bookingMethodDetails?: string;
+
   // Service-specific fields
   daycareSelectedDates?: string[]; // ISO date strings for multi-date daycare
   daycareDateTimes?: Array<{
@@ -119,7 +110,21 @@ export function BookingModal({
   preSelectedService,
 }: NewBookingModalProps) {
   // Step management
-  const [currentStep, setCurrentStep] = useState(preSelectedService ? 1 : 0);
+  const displayedSteps = STEPS.filter(
+    (step) =>
+      !(step.id === "client-pet" && preSelectedClientId && preSelectedPetId),
+  );
+  const [currentStep, setCurrentStep] = useState(
+    preSelectedService
+      ? displayedSteps.findIndex(
+          (s) =>
+            s.id ===
+            (preSelectedClientId && preSelectedPetId
+              ? "details"
+              : "client-pet"),
+        )
+      : 0,
+  );
   const [currentSubStep, setCurrentSubStep] = useState(0);
 
   // Client selection state
@@ -130,10 +135,6 @@ export function BookingModal({
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>(
     preSelectedPetId ? [preSelectedPetId] : [],
   );
-
-  // Booking method state
-  const [bookingMethod, setBookingMethod] = useState<string>("");
-  const [bookingMethodDetails, setBookingMethodDetails] = useState("");
 
   // Service selection state
   const [selectedService, setSelectedService] = useState<string>(
@@ -211,13 +212,6 @@ export function BookingModal({
             return true;
           case 3:
             return true;
-          case 4:
-            return true;
-          case 5:
-            if (!bookingMethod) return false;
-            if (bookingMethod === "other" && !bookingMethodDetails.trim())
-              return false;
-            return true;
           default:
             return false;
         }
@@ -232,13 +226,6 @@ export function BookingModal({
             return true;
           case 3:
             return true;
-          case 4:
-            return true;
-          case 5:
-            if (!bookingMethod) return false;
-            if (bookingMethod === "other" && !bookingMethodDetails.trim())
-              return false;
-            return true;
           default:
             return false;
         }
@@ -250,8 +237,6 @@ export function BookingModal({
       daycareSelectedDates,
       roomAssignments,
       selectedPetIds,
-      bookingMethod,
-      bookingMethodDetails,
       boardingRangeStart,
       boardingRangeEnd,
     ],
@@ -326,13 +311,13 @@ export function BookingModal({
 
   // Validation for each step
   const canProceed = useMemo(() => {
-    switch (currentStep) {
-      case 0: // Service
+    const currentStepId = displayedSteps[currentStep]?.id;
+    switch (currentStepId) {
+      case "service":
         return selectedService !== "";
-      case 1: // Client & Pet
+      case "client-pet":
         return selectedClientId !== null && selectedPetIds.length > 0;
-      case 2: // Details
-        // For daycare/boarding, check current sub-step completion
+      case "details":
         if (selectedService === "daycare" || selectedService === "boarding") {
           return isSubStepComplete(currentSubStep);
         }
@@ -340,22 +325,18 @@ export function BookingModal({
         if (!startDate) return false;
         if (selectedService === "grooming" && !groomingStyle) return false;
         if (selectedService === "training" && !trainingType) return false;
-        if (!bookingMethod) return false;
-        if (bookingMethod === "other" && !bookingMethodDetails.trim())
-          return false;
         return true;
-      case 3: // Confirm
+      case "confirm":
         return true;
       default:
         return false;
     }
   }, [
     currentStep,
+    displayedSteps,
     currentSubStep,
     selectedClientId,
     selectedPetIds,
-    bookingMethod,
-    bookingMethodDetails,
     selectedService,
     startDate,
     groomingStyle,
@@ -364,9 +345,10 @@ export function BookingModal({
   ]);
 
   const handleNext = () => {
+    const currentStepId = displayedSteps[currentStep]?.id;
     // Handle sub-steps for daycare/boarding on details step
     if (
-      currentStep === 2 &&
+      currentStepId === "details" &&
       (selectedService === "daycare" || selectedService === "boarding")
     ) {
       if (currentSubStep < currentSubSteps.length - 1) {
@@ -374,16 +356,18 @@ export function BookingModal({
         return;
       }
     }
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < displayedSteps.length - 1) {
       setCurrentStep(currentStep + 1);
       setCurrentSubStep(0);
     }
   };
 
   const handlePrevious = () => {
+    const currentStepId = displayedSteps[currentStep]?.id;
+    const prevStepId = displayedSteps[currentStep - 1]?.id;
     // Handle sub-steps for daycare/boarding on details step
     if (
-      currentStep === 2 &&
+      currentStepId === "details" &&
       (selectedService === "daycare" || selectedService === "boarding")
     ) {
       if (currentSubStep > 0) {
@@ -395,7 +379,7 @@ export function BookingModal({
       setCurrentStep(currentStep - 1);
       // Reset to last sub-step if going back to details with daycare/boarding
       if (
-        currentStep - 1 === 2 &&
+        prevStepId === "details" &&
         (selectedService === "daycare" || selectedService === "boarding")
       ) {
         setCurrentSubStep(currentSubSteps.length - 1);
@@ -441,8 +425,6 @@ export function BookingModal({
       discount: 0,
       totalCost: calculatePrice.total,
       paymentStatus: "pending",
-      bookingMethod,
-      bookingMethodDetails: bookingMethodDetails || undefined,
       daycareSelectedDates:
         daycareSelectedDates.length > 0
           ? daycareSelectedDates.map((d) => d.toISOString().split("T")[0])
@@ -479,8 +461,7 @@ export function BookingModal({
     setBoardingRangeStart(null);
     setBoardingRangeEnd(null);
     setBoardingDateTimes([]);
-    setBookingMethod("");
-    setBookingMethodDetails("");
+
     setSelectedService("");
     setServiceType("");
     setStartDate("");
@@ -504,51 +485,76 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            New Booking
-          </DialogTitle>
-          <DialogDescription>
-            Create a new booking for your facility
-          </DialogDescription>
-        </DialogHeader>
-
+      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+        <DialogTitle className="sr-only">New Booking</DialogTitle>
         <div className="flex-1 flex min-h-0">
           {/* Side Navigation Tabs */}
           <div className="w-80 border-r bg-muted/30 flex flex-col">
+            {/* Title in Sidebar */}
+            <div className="p-4 border-b bg-background">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Plus className="h-5 w-5" />
+                {(() => {
+                  const preSelectedClient = clients.find(
+                    (c) => c.id === preSelectedClientId,
+                  );
+                  const preSelectedPet = preSelectedClient?.pets.find(
+                    (p) => p.id === preSelectedPetId,
+                  );
+                  if (preSelectedPet) {
+                    return `Book ${preSelectedPet.name}`;
+                  } else if (preSelectedClient) {
+                    return `Book for ${preSelectedClient.name}`;
+                  } else {
+                    return "New Booking";
+                  }
+                })()}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {(() => {
+                  const preSelectedClient = clients.find(
+                    (c) => c.id === preSelectedClientId,
+                  );
+                  const preSelectedPet = preSelectedClient?.pets.find(
+                    (p) => p.id === preSelectedPetId,
+                  );
+                  if (preSelectedPet) {
+                    return `Create a new booking for ${preSelectedPet.name}`;
+                  } else if (preSelectedClient) {
+                    return `Create a new booking for ${preSelectedClient.name}`;
+                  } else {
+                    return "Create a new booking for your facility";
+                  }
+                })()}
+              </p>
+            </div>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-2">
-                {STEPS.map((step, idx) => {
+                {displayedSteps.map((step, idx) => {
                   const isActive = currentStep === idx;
-                  const isCompleted = currentStep > idx;
-                  const displayClient = selectedClient;
-                  const serviceInfo = SERVICE_CATEGORIES.find(
-                    (s) => s.id === selectedService,
-                  );
+                  let isCompleted = currentStep > idx;
+                  if (
+                    step.id === "details" &&
+                    currentStep === idx &&
+                    canProceed
+                  ) {
+                    isCompleted = true;
+                  }
                   const showSubSteps =
-                    idx === 2 &&
+                    step.id === "details" &&
                     isActive &&
                     (selectedService === "daycare" ||
                       selectedService === "boarding");
 
                   return (
                     <div key={step.id}>
-                      <button
-                        onClick={() => {
-                          if (isCompleted || idx < currentStep) {
-                            setCurrentStep(idx);
-                            setCurrentSubStep(0);
-                          }
-                        }}
-                        disabled={!isCompleted && idx > currentStep}
+                      <div
                         className={`w-full text-left p-3 rounded-lg border transition-all ${
                           isActive
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
                             : isCompleted
-                              ? "bg-background hover:bg-muted border-border cursor-pointer"
-                              : "bg-muted/50 border-dashed border-muted-foreground/30 cursor-not-allowed opacity-60"
+                              ? "bg-background border-border"
+                              : "bg-muted/50 border-dashed border-muted-foreground/30 opacity-60"
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -588,94 +594,9 @@ export function BookingModal({
                             >
                               {step.description}
                             </p>
-
-                            {/* Display entered data */}
-                            {isCompleted && (
-                              <div className="mt-2 pt-2 border-t border-current/20">
-                                {idx === 0 && selectedService && (
-                                  <div className="text-xs space-y-1">
-                                    <p className="font-medium truncate">
-                                      {serviceInfo?.name}
-                                    </p>
-                                    {serviceType && (
-                                      <p className="text-current/70 capitalize truncate">
-                                        {serviceType.replace(/_/g, " ")}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                                {idx === 1 && displayClient && (
-                                  <div className="text-xs space-y-2">
-                                    <div>
-                                      <p className="font-medium truncate">
-                                        {displayClient.name}
-                                      </p>
-                                      <p className="text-current/70 truncate">
-                                        {displayClient.email}
-                                      </p>
-                                    </div>
-                                    {selectedPets.length > 0 && (
-                                      <div>
-                                        <p className="font-medium truncate">
-                                          {selectedPets.length} pet
-                                          {selectedPets.length > 1 ? "s" : ""}
-                                        </p>
-                                        <p className="text-current/70 truncate">
-                                          {selectedPets
-                                            .map((p: Pet) => p.name)
-                                            .join(", ")}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                {idx === 2 && bookingMethod && (
-                                  <div className="text-xs space-y-1">
-                                    <p className="font-medium truncate">
-                                      {
-                                        BOOKING_METHODS.find(
-                                          (m) => m.id === bookingMethod,
-                                        )?.name
-                                      }
-                                    </p>
-                                    {selectedService === "daycare" &&
-                                      daycareSelectedDates.length > 0 && (
-                                        <p className="text-current/70 truncate">
-                                          {daycareSelectedDates.length} day
-                                          {daycareSelectedDates.length !== 1
-                                            ? "s"
-                                            : ""}
-                                        </p>
-                                      )}
-                                    {selectedService === "boarding" &&
-                                      boardingRangeStart &&
-                                      boardingRangeEnd && (
-                                        <p className="text-current/70 truncate">
-                                          {boardingRangeStart.toLocaleDateString(
-                                            "en-US",
-                                            { month: "short", day: "numeric" },
-                                          )}{" "}
-                                          -{" "}
-                                          {boardingRangeEnd.toLocaleDateString(
-                                            "en-US",
-                                            { month: "short", day: "numeric" },
-                                          )}
-                                        </p>
-                                      )}
-                                    {startDate &&
-                                      selectedService !== "daycare" &&
-                                      selectedService !== "boarding" && (
-                                        <p className="text-current/70 truncate">
-                                          {startDate}
-                                        </p>
-                                      )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
                         </div>
-                      </button>
+                      </div>
 
                       {/* Sub-steps for Details step when daycare/boarding */}
                       {showSubSteps && (
@@ -683,18 +604,29 @@ export function BookingModal({
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
                             const isSubCompleted = isSubStepComplete(subIdx);
+                            const allPreviousCompleted = Array.from(
+                              { length: subIdx },
+                              (_, i) => i,
+                            ).every((i) => isSubStepComplete(i));
+                            const isAccessible =
+                              subIdx === 0 || allPreviousCompleted;
 
                             return (
                               <button
                                 key={subStep.id}
                                 type="button"
-                                onClick={() => setCurrentSubStep(subIdx)}
+                                onClick={() =>
+                                  isAccessible && setCurrentSubStep(subIdx)
+                                }
+                                disabled={!isAccessible}
                                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
                                   isSubActive
                                     ? "bg-primary/20 text-primary font-medium"
                                     : isSubCompleted
                                       ? "text-foreground hover:bg-muted"
-                                      : "text-muted-foreground hover:bg-muted"
+                                      : isAccessible
+                                        ? "text-muted-foreground hover:bg-muted"
+                                        : "text-muted-foreground/50 cursor-not-allowed opacity-60"
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
@@ -727,7 +659,7 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Price Summary at Bottom */}
-            <div className="p-4 border-t bg-background">
+            <div className="p-6 border-t bg-background">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>Total Price</span>
@@ -740,8 +672,20 @@ export function BookingModal({
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col min-w-0 overflow-scroll">
             <ScrollArea className="flex-1">
+              <div className="p-4 border-b bg-background">
+                <h2 className="text-lg font-semibold">
+                  {displayedSteps[currentStep]?.title}
+                </h2>
+                {displayedSteps[currentStep]?.id === "details" &&
+                  (selectedService === "daycare" ||
+                    selectedService === "boarding") && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {currentSubSteps[currentSubStep]?.title}
+                    </p>
+                  )}
+              </div>
               <div className="p-6">
-                {currentStep === 0 && (
+                {displayedSteps[currentStep]?.id === "service" && (
                   <ServiceStep
                     selectedService={selectedService}
                     setSelectedService={setSelectedService}
@@ -749,7 +693,7 @@ export function BookingModal({
                     setCurrentSubStep={setCurrentSubStep}
                   />
                 )}
-                {currentStep === 1 && (
+                {displayedSteps[currentStep]?.id === "client-pet" && (
                   <ClientPetStep
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
@@ -759,12 +703,14 @@ export function BookingModal({
                     selectedPetIds={selectedPetIds}
                     setSelectedPetIds={setSelectedPetIds}
                     selectedClient={selectedClient}
+                    preSelectedClientId={preSelectedClientId}
                   />
                 )}
-                {currentStep === 2 && (
+                {displayedSteps[currentStep]?.id === "details" && (
                   <DetailsStep
                     selectedService={selectedService}
                     currentSubStep={currentSubStep}
+                    isSubStepComplete={isSubStepComplete}
                     startDate={startDate}
                     setStartDate={setStartDate}
                     checkInTime={checkInTime}
@@ -803,16 +749,12 @@ export function BookingModal({
                     setMedications={setMedications}
                     feedingMedicationTab={feedingMedicationTab}
                     setFeedingMedicationTab={setFeedingMedicationTab}
-                    bookingMethod={bookingMethod}
-                    setBookingMethod={setBookingMethod}
-                    bookingMethodDetails={bookingMethodDetails}
-                    setBookingMethodDetails={setBookingMethodDetails}
                     extraServices={extraServices}
                     setExtraServices={setExtraServices}
                     selectedPets={selectedPets}
                   />
                 )}
-                {currentStep === 3 && (
+                {displayedSteps[currentStep]?.id === "confirm" && (
                   <ConfirmStep
                     selectedClient={selectedClient}
                     selectedPets={selectedPets}
@@ -829,8 +771,6 @@ export function BookingModal({
                     groomingStyle={groomingStyle}
                     groomingAddOns={groomingAddOns}
                     trainingType={trainingType}
-                    bookingMethod={bookingMethod}
-                    bookingMethodDetails={bookingMethodDetails}
                     roomAssignments={roomAssignments}
                     feedingSchedule={feedingSchedule}
                     medications={medications}
@@ -859,7 +799,7 @@ export function BookingModal({
                 >
                   Cancel
                 </Button>
-                {currentStep < STEPS.length - 1 ? (
+                {currentStep < displayedSteps.length - 1 ? (
                   <Button
                     type="button"
                     onClick={handleNext}

@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -516,9 +517,10 @@ export function DateSelectionCalendar({
         </div>
 
         {/* Time Selection Column */}
-        {showTimeSelection &&
+        <div className="border rounded-lg p-4 min-h-[200px]">
+          {showTimeSelection &&
           ((mode === "multi" && selectedDates.length > 0) ||
-            (mode === "range" && rangeStart && rangeEnd)) && (
+            (mode === "range" && rangeStart && rangeEnd)) ? (
             <div className="space-y-2">
               <Label className="text-xs font-medium">Check-in/out Times</Label>
 
@@ -615,7 +617,13 @@ export function DateSelectionCalendar({
                 </div>
               )}
             </div>
+          ) : (
+            <div className="text-center text-muted-foreground">
+              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Select dates to set check-in/out times</p>
+            </div>
           )}
+        </div>
       </div>
     </div>
   );

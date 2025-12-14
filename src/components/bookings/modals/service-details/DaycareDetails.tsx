@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Check, PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Pet } from "@/lib/types";
@@ -58,6 +57,7 @@ interface ExtraService {
 
 interface DaycareDetailsProps {
   currentSubStep: number;
+  isSubStepComplete?: (stepIndex: number) => boolean;
   daycareSelectedDates: Date[];
   setDaycareSelectedDates: (dates: Date[]) => void;
   daycareDateTimes: Array<{
@@ -188,31 +188,9 @@ const DAYCARE_ROOMS = [
   },
 ];
 
-const BOOKING_METHODS = [
-  {
-    id: "phone",
-    name: "Phone Call",
-    description: "Customer called in",
-  },
-  {
-    id: "email",
-    name: "Email",
-    description: "Customer emailed",
-  },
-  {
-    id: "walk_in",
-    name: "Walk-in",
-    description: "Customer walked in",
-  },
-  {
-    id: "other",
-    name: "Other",
-    description: "Other method",
-  },
-];
-
 export function DaycareDetails({
   currentSubStep,
+  isSubStepComplete,
   daycareSelectedDates,
   setDaycareSelectedDates,
   daycareDateTimes,
@@ -222,10 +200,6 @@ export function DaycareDetails({
   setFeedingSchedule,
   medications,
   setMedications,
-  bookingMethod,
-  setBookingMethod,
-  bookingMethodDetails,
-  setBookingMethodDetails,
   roomAssignments,
   setRoomAssignments,
   extraServices,
@@ -233,6 +207,18 @@ export function DaycareDetails({
   selectedPets,
 }: DaycareDetailsProps) {
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
+
+  const allPreviousCompleted = (stepIndex: number) => {
+    if (!isSubStepComplete) return true;
+    return Array.from({ length: stepIndex }, (_, i) => i).every((i) =>
+      isSubStepComplete(i),
+    );
+  };
+
+  const isStepAccessible = (stepIndex: number) => {
+    return stepIndex === 0 || allPreviousCompleted(stepIndex);
+  };
+
   return (
     <div className="space-y-6">
       {/* Step Content */}
@@ -285,174 +271,197 @@ export function DaycareDetails({
               </p>
             </div>
 
-            {/* Unassigned Pets */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Unassigned Pets</Label>
-              <div className="flex flex-wrap gap-2 p-3 border-2 border-dashed rounded-lg min-h-20 bg-muted/30">
-                {selectedPets
-                  .filter(
-                    (pet) => !roomAssignments.find((a) => a.petId === pet.id),
-                  )
-                  .map((pet) => (
-                    <div
-                      key={pet.id}
-                      draggable
-                      onDragStart={() => setDraggedPet(pet)}
-                      onDragEnd={() => setDraggedPet(null)}
-                      className="flex items-center gap-2 px-3 py-2 bg-background border-2 border-border rounded-lg cursor-move hover:border-primary/50 transition-colors"
-                    >
-                      <PawPrint className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{pet.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({pet.type})
-                      </span>
-                    </div>
-                  ))}
-                {selectedPets.filter(
-                  (pet) => !roomAssignments.find((a) => a.petId === pet.id),
-                ).length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    All pets assigned
-                  </p>
-                )}
+            {!isStepAccessible(1) && (
+              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+                <p className="text-muted-foreground">
+                  Please complete the Schedule step first
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* Rooms */}
-            <div className="grid grid-cols-2 gap-4">
-              {DAYCARE_ROOMS.map((room) => {
-                const availableSpots = room.capacity - room.currentBookings;
-                const assignedPets = selectedPets.filter((pet) =>
-                  roomAssignments.find(
-                    (a) => a.petId === pet.id && a.roomId === room.id,
-                  ),
-                );
+            {isStepAccessible(1) && (
+              <>
+                {/* Unassigned Pets */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Unassigned Pets</Label>
+                  <div className="flex flex-wrap gap-2 p-3 border-2 border-dashed rounded-lg min-h-20 bg-muted/30">
+                    {selectedPets
+                      .filter(
+                        (pet) =>
+                          !roomAssignments.find((a) => a.petId === pet.id),
+                      )
+                      .map((pet) => (
+                        <div
+                          key={pet.id}
+                          draggable
+                          onDragStart={() => setDraggedPet(pet)}
+                          onDragEnd={() => setDraggedPet(null)}
+                          className="flex items-center gap-2 px-3 py-2 bg-background border-2 border-border rounded-lg cursor-move hover:border-primary/50 transition-colors"
+                        >
+                          <PawPrint className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">
+                            {pet.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({pet.type})
+                          </span>
+                        </div>
+                      ))}
+                    {selectedPets.filter(
+                      (pet) => !roomAssignments.find((a) => a.petId === pet.id),
+                    ).length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        All pets assigned
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-                return (
-                  <div
-                    key={room.id}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.add("ring-2", "ring-primary");
-                    }}
-                    onDragLeave={(e) => {
-                      e.currentTarget.classList.remove(
-                        "ring-2",
-                        "ring-primary",
-                      );
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove(
-                        "ring-2",
-                        "ring-primary",
-                      );
-                      if (draggedPet && availableSpots > assignedPets.length) {
-                        setRoomAssignments([
-                          ...roomAssignments.filter(
-                            (a) => a.petId !== draggedPet.id,
-                          ),
-                          { petId: draggedPet.id, roomId: room.id },
-                        ]);
-                      }
-                    }}
-                    className={`flex flex-col border-2 rounded-lg transition-all overflow-hidden ${
-                      availableSpots === 0
-                        ? "opacity-60 cursor-not-allowed"
-                        : "cursor-pointer"
-                    } ${assignedPets.length > 0 ? "border-primary bg-primary/5" : "border-border"}`}
-                  >
-                    <div className="relative w-full h-48 overflow-hidden bg-muted">
-                      {room.imageUrl ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={room.imageUrl}
-                            alt={room.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {assignedPets.length > 0 && (
-                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-semibold">
-                              {assignedPets.length}
+                {/* Rooms */}
+                <div className="grid grid-cols-2 gap-4">
+                  {DAYCARE_ROOMS.map((room) => {
+                    const availableSpots = room.capacity - room.currentBookings;
+                    const assignedPets = selectedPets.filter((pet) =>
+                      roomAssignments.find(
+                        (a) => a.petId === pet.id && a.roomId === room.id,
+                      ),
+                    );
+
+                    return (
+                      <div
+                        key={room.id}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.add(
+                            "ring-2",
+                            "ring-primary",
+                          );
+                        }}
+                        onDragLeave={(e) => {
+                          e.currentTarget.classList.remove(
+                            "ring-2",
+                            "ring-primary",
+                          );
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.classList.remove(
+                            "ring-2",
+                            "ring-primary",
+                          );
+                          if (
+                            draggedPet &&
+                            availableSpots > assignedPets.length
+                          ) {
+                            setRoomAssignments([
+                              ...roomAssignments.filter(
+                                (a) => a.petId !== draggedPet.id,
+                              ),
+                              { petId: draggedPet.id, roomId: room.id },
+                            ]);
+                          }
+                        }}
+                        className={`flex flex-col border-2 rounded-lg transition-all overflow-hidden ${
+                          availableSpots === 0
+                            ? "opacity-60 cursor-not-allowed"
+                            : "cursor-pointer"
+                        } ${assignedPets.length > 0 ? "border-primary bg-primary/5" : "border-border"}`}
+                      >
+                        <div className="relative w-full h-48 overflow-hidden bg-muted">
+                          {room.imageUrl ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={room.imageUrl}
+                                alt={room.name}
+                                className="w-full h-full object-cover"
+                              />
+                              {assignedPets.length > 0 && (
+                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-semibold">
+                                  {assignedPets.length}
+                                </div>
+                              )}
+                              {availableSpots === 0 && (
+                                <div className="absolute top-2 right-2">
+                                  <span className="text-xs font-semibold text-destructive bg-destructive/10 px-2 py-1 rounded backdrop-blur-sm">
+                                    Full
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-muted-foreground text-sm">
+                                No image available
+                              </div>
                             </div>
                           )}
-                          {availableSpots === 0 && (
-                            <div className="absolute top-2 right-2">
-                              <span className="text-xs font-semibold text-destructive bg-destructive/10 px-2 py-1 rounded backdrop-blur-sm">
-                                Full
+                        </div>
+                        <div className="p-4 flex-1">
+                          <div className="mb-2">
+                            <p className="font-semibold text-base">
+                              {room.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {room.description}
+                            </p>
+                          </div>
+
+                          {/* Assigned Pets in this room */}
+                          {assignedPets.length > 0 && (
+                            <div className="mb-2 flex flex-wrap gap-1">
+                              {assignedPets.map((pet) => (
+                                <div
+                                  key={pet.id}
+                                  className="flex items-center gap-1 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-xs"
+                                >
+                                  <span>{pet.name}</span>
+                                  <button
+                                    onClick={() => {
+                                      setRoomAssignments(
+                                        roomAssignments.filter(
+                                          (a) => a.petId !== pet.id,
+                                        ),
+                                      );
+                                    }}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-4 text-xs mt-2">
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">
+                                Available:
+                              </span>
+                              <span
+                                className={cn(
+                                  "font-semibold",
+                                  availableSpots - assignedPets.length === 0 &&
+                                    "text-destructive",
+                                  availableSpots - assignedPets.length > 0 &&
+                                    availableSpots - assignedPets.length <= 2 &&
+                                    "text-orange-600",
+                                  availableSpots - assignedPets.length > 2 &&
+                                    "text-green-600",
+                                )}
+                              >
+                                {availableSpots - assignedPets.length}/
+                                {room.capacity}
                               </span>
                             </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-muted-foreground text-sm">
-                            No image available
                           </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-4 flex-1">
-                      <div className="mb-2">
-                        <p className="font-semibold text-base">{room.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {room.description}
-                        </p>
                       </div>
-
-                      {/* Assigned Pets in this room */}
-                      {assignedPets.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {assignedPets.map((pet) => (
-                            <div
-                              key={pet.id}
-                              className="flex items-center gap-1 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-xs"
-                            >
-                              <span>{pet.name}</span>
-                              <button
-                                onClick={() => {
-                                  setRoomAssignments(
-                                    roomAssignments.filter(
-                                      (a) => a.petId !== pet.id,
-                                    ),
-                                  );
-                                }}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-4 text-xs mt-2">
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">
-                            Available:
-                          </span>
-                          <span
-                            className={cn(
-                              "font-semibold",
-                              availableSpots - assignedPets.length === 0 &&
-                                "text-destructive",
-                              availableSpots - assignedPets.length > 0 &&
-                                availableSpots - assignedPets.length <= 2 &&
-                                "text-orange-600",
-                              availableSpots - assignedPets.length > 2 &&
-                                "text-green-600",
-                            )}
-                          >
-                            {availableSpots - assignedPets.length}/
-                            {room.capacity}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -466,175 +475,189 @@ export function DaycareDetails({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {EXTRA_SERVICES.map((service) => {
-                const totalQuantity = extraServices
-                  .filter((es) => es.serviceId === service.id)
-                  .reduce((sum, es) => sum + es.quantity, 0);
+            {!isStepAccessible(2) && (
+              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+                <p className="text-muted-foreground">
+                  Please complete the previous steps first
+                </p>
+              </div>
+            )}
 
-                return (
-                  <Card
-                    key={service.id}
-                    className={cn(
-                      "overflow-hidden transition-all",
-                      totalQuantity > 0 && "ring-2 ring-primary",
-                    )}
-                  >
-                    <img
-                      src={service.image}
-                      alt={service.name}
-                      className="w-full h-32 object-cover"
-                    />
-                    <CardContent className="p-4 space-y-3">
-                      <div>
-                        <h4 className="font-semibold text-sm">
-                          {service.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {service.description}
-                        </p>
-                      </div>
+            {isStepAccessible(2) && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {EXTRA_SERVICES.map((service) => {
+                    const totalQuantity = extraServices
+                      .filter((es) => es.serviceId === service.id)
+                      .reduce((sum, es) => sum + es.quantity, 0);
 
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium">
-                          {service.hasUnits ? (
-                            <>
-                              ${service.pricePerUnit} / {service.unit}
-                            </>
-                          ) : (
-                            <>${service.basePrice}</>
-                          )}
-                        </div>
-                      </div>
+                    return (
+                      <Card
+                        key={service.id}
+                        className={cn(
+                          "overflow-hidden transition-all",
+                          totalQuantity > 0 && "ring-2 ring-primary",
+                        )}
+                      >
+                        <img
+                          src={service.image}
+                          alt={service.name}
+                          className="w-full h-32 object-cover"
+                        />
+                        <CardContent className="p-4 space-y-3">
+                          <div>
+                            <h4 className="font-semibold text-sm">
+                              {service.name}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {service.description}
+                            </p>
+                          </div>
 
-                      <div className="space-y-2">
-                        {selectedPets.map((pet) => {
-                          const petService = extraServices.find(
-                            (es) =>
-                              es.serviceId === service.id &&
-                              es.petId === pet.id,
-                          );
-                          const quantity = petService?.quantity || 0;
-
-                          return (
-                            <div
-                              key={pet.id}
-                              className="flex items-center justify-between"
-                            >
-                              <span className="text-sm text-muted-foreground">
-                                {pet.name}
-                              </span>
-
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium">
                               {service.hasUnits ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (quantity > 0) {
-                                        const updated = extraServices
-                                          .map((es) =>
-                                            es.serviceId === service.id &&
-                                            es.petId === pet.id
-                                              ? {
-                                                  ...es,
-                                                  quantity: es.quantity - 1,
-                                                }
-                                              : es,
-                                          )
-                                          .filter((es) => es.quantity > 0);
-                                        setExtraServices(updated);
-                                      }
-                                    }}
-                                    disabled={quantity === 0}
-                                    className="h-7 w-7 p-0"
-                                  >
-                                    -
-                                  </Button>
-                                  <span className="text-sm font-medium min-w-[2ch] text-center">
-                                    {quantity}
-                                  </span>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (petService) {
-                                        const updated = extraServices.map(
-                                          (es) =>
-                                            es.serviceId === service.id &&
-                                            es.petId === pet.id
-                                              ? {
-                                                  ...es,
-                                                  quantity: es.quantity + 1,
-                                                }
-                                              : es,
-                                        );
-                                        setExtraServices(updated);
-                                      } else {
-                                        setExtraServices([
-                                          ...extraServices,
-                                          {
-                                            serviceId: service.id,
-                                            quantity: 1,
-                                            petId: pet.id,
-                                          },
-                                        ]);
-                                      }
-                                    }}
-                                    className="h-7 w-7 p-0"
-                                  >
-                                    +
-                                  </Button>
-                                </div>
+                                <>
+                                  ${service.pricePerUnit} / {service.unit}
+                                </>
                               ) : (
-                                <Button
-                                  type="button"
-                                  variant={quantity > 0 ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => {
-                                    if (quantity > 0) {
-                                      const updated = extraServices.filter(
-                                        (es) =>
-                                          !(
-                                            es.serviceId === service.id &&
-                                            es.petId === pet.id
-                                          ),
-                                      );
-                                      setExtraServices(updated);
-                                    } else {
-                                      setExtraServices([
-                                        ...extraServices,
-                                        {
-                                          serviceId: service.id,
-                                          quantity: 1,
-                                          petId: pet.id,
-                                        },
-                                      ]);
-                                    }
-                                  }}
-                                  className="h-7"
-                                >
-                                  {quantity > 0 ? (
-                                    <>
-                                      <Check className="h-3 w-3 mr-1" />
-                                      Added
-                                    </>
-                                  ) : (
-                                    "Add"
-                                  )}
-                                </Button>
+                                <>${service.basePrice}</>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {selectedPets.map((pet) => {
+                              const petService = extraServices.find(
+                                (es) =>
+                                  es.serviceId === service.id &&
+                                  es.petId === pet.id,
+                              );
+                              const quantity = petService?.quantity || 0;
+
+                              return (
+                                <div
+                                  key={pet.id}
+                                  className="flex items-center justify-between"
+                                >
+                                  <span className="text-sm text-muted-foreground">
+                                    {pet.name}
+                                  </span>
+
+                                  {service.hasUnits ? (
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (quantity > 0) {
+                                            const updated = extraServices
+                                              .map((es) =>
+                                                es.serviceId === service.id &&
+                                                es.petId === pet.id
+                                                  ? {
+                                                      ...es,
+                                                      quantity: es.quantity - 1,
+                                                    }
+                                                  : es,
+                                              )
+                                              .filter((es) => es.quantity > 0);
+                                            setExtraServices(updated);
+                                          }
+                                        }}
+                                        disabled={quantity === 0}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="text-sm font-medium min-w-[2ch] text-center">
+                                        {quantity}
+                                      </span>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (petService) {
+                                            const updated = extraServices.map(
+                                              (es) =>
+                                                es.serviceId === service.id &&
+                                                es.petId === pet.id
+                                                  ? {
+                                                      ...es,
+                                                      quantity: es.quantity + 1,
+                                                    }
+                                                  : es,
+                                            );
+                                            setExtraServices(updated);
+                                          } else {
+                                            setExtraServices([
+                                              ...extraServices,
+                                              {
+                                                serviceId: service.id,
+                                                quantity: 1,
+                                                petId: pet.id,
+                                              },
+                                            ]);
+                                          }
+                                        }}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        +
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant={
+                                        quantity > 0 ? "default" : "outline"
+                                      }
+                                      size="sm"
+                                      onClick={() => {
+                                        if (quantity > 0) {
+                                          const updated = extraServices.filter(
+                                            (es) =>
+                                              !(
+                                                es.serviceId === service.id &&
+                                                es.petId === pet.id
+                                              ),
+                                          );
+                                          setExtraServices(updated);
+                                        } else {
+                                          setExtraServices([
+                                            ...extraServices,
+                                            {
+                                              serviceId: service.id,
+                                              quantity: 1,
+                                              petId: pet.id,
+                                            },
+                                          ]);
+                                        }
+                                      }}
+                                      className="h-7"
+                                    >
+                                      {quantity > 0 ? (
+                                        <>
+                                          <Check className="h-3 w-3 mr-1" />
+                                          Added
+                                        </>
+                                      ) : (
+                                        "Add"
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -648,547 +671,529 @@ export function DaycareDetails({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              {/* Feeding Section */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">Feeding Instructions</h4>
-                <div className="space-y-3">
-                  {feedingSchedule.map((item, index) => (
-                    <Card key={item.id}>
-                      <CardContent className="pt-4 space-y-3">
-                        <div className="flex justify-between items-start">
-                          <Label className="text-sm font-medium">
-                            Schedule #{index + 1}
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setFeedingSchedule(
-                                feedingSchedule.filter((_, i) => i !== index),
-                              );
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Schedule Name</Label>
-                          <Input
-                            value={item.name}
-                            onChange={(e) => {
-                              const updated = [...feedingSchedule];
-                              updated[index].name = e.target.value;
-                              setFeedingSchedule(updated);
-                            }}
-                            placeholder="e.g., Morning Feeding"
-                          />
-                        </div>
-                        {selectedPets.length > 1 && (
-                          <div>
-                            <Label className="text-xs">Pet</Label>
-                            <Select
-                              value={item.petId?.toString() || ""}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].petId = parseInt(value);
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select pet" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {selectedPets.map((pet) => (
-                                  <SelectItem
-                                    key={pet.id}
-                                    value={pet.id.toString()}
-                                  >
-                                    {pet.name} ({pet.type})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Time</Label>
-                            <Select
-                              value={item.time}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].time = value;
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="AM">AM</SelectItem>
-                                <SelectItem value="PM">PM</SelectItem>
-                                <SelectItem value="Noon">Noon</SelectItem>
-                                <SelectItem value="Evening">Evening</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Amount</Label>
-                            <Input
-                              value={item.amount}
-                              onChange={(e) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].amount = e.target.value;
-                                setFeedingSchedule(updated);
-                              }}
-                              placeholder="e.g., 1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Unit</Label>
-                            <Select
-                              value={item.unit}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].unit = value;
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="cup">Cup</SelectItem>
-                                <SelectItem value="oz">Oz</SelectItem>
-                                <SelectItem value="g">Grams</SelectItem>
-                                <SelectItem value="scoop">Scoop</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Type</Label>
-                            <Select
-                              value={item.type}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].type = value;
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="dry">Dry Food</SelectItem>
-                                <SelectItem value="wet">Wet Food</SelectItem>
-                                <SelectItem value="raw">Raw Food</SelectItem>
-                                <SelectItem value="treats">Treats</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Source</Label>
-                            <Select
-                              value={item.source}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].source = value;
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="owner">
-                                  Owner Provides
-                                </SelectItem>
-                                <SelectItem value="facility">
-                                  Facility Provides
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Instructions</Label>
-                            <Select
-                              value={item.instructions}
-                              onValueChange={(value) => {
-                                const updated = [...feedingSchedule];
-                                updated[index].instructions = value;
-                                setFeedingSchedule(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="slow_feed">
-                                  Slow Feed
-                                </SelectItem>
-                                <SelectItem value="separate">
-                                  Feed Separately
-                                </SelectItem>
-                                <SelectItem value="mixed">
-                                  Mix with Water
-                                </SelectItem>
-                                <SelectItem value="normal">Normal</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Feeding Notes</Label>
-                          <Textarea
-                            value={item.notes}
-                            onChange={(e) => {
-                              const updated = [...feedingSchedule];
-                              updated[index].notes = e.target.value;
-                              setFeedingSchedule(updated);
-                            }}
-                            placeholder="Additional notes..."
-                            rows={2}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFeedingSchedule([
-                        ...feedingSchedule,
-                        {
-                          id: `feeding-${Date.now()}`,
-                          petId:
-                            selectedPets.length === 1
-                              ? selectedPets[0].id
-                              : undefined,
-                          name: "",
-                          time: "",
-                          amount: "",
-                          unit: "",
-                          type: "",
-                          source: "",
-                          instructions: "",
-                          notes: "",
-                        },
-                      ]);
-                    }}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Feeding Schedule
-                  </Button>
-                </div>
+            {!isStepAccessible(3) && (
+              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+                <p className="text-muted-foreground">
+                  Please complete the previous steps first
+                </p>
               </div>
+            )}
 
-              {/* Medication Section */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold">
-                  Medication Instructions
-                </h4>
-                <div className="space-y-3">
-                  {medications.map((item, index) => (
-                    <Card key={item.id}>
-                      <CardContent className="pt-4 space-y-3">
-                        <div className="flex justify-between items-start">
-                          <Label className="text-sm font-medium">
-                            Medication #{index + 1}
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setMedications(
-                                medications.filter((_, i) => i !== index),
-                              );
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Medication Name</Label>
-                          <Input
-                            value={item.name}
-                            onChange={(e) => {
-                              const updated = [...medications];
-                              updated[index].name = e.target.value;
-                              setMedications(updated);
-                            }}
-                            placeholder="e.g., Heartworm Prevention"
-                          />
-                        </div>
-                        {selectedPets.length > 1 && (
-                          <div>
-                            <Label className="text-xs">Pet</Label>
-                            <Select
-                              value={item.petId?.toString() || ""}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].petId = parseInt(value);
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select pet" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {selectedPets.map((pet) => (
-                                  <SelectItem
-                                    key={pet.id}
-                                    value={pet.id.toString()}
-                                  >
-                                    {pet.name} ({pet.type})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Time</Label>
-                            <Select
-                              value={item.time}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].time = value;
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="AM">AM</SelectItem>
-                                <SelectItem value="PM">PM</SelectItem>
-                                <SelectItem value="Noon">Noon</SelectItem>
-                                <SelectItem value="Evening">Evening</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Amount</Label>
-                            <Input
-                              value={item.amount}
-                              onChange={(e) => {
-                                const updated = [...medications];
-                                updated[index].amount = e.target.value;
-                                setMedications(updated);
-                              }}
-                              placeholder="e.g., 1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Unit</Label>
-                            <Select
-                              value={item.unit}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].unit = value;
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pill">Pill</SelectItem>
-                                <SelectItem value="ml">ML</SelectItem>
-                                <SelectItem value="mg">MG</SelectItem>
-                                <SelectItem value="drop">Drop(s)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Type</Label>
-                            <Select
-                              value={item.type}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].type = value;
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="oral">Oral</SelectItem>
-                                <SelectItem value="topical">Topical</SelectItem>
-                                <SelectItem value="injection">
-                                  Injection
-                                </SelectItem>
-                                <SelectItem value="eye_ear">
-                                  Eye/Ear Drops
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Source</Label>
-                            <Select
-                              value={item.source}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].source = value;
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="owner">
-                                  Owner Provides
-                                </SelectItem>
-                                <SelectItem value="facility">
-                                  Facility Provides
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Instructions</Label>
-                            <Select
-                              value={item.instructions}
-                              onValueChange={(value) => {
-                                const updated = [...medications];
-                                updated[index].instructions = value;
-                                setMedications(updated);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="with_food">
-                                  With Food
-                                </SelectItem>
-                                <SelectItem value="empty_stomach">
-                                  Empty Stomach
-                                </SelectItem>
-                                <SelectItem value="as_needed">
-                                  As Needed
-                                </SelectItem>
-                                <SelectItem value="regular">
-                                  Regular Schedule
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Medication Notes</Label>
-                          <Textarea
-                            value={item.notes}
-                            onChange={(e) => {
-                              const updated = [...medications];
-                              updated[index].notes = e.target.value;
-                              setMedications(updated);
-                            }}
-                            placeholder="Additional notes..."
-                            rows={2}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setMedications([
-                        ...medications,
-                        {
-                          id: `medication-${Date.now()}`,
-                          petId:
-                            selectedPets.length === 1
-                              ? selectedPets[0].id
-                              : undefined,
-                          name: "",
-                          time: "",
-                          amount: "",
-                          unit: "",
-                          type: "",
-                          source: "",
-                          instructions: "",
-                          notes: "",
-                        },
-                      ]);
-                    }}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Medication
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentSubStep === 4 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">
-                How Did the Customer Book?
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Select the method the customer used to book this appointment
-              </p>
-            </div>
-
-            <RadioGroup
-              value={bookingMethod}
-              onValueChange={setBookingMethod}
-              className="grid grid-cols-2 gap-3"
-            >
-              {BOOKING_METHODS.map((method) => (
-                <Label
-                  key={method.id}
-                  htmlFor={method.id}
-                  className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    bookingMethod === method.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={method.id} id={method.id} />
-                  <div className="flex-1">
-                    <p className="font-medium">{method.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {method.description}
-                    </p>
+            {isStepAccessible(3) && (
+              <>
+                {/* Tabs */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Feeding Section */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">
+                      Feeding Instructions
+                    </h4>
+                    <div className="space-y-3">
+                      {feedingSchedule.map((item, index) => (
+                        <Card key={item.id}>
+                          <CardContent className="pt-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <Label className="text-sm font-medium">
+                                Schedule #{index + 1}
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setFeedingSchedule(
+                                    feedingSchedule.filter(
+                                      (_, i) => i !== index,
+                                    ),
+                                  );
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Schedule Name</Label>
+                              <Input
+                                value={item.name}
+                                onChange={(e) => {
+                                  const updated = [...feedingSchedule];
+                                  updated[index].name = e.target.value;
+                                  setFeedingSchedule(updated);
+                                }}
+                                placeholder="e.g., Morning Feeding"
+                              />
+                            </div>
+                            {selectedPets.length > 1 && (
+                              <div>
+                                <Label className="text-xs">Pet</Label>
+                                <Select
+                                  value={item.petId?.toString() || ""}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].petId = parseInt(value);
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select pet" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {selectedPets.map((pet) => (
+                                      <SelectItem
+                                        key={pet.id}
+                                        value={pet.id.toString()}
+                                      >
+                                        {pet.name} ({pet.type})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs">Time</Label>
+                                <Select
+                                  value={item.time}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].time = value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="AM">AM</SelectItem>
+                                    <SelectItem value="PM">PM</SelectItem>
+                                    <SelectItem value="Noon">Noon</SelectItem>
+                                    <SelectItem value="Evening">
+                                      Evening
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Amount</Label>
+                                <Input
+                                  value={item.amount}
+                                  onChange={(e) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].amount = e.target.value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                  placeholder="e.g., 1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Unit</Label>
+                                <Select
+                                  value={item.unit}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].unit = value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="cup">Cup</SelectItem>
+                                    <SelectItem value="oz">Oz</SelectItem>
+                                    <SelectItem value="g">Grams</SelectItem>
+                                    <SelectItem value="scoop">Scoop</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs">Type</Label>
+                                <Select
+                                  value={item.type}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].type = value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="dry">
+                                      Dry Food
+                                    </SelectItem>
+                                    <SelectItem value="wet">
+                                      Wet Food
+                                    </SelectItem>
+                                    <SelectItem value="raw">
+                                      Raw Food
+                                    </SelectItem>
+                                    <SelectItem value="treats">
+                                      Treats
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Source</Label>
+                                <Select
+                                  value={item.source}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].source = value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="owner">
+                                      Owner Provides
+                                    </SelectItem>
+                                    <SelectItem value="facility">
+                                      Facility Provides
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Instructions</Label>
+                                <Select
+                                  value={item.instructions}
+                                  onValueChange={(value) => {
+                                    const updated = [...feedingSchedule];
+                                    updated[index].instructions = value;
+                                    setFeedingSchedule(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="slow_feed">
+                                      Slow Feed
+                                    </SelectItem>
+                                    <SelectItem value="separate">
+                                      Feed Separately
+                                    </SelectItem>
+                                    <SelectItem value="mixed">
+                                      Mix with Water
+                                    </SelectItem>
+                                    <SelectItem value="normal">
+                                      Normal
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Feeding Notes</Label>
+                              <Textarea
+                                value={item.notes}
+                                onChange={(e) => {
+                                  const updated = [...feedingSchedule];
+                                  updated[index].notes = e.target.value;
+                                  setFeedingSchedule(updated);
+                                }}
+                                placeholder="Additional notes..."
+                                rows={2}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setFeedingSchedule([
+                            ...feedingSchedule,
+                            {
+                              id: `feeding-${Date.now()}`,
+                              petId:
+                                selectedPets.length === 1
+                                  ? selectedPets[0].id
+                                  : undefined,
+                              name: "",
+                              time: "",
+                              amount: "",
+                              unit: "",
+                              type: "",
+                              source: "",
+                              instructions: "",
+                              notes: "",
+                            },
+                          ]);
+                        }}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Feeding Schedule
+                      </Button>
+                    </div>
                   </div>
-                </Label>
-              ))}
-            </RadioGroup>
 
-            {bookingMethod === "other" && (
-              <div className="space-y-2">
-                <Label htmlFor="booking-method-details">
-                  Please specify the booking method{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="booking-method-details"
-                  value={bookingMethodDetails}
-                  onChange={(e) => setBookingMethodDetails(e.target.value)}
-                  placeholder="Describe how the customer booked..."
-                  rows={3}
-                />
-              </div>
+                  {/* Medication Section */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">
+                      Medication Instructions
+                    </h4>
+                    <div className="space-y-3">
+                      {medications.map((item, index) => (
+                        <Card key={item.id}>
+                          <CardContent className="pt-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <Label className="text-sm font-medium">
+                                Medication #{index + 1}
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setMedications(
+                                    medications.filter((_, i) => i !== index),
+                                  );
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Medication Name</Label>
+                              <Input
+                                value={item.name}
+                                onChange={(e) => {
+                                  const updated = [...medications];
+                                  updated[index].name = e.target.value;
+                                  setMedications(updated);
+                                }}
+                                placeholder="e.g., Heartworm Prevention"
+                              />
+                            </div>
+                            {selectedPets.length > 1 && (
+                              <div>
+                                <Label className="text-xs">Pet</Label>
+                                <Select
+                                  value={item.petId?.toString() || ""}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].petId = parseInt(value);
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select pet" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {selectedPets.map((pet) => (
+                                      <SelectItem
+                                        key={pet.id}
+                                        value={pet.id.toString()}
+                                      >
+                                        {pet.name} ({pet.type})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs">Time</Label>
+                                <Select
+                                  value={item.time}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].time = value;
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="AM">AM</SelectItem>
+                                    <SelectItem value="PM">PM</SelectItem>
+                                    <SelectItem value="Noon">Noon</SelectItem>
+                                    <SelectItem value="Evening">
+                                      Evening
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Amount</Label>
+                                <Input
+                                  value={item.amount}
+                                  onChange={(e) => {
+                                    const updated = [...medications];
+                                    updated[index].amount = e.target.value;
+                                    setMedications(updated);
+                                  }}
+                                  placeholder="e.g., 1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Unit</Label>
+                                <Select
+                                  value={item.unit}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].unit = value;
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pill">Pill</SelectItem>
+                                    <SelectItem value="ml">ML</SelectItem>
+                                    <SelectItem value="mg">MG</SelectItem>
+                                    <SelectItem value="drop">
+                                      Drop(s)
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs">Type</Label>
+                                <Select
+                                  value={item.type}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].type = value;
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="oral">Oral</SelectItem>
+                                    <SelectItem value="topical">
+                                      Topical
+                                    </SelectItem>
+                                    <SelectItem value="injection">
+                                      Injection
+                                    </SelectItem>
+                                    <SelectItem value="eye_ear">
+                                      Eye/Ear Drops
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Source</Label>
+                                <Select
+                                  value={item.source}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].source = value;
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="owner">
+                                      Owner Provides
+                                    </SelectItem>
+                                    <SelectItem value="facility">
+                                      Facility Provides
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Instructions</Label>
+                                <Select
+                                  value={item.instructions}
+                                  onValueChange={(value) => {
+                                    const updated = [...medications];
+                                    updated[index].instructions = value;
+                                    setMedications(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="with_food">
+                                      With Food
+                                    </SelectItem>
+                                    <SelectItem value="empty_stomach">
+                                      Empty Stomach
+                                    </SelectItem>
+                                    <SelectItem value="as_needed">
+                                      As Needed
+                                    </SelectItem>
+                                    <SelectItem value="regular">
+                                      Regular Schedule
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">
+                                Medication Notes
+                              </Label>
+                              <Textarea
+                                value={item.notes}
+                                onChange={(e) => {
+                                  const updated = [...medications];
+                                  updated[index].notes = e.target.value;
+                                  setMedications(updated);
+                                }}
+                                placeholder="Additional notes..."
+                                rows={2}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setMedications([
+                            ...medications,
+                            {
+                              id: `medication-${Date.now()}`,
+                              petId:
+                                selectedPets.length === 1
+                                  ? selectedPets[0].id
+                                  : undefined,
+                              name: "",
+                              time: "",
+                              amount: "",
+                              unit: "",
+                              type: "",
+                              source: "",
+                              instructions: "",
+                              notes: "",
+                            },
+                          ]);
+                        }}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Medication
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
