@@ -73,10 +73,6 @@ interface DaycareDetailsProps {
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
   medications: MedicationItem[];
   setMedications: (medications: MedicationItem[]) => void;
-  bookingMethod: string;
-  setBookingMethod: (method: string) => void;
-  bookingMethodDetails: string;
-  setBookingMethodDetails: (details: string) => void;
   roomAssignments: Array<{ petId: number; roomId: string }>;
   setRoomAssignments: (
     assignments: Array<{ petId: number; roomId: string }>,
