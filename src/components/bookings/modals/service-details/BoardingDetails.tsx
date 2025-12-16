@@ -284,7 +284,8 @@ export function BoardingDetails({
             <div>
               <h3 className="text-base font-semibold">Select Room Type</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Drag and drop pets into room types
+                Drag and drop pets into room types or double-click pets and
+                click on rooms
               </p>
             </div>
 
@@ -313,15 +314,15 @@ export function BoardingDetails({
                           draggable
                           onDragStart={() => setDraggedPet(pet)}
                           onDragEnd={() => setDraggedPet(null)}
-                          onClick={() =>
+                          onDoubleClick={() =>
                             setSelectedPet(
                               selectedPet?.id === pet.id ? null : pet,
                             )
                           }
-                          className={`flex items-center gap-2 px-3 py-2 bg-background border-2 rounded-lg cursor-pointer hover:border-primary/50 transition-colors ${
+                          className={`flex items-center gap-2 px-3 py-2 bg-background border-2 rounded-lg cursor-move hover:border-primary/50 transition-colors ${
                             selectedPet?.id === pet.id
                               ? "border-primary bg-primary/5"
-                              : "border-border cursor-move"
+                              : "border-border"
                           }`}
                         >
                           <PawPrint className="h-4 w-4 text-muted-foreground" />

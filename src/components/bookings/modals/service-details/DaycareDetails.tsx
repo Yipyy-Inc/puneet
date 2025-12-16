@@ -203,6 +203,7 @@ export function DaycareDetails({
   selectedPets,
 }: DaycareDetailsProps) {
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
+  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
 
   const allPreviousCompleted = (stepIndex: number) => {
     if (!isSubStepComplete) return true;
@@ -263,7 +264,8 @@ export function DaycareDetails({
             <div>
               <h3 className="text-base font-semibold">Room Assignment</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Drag and drop pets into rooms
+                Drag and drop pets into rooms or double-click pets and click on
+                rooms
               </p>
             </div>
 
@@ -292,7 +294,16 @@ export function DaycareDetails({
                           draggable
                           onDragStart={() => setDraggedPet(pet)}
                           onDragEnd={() => setDraggedPet(null)}
-                          className="flex items-center gap-2 px-3 py-2 bg-background border-2 border-border rounded-lg cursor-move hover:border-primary/50 transition-colors"
+                          onDoubleClick={() =>
+                            setSelectedPet(
+                              selectedPet?.id === pet.id ? null : pet,
+                            )
+                          }
+                          className={`flex items-center gap-2 px-3 py-2 bg-background border-2 rounded-lg cursor-move hover:border-primary/50 transition-colors ${
+                            selectedPet?.id === pet.id
+                              ? "border-primary bg-primary/5"
+                              : "border-border"
+                          }`}
                         >
                           <PawPrint className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium text-sm">
@@ -326,6 +337,20 @@ export function DaycareDetails({
                     return (
                       <div
                         key={room.id}
+                        onClick={() => {
+                          if (
+                            selectedPet &&
+                            availableSpots > assignedPets.length
+                          ) {
+                            setRoomAssignments([
+                              ...roomAssignments.filter(
+                                (a) => a.petId !== selectedPet.id,
+                              ),
+                              { petId: selectedPet.id, roomId: room.id },
+                            ]);
+                            setSelectedPet(null);
+                          }
+                        }}
                         onDragOver={(e) => {
                           e.preventDefault();
                           e.currentTarget.classList.add(
