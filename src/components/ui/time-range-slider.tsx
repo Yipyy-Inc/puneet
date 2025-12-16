@@ -10,6 +10,8 @@ export interface TimeRangeSliderProps {
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
   onTimeChange: (start: string, end: string) => void;
+  onApply?: () => void;
+  onApplyToAll?: () => void;
   step?: number; // in minutes, default 30
   className?: string;
 }
@@ -20,6 +22,8 @@ export function TimeRangeSlider({
   startTime,
   endTime,
   onTimeChange,
+  onApply,
+  onApplyToAll,
   step = 30,
   className,
 }: TimeRangeSliderProps) {
@@ -234,15 +238,29 @@ export function TimeRangeSlider({
         </div>
       </div>
 
-      {/* Done button to collapse */}
-      <div className="flex justify-end">
+      {/* Apply buttons */}
+      <div className="flex justify-end gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setIsExpanded(false)}
+          onClick={() => {
+            onApply?.();
+            setIsExpanded(false);
+          }}
         >
-          Done
+          Apply
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onApplyToAll?.();
+            setIsExpanded(false);
+          }}
+        >
+          Apply to All
         </Button>
       </div>
     </div>

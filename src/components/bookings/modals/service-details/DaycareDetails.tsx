@@ -158,6 +158,7 @@ const DAYCARE_ROOMS = [
     capacity: 15,
     currentBookings: 12, // Would come from future bookings data
     imageUrl: "/rooms/room-1.jpg",
+    allowedPetTypes: ["Dog"],
   },
   {
     id: "playroom-b",
@@ -166,6 +167,7 @@ const DAYCARE_ROOMS = [
     capacity: 10,
     currentBookings: 6,
     imageUrl: "/rooms/room-2.jpg",
+    allowedPetTypes: ["Dog"],
   },
   {
     id: "quiet-zone",
@@ -174,6 +176,7 @@ const DAYCARE_ROOMS = [
     capacity: 8,
     currentBookings: 3,
     imageUrl: "/rooms/room-3.jpg",
+    allowedPetTypes: ["Dog", "Cat"],
   },
   {
     id: "outdoor-yard",
@@ -181,6 +184,7 @@ const DAYCARE_ROOMS = [
     description: "Outdoor supervised play area",
     capacity: 20,
     currentBookings: 15,
+    allowedPetTypes: ["Dog"],
   },
 ];
 
@@ -333,30 +337,28 @@ export function DaycareDetails({
                         (a) => a.petId === pet.id && a.roomId === room.id,
                       ),
                     );
+                    const isDraggedPetAllowed = draggedPet
+                      ? room.allowedPetTypes.includes(draggedPet.type)
+                      : true;
+                    const isSelectedPetAllowed = selectedPet
+                      ? room.allowedPetTypes.includes(selectedPet.type)
+                      : true;
+                    const isPetAllowed =
+                      isDraggedPetAllowed && isSelectedPetAllowed;
+                    const isRoomDisabled =
+                      availableSpots === 0 || !isPetAllowed;
 
                     return (
                       <div
                         key={room.id}
-                        onClick={() => {
-                          if (
-                            selectedPet &&
-                            availableSpots > assignedPets.length
-                          ) {
-                            setRoomAssignments([
-                              ...roomAssignments.filter(
-                                (a) => a.petId !== selectedPet.id,
-                              ),
-                              { petId: selectedPet.id, roomId: room.id },
-                            ]);
-                            setSelectedPet(null);
-                          }
-                        }}
                         onDragOver={(e) => {
-                          e.preventDefault();
-                          e.currentTarget.classList.add(
-                            "ring-2",
-                            "ring-primary",
-                          );
+                          if (!isRoomDisabled) {
+                            e.preventDefault();
+                            e.currentTarget.classList.add(
+                              "ring-2",
+                              "ring-primary",
+                            );
+                          }
                         }}
                         onDragLeave={(e) => {
                           e.currentTarget.classList.remove(
@@ -372,7 +374,8 @@ export function DaycareDetails({
                           );
                           if (
                             draggedPet &&
-                            availableSpots > assignedPets.length
+                            availableSpots > assignedPets.length &&
+                            isPetAllowed
                           ) {
                             setRoomAssignments([
                               ...roomAssignments.filter(
@@ -382,8 +385,23 @@ export function DaycareDetails({
                             ]);
                           }
                         }}
+                        onClick={() => {
+                          if (
+                            selectedPet &&
+                            availableSpots > assignedPets.length &&
+                            room.allowedPetTypes.includes(selectedPet.type)
+                          ) {
+                            setRoomAssignments([
+                              ...roomAssignments.filter(
+                                (a) => a.petId !== selectedPet.id,
+                              ),
+                              { petId: selectedPet.id, roomId: room.id },
+                            ]);
+                            setSelectedPet(null);
+                          }
+                        }}
                         className={`flex flex-col border-2 rounded-lg transition-all overflow-hidden ${
-                          availableSpots === 0
+                          isRoomDisabled
                             ? "opacity-60 cursor-not-allowed"
                             : "cursor-pointer"
                         } ${assignedPets.length > 0 ? "border-primary bg-primary/5" : "border-border"}`}
@@ -409,6 +427,20 @@ export function DaycareDetails({
                                   </span>
                                 </div>
                               )}
+                              {draggedPet && !isDraggedPetAllowed && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                  <span className="text-white text-sm font-semibold">
+                                    Not allowed for {draggedPet.type}s
+                                  </span>
+                                </div>
+                              )}
+                              {selectedPet && !isSelectedPetAllowed && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                  <span className="text-white text-sm font-semibold">
+                                    Not allowed for {selectedPet.type}s
+                                  </span>
+                                </div>
+                              )}
                             </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
@@ -425,6 +457,9 @@ export function DaycareDetails({
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {room.description}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Allowed: {room.allowedPetTypes.join(", ")}
                             </p>
                           </div>
 

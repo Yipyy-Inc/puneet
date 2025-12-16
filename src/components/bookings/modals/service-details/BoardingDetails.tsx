@@ -489,6 +489,9 @@ export function BoardingDetails({
                             <p className="text-sm text-muted-foreground">
                               {type.description}
                             </p>
+                            <p className="text-xs text-muted-foreground">
+                              Allowed: {type.allowedPetTypes.join(", ")}
+                            </p>
                           </div>
 
                           {/* Assigned Pets in this room */}

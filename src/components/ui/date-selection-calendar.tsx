@@ -591,25 +591,41 @@ export function DateSelectionCalendar({
                             })}
                           </p>
                           {timeInfo && (
-                            <TimeRangeSlider
-                              minTime="06:00"
-                              maxTime="22:00"
-                              startTime={timeInfo.checkInTime}
-                              endTime={timeInfo.checkOutTime}
-                              onTimeChange={(start, end) => {
-                                const updatedTimes = dateTimes.map((dt) =>
-                                  dt.date === dateStr
-                                    ? {
+                            <>
+                              <TimeRangeSlider
+                                minTime="06:00"
+                                maxTime="22:00"
+                                startTime={timeInfo.checkInTime}
+                                endTime={timeInfo.checkOutTime}
+                                onTimeChange={(start, end) => {
+                                  const updatedTimes = dateTimes.map((dt) =>
+                                    dt.date === dateStr
+                                      ? {
+                                          ...dt,
+                                          checkInTime: start,
+                                          checkOutTime: end,
+                                        }
+                                      : dt,
+                                  );
+                                  onDateTimesChange?.(updatedTimes);
+                                }}
+                                onApply={() => {}}
+                                onApplyToAll={() => {
+                                  const currentTime = getTimeForDate(dateStr);
+                                  if (currentTime) {
+                                    const updatedTimes = dateTimes.map(
+                                      (dt) => ({
                                         ...dt,
-                                        checkInTime: start,
-                                        checkOutTime: end,
-                                      }
-                                    : dt,
-                                );
-                                onDateTimesChange?.(updatedTimes);
-                              }}
-                              step={30}
-                            />
+                                        checkInTime: currentTime.checkInTime,
+                                        checkOutTime: currentTime.checkOutTime,
+                                      }),
+                                    );
+                                    onDateTimesChange?.(updatedTimes);
+                                  }
+                                }}
+                                step={30}
+                              />
+                            </>
                           )}
                         </div>
                       );
