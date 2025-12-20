@@ -56,43 +56,24 @@ export function FacilitySidebar() {
         ],
       },
       {
-        label: "Customers & Pets",
         items: [
           {
-            title: "Clients",
+            title: "Customer",
             url: "/facility/dashboard/clients",
             icon: Users,
             disabled: false,
+            count: 3,
           },
         ],
       },
       {
-        label: "Operations",
         items: [
           {
-            title: "Bookings",
-            url: "/facility/dashboard/bookings",
-            icon: Calendar,
+            title: "Communications",
+            url: "/facility/dashboard/communications",
+            icon: MessageSquare,
             disabled: false,
-          },
-          {
-            title: "Staff",
-            url: "/facility/staff",
-            icon: UserCheck,
-            disabled: false,
-          },
-
-          {
-            title: "Services & Pricing",
-            url: "/facility/services",
-            icon: Tags,
-            disabled: false,
-          },
-          {
-            title: "Live Pet Cams",
-            url: "/facility/dashboard/petcams",
-            icon: Camera,
-            disabled: false,
+            count: 5,
           },
         ],
       },
@@ -132,12 +113,19 @@ export function FacilitySidebar() {
         ],
       },
       {
-        label: "Financial",
+        label: "Operations",
         items: [
           {
-            title: "Payments & Billing",
-            url: "/facility/dashboard/billing",
-            icon: DollarSign,
+            title: "Bookings",
+            url: "/facility/dashboard/bookings",
+            icon: Calendar,
+            disabled: false,
+            count: 8,
+          },
+          {
+            title: "Users",
+            url: "/facility/staff",
+            icon: UserCheck,
             disabled: false,
           },
           {
@@ -146,10 +134,33 @@ export function FacilitySidebar() {
             icon: Package,
             disabled: false,
           },
+          {
+            title: "Services & Pricing",
+            url: "/facility/services",
+            icon: Tags,
+            disabled: false,
+          },
+          {
+            title: "Live Pet Cams",
+            url: "/facility/dashboard/petcams",
+            icon: Camera,
+            disabled: false,
+          },
         ],
       },
       {
-        label: "Reports & Marketing",
+        label: "Financial",
+        items: [
+          {
+            title: "Payments & Billing",
+            url: "/facility/dashboard/billing",
+            icon: DollarSign,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        label: "Reports",
         items: [
           {
             title: "Reports & Analytics",
@@ -163,16 +174,14 @@ export function FacilitySidebar() {
             icon: Lightbulb,
             disabled: false,
           },
+        ],
+      },
+      {
+        items: [
           {
             title: "Marketing",
             url: "/facility/dashboard/marketing",
             icon: Megaphone,
-            disabled: false,
-          },
-          {
-            title: "Communications",
-            url: "/facility/dashboard/communications",
-            icon: MessageSquare,
             disabled: false,
           },
         ],
@@ -185,6 +194,7 @@ export function FacilitySidebar() {
             url: "/facility/dashboard/incidents",
             icon: AlertTriangle,
             disabled: false,
+            count: 2,
           },
           {
             title: "Digital Waivers",

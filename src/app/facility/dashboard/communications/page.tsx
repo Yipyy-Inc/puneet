@@ -50,6 +50,7 @@ export default function CommunicationsPage() {
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(
     null,
   );
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   // Message Columns
   const messageColumns: ColumnDef<(typeof messages)[0]>[] = [
@@ -437,6 +438,10 @@ export default function CommunicationsPage() {
             <Mail className="h-4 w-4 mr-2" />
             Inbox
           </TabsTrigger>
+          <TabsTrigger value="dialer">
+            <Phone className="h-4 w-4 mr-2" />
+            Dialer
+          </TabsTrigger>
           <TabsTrigger value="automations">
             <Zap className="h-4 w-4 mr-2" />
             Automations
@@ -462,6 +467,81 @@ export default function CommunicationsPage() {
             Internal
           </TabsTrigger>
         </TabsList>
+
+        {/* Dialer Tab */}
+        <TabsContent value="dialer" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dialer</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Make calls using Twilio integration
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-w-md mx-auto">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-md"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9",
+                    "*",
+                    "0",
+                    "#",
+                  ].map((num) => (
+                    <Button
+                      key={num}
+                      variant="outline"
+                      className="h-12 text-lg font-semibold"
+                      onClick={() => setPhoneNumber((prev) => prev + num)}
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPhoneNumber("")}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      // TODO: Integrate with Twilio API
+                      alert(
+                        `Dialing ${phoneNumber}... (Twilio integration pending)`,
+                      );
+                    }}
+                    className="flex-1"
+                    disabled={!phoneNumber.trim()}
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Dial
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Inbox Tab */}
         <TabsContent value="inbox" className="space-y-4">

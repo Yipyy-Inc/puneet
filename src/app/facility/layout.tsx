@@ -1,11 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 
@@ -27,8 +23,7 @@ export default async function FacilityLayout({
       <SidebarProvider>
         <FacilitySidebar />
         <SidebarInset>
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
-            <SidebarTrigger className="-ml-1 hover:bg-accent/50 rounded-lg transition-colors" />
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
             <UserProfileSheet />
           </header>
           {children}
