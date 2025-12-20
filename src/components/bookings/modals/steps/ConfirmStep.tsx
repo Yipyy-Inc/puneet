@@ -1,4 +1,5 @@
 import { PawPrint } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Pet, Client } from "@/lib/types";
 import { SERVICE_CATEGORIES } from "../constants";
 
@@ -77,6 +78,10 @@ interface ConfirmStepProps {
   medications: MedicationItem[];
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   calculatePrice: { basePrice: number; total: number };
+  notificationEmail: boolean;
+  setNotificationEmail: (value: boolean) => void;
+  notificationSMS: boolean;
+  setNotificationSMS: (value: boolean) => void;
 }
 
 export function ConfirmStep({
@@ -100,6 +105,10 @@ export function ConfirmStep({
   medications,
   extraServices,
   calculatePrice,
+  notificationEmail,
+  setNotificationEmail,
+  notificationSMS,
+  setNotificationSMS,
 }: ConfirmStepProps) {
   const displayClient = selectedClient;
   const displayPets = selectedPets;
@@ -419,6 +428,35 @@ export function ConfirmStep({
               )}
             </div>
           )}
+
+        {/* Notification Preferences */}
+        <div className="p-4 border-b border-dashed">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">
+            Notification Preferences
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="notify-email"
+                checked={notificationEmail}
+                onCheckedChange={setNotificationEmail}
+              />
+              <label htmlFor="notify-email" className="text-sm font-medium">
+                Send Email Confirmation
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="notify-sms"
+                checked={notificationSMS}
+                onCheckedChange={setNotificationSMS}
+              />
+              <label htmlFor="notify-sms" className="text-sm font-medium">
+                Send SMS Notification
+              </label>
+            </div>
+          </div>
+        </div>
 
         {/* Total */}
         <div className="p-4">

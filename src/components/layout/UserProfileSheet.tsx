@@ -225,7 +225,7 @@ export function UserProfileSheet() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/profile" className="flex items-center gap-2">
+            <Link href="/profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile Settings
             </Link>

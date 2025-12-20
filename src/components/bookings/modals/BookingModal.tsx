@@ -75,6 +75,8 @@ export interface BookingData {
   totalCost: number;
   paymentStatus: "pending" | "paid";
   specialRequests?: string;
+  notificationEmail?: boolean;
+  notificationSMS?: boolean;
 
   // Service-specific fields
   daycareSelectedDates?: string[]; // ISO date strings for multi-date daycare
@@ -191,6 +193,8 @@ export function BookingModal({
   const [extraServices, setExtraServices] = useState<
     Array<{ serviceId: string; quantity: number; petId: number }>
   >([]);
+  const [notificationEmail, setNotificationEmail] = useState(true);
+  const [notificationSMS, setNotificationSMS] = useState(false);
 
   // Get current sub-steps based on selected service
   const currentSubSteps = useMemo(() => {
@@ -443,6 +447,8 @@ export function BookingModal({
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
       extraServices: extraServices.length > 0 ? extraServices : undefined,
+      notificationEmail: notificationEmail,
+      notificationSMS: notificationSMS,
     };
 
     onCreateBooking(booking);
@@ -481,6 +487,8 @@ export function BookingModal({
     setWalkSchedule("");
     setMedications([]);
     setExtraServices([]);
+    setNotificationEmail(true);
+    setNotificationSMS(false);
   };
 
   return (
@@ -765,6 +773,10 @@ export function BookingModal({
                     medications={medications}
                     extraServices={extraServices}
                     calculatePrice={calculatePrice}
+                    notificationEmail={notificationEmail}
+                    setNotificationEmail={setNotificationEmail}
+                    notificationSMS={notificationSMS}
+                    setNotificationSMS={setNotificationSMS}
                   />
                 )}
               </div>
