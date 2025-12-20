@@ -31,6 +31,7 @@ import {
   MenuItem,
 } from "@/components/ui/generic-sidebar";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { facilities } from "@/data/facilities";
 
 export function FacilitySidebar() {
   const { canAccess, isLoading } = useFacilityRole();
@@ -230,9 +231,26 @@ export function FacilitySidebar() {
     // TODO: Implement logout logic
   };
 
+  // Static facility ID for now (would come from user token in production)
+  const facilityId = 11;
+  const facility = facilities.find((f) => f.id === facilityId);
+
   return (
     <GenericSidebar
-      header={<h2 className="text-lg font-semibold">Facility Dashboard</h2>}
+      header={
+        <div>
+          <h2 className="text-lg font-semibold">
+            {facility?.name || "Facility Dashboard"}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
+        </div>
+      }
       menuSections={filteredMenuSections}
       onLogout={handleLogout}
     />

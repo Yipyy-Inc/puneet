@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
+import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 
 export default async function FacilityLayout({
@@ -24,6 +25,7 @@ export default async function FacilityLayout({
         <FacilitySidebar />
         <SidebarInset>
           <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
+            <FacilityHeader />
             <UserProfileSheet />
           </header>
           {children}
