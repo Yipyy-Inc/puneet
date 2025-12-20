@@ -604,29 +604,18 @@ export function BookingModal({
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
                             const isSubCompleted = isSubStepComplete(subIdx);
-                            const allPreviousCompleted = Array.from(
-                              { length: subIdx },
-                              (_, i) => i,
-                            ).every((i) => isSubStepComplete(i));
-                            const isAccessible =
-                              subIdx === 0 || allPreviousCompleted;
+                            const isVisitedAndCompleted =
+                              subIdx < currentSubStep && isSubCompleted;
 
                             return (
-                              <button
+                              <div
                                 key={subStep.id}
-                                type="button"
-                                onClick={() =>
-                                  isAccessible && setCurrentSubStep(subIdx)
-                                }
-                                disabled={!isAccessible}
                                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
                                   isSubActive
                                     ? "bg-primary/20 text-primary font-medium"
-                                    : isSubCompleted
-                                      ? "text-foreground hover:bg-muted"
-                                      : isAccessible
-                                        ? "text-muted-foreground hover:bg-muted"
-                                        : "text-muted-foreground/50 cursor-not-allowed opacity-60"
+                                    : isVisitedAndCompleted
+                                      ? "text-foreground"
+                                      : "text-muted-foreground"
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
@@ -634,12 +623,12 @@ export function BookingModal({
                                     className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                                       isSubActive
                                         ? "bg-primary text-primary-foreground"
-                                        : isSubCompleted
+                                        : isVisitedAndCompleted
                                           ? "bg-primary text-primary-foreground"
                                           : "bg-muted-foreground/20 text-muted-foreground"
                                     }`}
                                   >
-                                    {isSubCompleted && !isSubActive ? (
+                                    {isVisitedAndCompleted ? (
                                       <Check className="h-2.5 w-2.5" />
                                     ) : (
                                       subIdx + 1
@@ -647,7 +636,7 @@ export function BookingModal({
                                   </div>
                                   <span>{subStep.title}</span>
                                 </div>
-                              </button>
+                              </div>
                             );
                           })}
                         </div>
