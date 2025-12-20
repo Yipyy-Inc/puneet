@@ -43,11 +43,11 @@ interface FeedingScheduleItem {
 interface MedicationItem {
   id: string;
   name: string;
-  time: string;
+  time: string[];
   amount: string;
   unit: string;
   type: string;
-  source: string;
+  source?: string;
   instructions: string;
   notes: string;
 }
@@ -288,14 +288,12 @@ export function ConfirmStep({
               </div>
             )}
 
-            {/* Extra Services */}
+            {/* Add-ons */}
             {(selectedService === "daycare" ||
               selectedService === "boarding") &&
               extraServices.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Extra Services
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">Add-ons</p>
                   <div className="space-y-1">
                     {Object.entries(
                       extraServices.reduce(
@@ -357,7 +355,11 @@ export function ConfirmStep({
                           <span className="font-medium">
                             {item.name || `Schedule ${idx + 1}`}
                           </span>
-                          <span>{item.time}</span>
+                          <span>
+                            {item.time
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                          </span>
                         </div>
                         <p className="text-muted-foreground mt-1">
                           {item.amount} {item.unit} •{" "}
@@ -389,12 +391,21 @@ export function ConfirmStep({
                           <span className="font-medium">
                             {item.name || `Medication ${idx + 1}`}
                           </span>
-                          <span>{item.time}</span>
+                          <span>
+                            {item.time
+                              .map((t) =>
+                                t
+                                  .replace(/_/g, " ")
+                                  .replace(/\b\w/g, (l) => l.toUpperCase()),
+                              )
+                              .join(", ")}
+                          </span>
                         </div>
                         <p className="text-muted-foreground mt-1">
                           {item.amount} {item.unit} •{" "}
-                          {item.type.replace(/_/g, " ")} •{" "}
-                          {item.source.replace(/_/g, " ")}
+                          {item.type.replace(/_/g, " ")}
+                          {item.source &&
+                            ` • ${item.source.replace(/_/g, " ")}`}
                         </p>
                         {item.notes && (
                           <p className="text-muted-foreground italic mt-1">

@@ -93,13 +93,13 @@ export const STEPS: Step[] = [
 export const DAYCARE_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select dates and times" },
   { id: 1, title: "Room Assignment", description: "Assign to room" },
-  { id: 2, title: "Extra Services", description: "Add-on services" },
+  { id: 2, title: "Add-ons", description: "Add-on services" },
   { id: 3, title: "Feeding & Medication", description: "Care instructions" },
 ];
 
 export const BOARDING_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select dates" },
   { id: 1, title: "Room Type", description: "Choose room" },
-  { id: 2, title: "Extra Services", description: "Add-on services" },
+  { id: 2, title: "Add-ons", description: "Add-on services" },
   { id: 3, title: "Feeding & Medication", description: "Care instructions" },
 ];

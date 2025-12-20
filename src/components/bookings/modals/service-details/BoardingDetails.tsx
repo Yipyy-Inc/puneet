@@ -35,11 +35,11 @@ interface MedicationItem {
   id: string;
   petId?: number;
   name: string;
-  time: string;
+  time: string[];
   amount: string;
   unit: string;
   type: string;
-  source: string;
+  source?: string;
   instructions: string;
   notes: string;
 }
@@ -555,7 +555,7 @@ export function BoardingDetails({
         {currentSubStep === 2 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Extra Services</h3>
+              <h3 className="text-base font-semibold">Add-ons</h3>
               <p className="text-xs text-muted-foreground mt-1">
                 Add optional services to enhance your pet&apos;s boarding
                 experience
@@ -768,7 +768,7 @@ export function BoardingDetails({
 
             {isStepAccessible(3) && (
               <>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Feeding Section */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold">
@@ -777,11 +777,24 @@ export function BoardingDetails({
                     <div className="space-y-3">
                       {feedingSchedule.map((item, index) => (
                         <Card key={item.id}>
-                          <CardContent className="pt-4 space-y-3">
+                          <CardContent className="pt-4 space-y-4">
+                            {/* Header */}
                             <div className="flex justify-between items-start">
-                              <Label className="text-sm font-medium">
-                                Schedule #{index + 1}
-                              </Label>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-orange-600">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">
+                                    Feeding Schedule
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    Daily feeding routine
+                                  </p>
+                                </div>
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -793,192 +806,246 @@ export function BoardingDetails({
                                     ),
                                   );
                                 }}
+                                className="text-destructive hover:text-destructive"
                               >
                                 Remove
                               </Button>
                             </div>
-                            <div>
-                              <Label className="text-xs">Schedule Name</Label>
-                              <Input
-                                value={item.name}
-                                onChange={(e) => {
-                                  const updated = [...feedingSchedule];
-                                  updated[index].name = e.target.value;
-                                  setFeedingSchedule(updated);
-                                }}
-                                placeholder="e.g., Morning Feeding"
-                              />
+
+                            {/* Basic Info */}
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium flex items-center gap-1">
+                                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                                    Name
+                                  </Label>
+                                  <Input
+                                    value={item.name}
+                                    onChange={(e) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].name = e.target.value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                    placeholder="e.g., Morning Feeding"
+                                    className="h-9"
+                                  />
+                                </div>
+                                {selectedPets.length > 1 && (
+                                  <div className="space-y-1">
+                                    <Label className="text-xs font-medium flex items-center gap-1">
+                                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                                      Pet
+                                    </Label>
+                                    <Select
+                                      value={item.petId?.toString() || ""}
+                                      onValueChange={(value) => {
+                                        const updated = [...feedingSchedule];
+                                        updated[index].petId = parseInt(value);
+                                        setFeedingSchedule(updated);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Select pet" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {selectedPets.map((pet) => (
+                                          <SelectItem
+                                            key={pet.id}
+                                            value={pet.id.toString()}
+                                          >
+                                            {pet.name} ({pet.type})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {selectedPets.length > 1 && (
-                              <div>
-                                <Label className="text-xs">Pet</Label>
-                                <Select
-                                  value={item.petId?.toString() || ""}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].petId = parseInt(value);
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select pet" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {selectedPets.map((pet) => (
-                                      <SelectItem
-                                        key={pet.id}
-                                        value={pet.id.toString()}
-                                      >
-                                        {pet.name} ({pet.type})
+
+                            {/* Feeding Details */}
+                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                              <h5 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <span className="w-4 h-4 rounded bg-orange-100 flex items-center justify-center">
+                                  <span className="text-xs">🍽️</span>
+                                </span>
+                                Feeding Details
+                              </h5>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Time
+                                  </Label>
+                                  <Select
+                                    value={item.time}
+                                    onValueChange={(value) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].time = value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select time" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="AM">AM</SelectItem>
+                                      <SelectItem value="PM">PM</SelectItem>
+                                      <SelectItem value="Noon">Noon</SelectItem>
+                                      <SelectItem value="Evening">
+                                        Evening
                                       </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-xs">Time</Label>
-                                <Select
-                                  value={item.time}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].time = value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="AM">AM</SelectItem>
-                                    <SelectItem value="PM">PM</SelectItem>
-                                    <SelectItem value="Noon">Noon</SelectItem>
-                                    <SelectItem value="Evening">
-                                      Evening
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Amount</Label>
-                                <Input
-                                  value={item.amount}
-                                  onChange={(e) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].amount = e.target.value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                  placeholder="e.g., 1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Unit</Label>
-                                <Select
-                                  value={item.unit}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].unit = value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="cup">Cup</SelectItem>
-                                    <SelectItem value="oz">Oz</SelectItem>
-                                    <SelectItem value="g">Grams</SelectItem>
-                                    <SelectItem value="scoop">Scoop</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Amount
+                                  </Label>
+                                  <Input
+                                    value={item.amount}
+                                    onChange={(e) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].amount = e.target.value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                    placeholder="e.g., 1"
+                                    className="h-9"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Unit
+                                  </Label>
+                                  <Select
+                                    value={item.unit}
+                                    onValueChange={(value) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].unit = value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="cup">Cup</SelectItem>
+                                      <SelectItem value="oz">Oz</SelectItem>
+                                      <SelectItem value="g">Grams</SelectItem>
+                                      <SelectItem value="scoop">
+                                        Scoop
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-xs">Type</Label>
-                                <Select
-                                  value={item.type}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].type = value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="dry">
-                                      Dry Food
-                                    </SelectItem>
-                                    <SelectItem value="wet">
-                                      Wet Food
-                                    </SelectItem>
-                                    <SelectItem value="raw">
-                                      Raw Food
-                                    </SelectItem>
-                                    <SelectItem value="treats">
-                                      Treats
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Source</Label>
-                                <Select
-                                  value={item.source}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].source = value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="owner">
-                                      Owner Provides
-                                    </SelectItem>
-                                    <SelectItem value="facility">
-                                      Facility Provides
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Instructions</Label>
-                                <Select
-                                  value={item.instructions}
-                                  onValueChange={(value) => {
-                                    const updated = [...feedingSchedule];
-                                    updated[index].instructions = value;
-                                    setFeedingSchedule(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="slow_feed">
-                                      Slow Feed
-                                    </SelectItem>
-                                    <SelectItem value="separate">
-                                      Feed Separately
-                                    </SelectItem>
-                                    <SelectItem value="mixed">
-                                      Mix with Water
-                                    </SelectItem>
-                                    <SelectItem value="normal">
-                                      Normal
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+
+                            {/* Food Details */}
+                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                              <h5 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <span className="w-4 h-4 rounded bg-blue-100 flex items-center justify-center">
+                                  <span className="text-xs">🥣</span>
+                                </span>
+                                Food Details
+                              </h5>
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Type
+                                  </Label>
+                                  <Select
+                                    value={item.type}
+                                    onValueChange={(value) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].type = value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="dry">
+                                        Dry Food
+                                      </SelectItem>
+                                      <SelectItem value="wet">
+                                        Wet Food
+                                      </SelectItem>
+                                      <SelectItem value="raw">
+                                        Raw Food
+                                      </SelectItem>
+                                      <SelectItem value="treats">
+                                        Treats
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Source
+                                  </Label>
+                                  <Select
+                                    value={item.source}
+                                    onValueChange={(value) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].source = value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select source" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="owner">
+                                        Owner Provides
+                                      </SelectItem>
+                                      <SelectItem value="facility">
+                                        Facility Provides
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Instructions
+                                  </Label>
+                                  <Select
+                                    value={item.instructions}
+                                    onValueChange={(value) => {
+                                      const updated = [...feedingSchedule];
+                                      updated[index].instructions = value;
+                                      setFeedingSchedule(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select instructions" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="slow_feed">
+                                        Slow Feed
+                                      </SelectItem>
+                                      <SelectItem value="separate">
+                                        Feed Separately
+                                      </SelectItem>
+                                      <SelectItem value="mixed">
+                                        Mix with Water
+                                      </SelectItem>
+                                      <SelectItem value="normal">
+                                        Normal
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <Label className="text-xs">Feeding Notes</Label>
+
+                            {/* Notes */}
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium flex items-center gap-1">
+                                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                                Feeding Notes
+                              </Label>
                               <Textarea
                                 value={item.notes}
                                 onChange={(e) => {
@@ -986,8 +1053,9 @@ export function BoardingDetails({
                                   updated[index].notes = e.target.value;
                                   setFeedingSchedule(updated);
                                 }}
-                                placeholder="Additional notes..."
+                                placeholder="Additional notes about feeding routine..."
                                 rows={2}
+                                className="resize-none"
                               />
                             </div>
                           </CardContent>
@@ -1032,11 +1100,22 @@ export function BoardingDetails({
                     <div className="space-y-3">
                       {medications.map((item, index) => (
                         <Card key={item.id}>
-                          <CardContent className="pt-4 space-y-3">
+                          <CardContent className="pt-4 space-y-4">
+                            {/* Header */}
                             <div className="flex justify-between items-start">
-                              <Label className="text-sm font-medium">
-                                Medication #{index + 1}
-                              </Label>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-red-600">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">Medication</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    Medical treatment details
+                                  </p>
+                                </div>
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -1046,192 +1125,270 @@ export function BoardingDetails({
                                     medications.filter((_, i) => i !== index),
                                   );
                                 }}
+                                className="text-destructive hover:text-destructive"
                               >
                                 Remove
                               </Button>
                             </div>
-                            <div>
-                              <Label className="text-xs">Medication Name</Label>
-                              <Input
-                                value={item.name}
-                                onChange={(e) => {
-                                  const updated = [...medications];
-                                  updated[index].name = e.target.value;
-                                  setMedications(updated);
-                                }}
-                                placeholder="e.g., Heartworm Prevention"
-                              />
+
+                            {/* Basic Info */}
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium flex items-center gap-1">
+                                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                                    Name
+                                  </Label>
+                                  <Input
+                                    value={item.name}
+                                    onChange={(e) => {
+                                      const updated = [...medications];
+                                      updated[index].name = e.target.value;
+                                      setMedications(updated);
+                                    }}
+                                    placeholder="e.g., Heartworm Prevention"
+                                    className="h-9"
+                                  />
+                                </div>
+                                {selectedPets.length > 1 && (
+                                  <div className="space-y-1">
+                                    <Label className="text-xs font-medium flex items-center gap-1">
+                                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                                      Pet
+                                    </Label>
+                                    <Select
+                                      value={item.petId?.toString() || ""}
+                                      onValueChange={(value) => {
+                                        const updated = [...medications];
+                                        updated[index].petId = parseInt(value);
+                                        setMedications(updated);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Select pet" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {selectedPets.map((pet) => (
+                                          <SelectItem
+                                            key={pet.id}
+                                            value={pet.id.toString()}
+                                          >
+                                            {pet.name} ({pet.type})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {selectedPets.length > 1 && (
-                              <div>
-                                <Label className="text-xs">Pet</Label>
-                                <Select
-                                  value={item.petId?.toString() || ""}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].petId = parseInt(value);
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select pet" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {selectedPets.map((pet) => (
-                                      <SelectItem
-                                        key={pet.id}
-                                        value={pet.id.toString()}
-                                      >
-                                        {pet.name} ({pet.type})
+
+                            {/* Dosage Details */}
+                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                              <h5 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <span className="w-4 h-4 rounded bg-red-100 flex items-center justify-center">
+                                  <span className="text-xs">💊</span>
+                                </span>
+                                Dosage Details
+                              </h5>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="space-y-1 sm:col-span-3">
+                                  <Label className="text-xs font-medium">
+                                    Time
+                                  </Label>
+                                  <div className="space-y-2">
+                                    <div className="flex flex-wrap gap-1">
+                                      {item.time.map((time, timeIndex) => (
+                                        <div
+                                          key={timeIndex}
+                                          className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded text-xs"
+                                        >
+                                          <span>
+                                            {time
+                                              .replace(/_/g, " ")
+                                              .replace(/\b\w/g, (l) =>
+                                                l.toUpperCase(),
+                                              )}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = [...medications];
+                                              updated[index].time =
+                                                item.time.filter(
+                                                  (_, i) => i !== timeIndex,
+                                                );
+                                              setMedications(updated);
+                                            }}
+                                            className="text-primary hover:text-primary/80"
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <Select
+                                      onValueChange={(value) => {
+                                        if (!item.time.includes(value)) {
+                                          const updated = [...medications];
+                                          updated[index].time = [
+                                            ...item.time,
+                                            value,
+                                          ];
+                                          setMedications(updated);
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Add time" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="AM">AM</SelectItem>
+                                        <SelectItem value="PM">PM</SelectItem>
+                                        <SelectItem value="Noon">
+                                          Noon
+                                        </SelectItem>
+                                        <SelectItem value="Evening">
+                                          Evening
+                                        </SelectItem>
+                                        <SelectItem value="breakfast">
+                                          Breakfast
+                                        </SelectItem>
+                                        <SelectItem value="lunch">
+                                          Lunch
+                                        </SelectItem>
+                                        <SelectItem value="dinner">
+                                          Dinner
+                                        </SelectItem>
+                                        <SelectItem value="bedtime">
+                                          Bedtime
+                                        </SelectItem>
+                                        <SelectItem value="as_needed">
+                                          As Needed
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Amount
+                                  </Label>
+                                  <Input
+                                    value={item.amount}
+                                    onChange={(e) => {
+                                      const updated = [...medications];
+                                      updated[index].amount = e.target.value;
+                                      setMedications(updated);
+                                    }}
+                                    placeholder="e.g., 1"
+                                    className="h-9"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Unit
+                                  </Label>
+                                  <Select
+                                    value={item.unit}
+                                    onValueChange={(value) => {
+                                      const updated = [...medications];
+                                      updated[index].unit = value;
+                                      setMedications(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="pill">Pill</SelectItem>
+                                      <SelectItem value="ml">ML</SelectItem>
+                                      <SelectItem value="mg">MG</SelectItem>
+                                      <SelectItem value="drop">
+                                        Drop(s)
                                       </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-xs">Time</Label>
-                                <Select
-                                  value={item.time}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].time = value;
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="AM">AM</SelectItem>
-                                    <SelectItem value="PM">PM</SelectItem>
-                                    <SelectItem value="Noon">Noon</SelectItem>
-                                    <SelectItem value="Evening">
-                                      Evening
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Amount</Label>
-                                <Input
-                                  value={item.amount}
-                                  onChange={(e) => {
-                                    const updated = [...medications];
-                                    updated[index].amount = e.target.value;
-                                    setMedications(updated);
-                                  }}
-                                  placeholder="e.g., 1"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Unit</Label>
-                                <Select
-                                  value={item.unit}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].unit = value;
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pill">Pill</SelectItem>
-                                    <SelectItem value="ml">ML</SelectItem>
-                                    <SelectItem value="mg">MG</SelectItem>
-                                    <SelectItem value="drop">
-                                      Drop(s)
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-xs">Type</Label>
-                                <Select
-                                  value={item.type}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].type = value;
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="oral">Oral</SelectItem>
-                                    <SelectItem value="topical">
-                                      Topical
-                                    </SelectItem>
-                                    <SelectItem value="injection">
-                                      Injection
-                                    </SelectItem>
-                                    <SelectItem value="eye_ear">
-                                      Eye/Ear Drops
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Source</Label>
-                                <Select
-                                  value={item.source}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].source = value;
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="owner">
-                                      Owner Provides
-                                    </SelectItem>
-                                    <SelectItem value="facility">
-                                      Facility Provides
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Instructions</Label>
-                                <Select
-                                  value={item.instructions}
-                                  onValueChange={(value) => {
-                                    const updated = [...medications];
-                                    updated[index].instructions = value;
-                                    setMedications(updated);
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="with_food">
-                                      With Food
-                                    </SelectItem>
-                                    <SelectItem value="empty_stomach">
-                                      Empty Stomach
-                                    </SelectItem>
-                                    <SelectItem value="as_needed">
-                                      As Needed
-                                    </SelectItem>
-                                    <SelectItem value="regular">
-                                      Regular Schedule
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+
+                            {/* Administration Details */}
+                            <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                              <h5 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <span className="w-4 h-4 rounded bg-blue-100 flex items-center justify-center">
+                                  <span className="text-xs">🏥</span>
+                                </span>
+                                Administration Details
+                              </h5>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Type
+                                  </Label>
+                                  <Select
+                                    value={item.type}
+                                    onValueChange={(value) => {
+                                      const updated = [...medications];
+                                      updated[index].type = value;
+                                      setMedications(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="oral">Oral</SelectItem>
+                                      <SelectItem value="topical">
+                                        Topical
+                                      </SelectItem>
+                                      <SelectItem value="injection">
+                                        Injection
+                                      </SelectItem>
+                                      <SelectItem value="eye_ear">
+                                        Eye/Ear Drops
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium">
+                                    Instructions
+                                  </Label>
+                                  <Select
+                                    value={item.instructions}
+                                    onValueChange={(value) => {
+                                      const updated = [...medications];
+                                      updated[index].instructions = value;
+                                      setMedications(updated);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue placeholder="Select instructions" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="with_food">
+                                        With Food
+                                      </SelectItem>
+                                      <SelectItem value="empty_stomach">
+                                        Empty Stomach
+                                      </SelectItem>
+                                      <SelectItem value="as_needed">
+                                        As Needed
+                                      </SelectItem>
+                                      <SelectItem value="regular">
+                                        Regular Schedule
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <Label className="text-xs">
+
+                            {/* Notes */}
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium flex items-center gap-1">
+                                <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                                 Medication Notes
                               </Label>
                               <Textarea
@@ -1241,8 +1398,9 @@ export function BoardingDetails({
                                   updated[index].notes = e.target.value;
                                   setMedications(updated);
                                 }}
-                                placeholder="Additional notes..."
+                                placeholder="Additional notes about medication..."
                                 rows={2}
+                                className="resize-none"
                               />
                             </div>
                           </CardContent>
@@ -1261,11 +1419,10 @@ export function BoardingDetails({
                                   ? selectedPets[0].id
                                   : undefined,
                               name: "",
-                              time: "",
+                              time: [],
                               amount: "",
                               unit: "",
                               type: "",
-                              source: "",
                               instructions: "",
                               notes: "",
                             },

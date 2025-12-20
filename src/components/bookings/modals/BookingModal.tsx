@@ -37,11 +37,11 @@ export interface MedicationItem {
   id: string;
   petId?: number;
   name: string;
-  time: string;
+  time: string[];
   amount: string;
   unit: string;
   type: string;
-  source: string;
+  source?: string;
   instructions: string;
   notes: string;
 }
