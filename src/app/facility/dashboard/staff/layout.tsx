@@ -8,22 +8,22 @@ import { Users, ClipboardList, Calendar, TrendingUp } from "lucide-react";
 const staffTabs = [
   {
     name: "Directory",
-    href: "/facility/staff",
+    href: "/facility/dashboard/staff",
     icon: Users,
   },
   {
     name: "Tasks",
-    href: "/facility/staff/tasks",
+    href: "/facility/dashboard/staff/tasks",
     icon: ClipboardList,
   },
   {
     name: "Availability",
-    href: "/facility/staff/availability",
+    href: "/facility/dashboard/staff/availability",
     icon: Calendar,
   },
   {
     name: "Performance",
-    href: "/facility/staff/performance",
+    href: "/facility/dashboard/staff/performance",
     icon: TrendingUp,
   },
 ];
@@ -36,10 +36,10 @@ export default function StaffLayout({
   const pathname = usePathname();
 
   const isActiveTab = (href: string) => {
-    if (href === "/facility/staff") {
+    if (href === "/facility/dashboard/staff") {
       return (
-        pathname === "/facility/staff" ||
-        pathname === "/facility/staff/directory"
+        pathname === "/facility/dashboard/staff" ||
+        pathname === "/facility/dashboard/staff/directory"
       );
     }
     return pathname.startsWith(href);

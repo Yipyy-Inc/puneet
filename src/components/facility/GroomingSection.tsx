@@ -8,24 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
+import { Modal } from "@/components/ui/modal";
+
 import {
   Search,
   PawPrint,
@@ -52,6 +37,7 @@ interface GroomingAppointmentWithPending extends Omit<
   "status"
 > {
   status: GroomingStatus | "pending";
+  price: number;
 }
 
 // Map pet IDs to dog images
@@ -75,15 +61,8 @@ export function GroomingSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointmentWithPending | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
-
-  // Confirmation dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    type: "pending" | "start" | "complete" | null;
-    appointment: GroomingAppointmentWithPending | null;
-  }>({ open: false, type: null, appointment: null });
-
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -96,7 +75,13 @@ export function GroomingSection() {
   // Local state for appointments data with pending status support
   const [appointmentsData, setAppointmentsData] = useState<
     GroomingAppointmentWithPending[]
-  >(groomingAppointments as GroomingAppointmentWithPending[]);
+  >(
+    groomingAppointments.map((apt) => ({
+      ...apt,
+      status: apt.status as GroomingStatus | "pending",
+      price: apt.totalPrice,
+    })),
+  );
 
   // Get groomer availability based on in-progress appointments
   const groomerStatus = useMemo(() => {
@@ -179,17 +164,6 @@ export function GroomingSection() {
     [todayAppointments],
   );
 
-  const openConfirmDialog = (
-    type: "pending" | "start" | "complete",
-    appointment: GroomingAppointmentWithPending,
-  ) => {
-    setConfirmDialog({ open: true, type, appointment });
-  };
-
-  const closeConfirmDialog = () => {
-    setConfirmDialog({ open: false, type: null, appointment: null });
-  };
-
   const executeAction = (
     appointment: GroomingAppointmentWithPending,
     newStatus: GroomingAppointmentWithPending["status"],
@@ -231,26 +205,6 @@ export function GroomingSection() {
     });
   };
 
-  const handleConfirmAction = () => {
-    if (!confirmDialog.appointment || !confirmDialog.type) return;
-
-    const { appointment, type } = confirmDialog;
-
-    switch (type) {
-      case "pending":
-        executeAction(appointment, "pending", "Marked as pending");
-        break;
-      case "start":
-        executeAction(appointment, "in-progress", "Grooming started");
-        break;
-      case "complete":
-        executeAction(appointment, "completed", "Grooming completed");
-        break;
-    }
-
-    closeConfirmDialog();
-  };
-
   const revertToScheduled = (appointment: GroomingAppointmentWithPending) => {
     const previousStatus = appointment.status;
     setAppointmentsData((prev) =>
@@ -279,7 +233,7 @@ export function GroomingSection() {
       duration: 5000,
     });
 
-    setShowDialog(false);
+    setIsDetailsModalOpen(false);
     setSelectedAppointment(null);
   };
 
@@ -311,7 +265,7 @@ export function GroomingSection() {
       duration: 5000,
     });
 
-    setShowDialog(false);
+    setIsDetailsModalOpen(false);
     setSelectedAppointment(null);
   };
 
@@ -343,27 +297,48 @@ export function GroomingSection() {
       duration: 5000,
     });
 
-    setShowDialog(false);
+    setIsDetailsModalOpen(false);
     setSelectedAppointment(null);
   };
 
   const handleMarkPending = (appointment: GroomingAppointmentWithPending) => {
-    openConfirmDialog("pending", appointment);
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(false);
+    setIsCheckInModalOpen(true);
   };
 
   const handleStartGrooming = (appointment: GroomingAppointmentWithPending) => {
-    openConfirmDialog("start", appointment);
-  };
-
-  const handleCompleteGrooming = (
-    appointment: GroomingAppointmentWithPending,
-  ) => {
-    openConfirmDialog("complete", appointment);
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(false);
+    setIsCheckInModalOpen(true);
   };
 
   const handleViewDetails = (appointment: GroomingAppointmentWithPending) => {
     setSelectedAppointment(appointment);
-    setShowDialog(true);
+    setIsCheckInModalOpen(false);
+    setIsDetailsModalOpen(true);
+  };
+
+  const confirmCheckIn = () => {
+    if (!selectedAppointment) return;
+    if (selectedAppointment.status === "scheduled") {
+      executeAction(selectedAppointment, "pending", "Checked in");
+    } else if (selectedAppointment.status === "pending") {
+      executeAction(selectedAppointment, "in-progress", "Grooming started");
+    }
+    setIsDetailsModalOpen(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleDetailsCheckIn = () => {
+    if (!selectedAppointment) return;
+    if (selectedAppointment.status === "scheduled") {
+      executeAction(selectedAppointment, "pending", "Checked in");
+    } else if (selectedAppointment.status === "pending") {
+      executeAction(selectedAppointment, "in-progress", "Grooming started");
+    }
+    setIsDetailsModalOpen(false);
+    setSelectedAppointment(null);
   };
 
   const formatTime = (time: string) => {
@@ -477,16 +452,7 @@ export function GroomingSection() {
           </Button>
         );
       case "in-progress":
-        return (
-          <Button
-            size="sm"
-            onClick={() => handleCompleteGrooming(appointment)}
-            className="gap-1 bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle className="h-3 w-3" />
-            Done
-          </Button>
-        );
+        return null;
       default:
         return null;
     }
@@ -674,188 +640,147 @@ export function GroomingSection() {
           )}
         </div>
 
-        {/* Appointment Details Dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Scissors className="h-5 w-5 text-primary" />
-                Appointment Details
-              </DialogTitle>
-              <DialogDescription>
-                View grooming appointment information
-              </DialogDescription>
-            </DialogHeader>
-
-            {selectedAppointment && (
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  {(() => {
-                    const client = findClientForPet(selectedAppointment.petId);
-                    return getPetImage(selectedAppointment.petId) ? (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
-                            : "#"
-                        }
-                      >
-                        <div className="h-12 w-12 rounded-full overflow-hidden">
-                          <Image
-                            src={getPetImage(selectedAppointment.petId)!}
-                            alt={selectedAppointment.petName}
-                            width={48}
-                            height={48}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </Link>
+        {/* Check-In Modal */}
+        <Modal
+          open={isCheckInModalOpen}
+          onOpenChange={setIsCheckInModalOpen}
+          type="confirmation"
+          title="Check-In Grooming Appointment"
+          description="Confirm pet arrival and appointment details"
+          actions={{
+            secondary: {
+              label: "Close",
+              onClick: () => setIsCheckInModalOpen(false),
+              variant: "outline",
+            },
+            primary: {
+              label: "Confirm Check-In",
+              onClick: confirmCheckIn,
+            },
+          }}
+        >
+          {selectedAppointment && (
+            <div className="space-y-6">
+              {/* Pet Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Pet Information</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                    {getPetImage(selectedAppointment.petId) ? (
+                      <Image
+                        src={getPetImage(selectedAppointment.petId)!}
+                        alt={selectedAppointment.petName}
+                        width={48}
+                        height={48}
+                        className="rounded-full"
+                      />
                     ) : (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
-                            : "#"
-                        }
-                      >
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-primary" />
-                        </div>
-                      </Link>
-                    );
-                  })()}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {(() => {
-                        const client = findClientForPet(
-                          selectedAppointment.petId,
-                        );
-                        return (
-                          <Link
-                            href={
-                              client
-                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
-                                : "#"
-                            }
-                            className="font-semibold text-lg hover:underline"
-                          >
-                            {selectedAppointment.petName}
-                          </Link>
-                        );
-                      })()}
-                      {getStatusBadge(selectedAppointment.status)}
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <PawPrint className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">
+                        {selectedAppointment.petName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAppointment.petBreed} •{" "}
+                        {selectedAppointment.petSize}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Owner: {selectedAppointment.ownerName}
-                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Breed</p>
-                    <p className="font-medium">
-                      {selectedAppointment.petBreed}
-                    </p>
+              {/* Owner Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Owner Information
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                    <Image
+                      src="/people/person-2.jpg"
+                      alt={selectedAppointment.ownerName}
+                      width={48}
+                      height={48}
+                      className="rounded-full"
+                    />
+                    <div>
+                      <p className="font-medium">
+                        {selectedAppointment.ownerName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAppointment.ownerPhone}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Phone</p>
-                    <p className="font-medium flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {selectedAppointment.ownerPhone}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Appointment Time</p>
-                    <p className="font-medium">
-                      {formatTime(selectedAppointment.startTime)} -{" "}
-                      {formatTime(selectedAppointment.endTime)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Groomer</p>
-                    <div className="flex items-center gap-2">
+                </div>
+              </div>
+
+              {/* Booking Details */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Service</p>
+                      <p className="font-medium">
+                        {selectedAppointment.packageName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Groomer</p>
                       <p className="font-medium">
                         {selectedAppointment.stylistName}
                       </p>
-                      {isGroomerAvailable(selectedAppointment.stylistId) ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Available
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                          Busy
-                        </Badge>
-                      )}
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Package</p>
-                    <p className="font-medium">
-                      {selectedAppointment.packageName}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Total Price</p>
-                    <p className="font-medium">
-                      ${selectedAppointment.totalPrice}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Pet Size</p>
-                    <p className="font-medium capitalize">
-                      {selectedAppointment.petSize}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Coat Type</p>
-                    <p className="font-medium capitalize">
-                      {selectedAppointment.coatType}
-                    </p>
-                  </div>
-                  {selectedAppointment.addOns.length > 0 && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Add-ons</p>
+                    <div>
+                      <p className="text-muted-foreground">Date & Time</p>
                       <p className="font-medium">
-                        {selectedAppointment.addOns.join(", ")}
+                        {selectedAppointment.date}{" "}
+                        {formatTime(selectedAppointment.startTime)} -{" "}
+                        {formatTime(selectedAppointment.endTime)}
                       </p>
                     </div>
-                  )}
-                  {selectedAppointment.specialInstructions && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">
-                        Special Instructions
-                      </p>
+                    <div>
+                      <p className="text-muted-foreground">Price</p>
                       <p className="font-medium">
-                        {selectedAppointment.specialInstructions}
+                        ${selectedAppointment.price}
                       </p>
                     </div>
-                  )}
-                  {selectedAppointment.allergies.length > 0 && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Allergies</p>
-                      <p className="font-medium text-red-600">
-                        {selectedAppointment.allergies.join(", ")}
-                      </p>
-                    </div>
-                  )}
-                  {selectedAppointment.notes && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Notes</p>
-                      <p className="font-medium">{selectedAppointment.notes}</p>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
+        </Modal>
 
-            <DialogFooter>
-              <div className="flex w-full justify-between">
-                <div className="flex gap-2">
-                  <Link href="/facility/dashboard/bookings">
-                    <Button variant="outline">Booking Details</Button>
-                  </Link>
-                  {selectedAppointment?.status === "pending" && (
+        {/* Details Modal */}
+        <Modal
+          open={isDetailsModalOpen}
+          onOpenChange={setIsDetailsModalOpen}
+          type="details"
+          title="Appointment Details"
+          description="View grooming appointment information"
+          size="xl"
+          footer={
+            <div className="flex w-full justify-between">
+              <div className="flex gap-2">
+                <Link href="/facility/dashboard/bookings">
+                  <Button variant="outline">Booking Details</Button>
+                </Link>
+                {selectedAppointment?.status === "pending" && (
+                  <Button
+                    variant="outline"
+                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    onClick={() => revertToScheduled(selectedAppointment)}
+                  >
+                    Revert to Scheduled
+                  </Button>
+                )}
+                {selectedAppointment?.status === "in-progress" && (
+                  <>
                     <Button
                       variant="outline"
                       className="text-orange-600 border-orange-600 hover:bg-orange-50"
@@ -863,138 +788,225 @@ export function GroomingSection() {
                     >
                       Revert to Scheduled
                     </Button>
-                  )}
-                  {selectedAppointment?.status === "in-progress" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                        onClick={() => revertToScheduled(selectedAppointment)}
-                      >
-                        Revert to Scheduled
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
-                        onClick={() => revertToPending(selectedAppointment)}
-                      >
-                        Revert to Pending
-                      </Button>
-                    </>
-                  )}
-                  {selectedAppointment?.status === "completed" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                        onClick={() => revertToScheduled(selectedAppointment)}
-                      >
-                        Revert to Scheduled
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                        onClick={() => revertToInProgress(selectedAppointment)}
-                      >
-                        Revert to In Progress
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDialog(false)}
-                  >
-                    Close
-                  </Button>
-                  {selectedAppointment?.status === "scheduled" && (
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        handleMarkPending(selectedAppointment);
-                        setShowDialog(false);
-                      }}
+                      className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                      onClick={() => revertToPending(selectedAppointment)}
                     >
-                      <Hourglass className="h-4 w-4 mr-2" />
-                      Mark Arrived
+                      Revert to Pending
                     </Button>
-                  )}
-                  {selectedAppointment?.status === "pending" && (
+                  </>
+                )}
+                {selectedAppointment?.status === "completed" && (
+                  <>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() => {
-                        handleStartGrooming(selectedAppointment);
-                        setShowDialog(false);
-                      }}
-                      disabled={
-                        !isGroomerAvailable(selectedAppointment.stylistId)
+                      variant="outline"
+                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      onClick={() => revertToScheduled(selectedAppointment)}
+                    >
+                      Revert to Scheduled
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      onClick={() => revertToInProgress(selectedAppointment)}
+                    >
+                      Revert to In Progress
+                    </Button>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedAppointment?.status === "scheduled" && (
+                  <Button variant="outline" onClick={handleDetailsCheckIn}>
+                    <Hourglass className="h-4 w-4 mr-2" />
+                    Mark Arrived
+                  </Button>
+                )}
+                {selectedAppointment?.status === "pending" && (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleDetailsCheckIn}
+                    disabled={
+                      !isGroomerAvailable(selectedAppointment.stylistId)
+                    }
+                  >
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    {isGroomerAvailable(selectedAppointment.stylistId)
+                      ? "Start Grooming"
+                      : `${selectedAppointment.stylistName} is Busy`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          }
+        >
+          {selectedAppointment && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                {(() => {
+                  const client = findClientForPet(selectedAppointment.petId);
+                  return getPetImage(selectedAppointment.petId) ? (
+                    <Link
+                      href={
+                        client
+                          ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                          : "#"
                       }
                     >
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      {isGroomerAvailable(selectedAppointment.stylistId)
-                        ? "Start Grooming"
-                        : `${selectedAppointment.stylistName} is Busy`}
-                    </Button>
-                  )}
-                  {selectedAppointment?.status === "in-progress" && (
-                    <Button
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        handleCompleteGrooming(selectedAppointment);
-                        setShowDialog(false);
-                      }}
+                      <div className="h-12 w-12 rounded-full overflow-hidden">
+                        <Image
+                          src={getPetImage(selectedAppointment.petId)!}
+                          alt={selectedAppointment.petName}
+                          width={48}
+                          height={48}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    </Link>
+                  ) : (
+                    <Link
+                      href={
+                        client
+                          ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                          : "#"
+                      }
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Complete
-                    </Button>
-                  )}
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <PawPrint className="h-6 w-6 text-primary" />
+                      </div>
+                    </Link>
+                  );
+                })()}
+                <div>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const client = findClientForPet(
+                        selectedAppointment.petId,
+                      );
+                      return (
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
+                              : "#"
+                          }
+                          className="font-semibold text-lg hover:underline"
+                        >
+                          {selectedAppointment.petName}
+                        </Link>
+                      );
+                    })()}
+                    {getStatusBadge(selectedAppointment.status)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Owner: {selectedAppointment.ownerName}
+                  </p>
                 </div>
               </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        {/* Confirmation Dialog */}
-        <AlertDialog
-          open={confirmDialog.open}
-          onOpenChange={(open) => !open && closeConfirmDialog()}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {confirmDialog.type === "pending" && "Mark as Arrived?"}
-                {confirmDialog.type === "start" && "Start Grooming?"}
-                {confirmDialog.type === "complete" && "Complete Grooming?"}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmDialog.type === "pending" &&
-                  `Are you sure you want to mark ${confirmDialog.appointment?.petName}'s appointment as arrived?`}
-                {confirmDialog.type === "start" &&
-                  `Are you sure you want to start grooming for ${confirmDialog.appointment?.petName}? This will mark ${confirmDialog.appointment?.stylistName} as busy.`}
-                {confirmDialog.type === "complete" &&
-                  `Are you sure you want to mark ${confirmDialog.appointment?.petName}'s grooming as complete?`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmAction}
-                className={
-                  confirmDialog.type === "complete"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : confirmDialog.type === "start"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : ""
-                }
-              >
-                {confirmDialog.type === "pending" && "Mark Arrived"}
-                {confirmDialog.type === "start" && "Start Grooming"}
-                {confirmDialog.type === "complete" && "Complete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Breed</p>
+                  <p className="font-medium">{selectedAppointment.petBreed}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {selectedAppointment.ownerPhone}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Appointment Time</p>
+                  <p className="font-medium">
+                    {formatTime(selectedAppointment.startTime)} -{" "}
+                    {formatTime(selectedAppointment.endTime)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Groomer</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">
+                      {selectedAppointment.stylistName}
+                    </p>
+                    {isGroomerAvailable(selectedAppointment.stylistId) ? (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Available
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        Busy
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Package</p>
+                  <p className="font-medium">
+                    {selectedAppointment.packageName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Price</p>
+                  <p className="font-medium">
+                    ${selectedAppointment.totalPrice}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Pet Size</p>
+                  <p className="font-medium capitalize">
+                    {selectedAppointment.petSize}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Coat Type</p>
+                  <p className="font-medium capitalize">
+                    {selectedAppointment.coatType}
+                  </p>
+                </div>
+                {selectedAppointment.addOns.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Add-ons</p>
+                    <p className="font-medium">
+                      {selectedAppointment.addOns.join(", ")}
+                    </p>
+                  </div>
+                )}
+                {selectedAppointment.specialInstructions && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">
+                      Special Instructions
+                    </p>
+                    <p className="font-medium">
+                      {selectedAppointment.specialInstructions}
+                    </p>
+                  </div>
+                )}
+                {selectedAppointment.allergies.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Allergies</p>
+                    <p className="font-medium text-red-600">
+                      {selectedAppointment.allergies.join(", ")}
+                    </p>
+                  </div>
+                )}
+                {selectedAppointment.notes && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Notes</p>
+                    <p className="font-medium">{selectedAppointment.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </Modal>
       </CardContent>
     </Card>
   );

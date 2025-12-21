@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -8,14 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Modal } from "@/components/ui/modal";
 import {
   LogIn,
   LogOut,
@@ -29,9 +22,12 @@ import {
   AlertTriangle,
   CheckCircle,
   Eye,
+  CreditCard,
+  MapPin,
+  Mail,
 } from "lucide-react";
 import { boardingGuests, BoardingGuest } from "@/data/boarding";
-import { daycareCheckIns, DaycareCheckIn } from "@/data/daycare";
+import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
 import { clients } from "@/data/clients";
 
 // Map pet IDs to dog images
@@ -69,6 +65,14 @@ interface UnifiedCheckIn {
   totalNights?: number;
   playGroup?: string | null;
   rateType?: string;
+  petSize?: "small" | "medium" | "large" | "giant";
+  price?: number;
+}
+
+function calculateDaycarePrice(rateType: string, petSize: string): number {
+  const rate = daycareRates.find((r) => r.type === rateType);
+  if (!rate) return 0;
+  return rate.sizePricing[petSize as keyof typeof rate.sizePricing] || 0;
 }
 
 function normalizeToUnifiedCheckIn(
@@ -90,6 +94,8 @@ function normalizeToUnifiedCheckIn(
     notes: guest.notes,
     kennelName: guest.kennelName,
     totalNights: guest.totalNights,
+    petSize: guest.petSize,
+    price: guest.totalPrice,
   }));
 
   const daycareItems: UnifiedCheckIn[] = daycare.map((checkIn) => ({
@@ -107,6 +113,8 @@ function normalizeToUnifiedCheckIn(
     notes: checkIn.notes,
     playGroup: checkIn.playGroup,
     rateType: checkIn.rateType,
+    petSize: checkIn.petSize,
+    price: calculateDaycarePrice(checkIn.rateType, checkIn.petSize),
   }));
 
   return [...boardingItems, ...daycareItems];
@@ -115,10 +123,16 @@ function normalizeToUnifiedCheckIn(
 export function CheckInOutSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
-  const [checkInOutMode, setCheckInOutMode] = useState<
-    "check-in" | "check-out" | "view" | null
-  >(null);
   const [selectedItem, setSelectedItem] = useState<UnifiedCheckIn | null>(null);
+  const [pickupPerson, setPickupPerson] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState<
+    null | "processing" | "succeeded" | "failed"
+  >(null);
+
+  // Modal open states
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -191,17 +205,23 @@ export function CheckInOutSection() {
 
   const handleCheckIn = (item: UnifiedCheckIn) => {
     setSelectedItem(item);
-    setCheckInOutMode("check-in");
+    setPickupPerson(item.ownerName);
+    setPaymentStatus(null);
+    setIsCheckInModalOpen(true);
   };
 
   const handleCheckOut = (item: UnifiedCheckIn) => {
     setSelectedItem(item);
-    setCheckInOutMode("check-out");
+    setPickupPerson(item.ownerName);
+    setPaymentStatus(null);
+    setIsCheckOutModalOpen(true);
   };
 
   const handleViewDetails = (item: UnifiedCheckIn) => {
     setSelectedItem(item);
-    setCheckInOutMode("view");
+    setPickupPerson(item.ownerName);
+    setPaymentStatus(null);
+    setIsDetailsModalOpen(true);
   };
 
   const revertToScheduled = (item: UnifiedCheckIn) => {
@@ -273,7 +293,7 @@ export function CheckInOutSection() {
       });
     }
 
-    setCheckInOutMode(null);
+    setIsDetailsModalOpen(false);
     setSelectedItem(null);
   };
 
@@ -344,38 +364,28 @@ export function CheckInOutSection() {
       });
     }
 
-    setCheckInOutMode(null);
+    setIsDetailsModalOpen(false);
     setSelectedItem(null);
   };
 
-  const confirmCheckInOut = () => {
+  const confirmCheckIn = () => {
     if (!selectedItem) return;
 
     const now = new Date().toISOString();
     const previousStatus = selectedItem.status;
-    const actionLabel =
-      checkInOutMode === "check-in" ? "Checked In" : "Checked Out";
-    const newStatus =
-      checkInOutMode === "check-in" ? "checked-in" : "checked-out";
+    const actionLabel = "Checked In";
+    const newStatus = "checked-in";
 
     if (selectedItem.serviceType === "boarding") {
       const previousData = boardingData.find((g) => g.id === selectedItem.id);
       setBoardingData((prev) =>
         prev.map((guest) => {
           if (guest.id === selectedItem.id) {
-            if (checkInOutMode === "check-in") {
-              return {
-                ...guest,
-                status: "checked-in" as const,
-                actualCheckIn: now,
-              };
-            } else {
-              return {
-                ...guest,
-                status: "checked-out" as const,
-                actualCheckOut: now,
-              };
-            }
+            return {
+              ...guest,
+              status: "checked-in" as const,
+              actualCheckIn: now,
+            };
           }
           return guest;
         }),
@@ -410,19 +420,11 @@ export function CheckInOutSection() {
       setDaycareData((prev) =>
         prev.map((checkIn) => {
           if (checkIn.id === selectedItem.id) {
-            if (checkInOutMode === "check-in") {
-              return {
-                ...checkIn,
-                status: "checked-in" as const,
-                checkInTime: now,
-              };
-            } else {
-              return {
-                ...checkIn,
-                status: "checked-out" as const,
-                checkOutTime: now,
-              };
-            }
+            return {
+              ...checkIn,
+              status: "checked-in" as const,
+              checkInTime: now,
+            };
           }
           return checkIn;
         }),
@@ -454,7 +456,124 @@ export function CheckInOutSection() {
       });
     }
 
-    setCheckInOutMode(null);
+    setIsCheckInModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const confirmCheckOut = () => {
+    if (!selectedItem) return;
+
+    const now = new Date().toISOString();
+    const previousStatus = selectedItem.status;
+    const actionLabel = "Checked Out";
+    const newStatus = "checked-out";
+
+    if (selectedItem.serviceType === "boarding") {
+      const previousData = boardingData.find((g) => g.id === selectedItem.id);
+      setBoardingData((prev) =>
+        prev.map((guest) => {
+          if (guest.id === selectedItem.id) {
+            return {
+              ...guest,
+              status: "checked-out" as const,
+              actualCheckOut: now,
+            };
+          }
+          return guest;
+        }),
+      );
+
+      // Show toast with undo
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+
+      toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+        description: `Boarding ${newStatus.replace("-", " ")}`,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setBoardingData((prev) =>
+                prev.map((guest) =>
+                  guest.id === selectedItem.id ? previousData : guest,
+                ),
+              );
+              toast.info("Action undone", {
+                description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
+              });
+            }
+          },
+        },
+        duration: 5000,
+      });
+    } else {
+      const previousData = daycareData.find((c) => c.id === selectedItem.id);
+      setDaycareData((prev) =>
+        prev.map((checkIn) => {
+          if (checkIn.id === selectedItem.id) {
+            return {
+              ...checkIn,
+              status: "checked-out" as const,
+              checkOutTime: now,
+            };
+          }
+          return checkIn;
+        }),
+      );
+
+      // Show toast with undo
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+
+      toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+        description: `Daycare ${newStatus.replace("-", " ")}`,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (previousData) {
+              setDaycareData((prev) =>
+                prev.map((checkIn) =>
+                  checkIn.id === selectedItem.id ? previousData : checkIn,
+                ),
+              );
+              toast.info("Action undone", {
+                description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
+              });
+            }
+          },
+        },
+        duration: 5000,
+      });
+    }
+
+    setPaymentStatus("processing");
+  };
+
+  useEffect(() => {
+    if (paymentStatus === "processing") {
+      const timer = setTimeout(() => {
+        setPaymentStatus("succeeded");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus]);
+
+  const closeCheckOutModal = () => {
+    setIsCheckOutModalOpen(false);
+    setSelectedItem(null);
+    setPickupPerson("");
+    setPaymentStatus(null);
+  };
+
+  const closeCheckInModal = () => {
+    setIsCheckInModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
     setSelectedItem(null);
   };
 
@@ -483,38 +602,6 @@ export function CheckInOutSection() {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const getCheckoutStatus = (scheduledCheckOut: string) => {
-    const now = new Date();
-    const expected = new Date(scheduledCheckOut);
-    const diffMs = now.getTime() - expected.getTime();
-    const diffMins = Math.round(diffMs / (1000 * 60));
-    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-
-    if (diffMins < -30) {
-      const displayTime =
-        Math.abs(diffHours) >= 1
-          ? `${Math.abs(diffHours)} hour${Math.abs(diffHours) !== 1 ? "s" : ""}`
-          : `${Math.abs(diffMins)} min${Math.abs(diffMins) !== 1 ? "s" : ""}`;
-      return {
-        status: "early" as const,
-        message: `${displayTime} early`,
-      };
-    } else if (diffMins > 30) {
-      const displayTime =
-        diffHours >= 1
-          ? `${diffHours} hour${diffHours !== 1 ? "s" : ""}`
-          : `${diffMins} min${diffMins !== 1 ? "s" : ""}`;
-      return {
-        status: "late" as const,
-        message: `${displayTime} late`,
-      };
-    }
-    return {
-      status: "on-time" as const,
-      message: "On time",
-    };
   };
 
   const getServiceBadge = (serviceType: "daycare" | "boarding") => {
@@ -1003,208 +1090,679 @@ export function CheckInOutSection() {
           )}
         </div>
 
-        {/* Check-In / Check-Out Dialog */}
-        <Dialog
-          open={checkInOutMode !== null}
-          onOpenChange={() => {
-            setCheckInOutMode(null);
-            setSelectedItem(null);
-          }}
+        {/* Check-In Modal */}
+        <Modal
+          open={isCheckInModalOpen}
+          onOpenChange={closeCheckInModal}
+          type="details"
+          title="Check In"
+          description="Confirm check-in for this pet"
+          icon={<LogIn className="h-5 w-5 text-green-600" />}
+          size="xl"
         >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {checkInOutMode === "check-in" ? (
-                  <>
-                    <LogIn className="h-5 w-5 text-green-600" />
-                    Check In
-                  </>
-                ) : checkInOutMode === "check-out" ? (
-                  <>
-                    <LogOut className="h-5 w-5 text-orange-600" />
-                    Check Out
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5 text-gray-600" />
-                    Checkout Details
-                  </>
-                )}
-              </DialogTitle>
-              <DialogDescription>
-                {checkInOutMode === "check-in"
-                  ? "Confirm check-in for this pet"
-                  : checkInOutMode === "check-out"
-                    ? "Confirm check-out for this pet"
-                    : "View details for this checkout"}
-              </DialogDescription>
-            </DialogHeader>
-
-            {selectedItem && (
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  {(() => {
-                    const client = findClientForPet(selectedItem.petId);
-                    return getPetImage(selectedItem.petId) ? (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
-                            : "#"
-                        }
-                      >
-                        <div className="h-12 w-12 rounded-full overflow-hidden">
-                          <Image
-                            src={getPetImage(selectedItem.petId)!}
-                            alt={selectedItem.petName}
-                            width={48}
-                            height={48}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </Link>
-                    ) : (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
-                            : "#"
-                        }
-                      >
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-primary" />
-                        </div>
-                      </Link>
-                    );
-                  })()}
-                  <div>
-                    <div className="flex items-center gap-2">
+          {selectedItem && (
+            <>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Pet Information</h4>
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
                       {(() => {
                         const client = findClientForPet(selectedItem.petId);
-                        return (
+                        return getPetImage(selectedItem.petId) ? (
                           <Link
                             href={
                               client
                                 ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                 : "#"
                             }
-                            className="font-semibold text-lg hover:underline"
                           >
-                            {selectedItem.petName}
+                            <div className="h-12 w-12 rounded-full overflow-hidden">
+                              <Image
+                                src={getPetImage(selectedItem.petId)!}
+                                alt={selectedItem.petName}
+                                width={48}
+                                height={48}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                : "#"
+                            }
+                          >
+                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <PawPrint className="h-6 w-6 text-primary" />
+                            </div>
                           </Link>
                         );
                       })()}
-                      {getServiceBadge(selectedItem.serviceType)}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const client = findClientForPet(selectedItem.petId);
+                            return (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                    : "#"
+                                }
+                                className="font-semibold text-lg hover:underline"
+                              >
+                                {selectedItem.petName}
+                              </Link>
+                            );
+                          })()}
+                          {getServiceBadge(selectedItem.serviceType)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Breed: {selectedItem.petBreed}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedItem.serviceType === "boarding"
+                            ? `Kennel: ${selectedItem.kennelName}`
+                            : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Owner: {selectedItem.ownerName}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Owner: {selectedItem.ownerName}
-                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Owner Information</h4>
+                    {(() => {
+                      const client = findClientForPet(selectedItem.petId);
+                      return client ? (
+                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <Image
+                              src="/people/person-2.jpg"
+                              alt={client.name}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg">
+                              {client.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {client.email}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {client.phone}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {client.address
+                                ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
+                                : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Client information not available
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Breed</p>
-                    <p className="font-medium">{selectedItem.petBreed}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Phone</p>
-                    <p className="font-medium flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {selectedItem.ownerPhone}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Expected Departure</p>
-                    <p className="font-medium">
-                      {formatExpectedDeparture(
-                        selectedItem.scheduledCheckOut,
-                        selectedItem.serviceType,
-                      )}
-                    </p>
-                  </div>
-                  {(checkInOutMode === "check-out" ||
-                    checkInOutMode === "view") && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">Booking Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
                     <div>
-                      <p className="text-muted-foreground">Checkout Status</p>
-                      {(() => {
-                        const checkoutStatus = getCheckoutStatus(
-                          selectedItem.scheduledCheckOut,
-                        );
-                        return (
-                          <p
-                            className={`font-medium flex items-center gap-1 ${
-                              checkoutStatus.status === "early"
-                                ? "text-blue-600"
-                                : checkoutStatus.status === "late"
-                                  ? "text-orange-600"
-                                  : "text-green-600"
-                            }`}
-                          >
-                            {checkoutStatus.status === "early" ? (
-                              <Clock className="h-3 w-3" />
-                            ) : checkoutStatus.status === "late" ? (
-                              <AlertTriangle className="h-3 w-3" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3" />
-                            )}
-                            {checkoutStatus.message}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  )}
-                  {checkInOutMode === "view" && selectedItem.checkOutTime && (
-                    <div>
-                      <p className="text-muted-foreground">Checked Out At</p>
-                      <p className="font-medium">
-                        {formatTime(selectedItem.checkOutTime)}
+                      <p className="text-muted-foreground">Service</p>
+                      <p className="font-medium capitalize">
+                        {selectedItem.serviceType}
                       </p>
                     </div>
-                  )}
-                  {selectedItem.serviceType === "boarding" && (
-                    <>
-                      <div>
-                        <p className="text-muted-foreground">Kennel</p>
-                        <p className="font-medium">{selectedItem.kennelName}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Stay Duration</p>
-                        <p className="font-medium">
-                          {selectedItem.totalNights} night
-                          {selectedItem.totalNights !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  {selectedItem.serviceType === "daycare" && (
-                    <>
-                      <div>
-                        <p className="text-muted-foreground">Play Group</p>
-                        <p className="font-medium">
-                          {selectedItem.playGroup || "Not assigned"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Rate Type</p>
-                        <p className="font-medium capitalize">
-                          {selectedItem.rateType?.replace("-", " ")}
-                        </p>
-                      </div>
-                    </>
-                  )}
+                    <div>
+                      <p className="text-muted-foreground">Check-in Date</p>
+                      <p className="font-medium">
+                        {new Date(
+                          selectedItem.checkInTime,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Check-out Date</p>
+                      <p className="font-medium">
+                        {new Date(
+                          selectedItem.scheduledCheckOut,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Price</p>
+                      <p className="font-medium">
+                        ${selectedItem.price?.toFixed(2) || "N/A"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
 
-            <DialogFooter>
-              {checkInOutMode === "view" && selectedItem ? (
-                <div className="flex w-full justify-between">
-                  <div className="flex gap-2">
-                    <Link href="/facility/dashboard/bookings">
-                      <Button variant="outline">Booking Details</Button>
-                    </Link>
-                    {selectedItem.status === "checked-in" && (
+              <div className="flex items-center justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={closeCheckInModal}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmCheckIn}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Confirm Check In
+                </Button>
+              </div>
+            </>
+          )}
+        </Modal>
+
+        {/* Check-Out Modal */}
+        <Modal
+          open={isCheckOutModalOpen}
+          onOpenChange={closeCheckOutModal}
+          type="details"
+          title="Check Out"
+          description="Confirm check-out for this pet"
+          icon={<LogOut className="h-5 w-5 text-orange-600" />}
+          size="xl"
+        >
+          {selectedItem && (
+            <>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Pet Information</h4>
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                      {(() => {
+                        const client = findClientForPet(selectedItem.petId);
+                        return getPetImage(selectedItem.petId) ? (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                : "#"
+                            }
+                          >
+                            <div className="h-12 w-12 rounded-full overflow-hidden">
+                              <Image
+                                src={getPetImage(selectedItem.petId)!}
+                                alt={selectedItem.petName}
+                                width={48}
+                                height={48}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                : "#"
+                            }
+                          >
+                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <PawPrint className="h-6 w-6 text-primary" />
+                            </div>
+                          </Link>
+                        );
+                      })()}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const client = findClientForPet(selectedItem.petId);
+                            return (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                    : "#"
+                                }
+                                className="font-semibold text-lg hover:underline"
+                              >
+                                {selectedItem.petName}
+                              </Link>
+                            );
+                          })()}
+                          {getServiceBadge(selectedItem.serviceType)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Breed: {selectedItem.petBreed}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedItem.serviceType === "boarding"
+                            ? `Kennel: ${selectedItem.kennelName}`
+                            : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Owner: {selectedItem.ownerName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Owner Information</h4>
+                    {(() => {
+                      const client = findClientForPet(selectedItem.petId);
+                      return client ? (
+                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <Image
+                              src="/people/person-2.jpg"
+                              alt={client.name}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg">
+                              {client.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {client.email}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {client.phone}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {client.address
+                                ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
+                                : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Client information not available
+                        </p>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">Pickup Information</h4>
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm">
+                      Pickup by: {pickupPerson || selectedItem.ownerName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">Booking Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
+                    <div>
+                      <p className="text-muted-foreground">Service</p>
+                      <p className="font-medium capitalize">
+                        {selectedItem.serviceType}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Check-in Date</p>
+                      <p className="font-medium">
+                        {new Date(
+                          selectedItem.checkInTime,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Check-out Date</p>
+                      <p className="font-medium">
+                        {new Date(
+                          selectedItem.scheduledCheckOut,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Price</p>
+                      <p className="font-medium">
+                        ${selectedItem.price?.toFixed(2) || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {paymentStatus && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Payment Status</h4>
+                    <div className="p-4 rounded-lg bg-muted/50">
+                      {paymentStatus === "processing" && (
+                        <p className="text-sm flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 animate-pulse" />
+                          Processing payment...
+                        </p>
+                      )}
+                      {paymentStatus === "succeeded" && (
+                        <p className="text-sm flex items-center gap-2 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          Payment succeeded
+                        </p>
+                      )}
+                      {paymentStatus === "failed" && (
+                        <p className="text-sm flex items-center gap-2 text-red-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          Payment failed: Insufficient funds
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t">
+                {paymentStatus === null && (
+                  <Button variant="outline" onClick={closeCheckOutModal}>
+                    Cancel
+                  </Button>
+                )}
+                {paymentStatus === null && (
+                  <Button
+                    onClick={confirmCheckOut}
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    Confirm Check Out
+                  </Button>
+                )}
+                {paymentStatus === "succeeded" && (
+                  <Button onClick={closeCheckOutModal}>Close</Button>
+                )}
+              </div>
+            </>
+          )}
+        </Modal>
+
+        {/* Details Modal */}
+        <Modal
+          open={isDetailsModalOpen}
+          onOpenChange={closeDetailsModal}
+          type="details"
+          title="Pet Details"
+          description="View details for this pet"
+          icon={<CheckCircle className="h-5 w-5 text-gray-600" />}
+          size="xl"
+        >
+          {selectedItem && (
+            <>
+              <div className="space-y-4">
+                {selectedItem.status === "checked-out" ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">
+                          Pet Information
+                        </h4>
+                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                          {(() => {
+                            const client = findClientForPet(selectedItem.petId);
+                            return getPetImage(selectedItem.petId) ? (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                    : "#"
+                                }
+                              >
+                                <div className="h-12 w-12 rounded-full overflow-hidden">
+                                  <Image
+                                    src={getPetImage(selectedItem.petId)!}
+                                    alt={selectedItem.petName}
+                                    width={48}
+                                    height={48}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                              </Link>
+                            ) : (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                    : "#"
+                                }
+                              >
+                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <PawPrint className="h-6 w-6 text-primary" />
+                                </div>
+                              </Link>
+                            );
+                          })()}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const client = findClientForPet(
+                                  selectedItem.petId,
+                                );
+                                return (
+                                  <Link
+                                    href={
+                                      client
+                                        ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                        : "#"
+                                    }
+                                    className="font-semibold text-lg hover:underline"
+                                  >
+                                    {selectedItem.petName}
+                                  </Link>
+                                );
+                              })()}
+                              {getServiceBadge(selectedItem.serviceType)}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Breed: {selectedItem.petBreed}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedItem.serviceType === "boarding"
+                                ? `Kennel: ${selectedItem.kennelName}`
+                                : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Owner: {selectedItem.ownerName}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">
+                          Owner Information
+                        </h4>
+                        {(() => {
+                          const client = findClientForPet(selectedItem.petId);
+                          return client ? (
+                            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                              <div className="h-12 w-12 rounded-full overflow-hidden">
+                                <Image
+                                  src="/people/person-2.jpg"
+                                  alt={client.name}
+                                  width={48}
+                                  height={48}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-lg">
+                                  {client.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {client.email}
+                                </p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {client.phone}
+                                </p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {client.address
+                                    ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
+                                    : "N/A"}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Client information not available
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">
+                        Pickup Information
+                      </h4>
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm">
+                          Pickup by: {pickupPerson || selectedItem.ownerName}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">Booking Details</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
+                        <div>
+                          <p className="text-muted-foreground">Service</p>
+                          <p className="font-medium capitalize">
+                            {selectedItem.serviceType}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Check-in Date</p>
+                          <p className="font-medium">
+                            {new Date(
+                              selectedItem.checkInTime,
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">
+                            Check-out Date
+                          </p>
+                          <p className="font-medium">
+                            {new Date(
+                              selectedItem.scheduledCheckOut,
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Total Price</p>
+                          <p className="font-medium">
+                            ${selectedItem.price?.toFixed(2) || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">Payment Status</h4>
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm flex items-center gap-2 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          Payment succeeded
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                    {(() => {
+                      const client = findClientForPet(selectedItem.petId);
+                      return getPetImage(selectedItem.petId) ? (
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                              : "#"
+                          }
+                        >
+                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <Image
+                              src={getPetImage(selectedItem.petId)!}
+                              alt={selectedItem.petName}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        </Link>
+                      ) : (
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                              : "#"
+                          }
+                        >
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <PawPrint className="h-6 w-6 text-primary" />
+                          </div>
+                        </Link>
+                      );
+                    })()}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const client = findClientForPet(selectedItem.petId);
+                          return (
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
+                                  : "#"
+                              }
+                              className="font-semibold text-lg hover:underline"
+                            >
+                              {selectedItem.petName}
+                            </Link>
+                          );
+                        })()}
+                        {getServiceBadge(selectedItem.serviceType)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Owner: {selectedItem.ownerName}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between w-full gap-2 pt-4 border-t">
+                <div className="flex gap-2">
+                  <Link href="/facility/dashboard/bookings">
+                    <Button variant="outline">Booking Details</Button>
+                  </Link>
+                  {selectedItem.status === "checked-in" && (
+                    <Button
+                      variant="outline"
+                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      onClick={() => revertToScheduled(selectedItem)}
+                    >
+                      Revert to Scheduled
+                    </Button>
+                  )}
+                  {selectedItem.status === "checked-out" && (
+                    <>
                       <Button
                         variant="outline"
                         className="text-orange-600 border-orange-600 hover:bg-orange-50"
@@ -1212,64 +1770,25 @@ export function CheckInOutSection() {
                       >
                         Revert to Scheduled
                       </Button>
-                    )}
-                    {selectedItem.status === "checked-out" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                          onClick={() => revertToScheduled(selectedItem)}
-                        >
-                          Revert to Scheduled
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                          onClick={() => revertToCheckedIn(selectedItem)}
-                        >
-                          Revert to Checked In
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setCheckInOutMode(null);
-                      setSelectedItem(null);
-                    }}
-                  >
+                      <Button
+                        variant="outline"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        onClick={() => revertToCheckedIn(selectedItem)}
+                      >
+                        Revert to Checked In
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2 ml-auto">
+                  <Button variant="outline" onClick={closeDetailsModal}>
                     Close
                   </Button>
                 </div>
-              ) : checkInOutMode !== "view" ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setCheckInOutMode(null);
-                      setSelectedItem(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={confirmCheckInOut}
-                    className={
-                      checkInOutMode === "check-in"
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-orange-600 hover:bg-orange-700"
-                    }
-                  >
-                    {checkInOutMode === "check-in"
-                      ? "Confirm Check In"
-                      : "Confirm Check Out"}
-                  </Button>
-                </>
-              ) : null}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </div>
+            </>
+          )}
+        </Modal>
       </CardContent>
     </Card>
   );

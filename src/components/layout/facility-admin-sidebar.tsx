@@ -125,13 +125,13 @@ export function FacilitySidebar() {
           },
           {
             title: "Users",
-            url: "/facility/staff",
+            url: "/facility/dashboard/staff",
             icon: UserCheck,
             disabled: false,
           },
           {
             title: "Inventory",
-            url: "/facility/inventory",
+            url: "/facility/dashboard/inventory",
             icon: Package,
             disabled: false,
           },

@@ -8,24 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+
+import { Modal } from "@/components/ui/modal";
+
 import {
   Search,
   PawPrint,
@@ -57,6 +43,7 @@ interface TrainingSessionLocal {
   status: SessionStatus;
   attendees: string[];
   notes: string;
+  price: number;
 }
 
 interface EnrollmentLocal {
@@ -108,14 +95,10 @@ export function TrainingSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSession, setSelectedSession] =
     useState<TrainingSessionLocal | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
+  const [arrivedPets, setArrivedPets] = useState<Set<number>>(new Set());
 
-  // Confirmation dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    type: "pending" | "start" | "complete" | null;
-    session: TrainingSessionLocal | null;
-  }>({ open: false, type: null, session: null });
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,6 +123,7 @@ export function TrainingSection() {
       status: s.status as SessionStatus,
       attendees: s.attendees as string[],
       notes: s.notes as string,
+      price: 75,
     })),
   );
 
@@ -259,17 +243,6 @@ export function TrainingSection() {
     [todaySessions],
   );
 
-  const openConfirmDialog = (
-    type: "pending" | "start" | "complete",
-    session: TrainingSessionLocal,
-  ) => {
-    setConfirmDialog({ open: true, type, session });
-  };
-
-  const closeConfirmDialog = () => {
-    setConfirmDialog({ open: false, type: null, session: null });
-  };
-
   const executeAction = (
     session: TrainingSessionLocal,
     newStatus: SessionStatus,
@@ -307,26 +280,6 @@ export function TrainingSection() {
     });
   };
 
-  const handleConfirmAction = () => {
-    if (!confirmDialog.session || !confirmDialog.type) return;
-
-    const { session, type } = confirmDialog;
-
-    switch (type) {
-      case "pending":
-        executeAction(session, "pending", "Marked as pending");
-        break;
-      case "start":
-        executeAction(session, "in-progress", "Session started");
-        break;
-      case "complete":
-        executeAction(session, "completed", "Session completed");
-        break;
-    }
-
-    closeConfirmDialog();
-  };
-
   const revertToScheduled = (session: TrainingSessionLocal) => {
     const previousStatus = session.status;
     setSessionsData((prev) =>
@@ -351,7 +304,7 @@ export function TrainingSection() {
       duration: 5000,
     });
 
-    setShowDialog(false);
+    setIsDetailsModalOpen(false);
     setSelectedSession(null);
   };
 
@@ -379,53 +332,72 @@ export function TrainingSection() {
       duration: 5000,
     });
 
-    setShowDialog(false);
-    setSelectedSession(null);
-  };
-
-  const revertToInProgress = (session: TrainingSessionLocal) => {
-    const previousStatus = session.status;
-    setSessionsData((prev) =>
-      prev.map((s) =>
-        s.id === session.id ? { ...s, status: "in-progress" as const } : s,
-      ),
-    );
-
-    toast.success(`${session.className} - Reverted to In Progress`, {
-      description: "Status has been reset",
-      action: {
-        label: "Undo",
-        onClick: () => {
-          setSessionsData((prev) =>
-            prev.map((s) =>
-              s.id === session.id ? { ...s, status: previousStatus } : s,
-            ),
-          );
-          toast.info("Action undone");
-        },
-      },
-      duration: 5000,
-    });
-
-    setShowDialog(false);
+    setIsDetailsModalOpen(false);
     setSelectedSession(null);
   };
 
   const handleMarkPending = (session: TrainingSessionLocal) => {
-    openConfirmDialog("pending", session);
+    setSelectedSession(session);
+    setArrivedPets(new Set());
+    setIsDetailsModalOpen(false);
+    setIsCheckInModalOpen(true);
   };
 
   const handleStartSession = (session: TrainingSessionLocal) => {
-    openConfirmDialog("start", session);
-  };
-
-  const handleCompleteSession = (session: TrainingSessionLocal) => {
-    openConfirmDialog("complete", session);
+    setSelectedSession(session);
+    setArrivedPets(new Set());
+    setIsDetailsModalOpen(false);
+    setIsCheckInModalOpen(true);
   };
 
   const handleViewDetails = (session: TrainingSessionLocal) => {
     setSelectedSession(session);
-    setShowDialog(true);
+    setArrivedPets(new Set());
+    setIsCheckInModalOpen(false);
+    setIsDetailsModalOpen(true);
+  };
+
+  const canStartSession = (session: TrainingSessionLocal) => {
+    const now = new Date();
+    const sessionTime = new Date(`${session.date}T${session.startTime}`);
+    const allArrived = getSessionEnrollments(session.attendees).every((e) =>
+      arrivedPets.has(e.petId),
+    );
+    return allArrived || now >= sessionTime;
+  };
+
+  const confirmCheckIn = () => {
+    if (!selectedSession) return;
+    if (selectedSession.status === "scheduled") {
+      executeAction(selectedSession, "pending", "Checked in");
+    } else if (selectedSession.status === "pending") {
+      if (!canStartSession(selectedSession)) {
+        toast.error(
+          "Cannot start session until all pets arrived or session time reached",
+        );
+        return;
+      }
+      executeAction(selectedSession, "in-progress", "Session started");
+    }
+    setIsCheckInModalOpen(false);
+    setSelectedSession(null);
+  };
+
+  const handleDetailsCheckIn = () => {
+    if (!selectedSession) return;
+    if (selectedSession.status === "scheduled") {
+      executeAction(selectedSession, "pending", "Checked in");
+    } else if (selectedSession.status === "pending") {
+      if (!canStartSession(selectedSession)) {
+        toast.error(
+          "Cannot start session until all pets arrived or session time reached",
+        );
+        return;
+      }
+      executeAction(selectedSession, "in-progress", "Session started");
+    }
+    setIsDetailsModalOpen(false);
+    setSelectedSession(null);
   };
 
   const formatTime = (time: string) => {
@@ -539,16 +511,7 @@ export function TrainingSection() {
           </Button>
         );
       case "in-progress":
-        return (
-          <Button
-            size="sm"
-            onClick={() => handleCompleteSession(session)}
-            className="gap-1 bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle className="h-3 w-3" />
-            Done
-          </Button>
-        );
+        return null;
       default:
         return null;
     }
@@ -711,152 +674,184 @@ export function TrainingSection() {
           )}
         </div>
 
-        {/* Session Details Dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-primary" />
-                Session Details
-              </DialogTitle>
-              <DialogDescription>
-                View training session information
-              </DialogDescription>
-            </DialogHeader>
-
-            {selectedSession && (
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <GraduationCap className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-lg">
-                        {selectedSession.className}
-                      </p>
-                      {getStatusBadge(selectedSession.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Trainer: {selectedSession.trainerName}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Session Time</p>
-                    <p className="font-medium">
-                      {formatTime(selectedSession.startTime)} -{" "}
-                      {formatTime(selectedSession.endTime)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Trainer</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">
-                        {selectedSession.trainerName}
-                      </p>
-                      {isTrainerAvailable(selectedSession.trainerId) ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Available
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                          Busy
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground mb-2">
-                      Attendees (
-                      {getSessionEnrollments(selectedSession.attendees).length})
-                    </p>
-                    <div className="space-y-2">
-                      {getSessionEnrollments(selectedSession.attendees).map(
-                        (enrollment) => {
-                          const client = findClientForPet(enrollment.petId);
-                          return (
-                            <div
-                              key={enrollment.id}
-                              className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
-                            >
-                              {getPetImage(enrollment.petId) ? (
-                                <Link
-                                  href={
-                                    client
-                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
-                                      : "#"
-                                  }
-                                  className="shrink-0"
-                                >
-                                  <div className="h-8 w-8 rounded-full overflow-hidden">
-                                    <Image
-                                      src={getPetImage(enrollment.petId)!}
-                                      alt={enrollment.petName}
-                                      width={32}
-                                      height={32}
-                                      className="h-full w-full object-cover"
-                                    />
-                                  </div>
-                                </Link>
-                              ) : (
-                                <Link
-                                  href={
-                                    client
-                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
-                                      : "#"
-                                  }
-                                  className="shrink-0"
-                                >
-                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <PawPrint className="h-4 w-4 text-primary" />
-                                  </div>
-                                </Link>
-                              )}
-                              <div className="min-w-0">
-                                <Link
-                                  href={
-                                    client
-                                      ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
-                                      : "#"
-                                  }
-                                  className="font-medium text-sm hover:underline"
-                                >
-                                  {enrollment.petName}
-                                </Link>
-                                <p className="text-xs text-muted-foreground">
-                                  {enrollment.ownerName} • {enrollment.petBreed}
-                                </p>
-                              </div>
-                              <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                {enrollment.ownerPhone}
-                              </div>
+        {/* Check-In Modal */}
+        <Modal
+          open={isCheckInModalOpen}
+          onOpenChange={setIsCheckInModalOpen}
+          type="confirmation"
+          size="xl"
+          title="Check-In Training Session"
+          description="Confirm pet arrival and session details"
+          actions={{
+            secondary: {
+              label: "Close",
+              onClick: () => setIsCheckInModalOpen(false),
+              variant: "outline",
+            },
+            primary: {
+              label:
+                selectedSession?.status === "scheduled"
+                  ? "Mark as Ready"
+                  : "Start Session",
+              onClick: confirmCheckIn,
+              disabled:
+                selectedSession?.status === "pending" &&
+                selectedSession &&
+                !canStartSession(selectedSession),
+            },
+          }}
+        >
+          {selectedSession && (
+            <div className="space-y-6">
+              {/* Pet Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Pet Information</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {getSessionEnrollments(selectedSession.attendees).map(
+                    (enrollment) => {
+                      return (
+                        <div
+                          key={enrollment.id}
+                          className="flex items-center gap-4 p-4 rounded-lg bg-muted/50"
+                        >
+                          <Checkbox
+                            checked={arrivedPets.has(enrollment.petId)}
+                            onCheckedChange={(checked) => {
+                              setArrivedPets((prev) => {
+                                const newSet = new Set(prev);
+                                if (checked) {
+                                  newSet.add(enrollment.petId);
+                                } else {
+                                  newSet.delete(enrollment.petId);
+                                }
+                                return newSet;
+                              });
+                            }}
+                          />
+                          {getPetImage(enrollment.petId) ? (
+                            <Image
+                              src={getPetImage(enrollment.petId)!}
+                              alt={enrollment.petName}
+                              width={48}
+                              height={48}
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <PawPrint className="h-6 w-6 text-primary" />
                             </div>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
-                  {selectedSession.notes && (
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Notes</p>
-                      <p className="font-medium">{selectedSession.notes}</p>
-                    </div>
+                          )}
+                          <div>
+                            <p className="font-medium">{enrollment.petName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {enrollment.petBreed}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    },
                   )}
                 </div>
               </div>
-            )}
 
-            <DialogFooter>
-              <div className="flex w-full justify-between">
-                <div className="flex gap-2">
-                  <Link href="/facility/dashboard/bookings">
-                    <Button variant="outline">Booking Details</Button>
-                  </Link>
-                  {selectedSession?.status === "pending" && (
+              {/* Owner Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Owner Information
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {getSessionEnrollments(selectedSession.attendees).map(
+                    (enrollment) => {
+                      return (
+                        <div
+                          key={enrollment.id}
+                          className="flex items-center gap-4 p-4 rounded-lg bg-muted/50"
+                        >
+                          <Image
+                            src="/people/person-2.jpg"
+                            alt={enrollment.ownerName}
+                            width={48}
+                            height={48}
+                            className="rounded-full"
+                          />
+                          <div>
+                            <p className="font-medium">
+                              {enrollment.ownerName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {enrollment.ownerEmail}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {enrollment.ownerPhone}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+
+              {/* Booking Details */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Service</p>
+                      <p className="font-medium">{selectedSession.className}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Trainer</p>
+                      <p className="font-medium">
+                        {selectedSession.trainerName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Date & Time</p>
+                      <p className="font-medium">
+                        {selectedSession.date}{" "}
+                        {formatTime(selectedSession.startTime)} -{" "}
+                        {formatTime(selectedSession.endTime)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Price</p>
+                      <p className="font-medium">${selectedSession.price}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Details Modal */}
+        <Modal
+          open={isDetailsModalOpen}
+          onOpenChange={setIsDetailsModalOpen}
+          type="details"
+          size="xl"
+          title="Session Details"
+          description="View training session information"
+          closable={false}
+          footer={
+            <div className="flex w-full justify-between">
+              <div className="flex gap-2">
+                <Link href="/facility/dashboard/bookings">
+                  <Button variant="outline">Booking Details</Button>
+                </Link>
+                {selectedSession?.status === "pending" && (
+                  <Button
+                    variant="outline"
+                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    onClick={() => revertToScheduled(selectedSession)}
+                  >
+                    Revert to Scheduled
+                  </Button>
+                )}
+                {selectedSession?.status === "in-progress" && (
+                  <>
                     <Button
                       variant="outline"
                       className="text-orange-600 border-orange-600 hover:bg-orange-50"
@@ -864,136 +859,198 @@ export function TrainingSection() {
                     >
                       Revert to Scheduled
                     </Button>
-                  )}
-                  {selectedSession?.status === "in-progress" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                        onClick={() => revertToScheduled(selectedSession)}
-                      >
-                        Revert to Scheduled
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
-                        onClick={() => revertToPending(selectedSession)}
-                      >
-                        Revert to Pending
-                      </Button>
-                    </>
-                  )}
-                  {selectedSession?.status === "completed" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                        onClick={() => revertToScheduled(selectedSession)}
-                      >
-                        Revert to Scheduled
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                        onClick={() => revertToInProgress(selectedSession)}
-                      >
-                        Revert to In Progress
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDialog(false)}
-                  >
-                    Close
-                  </Button>
-                  {selectedSession?.status === "scheduled" && (
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        handleMarkPending(selectedSession);
-                        setShowDialog(false);
-                      }}
+                      className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                      onClick={() => revertToPending(selectedSession)}
                     >
-                      <Hourglass className="h-4 w-4 mr-2" />
-                      Mark Ready
+                      Revert to Pending
                     </Button>
-                  )}
-                  {selectedSession?.status === "pending" && (
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() => {
-                        handleStartSession(selectedSession);
-                        setShowDialog(false);
-                      }}
-                      disabled={!isTrainerAvailable(selectedSession.trainerId)}
-                    >
-                      <PlayCircle className="h-4 w-4 mr-2" />
-                      {isTrainerAvailable(selectedSession.trainerId)
-                        ? "Start Session"
-                        : `${selectedSession.trainerName} is Busy`}
-                    </Button>
-                  )}
-                  {selectedSession?.status === "in-progress" && (
-                    <Button
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        handleCompleteSession(selectedSession);
-                        setShowDialog(false);
-                      }}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Complete
-                    </Button>
-                  )}
+                  </>
+                )}
+                {selectedSession?.status === "completed" && (
+                  <Button
+                    variant="outline"
+                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    onClick={() => revertToScheduled(selectedSession)}
+                  >
+                    Revert to Scheduled
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedSession?.status === "scheduled" && (
+                  <Button variant="outline" onClick={handleDetailsCheckIn}>
+                    <Hourglass className="h-4 w-4 mr-2" />
+                    Mark Ready
+                  </Button>
+                )}
+                {selectedSession?.status === "pending" && (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleDetailsCheckIn}
+                    disabled={
+                      !isTrainerAvailable(selectedSession.trainerId) ||
+                      !canStartSession(selectedSession)
+                    }
+                  >
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    {!isTrainerAvailable(selectedSession.trainerId)
+                      ? `${selectedSession.trainerName} is Busy`
+                      : !canStartSession(selectedSession)
+                        ? "Waiting for all pets or session time"
+                        : "Start Session"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          }
+        >
+          {selectedSession && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <GraduationCap className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-lg">
+                      {selectedSession.className}
+                    </p>
+                    {getStatusBadge(selectedSession.status)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Trainer: {selectedSession.trainerName}
+                  </p>
                 </div>
               </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        {/* Confirmation Dialog */}
-        <AlertDialog
-          open={confirmDialog.open}
-          onOpenChange={(open) => !open && closeConfirmDialog()}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {confirmDialog.type === "pending" && "Mark as Ready?"}
-                {confirmDialog.type === "start" && "Start Session?"}
-                {confirmDialog.type === "complete" && "Complete Session?"}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmDialog.type === "pending" &&
-                  `Are you sure you want to mark ${confirmDialog.session?.className} as ready to start?`}
-                {confirmDialog.type === "start" &&
-                  `Are you sure you want to start ${confirmDialog.session?.className}? This will mark ${confirmDialog.session?.trainerName} as busy.`}
-                {confirmDialog.type === "complete" &&
-                  `Are you sure you want to mark ${confirmDialog.session?.className} as complete?`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmAction}
-                className={
-                  confirmDialog.type === "complete"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : confirmDialog.type === "start"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : ""
-                }
-              >
-                {confirmDialog.type === "pending" && "Mark Ready"}
-                {confirmDialog.type === "start" && "Start Session"}
-                {confirmDialog.type === "complete" && "Complete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Session Time</p>
+                  <p className="font-medium">
+                    {formatTime(selectedSession.startTime)} -{" "}
+                    {formatTime(selectedSession.endTime)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Trainer</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{selectedSession.trainerName}</p>
+                    {isTrainerAvailable(selectedSession.trainerId) ? (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Available
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        Busy
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground mb-2">
+                    Attendees (
+                    {getSessionEnrollments(selectedSession.attendees).length})
+                  </p>
+                  <div className="space-y-2">
+                    {getSessionEnrollments(selectedSession.attendees).map(
+                      (enrollment) => {
+                        const client = findClientForPet(enrollment.petId);
+                        return (
+                          <div
+                            key={enrollment.id}
+                            className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
+                          >
+                            <Checkbox
+                              checked={arrivedPets.has(enrollment.petId)}
+                              onCheckedChange={(checked) => {
+                                setArrivedPets((prev) => {
+                                  const newSet = new Set(prev);
+                                  if (checked) {
+                                    newSet.add(enrollment.petId);
+                                  } else {
+                                    newSet.delete(enrollment.petId);
+                                  }
+                                  return newSet;
+                                });
+                              }}
+                            />
+                            {getPetImage(enrollment.petId) ? (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                    : "#"
+                                }
+                                className="shrink-0"
+                              >
+                                <div className="h-8 w-8 rounded-full overflow-hidden">
+                                  <Image
+                                    src={getPetImage(enrollment.petId)!}
+                                    alt={enrollment.petName}
+                                    width={32}
+                                    height={32}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                              </Link>
+                            ) : (
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                    : "#"
+                                }
+                                className="shrink-0"
+                              >
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <PawPrint className="h-4 w-4 text-primary" />
+                                </div>
+                              </Link>
+                            )}
+                            <div className="min-w-0">
+                              <Link
+                                href={
+                                  client
+                                    ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
+                                    : "#"
+                                }
+                                className="font-medium text-sm hover:underline"
+                              >
+                                {enrollment.petName}
+                              </Link>
+                              <p className="text-xs text-muted-foreground">
+                                {enrollment.ownerName} • {enrollment.petBreed}
+                              </p>
+                            </div>
+                            <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              {enrollment.ownerPhone}
+                            </div>
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                </div>
+
+                {selectedSession.notes && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Notes</p>
+                    <p className="font-medium">{selectedSession.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </Modal>
       </CardContent>
     </Card>
   );
