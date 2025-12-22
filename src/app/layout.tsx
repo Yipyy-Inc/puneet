@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Yipyy - Pet Services",
   description: "Manage your pet care business with ease",
   icons: {
-    icon: "/transparent-logo.svg",
+    icon: "/yipyy-white.png",
   },
 };
 

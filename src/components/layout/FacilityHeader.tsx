@@ -12,12 +12,11 @@ import {
 
 import { Plus, User, Calendar, List, Zap } from "lucide-react";
 import { facilities } from "@/data/facilities";
-import { bookings as initialBookings, type Booking } from "@/data/bookings";
+import { bookings as initialBookings } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { type BookingData } from "@/components/bookings/modals/BookingModal";
 
-import { Client, Pet } from "@/lib/types";
+import { Client, Pet, NewBooking, Booking } from "@/lib/types";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 
@@ -73,11 +72,11 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     setIsCreateClientModalOpen(false);
   };
 
-  const handleCreateBooking = (bookingData: BookingData) => {
+  const handleCreateBooking = (bookingData: NewBooking) => {
     const petId = Array.isArray(bookingData.petId)
       ? bookingData.petId[0]
       : bookingData.petId;
-    const maxId = Math.max(...bookings.map((b) => b.id), 0);
+    const maxId = Math.max(...bookings.map((b) => b.id ?? 0), 0);
     const bookingWithId: Booking = {
       id: maxId + 1,
       clientId: bookingData.clientId,

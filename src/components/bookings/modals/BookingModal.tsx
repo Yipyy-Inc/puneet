@@ -1,9 +1,27 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Check,
+  Clock,
+  Pill,
+  Utensils,
+  Scissors,
+  type LucideIcon,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import {
@@ -17,34 +35,18 @@ import {
   BOARDING_SUB_STEPS,
 } from "./constants";
 
-import { Client } from "@/lib/types";
+import {
+  Client,
+  FeedingScheduleItem,
+  MedicationItem,
+  NewBooking,
+  Booking,
+  DaycareDateTime,
+  Task,
+} from "@/lib/types";
+import type { ExtraService } from "@/lib/types";
 
 // Types
-export interface FeedingScheduleItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string;
-  amount: string;
-  unit: string;
-  type: string;
-  source: string;
-  instructions: string;
-  notes: string;
-}
-
-export interface MedicationItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string[];
-  amount: string;
-  unit: string;
-  type: string;
-  source?: string;
-  instructions: string;
-  notes: string;
-}
 
 export interface NewBookingModalProps {
   open: boolean;
@@ -52,53 +54,11 @@ export interface NewBookingModalProps {
   clients: Client[];
   facilityId: number;
   facilityName: string;
-  onCreateBooking: (booking: BookingData) => void;
+  onCreateBooking: (booking: NewBooking) => void;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
-}
-
-export interface BookingData {
-  clientId: number;
-  petId: number | number[];
-  facilityId: number;
-  service: string;
-  serviceType?: string;
-  startDate: string;
-  endDate: string;
-  checkInTime?: string;
-  checkOutTime?: string;
-  status: "pending" | "confirmed";
-  basePrice: number;
-  discount: number;
-  discountReason?: string;
-  totalCost: number;
-  paymentStatus: "pending" | "paid";
-  specialRequests?: string;
-  notificationEmail?: boolean;
-  notificationSMS?: boolean;
-
-  // Service-specific fields
-  daycareSelectedDates?: string[]; // ISO date strings for multi-date daycare
-  daycareDateTimes?: Array<{
-    date: string;
-    checkInTime: string;
-    checkOutTime: string;
-  }>;
-  groomingStyle?: string;
-  groomingAddOns?: string[];
-  stylistPreference?: string;
-  trainingType?: string;
-  trainerId?: string;
-  trainingGoals?: string;
-  vetReason?: string;
-  vetSymptoms?: string;
-  isEmergency?: boolean;
-  kennel?: string;
-  feedingSchedule?: FeedingScheduleItem[];
-  walkSchedule?: string;
-  medications?: MedicationItem[];
-  extraServices?: Array<{ serviceId: string; quantity: number }>;
+  booking?: Booking;
 }
 
 export function BookingModal({
@@ -110,7 +70,24 @@ export function BookingModal({
   preSelectedClientId,
   preSelectedPetId,
   preSelectedService,
+  booking,
 }: NewBookingModalProps) {
+  // Staff options for assignment
+  const staffOptions = [
+    { value: "Mike Chen", label: "Mike Chen" },
+    { value: "Emily Davis", label: "Emily Davis" },
+    { value: "David Wilson", label: "David Wilson" },
+    { value: "Lisa Rodriguez", label: "Lisa Rodriguez" },
+    { value: "Tom Anderson", label: "Tom Anderson" },
+    { value: "Manager One", label: "Manager One" },
+    { value: "Admin User", label: "Admin User" },
+  ];
+
+  // Task assignments state
+  const [taskAssignments, setTaskAssignments] = useState<
+    Record<string, string>
+  >({});
+
   // Step management
   const displayedSteps = STEPS.filter(
     (step) =>
@@ -154,18 +131,18 @@ export function BookingModal({
 
   // Daycare specific - multi-date selection
   const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
-  const [daycareDateTimes, setDaycareDateTimes] = useState<
-    Array<{ date: string; checkInTime: string; checkOutTime: string }>
-  >([]);
+  const [daycareDateTimes, setDaycareDateTimes] = useState<DaycareDateTime[]>(
+    [],
+  );
 
   // Boarding specific - date range selection
   const [boardingRangeStart, setBoardingRangeStart] = useState<Date | null>(
     null,
   );
   const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(null);
-  const [boardingDateTimes, setBoardingDateTimes] = useState<
-    Array<{ date: string; checkInTime: string; checkOutTime: string }>
-  >([]);
+  const [boardingDateTimes, setBoardingDateTimes] = useState<DaycareDateTime[]>(
+    [],
+  );
 
   // Grooming specific
   const [groomingStyle, setGroomingStyle] = useState("");
@@ -190,9 +167,7 @@ export function BookingModal({
   const [feedingMedicationTab, setFeedingMedicationTab] = useState<
     "feeding" | "medication"
   >("feeding");
-  const [extraServices, setExtraServices] = useState<
-    Array<{ serviceId: string; quantity: number; petId: number }>
-  >([]);
+  const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
   const [notificationEmail, setNotificationEmail] = useState(true);
   const [notificationSMS, setNotificationSMS] = useState(false);
 
@@ -400,7 +375,7 @@ export function BookingModal({
 
     if (!clientId || !petId) return;
 
-    const booking: BookingData = {
+    const booking: NewBooking = {
       clientId,
       petId,
       facilityId,
@@ -490,6 +465,411 @@ export function BookingModal({
     setNotificationEmail(true);
     setNotificationSMS(false);
   };
+
+  const isViewMode = !!booking;
+
+  const getTaskIcon = (type: string): LucideIcon => {
+    switch (type) {
+      case "feeding":
+        return Utensils;
+      case "medication":
+        return Pill;
+      case "service":
+        return Scissors;
+      case "walking":
+        return Clock;
+      default:
+        return Clock;
+    }
+  };
+
+  const tasks = useMemo((): Task[] => {
+    if (!booking) return [];
+
+    const taskList: Task[] = [];
+    const now = new Date();
+    const bookingStart = new Date(booking.startDate);
+    const isFutureBooking = bookingStart > now;
+
+    // Feeding tasks
+    if (booking.feedingSchedule) {
+      booking.feedingSchedule.forEach((feed) => {
+        const petId = Array.isArray(booking.petId)
+          ? booking.petId[0]
+          : booking.petId;
+        taskList.push({
+          id: `feed-${feed.id}`,
+          bookingId: booking.id,
+          petId,
+          type: "feeding",
+          title: `Feed ${feed.name}`,
+          time: feed.time,
+          details: feed.instructions,
+          assignedStaff: taskAssignments[`feed-${feed.id}`] || undefined,
+          completionStatus: "pending",
+          assignable: isFutureBooking && !taskAssignments[`feed-${feed.id}`],
+        });
+      });
+    }
+
+    // Medication tasks
+    if (booking.medications) {
+      booking.medications.forEach((med) => {
+        med.time.forEach((time) => {
+          const petId = Array.isArray(booking.petId)
+            ? booking.petId[0]
+            : booking.petId;
+          taskList.push({
+            id: `med-${med.id}-${time}`,
+            bookingId: booking.id,
+            petId,
+            type: "medication",
+            title: `Give ${med.name}`,
+            time,
+            details: med.instructions,
+            assignedStaff:
+              taskAssignments[`med-${med.id}-${time}`] || undefined,
+            completionStatus: "pending",
+            assignable:
+              isFutureBooking && !taskAssignments[`med-${med.id}-${time}`],
+          });
+        });
+      });
+    }
+
+    // Extra services
+    if (booking.extraServices) {
+      booking.extraServices.forEach((service) => {
+        taskList.push({
+          id: `service-${service.serviceId}-${service.petId}`,
+          bookingId: booking.id,
+          petId: service.petId,
+          type: "service",
+          title: `Perform ${service.serviceId} service`,
+          time: null,
+          details: `Quantity: ${service.quantity}`,
+          assignedStaff:
+            taskAssignments[`service-${service.serviceId}-${service.petId}`] ||
+            undefined,
+          completionStatus: "pending",
+          assignable:
+            isFutureBooking &&
+            !taskAssignments[`service-${service.serviceId}-${service.petId}`],
+        });
+      });
+    }
+
+    // Walk schedule for boarding
+    if (booking.service === "boarding" && booking.walkSchedule) {
+      const petId = Array.isArray(booking.petId)
+        ? booking.petId[0]
+        : booking.petId;
+      taskList.push({
+        id: "walk-schedule",
+        bookingId: booking.id,
+        petId,
+        type: "walking",
+        title: "Walk Schedule",
+        time: null,
+        details: booking.walkSchedule,
+        assignedStaff: taskAssignments["walk-schedule"] || undefined,
+        completionStatus: "pending",
+        assignable: isFutureBooking && !taskAssignments["walk-schedule"],
+      });
+    }
+
+    return taskList;
+  }, [booking, taskAssignments]);
+
+  if (isViewMode && booking) {
+    const client = clients.find((c) => c.id === booking.clientId);
+    const pet = client?.pets.find(
+      (p) =>
+        p.id ===
+        (Array.isArray(booking.petId) ? booking.petId[0] : booking.petId),
+    );
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="min-w-4xl w-[90vw] h-[85vh] overflow-hidden flex flex-col p-0">
+          <DialogTitle className="sr-only">Booking Details</DialogTitle>
+          <div className="p-6 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Booking #{booking.id}</h2>
+                <p className="text-muted-foreground">
+                  {client?.name} - {pet?.name} - {booking.service}
+                </p>
+              </div>
+              <Badge variant="outline" className="capitalize">
+                {booking.status}
+              </Badge>
+            </div>
+          </div>
+
+          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2 mx-6 mt-4">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Basic Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Service</label>
+                        <p className="capitalize">{booking.service}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          Service Type
+                        </label>
+                        <p>{booking.serviceType || "N/A"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Status</label>
+                        <Badge variant="outline" className="capitalize">
+                          {booking.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          Payment Status
+                        </label>
+                        <Badge variant="outline" className="capitalize">
+                          {booking.paymentStatus}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Dates & Times */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Dates & Times</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">
+                          Start Date
+                        </label>
+                        <p>{booking.startDate}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">End Date</label>
+                        <p>{booking.endDate}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Check In</label>
+                        <p>{booking.checkInTime || "N/A"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Check Out</label>
+                        <p>{booking.checkOutTime || "N/A"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pricing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pricing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">
+                          Base Price
+                        </label>
+                        <p>${booking.basePrice}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Discount</label>
+                        <p>${booking.discount}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          Total Cost
+                        </label>
+                        <p className="font-semibold">${booking.totalCost}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Service-specific details */}
+                {booking.service === "boarding" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Boarding Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {booking.kennel && (
+                        <div>
+                          <label className="text-sm font-medium">Kennel</label>
+                          <p>{booking.kennel}</p>
+                        </div>
+                      )}
+                      {booking.walkSchedule && (
+                        <div>
+                          <label className="text-sm font-medium">
+                            Walk Schedule
+                          </label>
+                          <p>{booking.walkSchedule}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {booking.service === "daycare" &&
+                  booking.daycareSelectedDates && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Daycare Details</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div>
+                          <label className="text-sm font-medium">
+                            Selected Dates
+                          </label>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {booking.daycareSelectedDates.map((date) => (
+                              <Badge key={date} variant="secondary">
+                                {date}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {booking.specialRequests && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Special Requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p>{booking.specialRequests}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="tasks" className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
+                {tasks.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-16">
+                      <Check className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Tasks</h3>
+                      <p className="text-muted-foreground text-center">
+                        This booking does not have any scheduled tasks.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {tasks.map((task) => (
+                      <Card key={task.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-muted rounded-lg">
+                              {React.createElement(getTaskIcon(task.type), {
+                                className: "h-4 w-4",
+                              })}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{task.title}</h4>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs capitalize"
+                                  >
+                                    {task.type}
+                                  </Badge>
+                                  <Badge
+                                    variant={
+                                      task.completionStatus === "completed"
+                                        ? "default"
+                                        : task.completionStatus ===
+                                            "in_progress"
+                                          ? "secondary"
+                                          : "outline"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {task.completionStatus.replace("_", " ")}
+                                  </Badge>
+                                </div>
+                                {task.assignedStaff && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Assigned: {task.assignedStaff}
+                                  </Badge>
+                                )}
+                              </div>
+                              {task.time && (
+                                <p className="text-sm text-muted-foreground mb-1">
+                                  Time: {task.time}
+                                </p>
+                              )}
+                              <p className="text-sm mb-2">{task.details}</p>
+                              {task.assignable && (
+                                <div className="flex items-center gap-2">
+                                  <label className="text-sm font-medium">
+                                    Assign to:
+                                  </label>
+                                  <Select
+                                    value={task.assignedStaff || ""}
+                                    onValueChange={(value) =>
+                                      setTaskAssignments((prev) => ({
+                                        ...prev,
+                                        [task.id]: value,
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger className="w-48">
+                                      <SelectValue placeholder="Select staff" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {staffOptions.map((staff) => (
+                                        <SelectItem
+                                          key={staff.value}
+                                          value={staff.value}
+                                        >
+                                          {staff.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

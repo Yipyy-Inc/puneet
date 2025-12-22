@@ -32,10 +32,10 @@ function SidebarLogo() {
     <div className="flex items-center gap-3">
       <div className="flex items-center justify-center w-10 h-10">
         <Image
-          src="/transparent-logo.svg"
+          src="/yipyy-transparent.png"
           alt="Yipyy Logo"
-          width={40}
-          height={40}
+          width={80}
+          height={80}
         />
       </div>
       <div className="flex flex-col">

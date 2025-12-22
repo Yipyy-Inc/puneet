@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { bookings as initialBookings, type Booking } from "@/data/bookings";
+import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { Booking } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BookingModal } from "@/components/modals/BookingModal";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
-import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { RefundBookingModal } from "@/components/bookings/modals/RefundBookingModal";
@@ -40,11 +39,39 @@ import {
   TrendingUp,
   MoreVertical,
   Eye,
-  Edit,
   X,
   CalendarDays,
   CalendarX,
+  CheckSquare,
 } from "lucide-react";
+const calculateTaskCount = (booking: Booking): number => {
+  let count = 0;
+
+  // Feeding tasks
+  if (booking.feedingSchedule) {
+    count += booking.feedingSchedule.length;
+  }
+
+  // Medication tasks (each medication can have multiple times)
+  if (booking.medications) {
+    booking.medications.forEach((med) => {
+      count += med.time.length;
+    });
+  }
+
+  // Extra services
+  if (booking.extraServices) {
+    count += booking.extraServices.length;
+  }
+
+  // Walk schedule for boarding
+  if (booking.service === "boarding" && booking.walkSchedule) {
+    count += 1;
+  }
+
+  return count;
+};
+
 const exportBookingsToCSV = (bookingsData: Booking[]) => {
   const headers = [
     "ID",
@@ -55,6 +82,7 @@ const exportBookingsToCSV = (bookingsData: Booking[]) => {
     "End Date",
     "Duration",
     "Status",
+    "Tasks",
     "Total Cost",
     "Payment Status",
     "Check In",
@@ -76,6 +104,7 @@ const exportBookingsToCSV = (bookingsData: Booking[]) => {
         booking.endDate,
         duration,
         booking.status,
+        calculateTaskCount(booking),
         booking.totalCost,
         booking.paymentStatus,
         booking.checkInTime || "",
@@ -127,7 +156,6 @@ const isPast = (dateString: string): boolean => {
 };
 
 export default function FacilityBookingsPage() {
-  const searchParams = useSearchParams();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
@@ -135,21 +163,12 @@ export default function FacilityBookingsPage() {
     initialBookings as Booking[],
   );
 
-  // Handle URL parameters for highlighting specific bookings
-  const highlightBookingId = searchParams.get("highlight");
   const facilityBookings = bookings.filter(
     (booking) => booking.facilityId === facilityId,
   );
-  const bookingToHighlight = highlightBookingId
-    ? facilityBookings.find(
-        (booking) => booking.id.toString() === highlightBookingId,
-      )
-    : null;
 
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(
-    bookingToHighlight || null,
-  );
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(
     null,
   );
@@ -160,18 +179,7 @@ export default function FacilityBookingsPage() {
     null,
   );
 
-  // Determine initial active tab based on highlighted booking
-  const getInitialActiveTab = () => {
-    if (bookingToHighlight) {
-      if (isToday(bookingToHighlight.startDate)) return "today";
-      if (isUpcoming(bookingToHighlight.startDate)) return "upcoming";
-      if (isPast(bookingToHighlight.startDate)) return "past";
-      if (bookingToHighlight.status === "pending") return "pending";
-    }
-    return "all";
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialActiveTab());
+  const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
 
   if (!facility) {
@@ -227,6 +235,9 @@ export default function FacilityBookingsPage() {
       label: "Client",
       icon: Calendar,
       defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) =>
+        clients.find((c) => c.id === booking.clientId)?.name || "Unknown",
       render: (booking) => {
         const client = clients.find((c) => c.id === booking.clientId);
         const pet = client?.pets.find((p) => p.id === booking.petId);
@@ -256,6 +267,8 @@ export default function FacilityBookingsPage() {
       label: "Dates",
       icon: Calendar,
       defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => booking.startDate,
       render: (booking) => {
         const duration = calculateDuration(booking.startDate, booking.endDate);
         return (
@@ -278,6 +291,8 @@ export default function FacilityBookingsPage() {
       label: "Time",
       icon: Clock,
       defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => booking.checkInTime,
       render: (booking) => (
         <div className="flex flex-col text-xs">
           <span>In: {booking.checkInTime}</span>
@@ -292,6 +307,8 @@ export default function FacilityBookingsPage() {
       label: "Status",
       icon: Calendar,
       defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => booking.status,
       render: (booking) => (
         <div className="flex flex-col gap-1">
           <StatusBadge type="status" value={booking.status} />
@@ -300,10 +317,33 @@ export default function FacilityBookingsPage() {
       ),
     },
     {
+      key: "tasks",
+      label: "Tasks",
+      icon: CheckSquare,
+      defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => calculateTaskCount(booking),
+      render: (booking) => {
+        const taskCount = calculateTaskCount(booking);
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{taskCount}</span>
+            {taskCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {taskCount === 1 ? "task" : "tasks"}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "totalCost",
       label: "Cost",
       icon: DollarSign,
       defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => booking.totalCost,
       render: (booking) => (
         <span className="font-semibold">${booking.totalCost}</span>
       ),
@@ -358,13 +398,6 @@ export default function FacilityBookingsPage() {
       default:
         return allBookings;
     }
-  };
-
-  const handleSaveBooking = (updatedBooking: Booking) => {
-    setBookings(
-      bookings.map((b) => (b.id === updatedBooking.id ? updatedBooking : b)),
-    );
-    alert(`Booking #${updatedBooking.id} has been updated successfully.`);
   };
 
   const handleCancelBooking = (
@@ -715,14 +748,6 @@ export default function FacilityBookingsPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {"View Details"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setEditingBooking(booking as unknown as Booking)
-                        }
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        {"Edit Booking"}
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel>{"Status"}</DropdownMenuLabel>
                       {booking.status === "pending" && (
@@ -804,16 +829,6 @@ export default function FacilityBookingsPage() {
             )}
           </TabsContent>
         </Tabs>
-      )}
-
-      {/* Edit Booking Modal */}
-      {editingBooking && (
-        <EditBookingModal
-          booking={editingBooking}
-          open={!!editingBooking}
-          onOpenChange={(open) => !open && setEditingBooking(null)}
-          onSave={handleSaveBooking}
-        />
       )}
 
       {/* Cancel Booking Modal */}
