@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { DaycareDetails, BoardingDetails } from "../service-details";
-import type { FeedingScheduleItem, MedicationItem } from "../BookingModal";
+import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
 import { Pet } from "@/lib/types";
 
 const GROOMING_STYLES = [

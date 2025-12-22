@@ -7,11 +7,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import {
-  BookingModal,
-  type BookingData,
-} from "@/components/bookings/modals/BookingModal";
-
+import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { NewBooking as BookingData } from "@/lib/types";
 import { Client } from "@/lib/types";
 
 interface BookingModalConfig {

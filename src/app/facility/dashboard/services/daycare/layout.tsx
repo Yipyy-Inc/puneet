@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { facilities } from "@/data/facilities";
 import { clients as initialClients } from "@/data/clients";
-import { type BookingData } from "@/components/bookings/modals/BookingModal";
+import { NewBooking as BookingData } from "@/lib/types";
 import { Client } from "@/lib/types";
 import {
   Sun,

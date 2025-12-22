@@ -49,7 +49,7 @@ import {
   Users,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import type { BookingData } from "@/components/bookings/modals/BookingModal";
+import type { NewBooking as BookingData } from "@/lib/types";
 
 interface Pet {
   id: number;

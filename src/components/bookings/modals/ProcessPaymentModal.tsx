@@ -13,7 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CreditCard, Banknote, DollarSign, CheckCircle } from "lucide-react";
-import type { Booking } from "@/data/bookings";
+import { Booking } from "@/lib/types";
 import { clients } from "@/data/clients";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { Booking } from "@/data/bookings";
+import { Booking } from "@/lib/types";
 import { clients } from "@/data/clients";
 
 interface EditBookingModalProps {
