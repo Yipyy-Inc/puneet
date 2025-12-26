@@ -358,9 +358,7 @@ export function BookingModal({
 
     if (requiresEvaluation) {
       const petsNeedingEvaluation = selectedPets.filter((pet) => {
-        const evaluation = pet.evaluations?.find(
-          (e) => e.serviceId === selectedService && e.status === "passed",
-        );
+        const evaluation = pet.evaluations?.find((e) => e.status === "passed");
         return !evaluation;
       });
 
@@ -1077,6 +1075,7 @@ export function BookingModal({
                     selectedClient={selectedClient}
                     preSelectedClientId={preSelectedClientId}
                     selectedService={selectedService}
+                    configs={configs}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (

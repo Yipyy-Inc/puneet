@@ -15,6 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useModulesConfig } from "@/hooks/use-modules-config";
@@ -27,7 +34,6 @@ export default function BoardingSettingsPage() {
   const [isEditingPricing, setIsEditingPricing] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
   const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
-  const [isEditingStatus, setIsEditingStatus] = useState(false);
 
   const updateFormData = (updates: Partial<ModuleConfig>) => {
     const newData = { ...formData, ...updates };
@@ -58,7 +64,6 @@ export default function BoardingSettingsPage() {
     if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
-    if (section === "status") setIsEditingStatus(false);
   };
 
   const handleSave = (section: string) => {
@@ -67,21 +72,11 @@ export default function BoardingSettingsPage() {
     if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
-    if (section === "status") setIsEditingStatus(false);
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Boarding Module Settings
-        </h2>
-        <p className="text-muted-foreground">
-          Configure the boarding module configuration
-        </p>
-      </div>
-
-      <div className="grid gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Basic Information */}
         <Card>
           <CardHeader>
@@ -373,83 +368,159 @@ export default function BoardingSettingsPage() {
                     disabled={!isEditingEvaluation}
                   />
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Status */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Status</CardTitle>
-                <CardDescription>
-                  Enable or disable the boarding module
-                </CardDescription>
-              </div>
-              {isEditingStatus ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancel("status")}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={() => handleSave("status")}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingStatus(true)}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Disabled</Label>
-                <p className="text-sm text-muted-foreground">
-                  Disable the boarding service
-                </p>
-              </div>
-              <Switch
-                checked={formData.status.disabled}
-                onCheckedChange={(checked) =>
-                  updateNested("status", "disabled", checked)
-                }
-                disabled={!isEditingStatus}
-              />
-            </div>
-            {formData.status.disabled && (
-              <>
                 <Separator />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Internal Name (Staff-Facing)</Label>
+                    <Input
+                      value={formData.settings.evaluation.internalName}
+                      onChange={(e) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          internalName: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., Boarding Evaluation"
+                      disabled={!isEditingEvaluation}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Customer-Facing Name</Label>
+                    <Input
+                      value={formData.settings.evaluation.customerName}
+                      onChange={(e) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          customerName: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., Pet Evaluation"
+                      disabled={!isEditingEvaluation}
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label>Reason</Label>
+                  <Label>Description</Label>
                   <Textarea
-                    value={formData.status.reason || ""}
+                    value={formData.settings.evaluation.description}
                     onChange={(e) =>
-                      updateNested(
-                        "status",
-                        "reason",
-                        e.target.value || undefined,
-                      )
+                      updateNested("settings", "evaluation", {
+                        ...formData.settings.evaluation,
+                        description: e.target.value,
+                      })
                     }
-                    rows={2}
-                    placeholder="Reason for disabling..."
-                    disabled={!isEditingStatus}
+                    rows={3}
+                    placeholder="Describe the evaluation process..."
+                    disabled={!isEditingEvaluation}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Price ($)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.settings.evaluation.price}
+                      onChange={(e) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="0 for free"
+                      disabled={!isEditingEvaluation}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Duration</Label>
+                    <Select
+                      value={formData.settings.evaluation.duration}
+                      onValueChange={(
+                        value: "half-day" | "full-day" | "custom",
+                      ) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          duration: value,
+                        })
+                      }
+                      disabled={!isEditingEvaluation}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="half-day">Half-Day</SelectItem>
+                        <SelectItem value="full-day">Full-Day</SelectItem>
+                        <SelectItem value="custom">Custom Hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {formData.settings.evaluation.duration === "custom" && (
+                  <div className="space-y-2">
+                    <Label>Custom Hours</Label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={formData.settings.evaluation.customHours || ""}
+                      onChange={(e) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          customHours: parseFloat(e.target.value) || undefined,
+                        })
+                      }
+                      placeholder="e.g., 2.5"
+                      disabled={!isEditingEvaluation}
+                      className="w-32"
+                    />
+                  </div>
+                )}
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Taxable</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Apply tax to evaluation price
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.settings.evaluation.taxSettings.taxable}
+                    onCheckedChange={(checked) =>
+                      updateNested("settings", "evaluation", {
+                        ...formData.settings.evaluation,
+                        taxSettings: {
+                          ...formData.settings.evaluation.taxSettings,
+                          taxable: checked,
+                        },
+                      })
+                    }
+                    disabled={!isEditingEvaluation}
+                  />
+                </div>
+                {formData.settings.evaluation.taxSettings.taxable && (
+                  <div className="space-y-2">
+                    <Label>Tax Rate (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={
+                        formData.settings.evaluation.taxSettings.taxRate || ""
+                      }
+                      onChange={(e) =>
+                        updateNested("settings", "evaluation", {
+                          ...formData.settings.evaluation,
+                          taxSettings: {
+                            ...formData.settings.evaluation.taxSettings,
+                            taxRate: parseFloat(e.target.value) || undefined,
+                          },
+                        })
+                      }
+                      placeholder="e.g., 8.25"
+                      disabled={!isEditingEvaluation}
+                      className="w-32"
+                    />
+                  </div>
+                )}
               </>
             )}
           </CardContent>

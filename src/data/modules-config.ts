@@ -9,6 +9,16 @@ export interface ModuleConfig {
     evaluation: {
       enabled: boolean;
       optional?: boolean;
+      internalName: string;
+      customerName: string;
+      description: string;
+      price: number;
+      duration: "half-day" | "full-day" | "custom";
+      customHours?: number;
+      taxSettings: {
+        taxable: boolean;
+        taxRate?: number;
+      };
     };
   };
   status: {
@@ -29,6 +39,15 @@ export const daycareConfig: ModuleConfig = {
     evaluation: {
       enabled: true,
       optional: false,
+      internalName: "Daycare Evaluation",
+      customerName: "Pet Evaluation",
+      description:
+        "A brief assessment to ensure your pet is ready for daycare.",
+      price: 0,
+      duration: "half-day",
+      taxSettings: {
+        taxable: false,
+      },
     },
   },
   status: {
@@ -49,6 +68,15 @@ export const boardingConfig: ModuleConfig = {
   settings: {
     evaluation: {
       enabled: false,
+      internalName: "Boarding Evaluation",
+      customerName: "Pet Evaluation",
+      description:
+        "A brief assessment to ensure your pet is ready for boarding.",
+      price: 0,
+      duration: "half-day",
+      taxSettings: {
+        taxable: false,
+      },
     },
   },
   status: {
@@ -68,6 +96,15 @@ export const groomingConfig: ModuleConfig = {
   settings: {
     evaluation: {
       enabled: false,
+      internalName: "Grooming Evaluation",
+      customerName: "Pet Evaluation",
+      description:
+        "A brief assessment to ensure your pet is ready for grooming.",
+      price: 0,
+      duration: "half-day",
+      taxSettings: {
+        taxable: false,
+      },
     },
   },
   status: {
@@ -88,6 +125,15 @@ export const trainingConfig: ModuleConfig = {
   settings: {
     evaluation: {
       enabled: false,
+      internalName: "Training Evaluation",
+      customerName: "Pet Evaluation",
+      description:
+        "A brief assessment to ensure your pet is ready for training.",
+      price: 0,
+      duration: "half-day",
+      taxSettings: {
+        taxable: false,
+      },
     },
   },
   status: {

@@ -1,8 +1,7 @@
 export interface Evaluation {
   id: string;
   petId: number;
-  serviceId: string;
-  status: "pending" | "passed" | "failed";
+  status: "pending" | "passed" | "failed" | "outdated";
   evaluatedAt?: string;
   evaluatedBy?: string;
   notes?: string;

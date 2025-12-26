@@ -479,11 +479,10 @@ export const clients = [
           {
             id: "eval-001",
             petId: 13,
-            serviceId: "srv-003",
             status: "passed" as const,
             evaluatedAt: "2024-01-15T10:00:00Z",
             evaluatedBy: "Dr. Smith",
-            notes: "Passed daycare temperament evaluation",
+            notes: "Passed temperament evaluation",
           },
         ],
       },

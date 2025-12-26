@@ -3,9 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, PawPrint, Check, Cat } from "lucide-react";
+import { Search, PawPrint, Check, Cat, FileWarning, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Client } from "@/lib/types";
-import { daycareConfig, boardingConfig } from "@/data/modules-config";
+import type { ModuleConfig } from "@/data/modules-config";
 
 interface ClientPetStepProps {
   searchQuery: string;
@@ -18,6 +23,7 @@ interface ClientPetStepProps {
   selectedClient: Client | undefined;
   preSelectedClientId?: number;
   selectedService: string;
+  configs: { daycare: ModuleConfig; boarding: ModuleConfig };
 }
 
 export function ClientPetStep({
@@ -31,159 +37,22 @@ export function ClientPetStep({
   selectedClient,
   preSelectedClientId,
   selectedService,
+  configs,
 }: ClientPetStepProps) {
   // Check if service requires evaluation
   const serviceRequiresEvaluation = React.useMemo(() => {
-    return selectedService === "daycare"
-      ? daycareConfig.settings.evaluation.enabled
-      : selectedService === "boarding"
-        ? boardingConfig.settings.evaluation.enabled
-        : false;
-  }, [selectedService]);
+    const config = configs[selectedService as "daycare" | "boarding"];
+    return config?.settings.evaluation.enabled ?? false;
+  }, [selectedService, configs]);
 
-  // Get evaluation status for pets
-  const petEvaluationStatus = React.useMemo(() => {
-    if (!selectedClient || !serviceRequiresEvaluation) return null;
-
-    const petsToCheck =
-      selectedPetIds.length > 0
-        ? selectedClient.pets.filter((p) => selectedPetIds.includes(p.id))
-        : selectedClient.pets;
-
-    const status = {
-      passed: [] as typeof selectedClient.pets,
-      required: [] as typeof selectedClient.pets,
-      pending: [] as typeof selectedClient.pets,
-      failed: [] as typeof selectedClient.pets,
-    };
-
-    petsToCheck.forEach((pet) => {
-      // Check for evaluation matching the service
-      const evaluation = pet.evaluations?.find(
-        (e) => e.serviceId === selectedService,
-      );
-
-      if (!evaluation) {
-        status.required.push(pet);
-      } else if (evaluation.status === "passed") {
-        status.passed.push(pet);
-      } else if (evaluation.status === "pending") {
-        status.pending.push(pet);
-      } else if (evaluation.status === "failed") {
-        status.failed.push(pet);
-      }
-    });
-
-    return status;
-  }, [
-    selectedClient,
-    selectedPetIds,
-    selectedService,
-    serviceRequiresEvaluation,
-  ]);
-
-  const serviceName = React.useMemo(() => {
-    return selectedService === "daycare"
-      ? daycareConfig.clientFacingName
-      : selectedService === "boarding"
-        ? boardingConfig.clientFacingName
-        : "This service";
-  }, [selectedService]);
+  // Check if evaluation is optional
+  const isEvaluationOptional = React.useMemo(() => {
+    const config = configs[selectedService as "daycare" | "boarding"];
+    return config?.settings.evaluation.optional ?? false;
+  }, [selectedService, configs]);
 
   return (
     <div className="space-y-6">
-      {/* Service Evaluation Info Banner */}
-      {serviceRequiresEvaluation && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <Check className="h-5 w-5 text-amber-600" />
-            <h4 className="font-medium text-amber-800">
-              {serviceName} Evaluation Required
-            </h4>
-          </div>
-          <p className="text-sm text-amber-700 mb-3">
-            {serviceName} requires pets to pass an evaluation before booking.
-          </p>
-
-          {/* Pet Evaluation Status */}
-          {selectedClient && petEvaluationStatus && (
-            <div className="mt-3 pt-3 border-t border-amber-300">
-              <p className="text-sm font-medium text-amber-800 mb-2">
-                Pet Evaluation Status:
-              </p>
-              <div className="space-y-2">
-                {petEvaluationStatus.passed.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-green-100 text-green-800 hover:bg-green-100"
-                    >
-                      <Check className="h-3 w-3 mr-1" />
-                      Passed ({petEvaluationStatus.passed.length})
-                    </Badge>
-                    <span className="text-xs text-amber-700">
-                      {petEvaluationStatus.passed.map((p) => p.name).join(", ")}
-                    </span>
-                  </div>
-                )}
-                {petEvaluationStatus.pending.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                    >
-                      Pending ({petEvaluationStatus.pending.length})
-                    </Badge>
-                    <span className="text-xs text-amber-700">
-                      {petEvaluationStatus.pending
-                        .map((p) => p.name)
-                        .join(", ")}
-                    </span>
-                  </div>
-                )}
-                {petEvaluationStatus.failed.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-red-100 text-red-800 hover:bg-red-100"
-                    >
-                      Failed ({petEvaluationStatus.failed.length})
-                    </Badge>
-                    <span className="text-xs text-amber-700">
-                      {petEvaluationStatus.failed.map((p) => p.name).join(", ")}
-                    </span>
-                  </div>
-                )}
-                {petEvaluationStatus.required.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-red-100 text-red-800 hover:bg-red-100"
-                    >
-                      Evaluation Required ({petEvaluationStatus.required.length}
-                      )
-                    </Badge>
-                    <span className="text-xs text-amber-700">
-                      {petEvaluationStatus.required
-                        .map((p) => p.name)
-                        .join(", ")}
-                    </span>
-                  </div>
-                )}
-                {petEvaluationStatus.passed.length === 0 &&
-                  petEvaluationStatus.pending.length === 0 &&
-                  petEvaluationStatus.failed.length === 0 &&
-                  petEvaluationStatus.required.length === 0 && (
-                    <p className="text-xs text-amber-700">
-                      No pets selected yet
-                    </p>
-                  )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Client Selection */}
       {!preSelectedClientId && (
         <>
@@ -294,7 +163,23 @@ export function ClientPetStep({
       {/* Pet Selection */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Select Pet(s)</h3>
+          <div className="flex items-center">
+            <h3 className="text-lg font-semibold">Select Pet(s)</h3>
+            {serviceRequiresEvaluation && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground ml-2" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    Evaluation is enabled and{" "}
+                    {isEvaluationOptional ? "optional" : "required"} for this
+                    service.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {selectedClient && (
             <Badge variant="secondary">
               {selectedPetIds.length} pet
@@ -358,9 +243,7 @@ export function ClientPetStep({
                                 {serviceRequiresEvaluation && (
                                   <div className="mt-1">
                                     {pet.evaluations?.some(
-                                      (e) =>
-                                        e.serviceId === selectedService &&
-                                        e.status === "passed",
+                                      (e) => e.status === "passed",
                                     ) ? (
                                       <Badge
                                         variant="secondary"
@@ -368,6 +251,14 @@ export function ClientPetStep({
                                       >
                                         <Check className="h-3 w-3 mr-1" />
                                         Evaluation Passed
+                                      </Badge>
+                                    ) : isEvaluationOptional ? (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                      >
+                                        <FileWarning className="h-3 w-3 mr-1" />
+                                        No Evaluation
                                       </Badge>
                                     ) : (
                                       <Badge
