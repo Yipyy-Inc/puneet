@@ -24,15 +24,9 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
-import {
-  DAYCARE_TYPES,
-  BOARDING_TYPES,
-  STEPS,
-  DAYCARE_SUB_STEPS,
-  BOARDING_SUB_STEPS,
-} from "./constants";
+import { STEPS, DAYCARE_SUB_STEPS, BOARDING_SUB_STEPS } from "./constants";
 import { services } from "@/data/services-pricing";
-import { daycareConfig, boardingConfig } from "@/data/modules-config";
+import { useModulesConfig } from "@/hooks/use-modules-config";
 
 import {
   Client,
@@ -71,6 +65,8 @@ export function BookingModal({
   preSelectedService,
   booking,
 }: NewBookingModalProps) {
+  const { configs } = useModulesConfig();
+
   // Staff options for assignment
   const staffOptions = [
     { value: "Mike Chen", label: "Mike Chen" },
@@ -237,12 +233,13 @@ export function BookingModal({
     let basePrice = 0;
 
     if (selectedService === "daycare") {
-      const daycare = DAYCARE_TYPES.find((d) => d.id === serviceType);
-      const pricePerDay = daycare?.price || 35;
+      const pricePerDay =
+        serviceType === "half_day"
+          ? configs.daycare.basePrice / 2
+          : configs.daycare.basePrice;
       basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
-      const boarding = BOARDING_TYPES.find((b) => b.id === serviceType);
-      basePrice = boarding?.price || 45;
+      basePrice = configs.boarding.basePrice;
       if (boardingRangeStart && boardingRangeEnd) {
         const days = Math.ceil(
           (boardingRangeEnd.getTime() - boardingRangeStart.getTime()) /
@@ -262,6 +259,8 @@ export function BookingModal({
     boardingRangeStart,
     boardingRangeEnd,
     daycareSelectedDates.length,
+    configs.daycare.basePrice,
+    configs.boarding.basePrice,
   ]);
 
   // Validation for each step
@@ -352,9 +351,9 @@ export function BookingModal({
     const isDaycareService = service?.category === "daycare";
     const isBoardingService = service?.category === "boarding";
     const requiresEvaluation = isDaycareService
-      ? daycareConfig.settings.evaluation.enabled
+      ? configs.daycare.settings.evaluation.enabled
       : isBoardingService
-        ? boardingConfig.settings.evaluation.enabled
+        ? configs.boarding.settings.evaluation.enabled
         : service?.requiresEvaluation || false;
 
     if (requiresEvaluation) {
@@ -881,9 +880,9 @@ export function BookingModal({
                   } else if (preSelectedClient) {
                     return `Book for ${preSelectedClient.name}`;
                   } else if (selectedService === "daycare") {
-                    return daycareConfig.clientFacingName;
+                    return configs.daycare.clientFacingName;
                   } else if (selectedService === "boarding") {
-                    return boardingConfig.clientFacingName;
+                    return configs.boarding.clientFacingName;
                   } else {
                     return "New Booking";
                   }
@@ -902,9 +901,9 @@ export function BookingModal({
                   } else if (preSelectedClient) {
                     return `Create a new booking for ${preSelectedClient.name}`;
                   } else if (selectedService === "daycare") {
-                    return daycareConfig.slogan;
+                    return configs.daycare.slogan;
                   } else if (selectedService === "boarding") {
-                    return boardingConfig.slogan;
+                    return configs.boarding.slogan;
                   } else {
                     return "Create a new booking for your facility";
                   }
@@ -1063,6 +1062,7 @@ export function BookingModal({
                     setSelectedService={setSelectedService}
                     setServiceType={setServiceType}
                     setCurrentSubStep={setCurrentSubStep}
+                    configs={configs}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "client-pet" && (

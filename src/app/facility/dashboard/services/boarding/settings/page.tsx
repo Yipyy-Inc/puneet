@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -14,507 +15,443 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw } from "lucide-react";
+import { Save, Edit, X } from "lucide-react";
+import { toast } from "sonner";
+import { useModulesConfig } from "@/hooks/use-modules-config";
+import type { ModuleConfig } from "@/data/modules-config";
 
 export default function BoardingSettingsPage() {
-  const [settings, setSettings] = useState({
-    // General Settings
-    enabled: true,
-    requiresDeposit: true,
-    depositPercentage: 25,
-    allowSameDayBooking: false,
-    minAdvanceBookingHours: 24,
-    maxAdvanceBookingDays: 90,
+  const { configs, updateConfig } = useModulesConfig();
+  const [formData, setFormData] = useState<ModuleConfig>(configs.boarding);
+  const [isEditingBasic, setIsEditingBasic] = useState(false);
+  const [isEditingPricing, setIsEditingPricing] = useState(false);
+  const [isEditingMedia, setIsEditingMedia] = useState(false);
+  const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
 
-    // Capacity Settings
-    maxKennelCapacity: 50,
-    overbookingAllowed: false,
-    overbookingPercentage: 10,
-
-    // Check-in/Check-out
-    defaultCheckInTime: "14:00",
-    defaultCheckOutTime: "11:00",
-    lateCheckOutFee: 25,
-    earlyCheckInFee: 15,
-    gracePeriodMinutes: 30,
-
-    // Pet Requirements
-    requireVaccinationRecords: true,
-    requiredVaccinations: ["Rabies", "DHPP", "Bordetella"],
-    requireSpayNeuterProof: false,
-    minPetAge: 4,
-
-    // Notifications
-    sendBookingConfirmation: true,
-    sendCheckInReminder: true,
-    reminderHoursBefore: 24,
-    sendDailyUpdates: true,
-
-    // Policies
-    cancellationPolicy:
-      "Cancellations must be made 48 hours in advance for a full refund. Late cancellations may incur a fee.",
-    petPolicyNotes:
-      "All pets must be current on vaccinations. Aggressive animals may be refused boarding.",
-  });
-
-  const [isEditing, setIsEditing] = useState(false);
-
-  const handleSave = () => {
-    // TODO: Save to backend
-    setIsEditing(false);
+  const updateFormData = (updates: Partial<ModuleConfig>) => {
+    const newData = { ...formData, ...updates };
+    setFormData(newData);
+    updateConfig("boarding", newData);
   };
 
-  const handleReset = () => {
-    // TODO: Reset to saved values
-    setIsEditing(false);
+  const updateNested = <T extends keyof ModuleConfig>(
+    key: T,
+    nestedKey: string,
+    value: unknown,
+  ) => {
+    const newData = {
+      ...formData,
+      [key]: {
+        ...(formData[key] as Record<string, unknown>),
+        [nestedKey]: value,
+      },
+    };
+    setFormData(newData);
+    updateConfig("boarding", newData);
+  };
+
+  const handleCancel = (section: string) => {
+    setFormData(configs.boarding);
+    updateConfig("boarding", configs.boarding);
+    if (section === "basic") setIsEditingBasic(false);
+    if (section === "pricing") setIsEditingPricing(false);
+    if (section === "media") setIsEditingMedia(false);
+    if (section === "evaluation") setIsEditingEvaluation(false);
+    if (section === "status") setIsEditingStatus(false);
+  };
+
+  const handleSave = (section: string) => {
+    toast.success("Settings saved successfully");
+    if (section === "basic") setIsEditingBasic(false);
+    if (section === "pricing") setIsEditingPricing(false);
+    if (section === "media") setIsEditingMedia(false);
+    if (section === "evaluation") setIsEditingEvaluation(false);
+    if (section === "status") setIsEditingStatus(false);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Boarding Settings
-          </h2>
-          <p className="text-muted-foreground">
-            Configure boarding service preferences and policies
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
-          )}
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Boarding Module Settings
+        </h2>
+        <p className="text-muted-foreground">
+          Configure the boarding module configuration
+        </p>
       </div>
 
       <div className="grid gap-6">
-        {/* General Settings */}
+        {/* Basic Information */}
         <Card>
           <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>
-              Basic boarding service configuration
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Boarding Service</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow customers to book boarding reservations
-                </p>
+              <div>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>
+                  Client and staff facing names, slogan, and description
+                </CardDescription>
               </div>
-              <Switch
-                checked={settings.enabled}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enabled: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Deposit</Label>
-                <p className="text-sm text-muted-foreground">
-                  Collect a deposit at time of booking
-                </p>
-              </div>
-              <Switch
-                checked={settings.requiresDeposit}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, requiresDeposit: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.requiresDeposit && (
-              <div className="grid gap-2">
-                <Label>Deposit Percentage</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={settings.depositPercentage}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        depositPercentage: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">%</span>
+              {isEditingBasic ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("basic")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => handleSave("basic")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
                 </div>
-              </div>
-            )}
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Minimum Advance Booking (hours)</Label>
-                <Input
-                  type="number"
-                  value={settings.minAdvanceBookingHours}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      minAdvanceBookingHours: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Maximum Advance Booking (days)</Label>
-                <Input
-                  type="number"
-                  value={settings.maxAdvanceBookingDays}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      maxAdvanceBookingDays: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingBasic(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Capacity Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Capacity Settings</CardTitle>
-            <CardDescription>
-              Manage kennel capacity and availability
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Maximum Kennel Capacity</Label>
-              <Input
-                type="number"
-                value={settings.maxKennelCapacity}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    maxKennelCapacity: parseInt(e.target.value) || 0,
-                  })
-                }
-                disabled={!isEditing}
-                className="w-32"
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Allow Overbooking</Label>
-                <p className="text-sm text-muted-foreground">
-                  Accept bookings beyond capacity (for cancellation buffer)
-                </p>
-              </div>
-              <Switch
-                checked={settings.overbookingAllowed}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, overbookingAllowed: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.overbookingAllowed && (
-              <div className="grid gap-2">
-                <Label>Overbooking Percentage</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={settings.overbookingPercentage}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        overbookingPercentage: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-24"
-                  />
-                  <span className="text-muted-foreground">%</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Check-in/Check-out Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Check-in / Check-out</CardTitle>
-            <CardDescription>
-              Configure timing and fees for arrivals and departures
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Default Check-in Time</Label>
+                <Label>Client Facing Name</Label>
                 <Input
-                  type="time"
-                  value={settings.defaultCheckInTime}
+                  value={formData.clientFacingName}
                   onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      defaultCheckInTime: e.target.value,
-                    })
+                    updateFormData({ clientFacingName: e.target.value })
                   }
-                  disabled={!isEditing}
+                  placeholder="e.g., Cozy Kennels Boarding"
+                  disabled={!isEditingBasic}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Default Check-out Time</Label>
+                <Label>Staff Facing Name</Label>
                 <Input
-                  type="time"
-                  value={settings.defaultCheckOutTime}
+                  value={formData.staffFacingName}
                   onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      defaultCheckOutTime: e.target.value,
-                    })
+                    updateFormData({ staffFacingName: e.target.value })
                   }
-                  disabled={!isEditing}
+                  placeholder="e.g., Boarding Management"
+                  disabled={!isEditingBasic}
                 />
               </div>
             </div>
-            <Separator />
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Early Check-in Fee ($)</Label>
-                <Input
-                  type="number"
-                  value={settings.earlyCheckInFee}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      earlyCheckInFee: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Late Check-out Fee ($)</Label>
-                <Input
-                  type="number"
-                  value={settings.lateCheckOutFee}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      lateCheckOutFee: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Grace Period (minutes)</Label>
-                <Input
-                  type="number"
-                  value={settings.gracePeriodMinutes}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      gracePeriodMinutes: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Slogan</Label>
+              <Input
+                value={formData.slogan}
+                onChange={(e) => updateFormData({ slogan: e.target.value })}
+                placeholder="e.g., Your Pet's Home Away From Home"
+                disabled={!isEditingBasic}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) =>
+                  updateFormData({ description: e.target.value })
+                }
+                rows={4}
+                placeholder="Describe the boarding service..."
+                disabled={!isEditingBasic}
+              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Pet Requirements */}
+        {/* Pricing */}
         <Card>
           <CardHeader>
-            <CardTitle>Pet Requirements</CardTitle>
-            <CardDescription>
-              Set requirements for pets using the boarding service
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Pricing</CardTitle>
+                <CardDescription>
+                  Base price for the boarding service
+                </CardDescription>
+              </div>
+              {isEditingPricing ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("pricing")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => handleSave("pricing")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingPricing(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Vaccination Records</Label>
-                <p className="text-sm text-muted-foreground">
-                  Pets must have up-to-date vaccination records on file
-                </p>
-              </div>
-              <Switch
-                checked={settings.requireVaccinationRecords}
-                onCheckedChange={(checked) =>
-                  setSettings({
-                    ...settings,
-                    requireVaccinationRecords: checked,
-                  })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Spay/Neuter Proof</Label>
-                <p className="text-sm text-muted-foreground">
-                  Pets must be spayed or neutered
-                </p>
-              </div>
-              <Switch
-                checked={settings.requireSpayNeuterProof}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, requireSpayNeuterProof: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
+          <CardContent>
             <div className="space-y-2">
-              <Label>Minimum Pet Age (months)</Label>
+              <Label>Base Price ($)</Label>
               <Input
                 type="number"
-                value={settings.minPetAge}
+                step="0.01"
+                value={formData.basePrice}
                 onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    minPetAge: parseInt(e.target.value) || 0,
-                  })
+                  updateFormData({ basePrice: parseFloat(e.target.value) || 0 })
                 }
-                disabled={!isEditing}
                 className="w-32"
+                disabled={!isEditingPricing}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Notifications */}
+        {/* Media */}
         <Card>
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Configure automated notifications for boarding
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Media</CardTitle>
+                <CardDescription>
+                  Banner image for the boarding service
+                </CardDescription>
+              </div>
+              {isEditingMedia ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("media")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => handleSave("media")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingMedia(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Send Booking Confirmation</Label>
-                <p className="text-sm text-muted-foreground">
-                  Email confirmation when a booking is made
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendBookingConfirmation}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, sendBookingConfirmation: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Send Check-in Reminder</Label>
-                <p className="text-sm text-muted-foreground">
-                  Remind customers before their scheduled check-in
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendCheckInReminder}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, sendCheckInReminder: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.sendCheckInReminder && (
+          <CardContent>
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Reminder Time (hours before)</Label>
+                <Label>Banner Image URL</Label>
                 <Input
-                  type="number"
-                  value={settings.reminderHoursBefore}
+                  value={formData.bannerImage || ""}
                   onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      reminderHoursBefore: parseInt(e.target.value) || 0,
-                    })
+                    updateFormData({ bannerImage: e.target.value || undefined })
                   }
-                  disabled={!isEditing}
-                  className="w-32"
+                  placeholder="e.g., /services/boarding.jpg"
+                  disabled={!isEditingMedia}
                 />
               </div>
-            )}
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Send Daily Updates</Label>
-                <p className="text-sm text-muted-foreground">
-                  Send daily updates to pet owners during their stay
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendDailyUpdates}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, sendDailyUpdates: checked })
-                }
-                disabled={!isEditing}
-              />
+              {formData.bannerImage && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted">
+                    <Image
+                      src={formData.bannerImage}
+                      alt="Banner preview"
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        // Hide broken images
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Image preview - actual display may vary
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Policies */}
+        {/* Evaluation Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Policies</CardTitle>
-            <CardDescription>
-              Define boarding policies displayed to customers
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Evaluation Settings</CardTitle>
+                <CardDescription>
+                  Configure evaluation requirements for boarding
+                </CardDescription>
+              </div>
+              {isEditingEvaluation ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("evaluation")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => handleSave("evaluation")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingEvaluation(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Cancellation Policy</Label>
-              <Textarea
-                value={settings.cancellationPolicy}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    cancellationPolicy: e.target.value,
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Enable Evaluation</Label>
+                <p className="text-sm text-muted-foreground">
+                  Require evaluation for boarding bookings
+                </p>
+              </div>
+              <Switch
+                checked={formData.settings.evaluation.enabled}
+                onCheckedChange={(checked) =>
+                  updateNested("settings", "evaluation", {
+                    ...formData.settings.evaluation,
+                    enabled: checked,
                   })
                 }
-                disabled={!isEditing}
-                rows={3}
+                disabled={!isEditingEvaluation}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Pet Policy Notes</Label>
-              <Textarea
-                value={settings.petPolicyNotes}
-                onChange={(e) =>
-                  setSettings({ ...settings, petPolicyNotes: e.target.value })
+            {formData.settings.evaluation.enabled && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Optional Evaluation</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Make evaluation optional for clients
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.settings.evaluation.optional || false}
+                    onCheckedChange={(checked) =>
+                      updateNested("settings", "evaluation", {
+                        ...formData.settings.evaluation,
+                        optional: checked,
+                      })
+                    }
+                    disabled={!isEditingEvaluation}
+                  />
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Status */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Status</CardTitle>
+                <CardDescription>
+                  Enable or disable the boarding module
+                </CardDescription>
+              </div>
+              {isEditingStatus ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("status")}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={() => handleSave("status")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingStatus(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Disabled</Label>
+                <p className="text-sm text-muted-foreground">
+                  Disable the boarding service
+                </p>
+              </div>
+              <Switch
+                checked={formData.status.disabled}
+                onCheckedChange={(checked) =>
+                  updateNested("status", "disabled", checked)
                 }
-                disabled={!isEditing}
-                rows={3}
+                disabled={!isEditingStatus}
               />
             </div>
+            {formData.status.disabled && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Reason</Label>
+                  <Textarea
+                    value={formData.status.reason || ""}
+                    onChange={(e) =>
+                      updateNested(
+                        "status",
+                        "reason",
+                        e.target.value || undefined,
+                      )
+                    }
+                    rows={2}
+                    placeholder="Reason for disabling..."
+                    disabled={!isEditingStatus}
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

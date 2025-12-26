@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
+import { ModulesConfigProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 
 export default async function FacilityLayout({
   children,
@@ -20,17 +21,19 @@ export default async function FacilityLayout({
   }
 
   return (
-    <BookingModalProviderWrapper>
-      <SidebarProvider>
-        <FacilitySidebar />
-        <SidebarInset>
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
-            <FacilityHeader />
-            <UserProfileSheet />
-          </header>
-          {children}
-        </SidebarInset>
-      </SidebarProvider>
-    </BookingModalProviderWrapper>
+    <ModulesConfigProviderWrapper>
+      <BookingModalProviderWrapper>
+        <SidebarProvider>
+          <FacilitySidebar />
+          <SidebarInset>
+            <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
+              <FacilityHeader />
+              <UserProfileSheet />
+            </header>
+            {children}
+          </SidebarInset>
+        </SidebarProvider>
+      </BookingModalProviderWrapper>
+    </ModulesConfigProviderWrapper>
   );
 }

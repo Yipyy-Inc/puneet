@@ -1,18 +1,14 @@
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SERVICE_CATEGORIES } from "../constants";
-import {
-  daycareConfig,
-  boardingConfig,
-  groomingConfig,
-  trainingConfig,
-} from "@/data/modules-config";
+import type { ModuleConfig } from "@/data/modules-config";
 
 interface ServiceStepProps {
   selectedService: string;
   setSelectedService: (service: string) => void;
   setServiceType: (type: string) => void;
   setCurrentSubStep: (step: number) => void;
+  configs: Record<string, ModuleConfig>;
 }
 
 export function ServiceStep({
@@ -20,6 +16,7 @@ export function ServiceStep({
   setSelectedService,
   setServiceType,
   setCurrentSubStep,
+  configs,
 }: ServiceStepProps) {
   return (
     <div className="space-y-4">
@@ -27,16 +24,7 @@ export function ServiceStep({
       <div className="grid grid-cols-2 gap-4">
         {SERVICE_CATEGORIES.map((service) => {
           const Icon = service.icon;
-          const config =
-            service.id === "daycare"
-              ? daycareConfig
-              : service.id === "boarding"
-                ? boardingConfig
-                : service.id === "grooming"
-                  ? groomingConfig
-                  : service.id === "training"
-                    ? trainingConfig
-                    : null;
+          const config = configs[service.id as keyof typeof configs];
           const isDisabled = config?.status.disabled;
           return (
             <div
