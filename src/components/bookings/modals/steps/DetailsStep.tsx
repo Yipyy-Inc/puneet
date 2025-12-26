@@ -1,59 +1,11 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { DaycareDetails, BoardingDetails } from "../service-details";
 import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
 import { Pet } from "@/lib/types";
-
-const GROOMING_STYLES = [
-  { id: "bath_brush", name: "Bath & Brush", price: 40 },
-  { id: "full_groom", name: "Full Groom", price: 65 },
-  { id: "puppy_groom", name: "Puppy Groom", price: 35 },
-  { id: "hand_stripping", name: "Hand Stripping", price: 95 },
-  { id: "deshedding", name: "De-shedding Treatment", price: 55 },
-];
-
-const GROOMING_ADDONS = [
-  { id: "nail_trim", name: "Nail Trim", price: 15 },
-  { id: "teeth_brush", name: "Teeth Brushing", price: 10 },
-  { id: "ear_clean", name: "Ear Cleaning", price: 12 },
-  { id: "flea_treatment", name: "Flea Treatment", price: 25 },
-  { id: "medicated_bath", name: "Medicated Bath", price: 20 },
-  { id: "paw_treatment", name: "Paw Pad Treatment", price: 15 },
-];
-
-const TRAINING_TYPES = [
-  { id: "basic_obedience", name: "Basic Obedience", price: 250, sessions: 6 },
-  {
-    id: "advanced_obedience",
-    name: "Advanced Obedience",
-    price: 350,
-    sessions: 8,
-  },
-  { id: "private_session", name: "Private Session", price: 85, sessions: 1 },
-  { id: "puppy_training", name: "Puppy Training", price: 200, sessions: 4 },
-  {
-    id: "behavior_modification",
-    name: "Behavior Modification",
-    price: 150,
-    sessions: 1,
-  },
-  { id: "agility", name: "Agility Training", price: 300, sessions: 6 },
-];
 
 interface DetailsStepProps {
   selectedService: string;
   currentSubStep: number;
   isSubStepComplete?: (stepIndex: number) => boolean;
-  startDate: string;
-  setStartDate: (value: string) => void;
-  checkInTime: string;
-  setCheckInTime: (value: string) => void;
-  setCheckOutTime: (value: string) => void;
-  setEndDate: (value: string) => void;
   // Daycare
   daycareSelectedDates: Date[];
   setDaycareSelectedDates: (value: Date[]) => void;
@@ -80,22 +32,12 @@ interface DetailsStepProps {
   setBoardingDateTimes: (
     value: Array<{ date: string; checkInTime: string; checkOutTime: string }>,
   ) => void;
+  setStartDate: (value: string) => void;
+  setEndDate: (value: string) => void;
+  setCheckInTime: (value: string) => void;
+  setCheckOutTime: (value: string) => void;
   serviceType: string;
   setServiceType: (value: string) => void;
-  // Grooming
-  groomingStyle: string;
-  setGroomingStyle: (value: string) => void;
-  groomingAddOns: string[];
-  setGroomingAddOns: (value: string[]) => void;
-  stylistPreference: string;
-  setStylistPreference: (value: string) => void;
-  // Training
-  trainingType: string;
-  setTrainingType: (value: string) => void;
-  trainerId: string;
-  setTrainerId: (value: string) => void;
-  trainingGoals: string;
-  setTrainingGoals: (value: string) => void;
   // Common
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (value: FeedingScheduleItem[]) => void;
@@ -114,12 +56,6 @@ export function DetailsStep({
   selectedService,
   currentSubStep,
   isSubStepComplete,
-  startDate,
-  setStartDate,
-  checkInTime,
-  setCheckInTime,
-  setCheckOutTime,
-  setEndDate,
   daycareSelectedDates,
   setDaycareSelectedDates,
   daycareDateTimes,
@@ -132,20 +68,12 @@ export function DetailsStep({
   setBoardingRangeEnd,
   boardingDateTimes,
   setBoardingDateTimes,
+  setStartDate,
+  setEndDate,
+  setCheckInTime,
+  setCheckOutTime,
   serviceType,
   setServiceType,
-  groomingStyle,
-  setGroomingStyle,
-  groomingAddOns,
-  setGroomingAddOns,
-  stylistPreference,
-  setStylistPreference,
-  trainingType,
-  setTrainingType,
-  trainerId,
-  setTrainerId,
-  trainingGoals,
-  setTrainingGoals,
   feedingSchedule,
   setFeedingSchedule,
   medications,
@@ -154,52 +82,8 @@ export function DetailsStep({
   setExtraServices,
   selectedPets,
 }: DetailsStepProps) {
-  const toggleGroomingAddon = (addonId: string) => {
-    setGroomingAddOns(
-      groomingAddOns.includes(addonId)
-        ? groomingAddOns.filter((id) => id !== addonId)
-        : [...groomingAddOns, addonId],
-    );
-  };
-
   return (
     <div className="space-y-4">
-      {selectedService !== "daycare" && selectedService !== "boarding" && (
-        <>
-          <Separator />
-
-          {/* Common date/time fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="startDate">
-                Date <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-
-            {(selectedService === "grooming" ||
-              selectedService === "training") && (
-              <div className="grid gap-2">
-                <Label htmlFor="appointmentTime">Appointment Time</Label>
-                <Input
-                  id="appointmentTime"
-                  type="time"
-                  value={checkInTime}
-                  onChange={(e) => setCheckInTime(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-
-          <Separator />
-        </>
-      )}
-
       {/* Service-specific fields */}
       {selectedService === "daycare" && (
         <DaycareDetails
@@ -248,129 +132,6 @@ export function DetailsStep({
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}
         />
-      )}
-
-      {selectedService === "grooming" && (
-        <div className="space-y-4">
-          <div>
-            <Label className="text-base">
-              Grooming Style <span className="text-destructive">*</span>
-            </Label>
-            <RadioGroup
-              value={groomingStyle}
-              onValueChange={setGroomingStyle}
-              className="grid gap-2 mt-2"
-            >
-              {GROOMING_STYLES.map((style) => (
-                <Label
-                  key={style.id}
-                  htmlFor={`groom-${style.id}`}
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    groomingStyle === style.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={style.id} id={`groom-${style.id}`} />
-                  <span className="flex-1 font-medium">{style.name}</span>
-                  <span className="font-semibold">${style.price}</span>
-                </Label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div>
-            <Label className="text-base">Add-ons</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {GROOMING_ADDONS.map((addon) => (
-                <Label
-                  key={addon.id}
-                  htmlFor={`addon-${addon.id}`}
-                  className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    groomingAddOns.includes(addon.id)
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <Checkbox
-                    id={`addon-${addon.id}`}
-                    checked={groomingAddOns.includes(addon.id)}
-                    onCheckedChange={() => toggleGroomingAddon(addon.id)}
-                  />
-                  <span className="flex-1 text-sm">{addon.name}</span>
-                  <span className="text-sm font-medium">+${addon.price}</span>
-                </Label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="stylist">Stylist Preference</Label>
-            <Input
-              id="stylist"
-              value={stylistPreference}
-              onChange={(e) => setStylistPreference(e.target.value)}
-              placeholder="Any preferred groomer..."
-            />
-          </div>
-        </div>
-      )}
-
-      {selectedService === "training" && (
-        <div className="space-y-4">
-          <div>
-            <Label className="text-base">
-              Training Program <span className="text-destructive">*</span>
-            </Label>
-            <RadioGroup
-              value={trainingType}
-              onValueChange={setTrainingType}
-              className="grid gap-2 mt-2"
-            >
-              {TRAINING_TYPES.map((type) => (
-                <Label
-                  key={type.id}
-                  htmlFor={`train-${type.id}`}
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    trainingType === type.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                >
-                  <RadioGroupItem value={type.id} id={`train-${type.id}`} />
-                  <div className="flex-1">
-                    <p className="font-medium">{type.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {type.sessions} session{type.sessions > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <span className="font-semibold">${type.price}</span>
-                </Label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="trainer">Trainer Preference</Label>
-            <Input
-              id="trainer"
-              value={trainerId}
-              onChange={(e) => setTrainerId(e.target.value)}
-              placeholder="Any preferred trainer..."
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="goals">Training Goals</Label>
-            <Textarea
-              id="goals"
-              value={trainingGoals}
-              onChange={(e) => setTrainingGoals(e.target.value)}
-              placeholder="What would you like to achieve with training..."
-              rows={3}
-            />
-          </div>
-        </div>
       )}
     </div>
   );

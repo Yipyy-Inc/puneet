@@ -25,15 +25,14 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import {
-  GROOMING_STYLES,
-  GROOMING_ADDONS,
-  TRAINING_TYPES,
   DAYCARE_TYPES,
   BOARDING_TYPES,
   STEPS,
   DAYCARE_SUB_STEPS,
   BOARDING_SUB_STEPS,
 } from "./constants";
+import { services } from "@/data/services-pricing";
+import { daycareConfig, boardingConfig } from "@/data/modules-config";
 
 import {
   Client,
@@ -144,16 +143,6 @@ export function BookingModal({
     [],
   );
 
-  // Grooming specific
-  const [groomingStyle, setGroomingStyle] = useState("");
-  const [groomingAddOns, setGroomingAddOns] = useState<string[]>([]);
-  const [stylistPreference, setStylistPreference] = useState("");
-
-  // Training specific
-  const [trainingType, setTrainingType] = useState("");
-  const [trainerId, setTrainerId] = useState("");
-  const [trainingGoals, setTrainingGoals] = useState("");
-
   // Boarding specific
   const [kennel, setKennel] = useState("");
   const [roomAssignments, setRoomAssignments] = useState<
@@ -261,16 +250,6 @@ export function BookingModal({
         );
         basePrice = basePrice * Math.max(days, 1);
       }
-    } else if (selectedService === "grooming") {
-      const style = GROOMING_STYLES.find((g) => g.id === groomingStyle);
-      basePrice = style?.price || 40;
-      groomingAddOns.forEach((addonId) => {
-        const addon = GROOMING_ADDONS.find((a) => a.id === addonId);
-        if (addon) basePrice += addon.price;
-      });
-    } else if (selectedService === "training") {
-      const training = TRAINING_TYPES.find((t) => t.id === trainingType);
-      basePrice = training?.price || 85;
     }
 
     return {
@@ -282,9 +261,6 @@ export function BookingModal({
     serviceType,
     boardingRangeStart,
     boardingRangeEnd,
-    groomingStyle,
-    groomingAddOns,
-    trainingType,
     daycareSelectedDates.length,
   ]);
 
@@ -302,8 +278,6 @@ export function BookingModal({
         }
         // For other services, original logic
         if (!startDate) return false;
-        if (selectedService === "grooming" && !groomingStyle) return false;
-        if (selectedService === "training" && !trainingType) return false;
         return true;
       case "confirm":
         return true;
@@ -318,8 +292,6 @@ export function BookingModal({
     selectedPetIds,
     selectedService,
     startDate,
-    groomingStyle,
-    trainingType,
     isSubStepComplete,
   ]);
 
@@ -375,6 +347,33 @@ export function BookingModal({
 
     if (!clientId || !petId) return;
 
+    // Check if service requires evaluation
+    const service = services.find((s) => s.id === selectedService);
+    const isDaycareService = service?.category === "daycare";
+    const isBoardingService = service?.category === "boarding";
+    const requiresEvaluation = isDaycareService
+      ? daycareConfig.settings.evaluation.enabled
+      : isBoardingService
+        ? boardingConfig.settings.evaluation.enabled
+        : service?.requiresEvaluation || false;
+
+    if (requiresEvaluation) {
+      const petsNeedingEvaluation = selectedPets.filter((pet) => {
+        const evaluation = pet.evaluations?.find(
+          (e) => e.serviceId === selectedService && e.status === "passed",
+        );
+        return !evaluation;
+      });
+
+      if (petsNeedingEvaluation.length > 0) {
+        // Show prompt to staff
+        alert(
+          `The following pet(s) have not passed the required evaluation for ${service?.name}: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}. Please schedule an evaluation booking first.`,
+        );
+        return;
+      }
+    }
+
     const booking: NewBooking = {
       clientId,
       petId,
@@ -410,12 +409,6 @@ export function BookingModal({
           : undefined,
       daycareDateTimes:
         daycareDateTimes.length > 0 ? daycareDateTimes : undefined,
-      groomingStyle: groomingStyle || undefined,
-      groomingAddOns: groomingAddOns.length > 0 ? groomingAddOns : undefined,
-      stylistPreference: stylistPreference || undefined,
-      trainingType: trainingType || undefined,
-      trainerId: trainerId || undefined,
-      trainingGoals: trainingGoals || undefined,
 
       kennel: kennel || undefined,
       feedingSchedule: feedingSchedule || undefined,
@@ -449,12 +442,6 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
-    setGroomingStyle("");
-    setGroomingAddOns([]);
-    setStylistPreference("");
-    setTrainingType("");
-    setTrainerId("");
-    setTrainingGoals("");
 
     setKennel("");
     setRoomAssignments([]);
@@ -893,6 +880,10 @@ export function BookingModal({
                     return `Book ${preSelectedPet.name}`;
                   } else if (preSelectedClient) {
                     return `Book for ${preSelectedClient.name}`;
+                  } else if (selectedService === "daycare") {
+                    return daycareConfig.clientFacingName;
+                  } else if (selectedService === "boarding") {
+                    return boardingConfig.clientFacingName;
                   } else {
                     return "New Booking";
                   }
@@ -910,6 +901,10 @@ export function BookingModal({
                     return `Create a new booking for ${preSelectedPet.name}`;
                   } else if (preSelectedClient) {
                     return `Create a new booking for ${preSelectedClient.name}`;
+                  } else if (selectedService === "daycare") {
+                    return daycareConfig.slogan;
+                  } else if (selectedService === "boarding") {
+                    return boardingConfig.slogan;
                   } else {
                     return "Create a new booking for your facility";
                   }
@@ -1081,6 +1076,7 @@ export function BookingModal({
                     setSelectedPetIds={setSelectedPetIds}
                     selectedClient={selectedClient}
                     preSelectedClientId={preSelectedClientId}
+                    selectedService={selectedService}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
@@ -1088,12 +1084,6 @@ export function BookingModal({
                     selectedService={selectedService}
                     currentSubStep={currentSubStep}
                     isSubStepComplete={isSubStepComplete}
-                    startDate={startDate}
-                    setStartDate={setStartDate}
-                    checkInTime={checkInTime}
-                    setCheckInTime={setCheckInTime}
-                    setCheckOutTime={setCheckOutTime}
-                    setEndDate={setEndDate}
                     daycareSelectedDates={daycareSelectedDates}
                     setDaycareSelectedDates={setDaycareSelectedDates}
                     daycareDateTimes={daycareDateTimes}
@@ -1106,20 +1096,12 @@ export function BookingModal({
                     setBoardingRangeEnd={setBoardingRangeEnd}
                     boardingDateTimes={boardingDateTimes}
                     setBoardingDateTimes={setBoardingDateTimes}
+                    setStartDate={setStartDate}
+                    setEndDate={setEndDate}
+                    setCheckInTime={setCheckInTime}
+                    setCheckOutTime={setCheckOutTime}
                     serviceType={serviceType}
                     setServiceType={setServiceType}
-                    groomingStyle={groomingStyle}
-                    setGroomingStyle={setGroomingStyle}
-                    groomingAddOns={groomingAddOns}
-                    setGroomingAddOns={setGroomingAddOns}
-                    stylistPreference={stylistPreference}
-                    setStylistPreference={setStylistPreference}
-                    trainingType={trainingType}
-                    setTrainingType={setTrainingType}
-                    trainerId={trainerId}
-                    setTrainerId={setTrainerId}
-                    trainingGoals={trainingGoals}
-                    setTrainingGoals={setTrainingGoals}
                     feedingSchedule={feedingSchedule}
                     setFeedingSchedule={setFeedingSchedule}
                     medications={medications}
@@ -1145,9 +1127,6 @@ export function BookingModal({
                     boardingRangeStart={boardingRangeStart}
                     boardingRangeEnd={boardingRangeEnd}
                     boardingDateTimes={boardingDateTimes}
-                    groomingStyle={groomingStyle}
-                    groomingAddOns={groomingAddOns}
-                    trainingType={trainingType}
                     roomAssignments={roomAssignments}
                     feedingSchedule={feedingSchedule}
                     medications={medications}

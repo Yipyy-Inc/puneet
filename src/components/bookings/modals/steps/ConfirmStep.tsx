@@ -3,32 +3,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { Pet, Client } from "@/lib/types";
 import { SERVICE_CATEGORIES } from "../constants";
 
-const GROOMING_STYLES = [
-  { id: "bath_brush", name: "Bath & Brush", price: 40 },
-  { id: "full_groom", name: "Full Groom", price: 65 },
-  { id: "puppy_groom", name: "Puppy Groom", price: 35 },
-  { id: "hand_stripping", name: "Hand Stripping", price: 95 },
-  { id: "deshedding", name: "De-shedding Treatment", price: 55 },
-];
-
-const GROOMING_ADDONS = [
-  { id: "nail_trim", name: "Nail Trim", price: 15 },
-  { id: "teeth_brush", name: "Teeth Brushing", price: 10 },
-  { id: "ear_clean", name: "Ear Cleaning", price: 12 },
-  { id: "flea_treatment", name: "Flea Treatment", price: 25 },
-  { id: "medicated_bath", name: "Medicated Bath", price: 20 },
-  { id: "paw_treatment", name: "Paw Pad Treatment", price: 15 },
-];
-
-const TRAINING_TYPES = [
-  { id: "basic_obedience", name: "Basic Obedience" },
-  { id: "advanced_obedience", name: "Advanced Obedience" },
-  { id: "private_session", name: "Private Session" },
-  { id: "puppy_training", name: "Puppy Training" },
-  { id: "behavior_modification", name: "Behavior Modification" },
-  { id: "agility", name: "Agility Training" },
-];
-
 interface FeedingScheduleItem {
   id: string;
   name: string;
@@ -70,9 +44,7 @@ interface ConfirmStepProps {
     checkInTime: string;
     checkOutTime: string;
   }>;
-  groomingStyle: string;
-  groomingAddOns: string[];
-  trainingType: string;
+
   roomAssignments: Array<{ petId: number; roomId: string }>;
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
@@ -97,9 +69,7 @@ export function ConfirmStep({
   boardingRangeStart,
   boardingRangeEnd,
   boardingDateTimes,
-  groomingStyle,
-  groomingAddOns,
-  trainingType,
+
   roomAssignments,
   feedingSchedule,
   medications,
@@ -172,16 +142,6 @@ export function ConfirmStep({
                 {serviceType && (
                   <p className="text-sm text-muted-foreground capitalize">
                     {serviceType.replace(/_/g, " ")}
-                  </p>
-                )}
-                {groomingStyle && (
-                  <p className="text-sm text-muted-foreground">
-                    {GROOMING_STYLES.find((g) => g.id === groomingStyle)?.name}
-                  </p>
-                )}
-                {trainingType && (
-                  <p className="text-sm text-muted-foreground">
-                    {TRAINING_TYPES.find((t) => t.id === trainingType)?.name}
                   </p>
                 )}
               </div>
@@ -275,27 +235,6 @@ export function ConfirmStep({
                   </div>
                 </div>
               )}
-
-            {/* Grooming Add-ons */}
-            {groomingAddOns.length > 0 && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Add-ons</p>
-                <div className="space-y-1">
-                  {groomingAddOns.map((addonId) => {
-                    const addon = GROOMING_ADDONS.find((a) => a.id === addonId);
-                    return (
-                      <div
-                        key={addonId}
-                        className="flex justify-between text-sm"
-                      >
-                        <span>{addon?.name}</span>
-                        <span>+${addon?.price}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Add-ons */}
             {(selectedService === "daycare" ||

@@ -475,6 +475,17 @@ export const clients = [
         allergies: "None",
         specialNeeds: "None",
         imageUrl: "/dogs/dog-3.jpg",
+        evaluations: [
+          {
+            id: "eval-001",
+            petId: 13,
+            serviceId: "srv-003",
+            status: "passed" as const,
+            evaluatedAt: "2024-01-15T10:00:00Z",
+            evaluatedBy: "Dr. Smith",
+            notes: "Passed daycare temperament evaluation",
+          },
+        ],
       },
       {
         id: 19,
@@ -488,6 +499,7 @@ export const clients = [
         allergies: "None",
         specialNeeds: "Herding instinct, needs mental stimulation",
         imageUrl: "/dogs/dog-4.jpg",
+        evaluations: [],
       },
       {
         id: 20,

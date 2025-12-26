@@ -1,3 +1,13 @@
+export interface Evaluation {
+  id: string;
+  petId: number;
+  serviceId: string;
+  status: "pending" | "passed" | "failed";
+  evaluatedAt?: string;
+  evaluatedBy?: string;
+  notes?: string;
+}
+
 export interface Pet {
   id: number;
   name: string;
@@ -10,6 +20,7 @@ export interface Pet {
   allergies: string;
   specialNeeds: string;
   imageUrl?: string;
+  evaluations?: Evaluation[];
 }
 
 export interface Client {
