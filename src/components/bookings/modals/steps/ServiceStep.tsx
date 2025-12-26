@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SERVICE_CATEGORIES } from "../constants";
-import type { ModuleConfig } from "@/data/modules-config";
+import type { ModuleConfig } from "@/data/settings";
 
 interface ServiceStepProps {
   selectedService: string;

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
-import { useModulesConfig } from "@/hooks/use-modules-config";
+import { useSettings } from "@/hooks/use-settings";
 import {
   Bed,
   LogIn,
@@ -47,7 +47,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/services/boarding/settings",
+    href: "/facility/dashboard/services/boarding/settings#evaluation",
     icon: Settings,
   },
 ];
@@ -58,7 +58,7 @@ export default function BoardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { configs, updateConfig } = useModulesConfig();
+  const { boarding, updateBoarding } = useSettings();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const [disableReason, setDisableReason] = useState("");
@@ -70,10 +70,10 @@ export default function BoardingLayout({
 
   const handleConfirmToggle = () => {
     if (pendingEnabled !== null) {
-      updateConfig("boarding", {
-        ...configs.boarding,
+      updateBoarding({
+        ...boarding,
         status: {
-          ...configs.boarding.status,
+          ...boarding.status,
           disabled: !pendingEnabled,
           reason: !pendingEnabled ? disableReason : undefined,
         },
@@ -104,12 +104,10 @@ export default function BoardingLayout({
                   Boarding Module
                   <Badge
                     variant={
-                      configs.boarding.status.disabled
-                        ? "destructive"
-                        : "default"
+                      boarding.status.disabled ? "destructive" : "default"
                     }
                   >
-                    {configs.boarding.status.disabled ? "Disabled" : "Enabled"}
+                    {boarding.status.disabled ? "Disabled" : "Enabled"}
                   </Badge>
                 </h1>
                 <p className="text-sm text-muted-foreground">
@@ -120,7 +118,7 @@ export default function BoardingLayout({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Enabled</span>
               <Switch
-                checked={!configs.boarding.status.disabled}
+                checked={!boarding.status.disabled}
                 onCheckedChange={handleToggleEnabled}
               />
             </div>

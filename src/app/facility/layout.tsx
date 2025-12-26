@@ -5,7 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
-import { ModulesConfigProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
+import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 
 export default async function FacilityLayout({
   children,
@@ -21,7 +21,7 @@ export default async function FacilityLayout({
   }
 
   return (
-    <ModulesConfigProviderWrapper>
+    <SettingsProviderWrapper>
       <BookingModalProviderWrapper>
         <SidebarProvider>
           <FacilitySidebar />
@@ -34,6 +34,6 @@ export default async function FacilityLayout({
           </SidebarInset>
         </SidebarProvider>
       </BookingModalProviderWrapper>
-    </ModulesConfigProviderWrapper>
+    </SettingsProviderWrapper>
   );
 }

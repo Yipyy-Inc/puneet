@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Client } from "@/lib/types";
-import type { ModuleConfig } from "@/data/modules-config";
+import type { ModuleConfig } from "@/data/settings";
 
 interface ClientPetStepProps {
   searchQuery: string;

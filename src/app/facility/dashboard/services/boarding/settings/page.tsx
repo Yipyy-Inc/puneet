@@ -15,21 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
-import { useModulesConfig } from "@/hooks/use-modules-config";
-import type { ModuleConfig } from "@/data/modules-config";
+import { useSettings } from "@/hooks/use-settings";
+import type { ModuleConfig } from "@/data/settings";
 
 export default function BoardingSettingsPage() {
-  const { configs, updateConfig } = useModulesConfig();
-  const [formData, setFormData] = useState<ModuleConfig>(configs.boarding);
+  const { boarding, updateBoarding } = useSettings();
+  const [formData, setFormData] = useState<ModuleConfig>(boarding);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
   const [isEditingPricing, setIsEditingPricing] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
@@ -38,7 +31,7 @@ export default function BoardingSettingsPage() {
   const updateFormData = (updates: Partial<ModuleConfig>) => {
     const newData = { ...formData, ...updates };
     setFormData(newData);
-    updateConfig("boarding", newData);
+    updateBoarding(newData);
   };
 
   const updateNested = <T extends keyof ModuleConfig>(
@@ -54,12 +47,12 @@ export default function BoardingSettingsPage() {
       },
     };
     setFormData(newData);
-    updateConfig("boarding", newData);
+    updateBoarding(newData);
   };
 
   const handleCancel = (section: string) => {
-    setFormData(configs.boarding);
-    updateConfig("boarding", configs.boarding);
+    setFormData(boarding);
+    updateBoarding(boarding);
     if (section === "basic") setIsEditingBasic(false);
     if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
@@ -292,7 +285,7 @@ export default function BoardingSettingsPage() {
         </Card>
 
         {/* Evaluation Settings */}
-        <Card>
+        <Card id="evaluation">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -368,159 +361,20 @@ export default function BoardingSettingsPage() {
                     disabled={!isEditingEvaluation}
                   />
                 </div>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Internal Name (Staff-Facing)</Label>
-                    <Input
-                      value={formData.settings.evaluation.internalName}
-                      onChange={(e) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          internalName: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Boarding Evaluation"
-                      disabled={!isEditingEvaluation}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Customer-Facing Name</Label>
-                    <Input
-                      value={formData.settings.evaluation.customerName}
-                      onChange={(e) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          customerName: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Pet Evaluation"
-                      disabled={!isEditingEvaluation}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={formData.settings.evaluation.description}
-                    onChange={(e) =>
-                      updateNested("settings", "evaluation", {
-                        ...formData.settings.evaluation,
-                        description: e.target.value,
-                      })
-                    }
-                    rows={3}
-                    placeholder="Describe the evaluation process..."
-                    disabled={!isEditingEvaluation}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Price ($)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.settings.evaluation.price}
-                      onChange={(e) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          price: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="0 for free"
-                      disabled={!isEditingEvaluation}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Duration</Label>
-                    <Select
-                      value={formData.settings.evaluation.duration}
-                      onValueChange={(
-                        value: "half-day" | "full-day" | "custom",
-                      ) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          duration: value,
-                        })
-                      }
-                      disabled={!isEditingEvaluation}
+                <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Evaluation details (name, price, duration, etc.) are
+                    configured globally in{" "}
+                    <a
+                      href="/facility/dashboard/settings"
+                      className="text-primary hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="half-day">Half-Day</SelectItem>
-                        <SelectItem value="full-day">Full-Day</SelectItem>
-                        <SelectItem value="custom">Custom Hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      Settings → Business → Evaluation Settings
+                    </a>
+                  </p>
                 </div>
-                {formData.settings.evaluation.duration === "custom" && (
-                  <div className="space-y-2">
-                    <Label>Custom Hours</Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={formData.settings.evaluation.customHours || ""}
-                      onChange={(e) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          customHours: parseFloat(e.target.value) || undefined,
-                        })
-                      }
-                      placeholder="e.g., 2.5"
-                      disabled={!isEditingEvaluation}
-                      className="w-32"
-                    />
-                  </div>
-                )}
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Taxable</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Apply tax to evaluation price
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings.evaluation.taxSettings.taxable}
-                    onCheckedChange={(checked) =>
-                      updateNested("settings", "evaluation", {
-                        ...formData.settings.evaluation,
-                        taxSettings: {
-                          ...formData.settings.evaluation.taxSettings,
-                          taxable: checked,
-                        },
-                      })
-                    }
-                    disabled={!isEditingEvaluation}
-                  />
-                </div>
-                {formData.settings.evaluation.taxSettings.taxable && (
-                  <div className="space-y-2">
-                    <Label>Tax Rate (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={
-                        formData.settings.evaluation.taxSettings.taxRate || ""
-                      }
-                      onChange={(e) =>
-                        updateNested("settings", "evaluation", {
-                          ...formData.settings.evaluation,
-                          taxSettings: {
-                            ...formData.settings.evaluation.taxSettings,
-                            taxRate: parseFloat(e.target.value) || undefined,
-                          },
-                        })
-                      }
-                      placeholder="e.g., 8.25"
-                      disabled={!isEditingEvaluation}
-                      className="w-32"
-                    />
-                  </div>
-                )}
               </>
             )}
           </CardContent>

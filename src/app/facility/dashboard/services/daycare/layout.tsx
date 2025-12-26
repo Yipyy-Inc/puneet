@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { useModulesConfig } from "@/hooks/use-modules-config";
+import { useSettings } from "@/hooks/use-settings";
 import { facilities } from "@/data/facilities";
 import { clients as initialClients } from "@/data/clients";
 import { NewBooking as BookingData } from "@/lib/types";
@@ -72,7 +72,7 @@ export default function DaycareLayout({
 }) {
   const pathname = usePathname();
   const { openBookingModal } = useBookingModal();
-  const { configs, updateConfig } = useModulesConfig();
+  const { daycare, updateDaycare } = useSettings();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const [disableReason, setDisableReason] = useState("");
@@ -98,10 +98,10 @@ export default function DaycareLayout({
 
   const handleConfirmToggle = () => {
     if (pendingEnabled !== null) {
-      updateConfig("daycare", {
-        ...configs.daycare,
+      updateDaycare({
+        ...daycare,
         status: {
-          ...configs.daycare.status,
+          ...daycare.status,
           disabled: !pendingEnabled,
           reason: !pendingEnabled ? disableReason : undefined,
         },
@@ -132,12 +132,10 @@ export default function DaycareLayout({
                   Daycare Module
                   <Badge
                     variant={
-                      configs.daycare.status.disabled
-                        ? "destructive"
-                        : "default"
+                      daycare.status.disabled ? "destructive" : "default"
                     }
                   >
-                    {configs.daycare.status.disabled ? "Disabled" : "Enabled"}
+                    {daycare.status.disabled ? "Disabled" : "Enabled"}
                   </Badge>
                 </h1>
                 <p className="text-sm text-muted-foreground">
@@ -149,7 +147,7 @@ export default function DaycareLayout({
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Enabled</span>
                 <Switch
-                  checked={!configs.daycare.status.disabled}
+                  checked={!daycare.status.disabled}
                   onCheckedChange={handleToggleEnabled}
                 />
               </div>

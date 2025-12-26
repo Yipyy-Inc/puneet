@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSettings } from "@/hooks/use-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
@@ -57,6 +58,7 @@ import {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { evaluation, updateEvaluation } = useSettings();
   const [profile, setProfile] = useState(businessProfile);
   const [hours, setHours] = useState(businessHours);
   const [rules, setRules] = useState(bookingRules);
@@ -576,69 +578,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Kennel Types */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Kennel Types & Amenities</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Visual kennel map available in Kennel View
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {kennelTypes.map((kennel) => (
-                <div key={kennel.id} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold">{kennel.name}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Size: {kennel.dimensions} • {kennel.quantity} available
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {kennel.amenities.map((amenity, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {amenity}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">
-                        ${kennel.dailyRate}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        per night
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Pet Size Classes */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pet Size Classes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {petSizeClasses.map((size) => (
-                <div
-                  key={size.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div className="font-medium">{size.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {size.weightMin} - {size.weightMax} {size.unit}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
           {/* Vaccination Rules */}
           <Card>
             <CardHeader>
@@ -673,6 +612,162 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Evaluation Settings */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Evaluation Settings</CardTitle>
+                <Button onClick={() => handleSave("Evaluation Settings")}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Internal Name (Staff-Facing)</Label>
+                  <Input
+                    value={evaluation.internalName}
+                    onChange={(e) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        internalName: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Pet Evaluation"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Customer-Facing Name</Label>
+                  <Input
+                    value={evaluation.customerName}
+                    onChange={(e) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        customerName: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Pet Evaluation"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={evaluation.description}
+                  onChange={(e) =>
+                    updateEvaluation({
+                      ...evaluation,
+                      description: e.target.value,
+                    })
+                  }
+                  rows={3}
+                  placeholder="Describe the evaluation process..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Price ($)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={evaluation.price}
+                    onChange={(e) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        price: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="0 for free"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Duration</Label>
+                  <Select
+                    value={evaluation.duration}
+                    onValueChange={(
+                      value: "half-day" | "full-day" | "custom",
+                    ) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        duration: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="half-day">Half-Day</SelectItem>
+                      <SelectItem value="full-day">Full-Day</SelectItem>
+                      <SelectItem value="custom">Custom Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {evaluation.duration === "custom" && (
+                <div className="space-y-2">
+                  <Label>Custom Hours</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={evaluation.customHours || ""}
+                    onChange={(e) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        customHours: parseFloat(e.target.value) || undefined,
+                      })
+                    }
+                    placeholder="e.g., 2.5"
+                    className="w-32"
+                  />
+                </div>
+              )}
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <div className="font-medium">Taxable</div>
+                  <div className="text-sm text-muted-foreground">
+                    Apply tax to evaluation price
+                  </div>
+                </div>
+                <Switch
+                  checked={evaluation.taxSettings.taxable}
+                  onCheckedChange={(checked) =>
+                    updateEvaluation({
+                      ...evaluation,
+                      taxSettings: {
+                        ...evaluation.taxSettings,
+                        taxable: checked,
+                      },
+                    })
+                  }
+                />
+              </div>
+              {evaluation.taxSettings.taxable && (
+                <div className="space-y-2">
+                  <Label>Tax Rate (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={evaluation.taxSettings.taxRate || ""}
+                    onChange={(e) =>
+                      updateEvaluation({
+                        ...evaluation,
+                        taxSettings: {
+                          ...evaluation.taxSettings,
+                          taxRate: parseFloat(e.target.value) || undefined,
+                        },
+                      })
+                    }
+                    placeholder="e.g., 8.25"
+                    className="w-32"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

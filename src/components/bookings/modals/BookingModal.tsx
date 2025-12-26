@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import { STEPS, DAYCARE_SUB_STEPS, BOARDING_SUB_STEPS } from "./constants";
 import { services } from "@/data/services-pricing";
-import { useModulesConfig } from "@/hooks/use-modules-config";
+import { useSettings } from "@/hooks/use-settings";
 
 import {
   Client,
@@ -65,7 +65,8 @@ export function BookingModal({
   preSelectedService,
   booking,
 }: NewBookingModalProps) {
-  const { configs } = useModulesConfig();
+  const { daycare, boarding, grooming, training } = useSettings();
+  const configs = { daycare, boarding, grooming, training };
 
   // Staff options for assignment
   const staffOptions = [
@@ -234,12 +235,10 @@ export function BookingModal({
 
     if (selectedService === "daycare") {
       const pricePerDay =
-        serviceType === "half_day"
-          ? configs.daycare.basePrice / 2
-          : configs.daycare.basePrice;
+        serviceType === "half_day" ? daycare.basePrice / 2 : daycare.basePrice;
       basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
-      basePrice = configs.boarding.basePrice;
+      basePrice = boarding.basePrice;
       if (boardingRangeStart && boardingRangeEnd) {
         const days = Math.ceil(
           (boardingRangeEnd.getTime() - boardingRangeStart.getTime()) /
@@ -259,8 +258,8 @@ export function BookingModal({
     boardingRangeStart,
     boardingRangeEnd,
     daycareSelectedDates.length,
-    configs.daycare.basePrice,
-    configs.boarding.basePrice,
+    daycare.basePrice,
+    boarding.basePrice,
   ]);
 
   // Validation for each step
@@ -351,9 +350,9 @@ export function BookingModal({
     const isDaycareService = service?.category === "daycare";
     const isBoardingService = service?.category === "boarding";
     const requiresEvaluation = isDaycareService
-      ? configs.daycare.settings.evaluation.enabled
+      ? daycare.settings.evaluation.enabled
       : isBoardingService
-        ? configs.boarding.settings.evaluation.enabled
+        ? boarding.settings.evaluation.enabled
         : service?.requiresEvaluation || false;
 
     if (requiresEvaluation) {
@@ -878,9 +877,9 @@ export function BookingModal({
                   } else if (preSelectedClient) {
                     return `Book for ${preSelectedClient.name}`;
                   } else if (selectedService === "daycare") {
-                    return configs.daycare.clientFacingName;
+                    return daycare.clientFacingName;
                   } else if (selectedService === "boarding") {
-                    return configs.boarding.clientFacingName;
+                    return boarding.clientFacingName;
                   } else {
                     return "New Booking";
                   }
@@ -899,9 +898,9 @@ export function BookingModal({
                   } else if (preSelectedClient) {
                     return `Create a new booking for ${preSelectedClient.name}`;
                   } else if (selectedService === "daycare") {
-                    return configs.daycare.slogan;
+                    return daycare.slogan;
                   } else if (selectedService === "boarding") {
-                    return configs.boarding.slogan;
+                    return boarding.slogan;
                   } else {
                     return "Create a new booking for your facility";
                   }

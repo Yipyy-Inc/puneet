@@ -1,12 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { ModulesConfigProvider } from "@/hooks/use-modules-config";
+import { SettingsProvider } from "@/hooks/use-settings";
 
-export function ModulesConfigProviderWrapper({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return <ModulesConfigProvider>{children}</ModulesConfigProvider>;
+export function SettingsProviderWrapper({ children }: { children: ReactNode }) {
+  return <SettingsProvider>{children}</SettingsProvider>;
 }
