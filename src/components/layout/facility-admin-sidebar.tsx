@@ -25,18 +25,11 @@ import {
   FileText,
 } from "lucide-react";
 
-import {
-  GenericSidebar,
-  MenuSection,
-  MenuItem,
-} from "@/components/ui/generic-sidebar";
-import { useFacilityRole } from "@/hooks/use-facility-role";
+import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
 
 export function FacilitySidebar() {
-  const { canAccess, isLoading } = useFacilityRole();
-
-  // Filter menu items based on role permissions
+  // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
     const allMenuSections: MenuSection[] = [
       {
@@ -213,19 +206,9 @@ export function FacilitySidebar() {
       },
     ];
 
-    // During loading, show all items
-    if (isLoading) {
-      return allMenuSections;
-    }
-
-    // Filter items based on role permissions
-    return allMenuSections
-      .map((section) => ({
-        ...section,
-        items: section.items.filter((item: MenuItem) => canAccess(item.url)),
-      }))
-      .filter((section) => section.items.length > 0);
-  }, [canAccess, isLoading]);
+    // Since permission system is removed, always show all items
+    return allMenuSections;
+  }, []);
 
   const handleLogout = () => {
     // TODO: Implement logout logic

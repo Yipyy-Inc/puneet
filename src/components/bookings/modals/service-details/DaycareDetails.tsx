@@ -14,35 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Check, PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PawPrint, Plus, Check } from "lucide-react";
+import { useSettings } from "@/hooks/use-settings";
+import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
 import { Pet } from "@/lib/types";
-
-interface FeedingScheduleItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string;
-  amount: string;
-  unit: string;
-  type: string;
-  source: string;
-  instructions: string;
-  notes: string;
-}
-
-interface MedicationItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string[];
-  amount: string;
-  unit: string;
-  type: string;
-  source?: string;
-  instructions: string;
-  notes: string;
-}
 
 interface ExtraService {
   id: string;
@@ -206,6 +182,7 @@ export function DaycareDetails({
   setExtraServices,
   selectedPets,
 }: DaycareDetailsProps) {
+  const { hours, rules } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
 
@@ -235,7 +212,6 @@ export function DaycareDetails({
               mode="multi"
               selectedDates={daycareSelectedDates}
               onSelectionChange={setDaycareSelectedDates}
-              minDate={new Date()}
               showTimeSelection
               dateTimes={daycareDateTimes}
               onDateTimesChange={(times) => {
@@ -257,8 +233,11 @@ export function DaycareDetails({
                   }
                 }
               }}
-              defaultCheckInTime="08:00"
-              defaultCheckOutTime="17:00"
+              facilityHours={hours}
+              bookingRules={{
+                minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                maximumAdvanceBooking: rules.maximumAdvanceBooking,
+              }}
             />
           </div>
         )}

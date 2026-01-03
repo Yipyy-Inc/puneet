@@ -53,6 +53,18 @@ export interface DateSelectionCalendarProps {
   defaultCheckInTime?: string;
   defaultCheckOutTime?: string;
 
+  // Facility hours for time constraints
+  facilityHours?: Record<
+    string,
+    { isOpen: boolean; openTime: string; closeTime: string }
+  >;
+
+  // Booking rules for date constraints
+  bookingRules?: {
+    minimumAdvanceBooking: number; // hours
+    maximumAdvanceBooking: number; // days
+  };
+
   // Constraints
   minDate?: Date;
   maxDate?: Date;
@@ -69,7 +81,7 @@ export interface DateSelectionCalendarProps {
   className?: string;
 }
 
-const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const DAYS_OF_WEEK_FULL = [
   "Sunday",
   "Monday",
@@ -79,6 +91,35 @@ const DAYS_OF_WEEK_FULL = [
   "Friday",
   "Saturday",
 ];
+
+// Helper to get default times based on facility hours
+const getDefaultTimes = (
+  facilityHours?: Record<
+    string,
+    { isOpen: boolean; openTime: string; closeTime: string }
+  >,
+) => {
+  if (!facilityHours) return { checkIn: "08:00", checkOut: "17:00" };
+
+  const today = new Date();
+  const days = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const dayName = days[today.getDay()];
+  const hours = facilityHours[dayName];
+
+  if (hours?.isOpen) {
+    return { checkIn: hours.openTime, checkOut: hours.closeTime };
+  }
+
+  return { checkIn: "08:00", checkOut: "17:00" };
+};
 
 export function DateSelectionCalendar({
   mode,
@@ -92,8 +133,10 @@ export function DateSelectionCalendar({
   showTimeSelection = false,
   dateTimes = [],
   onDateTimesChange,
-  defaultCheckInTime = "08:00",
-  defaultCheckOutTime = "17:00",
+  defaultCheckInTime,
+  defaultCheckOutTime,
+  facilityHours,
+  bookingRules,
   minDate,
   maxDate,
   disabledDates = [],
@@ -102,6 +145,28 @@ export function DateSelectionCalendar({
 }: DateSelectionCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
+
+  // Compute effective default times
+  const effectiveDefaultCheckInTime =
+    defaultCheckInTime || getDefaultTimes(facilityHours).checkIn;
+  const effectiveDefaultCheckOutTime =
+    defaultCheckOutTime || getDefaultTimes(facilityHours).checkOut;
+
+  // Get facility hours for a specific date
+  const getFacilityHoursForDate = (date: Date) => {
+    if (!facilityHours) return null;
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayName = days[date.getDay()];
+    return facilityHours[dayName];
+  };
 
   // Utility functions
   const isSameDay = (date1: Date, date2: Date): boolean => {
@@ -117,9 +182,36 @@ export function DateSelectionCalendar({
     return time >= start.getTime() && time <= end.getTime();
   };
 
+  // Compute effective min/max dates based on booking rules
+  const effectiveMinDate = useMemo(() => {
+    const now = new Date();
+    let min = minDate;
+    if (bookingRules?.minimumAdvanceBooking) {
+      const minAdvance = new Date(
+        now.getTime() + bookingRules.minimumAdvanceBooking * 60 * 60 * 1000,
+      );
+      min = min ? (min > minAdvance ? min : minAdvance) : minAdvance;
+    }
+    return min;
+  }, [minDate, bookingRules]);
+
+  const effectiveMaxDate = useMemo(() => {
+    const now = new Date();
+    let max = maxDate;
+    if (bookingRules?.maximumAdvanceBooking) {
+      const maxAdvance = new Date(
+        now.getTime() +
+          bookingRules.maximumAdvanceBooking * 24 * 60 * 60 * 1000,
+      );
+      max = max ? (max < maxAdvance ? max : maxAdvance) : maxAdvance;
+    }
+    return max;
+  }, [maxDate, bookingRules]);
+
   const isDateDisabled = (date: Date): boolean => {
-    if (minDate && date < minDate) return true;
-    if (maxDate && date > maxDate) return true;
+    if (effectiveMinDate && date < effectiveMinDate) return true;
+    if (effectiveMaxDate && date > effectiveMaxDate) return true;
+    if (facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
     return disabledDates.some((d) => isSameDay(d, date));
   };
 
@@ -215,11 +307,14 @@ export function DateSelectionCalendar({
       // Handle time selection
       if (showTimeSelection && !isSelected) {
         const dateStr = date.toISOString().split("T")[0];
+        const facilityHoursForDate = getFacilityHoursForDate(date);
         onDateTimesChange?.([
           {
             date: dateStr,
-            checkInTime: defaultCheckInTime,
-            checkOutTime: defaultCheckOutTime,
+            checkInTime:
+              facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
+            checkOutTime:
+              facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
           },
         ]);
       } else if (showTimeSelection && isSelected) {
@@ -245,12 +340,19 @@ export function DateSelectionCalendar({
         if (showTimeSelection) {
           const mostRecentTime =
             dateTimes.length > 0 ? dateTimes[dateTimes.length - 1] : null;
+          const facilityHoursForDate = getFacilityHoursForDate(date);
           onDateTimesChange?.([
             ...dateTimes,
             {
               date: dateStr,
-              checkInTime: mostRecentTime?.checkInTime || defaultCheckInTime,
-              checkOutTime: mostRecentTime?.checkOutTime || defaultCheckOutTime,
+              checkInTime:
+                mostRecentTime?.checkInTime ||
+                facilityHoursForDate?.openTime ||
+                effectiveDefaultCheckInTime,
+              checkOutTime:
+                mostRecentTime?.checkOutTime ||
+                facilityHoursForDate?.closeTime ||
+                effectiveDefaultCheckOutTime,
             },
           ]);
         }
@@ -275,10 +377,13 @@ export function DateSelectionCalendar({
           const times: DateTimeInfo[] = [];
           const current = new Date(start);
           while (current <= end) {
+            const facilityHoursForDate = getFacilityHoursForDate(current);
             times.push({
               date: current.toISOString().split("T")[0],
-              checkInTime: defaultCheckInTime,
-              checkOutTime: defaultCheckOutTime,
+              checkInTime:
+                facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
+              checkOutTime:
+                facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
             });
             current.setDate(current.getDate() + 1);
           }
@@ -290,6 +395,17 @@ export function DateSelectionCalendar({
   };
 
   const handleRecurringDayToggle = (dayOfWeek: number) => {
+    const dayName = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ][dayOfWeek];
+    if (facilityHours && !facilityHours[dayName]?.isOpen) return;
+
     if (!recurringPattern) {
       onRecurringChange?.({
         frequency: "weekly",
@@ -405,22 +521,36 @@ export function DateSelectionCalendar({
         <div className="space-y-2.5 p-3 border rounded-lg bg-muted/30">
           <Label className="text-sm font-medium">Select Days of Week</Label>
           <div className="grid grid-cols-7 gap-2">
-            {DAYS_OF_WEEK_FULL.map((day, index) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => handleRecurringDayToggle(index)}
-                className={cn(
-                  "p-2 text-xs font-medium rounded-md transition-colors",
-                  "border",
-                  recurringPattern?.daysOfWeek.includes(index)
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-accent border-border",
-                )}
-              >
-                {day.slice(0, 3)}
-              </button>
-            ))}
+            {DAYS_OF_WEEK_FULL.map((day, index) => {
+              const dayName = [
+                "sunday",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+              ][index];
+              const isClosed = facilityHours && !facilityHours[dayName]?.isOpen;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => handleRecurringDayToggle(index)}
+                  disabled={isClosed}
+                  className={cn(
+                    "p-2 text-xs font-medium rounded-md transition-colors",
+                    "border",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    recurringPattern?.daysOfWeek.includes(index)
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-accent border-border",
+                  )}
+                >
+                  {day.slice(0, 3)}
+                </button>
+              );
+            })}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="recurringEndDate">Repeat Until (Optional)</Label>
@@ -533,7 +663,10 @@ export function DateSelectionCalendar({
                       </Label>
                       <Input
                         type="time"
-                        value={dateTimes[0]?.checkInTime || defaultCheckInTime}
+                        value={
+                          dateTimes[0]?.checkInTime ||
+                          effectiveDefaultCheckInTime
+                        }
                         onChange={(e) => {
                           const newTimes = dateTimes.map((dt) => ({
                             ...dt,
@@ -541,6 +674,18 @@ export function DateSelectionCalendar({
                           }));
                           onDateTimesChange?.(newTimes);
                         }}
+                        min={
+                          facilityHours && rangeStart
+                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
+                              "06:00"
+                            : "06:00"
+                        }
+                        max={
+                          facilityHours && rangeEnd
+                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
+                              "22:00"
+                            : "22:00"
+                        }
                         className="h-7 text-xs"
                       />
                     </div>
@@ -551,7 +696,8 @@ export function DateSelectionCalendar({
                       <Input
                         type="time"
                         value={
-                          dateTimes[0]?.checkOutTime || defaultCheckOutTime
+                          dateTimes[0]?.checkOutTime ||
+                          effectiveDefaultCheckOutTime
                         }
                         onChange={(e) => {
                           const newTimes = dateTimes.map((dt) => ({
@@ -560,6 +706,18 @@ export function DateSelectionCalendar({
                           }));
                           onDateTimesChange?.(newTimes);
                         }}
+                        min={
+                          facilityHours && rangeStart
+                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
+                              "06:00"
+                            : "06:00"
+                        }
+                        max={
+                          facilityHours && rangeEnd
+                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
+                              "22:00"
+                            : "22:00"
+                        }
                         className="h-7 text-xs"
                       />
                     </div>
@@ -593,8 +751,14 @@ export function DateSelectionCalendar({
                           {timeInfo && (
                             <>
                               <TimeRangeSlider
-                                minTime="06:00"
-                                maxTime="22:00"
+                                minTime={
+                                  getFacilityHoursForDate(date)?.openTime ||
+                                  "06:00"
+                                }
+                                maxTime={
+                                  getFacilityHoursForDate(date)?.closeTime ||
+                                  "22:00"
+                                }
                                 startTime={timeInfo.checkInTime}
                                 endTime={timeInfo.checkOutTime}
                                 onTimeChange={(start, end) => {

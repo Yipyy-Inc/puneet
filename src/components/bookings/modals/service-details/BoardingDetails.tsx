@@ -16,33 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Check, PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Pet } from "@/lib/types";
-
-interface FeedingScheduleItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string;
-  amount: string;
-  unit: string;
-  type: string;
-  source: string;
-  instructions: string;
-  notes: string;
-}
-
-interface MedicationItem {
-  id: string;
-  petId?: number;
-  name: string;
-  time: string[];
-  amount: string;
-  unit: string;
-  type: string;
-  source?: string;
-  instructions: string;
-  notes: string;
-}
+import { useSettings } from "@/hooks/use-settings";
+import { Pet, FeedingScheduleItem, MedicationItem } from "@/lib/types";
 
 interface ExtraService {
   id: string;
@@ -216,6 +191,7 @@ export function BoardingDetails({
   setExtraServices,
   selectedPets,
 }: BoardingDetailsProps) {
+  const { hours, rules } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
 
@@ -262,7 +238,6 @@ export function BoardingDetails({
                     setEndDate(end.toISOString().split("T")[0]);
                   }
                 }}
-                minDate={new Date()}
                 showTimeSelection
                 dateTimes={boardingDateTimes}
                 onDateTimesChange={(times) => {
@@ -272,8 +247,11 @@ export function BoardingDetails({
                     setCheckOutTime(times[times.length - 1].checkOutTime);
                   }
                 }}
-                defaultCheckInTime="14:00"
-                defaultCheckOutTime="11:00"
+                facilityHours={hours}
+                bookingRules={{
+                  minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                  maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                }}
               />
             </div>
           </div>

@@ -52,13 +52,22 @@ export interface BusinessProfile {
   };
 }
 
-export interface BusinessHours {
-  [day: string]: {
+type DayOfWeek =
+  | "sunday"
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday";
+
+export type BusinessHours = {
+  [K in DayOfWeek]: {
     isOpen: boolean;
     openTime: string;
     closeTime: string;
   };
-}
+};
 
 export interface Location {
   id: string;

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSettings } from "@/hooks/use-settings";
+import { SettingsBlock } from "@/components/ui/settings-block";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
-import { RolePermissionsManager } from "@/components/facility/RolePermissionsManager";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +18,12 @@ import {
   Plug,
   CreditCard,
   History,
-  Save,
   MapPin,
   Mail,
   Phone,
   Zap,
   Download,
   Smartphone,
-  Shield,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -39,37 +37,689 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import {
-  businessProfile,
-  businessHours,
   locations,
-  bookingRules,
-  kennelTypes,
-  petSizeClasses,
   vaccinationRules,
   paymentGateways,
   taxRates,
   currencySettings,
-  notificationToggles,
-  integrations,
   subscription,
-  moduleAddons,
   auditLog,
 } from "@/data/settings";
 
-export default function SettingsPage() {
-  const router = useRouter();
-  const { evaluation, updateEvaluation } = useSettings();
-  const [profile, setProfile] = useState(businessProfile);
-  const [hours, setHours] = useState(businessHours);
-  const [rules, setRules] = useState(bookingRules);
-  const [notifications, setNotifications] = useState(notificationToggles);
-  const [integrationsData, setIntegrationsData] = useState(integrations);
-  const [addons, setAddons] = useState(moduleAddons);
+// Business Profile Component
+function BusinessProfileCard() {
+  const { profile, updateProfile } = useSettings();
 
-  const handleSave = (section: string) => {
-    console.log(`Saving ${section} settings...`);
-    alert(`${section} settings saved successfully!`);
-  };
+  return (
+    <SettingsBlock
+      title="Business Profile"
+      data={profile}
+      onSave={updateProfile}
+    >
+      {(isEditing, localProfile, setLocalProfile) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="businessName">Business Name *</Label>
+              <Input
+                id="businessName"
+                value={localProfile.businessName}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    businessName: e.target.value,
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={localProfile.email}
+                onChange={(e) =>
+                  setLocalProfile({ ...localProfile, email: e.target.value })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone *</Label>
+              <Input
+                id="phone"
+                value={localProfile.phone}
+                onChange={(e) =>
+                  setLocalProfile({ ...localProfile, phone: e.target.value })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={localProfile.website}
+                onChange={(e) =>
+                  setLocalProfile({ ...localProfile, website: e.target.value })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Business Description</Label>
+            <Textarea
+              id="description"
+              value={localProfile.description}
+              onChange={(e) =>
+                setLocalProfile({
+                  ...localProfile,
+                  description: e.target.value,
+                })
+              }
+              rows={3}
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Address</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                placeholder="Street Address"
+                value={localProfile.address.street}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    address: {
+                      ...localProfile.address,
+                      street: e.target.value,
+                    },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+              <Input
+                placeholder="City"
+                value={localProfile.address.city}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    address: { ...localProfile.address, city: e.target.value },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+              <Input
+                placeholder="State"
+                value={localProfile.address.state}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    address: { ...localProfile.address, state: e.target.value },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+              <Input
+                placeholder="ZIP Code"
+                value={localProfile.address.zipCode}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    address: {
+                      ...localProfile.address,
+                      zipCode: e.target.value,
+                    },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Social Media</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <Input
+                placeholder="Facebook URL"
+                value={localProfile.socialMedia.facebook}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    socialMedia: {
+                      ...localProfile.socialMedia,
+                      facebook: e.target.value,
+                    },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+              <Input
+                placeholder="Instagram URL"
+                value={localProfile.socialMedia.instagram}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    socialMedia: {
+                      ...localProfile.socialMedia,
+                      instagram: e.target.value,
+                    },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+              <Input
+                placeholder="Twitter URL"
+                value={localProfile.socialMedia.twitter}
+                onChange={(e) =>
+                  setLocalProfile({
+                    ...localProfile,
+                    socialMedia: {
+                      ...localProfile.socialMedia,
+                      twitter: e.target.value,
+                    },
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+// Business Hours Component
+function BusinessHoursCard() {
+  const { hours, updateHours } = useSettings();
+
+  return (
+    <SettingsBlock title="Business Hours" data={hours} onSave={updateHours}>
+      {(isEditing, localHours, setLocalHours) => (
+        <div className="space-y-3">
+          {Object.entries(localHours).map(([day, schedule]: [string, any]) => (
+            <div
+              key={day}
+              className="flex items-center justify-between p-3 border rounded-lg"
+            >
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-32 font-medium capitalize">{day}</div>
+                <Switch
+                  checked={schedule.isOpen}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalHours({
+                      ...localHours,
+                      [day]: { ...schedule, isOpen: checked },
+                    })
+                  }
+                />
+                {schedule.isOpen && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={schedule.openTime}
+                      onChange={(e) =>
+                        setLocalHours({
+                          ...localHours,
+                          [day]: { ...schedule, openTime: e.target.value },
+                        })
+                      }
+                      className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      readOnly={!isEditing}
+                    />
+                    <span>to</span>
+                    <Input
+                      type="time"
+                      value={schedule.closeTime}
+                      onChange={(e) =>
+                        setLocalHours({
+                          ...localHours,
+                          [day]: { ...schedule, closeTime: e.target.value },
+                        })
+                      }
+                      className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      readOnly={!isEditing}
+                    />
+                  </div>
+                )}
+                {!schedule.isOpen && <Badge variant="secondary">Closed</Badge>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+// Booking Rules Component
+function BookingRulesCard() {
+  const { rules, updateRules } = useSettings();
+
+  return (
+    <SettingsBlock
+      title="Booking Rules & Policies"
+      data={rules}
+      onSave={updateRules}
+    >
+      {(isEditing, localRules, setLocalRules) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Minimum Advance Booking (hours)</Label>
+              <Input
+                type="number"
+                value={localRules.minimumAdvanceBooking}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    minimumAdvanceBooking: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Maximum Advance Booking (days)</Label>
+              <Input
+                type="number"
+                value={localRules.maximumAdvanceBooking}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    maximumAdvanceBooking: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cancellation Policy (hours before)</Label>
+              <Input
+                type="number"
+                value={localRules.cancelPolicyHours}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    cancelPolicyHours: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cancellation Fee (%)</Label>
+              <Input
+                type="number"
+                value={localRules.cancelFeePercentage}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    cancelFeePercentage: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Deposit Percentage (%)</Label>
+              <Input
+                type="number"
+                value={localRules.depositPercentage}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    depositPercentage: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Facility Capacity Limit</Label>
+              <Input
+                type="number"
+                value={localRules.capacityLimit}
+                onChange={(e) =>
+                  setLocalRules({
+                    ...localRules,
+                    capacityLimit: parseInt(e.target.value),
+                  })
+                }
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Require Deposit</div>
+              <div className="text-sm text-muted-foreground">
+                Require deposit at booking
+              </div>
+            </div>
+            <Switch
+              checked={localRules.depositRequired}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalRules({ ...localRules, depositRequired: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Allow Overbooking</div>
+              <div className="text-sm text-muted-foreground">
+                Accept bookings beyond capacity
+              </div>
+            </div>
+            <Switch
+              checked={localRules.allowOverBooking}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalRules({ ...localRules, allowOverBooking: checked })
+              }
+            />
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+// Evaluation Settings Component
+function EvaluationSettingsCard() {
+  const { evaluation, updateEvaluation } = useSettings();
+
+  return (
+    <SettingsBlock
+      title="Evaluation Settings"
+      data={evaluation}
+      onSave={updateEvaluation}
+    >
+      {(isEditing, localEvaluation, setLocalEvaluation) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Internal Name (Staff-Facing)</Label>
+              <Input
+                value={localEvaluation.internalName}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    internalName: e.target.value,
+                  })
+                }
+                placeholder="e.g., Pet Evaluation"
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Customer-Facing Name</Label>
+              <Input
+                value={localEvaluation.customerName}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    customerName: e.target.value,
+                  })
+                }
+                placeholder="e.g., Pet Evaluation"
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={localEvaluation.description}
+              onChange={(e) =>
+                setLocalEvaluation({
+                  ...localEvaluation,
+                  description: e.target.value,
+                })
+              }
+              rows={3}
+              placeholder="Describe the evaluation process..."
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Price ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={localEvaluation.price}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    price: parseFloat(e.target.value) || 0,
+                  })
+                }
+                placeholder="0 for free"
+                readOnly={!isEditing}
+                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <Select
+                value={localEvaluation.duration}
+                disabled={!isEditing}
+                onValueChange={(value: "half-day" | "full-day" | "custom") =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    duration: value,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="half-day">Half-Day</SelectItem>
+                  <SelectItem value="full-day">Full-Day</SelectItem>
+                  <SelectItem value="custom">Custom Hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {localEvaluation.duration === "custom" && (
+            <div className="space-y-2">
+              <Label>Custom Hours</Label>
+              <Input
+                type="number"
+                step="0.5"
+                value={localEvaluation.customHours || ""}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    customHours: parseFloat(e.target.value) || undefined,
+                  })
+                }
+                placeholder="e.g., 2.5"
+                className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                readOnly={!isEditing}
+              />
+            </div>
+          )}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Taxable</div>
+              <div className="text-sm text-muted-foreground">
+                Apply tax to evaluation price
+              </div>
+            </div>
+            <Switch
+              checked={localEvaluation.taxSettings.taxable}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalEvaluation({
+                  ...localEvaluation,
+                  taxSettings: {
+                    ...localEvaluation.taxSettings,
+                    taxable: checked,
+                  },
+                })
+              }
+            />
+          </div>
+          {localEvaluation.taxSettings.taxable && (
+            <div className="space-y-2">
+              <Label>Tax Rate (%)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={localEvaluation.taxSettings.taxRate || ""}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    taxSettings: {
+                      ...localEvaluation.taxSettings,
+                      taxRate: parseFloat(e.target.value) || undefined,
+                    },
+                  })
+                }
+                placeholder="e.g., 8.25"
+                className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                readOnly={!isEditing}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+// Notification Settings Component
+function NotificationSettingsCard() {
+  const { notifications, updateNotifications } = useSettings();
+
+  return (
+    <SettingsBlock
+      title="Notification Settings"
+      description="Configure which notifications are sent and through which channels"
+      data={notifications}
+      onSave={updateNotifications}
+    >
+      {(isEditing, localNotifications, setLocalNotifications) => (
+        <div>
+          {/* Group by category */}
+          {["client", "staff", "system"].map((category) => (
+            <div key={category} className="mb-6">
+              <h3 className="font-semibold mb-3 capitalize">
+                {category} Notifications
+              </h3>
+              <div className="space-y-3">
+                {localNotifications
+                  .filter((n) => n.category === category)
+                  .map((notif) => (
+                    <div key={notif.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="font-medium">{notif.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {notif.description}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Email</span>
+                          <Switch
+                            checked={notif.email}
+                            disabled={!isEditing}
+                            onCheckedChange={(checked) =>
+                              setLocalNotifications(
+                                localNotifications.map((n) =>
+                                  n.id === notif.id
+                                    ? { ...n, email: checked }
+                                    : n,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">SMS</span>
+                          <Switch
+                            checked={notif.sms}
+                            disabled={!isEditing}
+                            onCheckedChange={(checked) =>
+                              setLocalNotifications(
+                                localNotifications.map((n) =>
+                                  n.id === notif.id
+                                    ? { ...n, sms: checked }
+                                    : n,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Push</span>
+                          <Switch
+                            checked={notif.push}
+                            disabled={!isEditing}
+                            onCheckedChange={(checked) =>
+                              setLocalNotifications(
+                                localNotifications.map((n) =>
+                                  n.id === notif.id
+                                    ? { ...n, push: checked }
+                                    : n,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+export default function SettingsPage() {
+  const { integrations, updateIntegrations, addons, updateAddons } =
+    useSettings();
 
   // Audit Log Columns
   const auditColumns: ColumnDef<(typeof auditLog)[0]>[] = [
@@ -144,7 +794,7 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="business">
             <Building2 className="h-4 w-4 mr-2" />
             Business
@@ -153,10 +803,7 @@ export default function SettingsPage() {
             <DollarSign className="h-4 w-4 mr-2" />
             Financial
           </TabsTrigger>
-          <TabsTrigger value="permissions">
-            <Shield className="h-4 w-4 mr-2" />
-            Permissions
-          </TabsTrigger>
+
           <TabsTrigger value="notifications">
             <Bell className="h-4 w-4 mr-2" />
             Notifications
@@ -181,233 +828,9 @@ export default function SettingsPage() {
 
         {/* Business Configuration Tab */}
         <TabsContent value="business" className="space-y-6">
-          {/* Business Profile */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Business Profile</CardTitle>
-                <Button onClick={() => handleSave("Business Profile")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name *</Label>
-                  <Input
-                    id="businessName"
-                    value={profile.businessName}
-                    onChange={(e) =>
-                      setProfile({ ...profile, businessName: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) =>
-                      setProfile({ ...profile, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    value={profile.phone}
-                    onChange={(e) =>
-                      setProfile({ ...profile, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={profile.website}
-                    onChange={(e) =>
-                      setProfile({ ...profile, website: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+          <BusinessProfileCard />
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Business Description</Label>
-                <Textarea
-                  id="description"
-                  value={profile.description}
-                  onChange={(e) =>
-                    setProfile({ ...profile, description: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Address</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    placeholder="Street Address"
-                    value={profile.address.street}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: { ...profile.address, street: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="City"
-                    value={profile.address.city}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: { ...profile.address, city: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="State"
-                    value={profile.address.state}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: { ...profile.address, state: e.target.value },
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="ZIP Code"
-                    value={profile.address.zipCode}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: {
-                          ...profile.address,
-                          zipCode: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Social Media</Label>
-                <div className="grid grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Facebook URL"
-                    value={profile.socialMedia.facebook}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        socialMedia: {
-                          ...profile.socialMedia,
-                          facebook: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="Instagram URL"
-                    value={profile.socialMedia.instagram}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        socialMedia: {
-                          ...profile.socialMedia,
-                          instagram: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                  <Input
-                    placeholder="Twitter URL"
-                    value={profile.socialMedia.twitter}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        socialMedia: {
-                          ...profile.socialMedia,
-                          twitter: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Business Hours */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Business Hours</CardTitle>
-                <Button onClick={() => handleSave("Business Hours")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {Object.entries(hours).map(([day, schedule]) => (
-                <div
-                  key={day}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-32 font-medium capitalize">{day}</div>
-                    <Switch
-                      checked={schedule.isOpen}
-                      onCheckedChange={(checked) =>
-                        setHours({
-                          ...hours,
-                          [day]: { ...schedule, isOpen: checked },
-                        })
-                      }
-                    />
-                    {schedule.isOpen && (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="time"
-                          value={schedule.openTime}
-                          onChange={(e) =>
-                            setHours({
-                              ...hours,
-                              [day]: { ...schedule, openTime: e.target.value },
-                            })
-                          }
-                          className="w-32"
-                        />
-                        <span>to</span>
-                        <Input
-                          type="time"
-                          value={schedule.closeTime}
-                          onChange={(e) =>
-                            setHours({
-                              ...hours,
-                              [day]: { ...schedule, closeTime: e.target.value },
-                            })
-                          }
-                          className="w-32"
-                        />
-                      </div>
-                    )}
-                    {!schedule.isOpen && (
-                      <Badge variant="secondary">Closed</Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <BusinessHoursCard />
 
           {/* Locations */}
           <Card>
@@ -453,130 +876,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Booking Rules */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Booking Rules & Policies</CardTitle>
-                <Button onClick={() => handleSave("Booking Rules")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Minimum Advance Booking (hours)</Label>
-                  <Input
-                    type="number"
-                    value={rules.minimumAdvanceBooking}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        minimumAdvanceBooking: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Maximum Advance Booking (days)</Label>
-                  <Input
-                    type="number"
-                    value={rules.maximumAdvanceBooking}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        maximumAdvanceBooking: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cancellation Policy (hours before)</Label>
-                  <Input
-                    type="number"
-                    value={rules.cancelPolicyHours}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        cancelPolicyHours: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cancellation Fee (%)</Label>
-                  <Input
-                    type="number"
-                    value={rules.cancelFeePercentage}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        cancelFeePercentage: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Deposit Percentage (%)</Label>
-                  <Input
-                    type="number"
-                    value={rules.depositPercentage}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        depositPercentage: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Facility Capacity Limit</Label>
-                  <Input
-                    type="number"
-                    value={rules.capacityLimit}
-                    onChange={(e) =>
-                      setRules({
-                        ...rules,
-                        capacityLimit: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium">Require Deposit</div>
-                  <div className="text-sm text-muted-foreground">
-                    Require deposit at booking
-                  </div>
-                </div>
-                <Switch
-                  checked={rules.depositRequired}
-                  onCheckedChange={(checked) =>
-                    setRules({ ...rules, depositRequired: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium">Allow Overbooking</div>
-                  <div className="text-sm text-muted-foreground">
-                    Accept bookings beyond capacity
-                  </div>
-                </div>
-                <Switch
-                  checked={rules.allowOverBooking}
-                  onCheckedChange={(checked) =>
-                    setRules({ ...rules, allowOverBooking: checked })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <BookingRulesCard />
 
           {/* Vaccination Rules */}
           <Card>
@@ -588,12 +888,7 @@ export default function SettingsPage() {
                 <div key={vax.id} className="p-4 border rounded-lg">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{vax.vaccineName}</span>
-                        {vax.required && (
-                          <Badge variant="destructive">Required</Badge>
-                        )}
-                      </div>
+                      <div className="font-semibold">{vax.vaccineName}</div>
                       <div className="text-sm text-muted-foreground mt-1">
                         Expiry warning: {vax.expiryWarningDays} days before
                       </div>
@@ -615,161 +910,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Evaluation Settings */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Evaluation Settings</CardTitle>
-                <Button onClick={() => handleSave("Evaluation Settings")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Internal Name (Staff-Facing)</Label>
-                  <Input
-                    value={evaluation.internalName}
-                    onChange={(e) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        internalName: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., Pet Evaluation"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Customer-Facing Name</Label>
-                  <Input
-                    value={evaluation.customerName}
-                    onChange={(e) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        customerName: e.target.value,
-                      })
-                    }
-                    placeholder="e.g., Pet Evaluation"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={evaluation.description}
-                  onChange={(e) =>
-                    updateEvaluation({
-                      ...evaluation,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={3}
-                  placeholder="Describe the evaluation process..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Price ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={evaluation.price}
-                    onChange={(e) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        price: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="0 for free"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Duration</Label>
-                  <Select
-                    value={evaluation.duration}
-                    onValueChange={(
-                      value: "half-day" | "full-day" | "custom",
-                    ) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        duration: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="half-day">Half-Day</SelectItem>
-                      <SelectItem value="full-day">Full-Day</SelectItem>
-                      <SelectItem value="custom">Custom Hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {evaluation.duration === "custom" && (
-                <div className="space-y-2">
-                  <Label>Custom Hours</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={evaluation.customHours || ""}
-                    onChange={(e) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        customHours: parseFloat(e.target.value) || undefined,
-                      })
-                    }
-                    placeholder="e.g., 2.5"
-                    className="w-32"
-                  />
-                </div>
-              )}
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-medium">Taxable</div>
-                  <div className="text-sm text-muted-foreground">
-                    Apply tax to evaluation price
-                  </div>
-                </div>
-                <Switch
-                  checked={evaluation.taxSettings.taxable}
-                  onCheckedChange={(checked) =>
-                    updateEvaluation({
-                      ...evaluation,
-                      taxSettings: {
-                        ...evaluation.taxSettings,
-                        taxable: checked,
-                      },
-                    })
-                  }
-                />
-              </div>
-              {evaluation.taxSettings.taxable && (
-                <div className="space-y-2">
-                  <Label>Tax Rate (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={evaluation.taxSettings.taxRate || ""}
-                    onChange={(e) =>
-                      updateEvaluation({
-                        ...evaluation,
-                        taxSettings: {
-                          ...evaluation.taxSettings,
-                          taxRate: parseFloat(e.target.value) || undefined,
-                        },
-                      })
-                    }
-                    placeholder="e.g., 8.25"
-                    className="w-32"
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <EvaluationSettingsCard />
         </TabsContent>
 
         {/* Financial Settings Tab */}
@@ -824,13 +965,7 @@ export default function SettingsPage() {
           {/* Tax Rates */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Tax Rates</CardTitle>
-                <Button onClick={() => handleSave("Tax Rates")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
+              <CardTitle>Tax Rates</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {taxRates.map((tax) => (
@@ -876,13 +1011,7 @@ export default function SettingsPage() {
           {/* Currency Settings */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Currency Settings</CardTitle>
-                <Button onClick={() => handleSave("Currency")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
+              <CardTitle>Currency Settings</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
@@ -953,106 +1082,9 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Permissions Tab */}
-        <TabsContent value="permissions" className="space-y-6">
-          <RolePermissionsManager />
-        </TabsContent>
-
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Notification Settings</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Configure which notifications are sent and through which
-                    channels
-                  </p>
-                </div>
-                <Button onClick={() => handleSave("Notifications")}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Group by category */}
-              {["client", "staff", "system"].map((category) => (
-                <div key={category} className="mb-6">
-                  <h3 className="font-semibold mb-3 capitalize">
-                    {category} Notifications
-                  </h3>
-                  <div className="space-y-3">
-                    {notifications
-                      .filter((n) => n.category === category)
-                      .map((notif) => (
-                        <div key={notif.id} className="p-4 border rounded-lg">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="font-medium">{notif.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {notif.description}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">Email</span>
-                              <Switch
-                                checked={notif.email}
-                                onCheckedChange={(checked) =>
-                                  setNotifications(
-                                    notifications.map((n) =>
-                                      n.id === notif.id
-                                        ? { ...n, email: checked }
-                                        : n,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">SMS</span>
-                              <Switch
-                                checked={notif.sms}
-                                onCheckedChange={(checked) =>
-                                  setNotifications(
-                                    notifications.map((n) =>
-                                      n.id === notif.id
-                                        ? { ...n, sms: checked }
-                                        : n,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Bell className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">Push</span>
-                              <Switch
-                                checked={notif.push}
-                                onCheckedChange={(checked) =>
-                                  setNotifications(
-                                    notifications.map((n) =>
-                                      n.id === notif.id
-                                        ? { ...n, push: checked }
-                                        : n,
-                                    ),
-                                  )
-                                }
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <NotificationSettingsCard />
 
           {/* Template Editor */}
           <Card>
@@ -1064,14 +1096,9 @@ export default function SettingsPage() {
               </p>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  router.push("/facility/dashboard/communications")
-                }
-              >
-                Open Template Editor
-              </Button>
+              <Link href="/facility/dashboard/communications">
+                <Button variant="outline">Open Template Editor</Button>
+              </Link>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1087,7 +1114,7 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {integrationsData
+              {integrations
                 .filter((i) => i.category === "communication")
                 .map((integration) => (
                   <div
@@ -1104,8 +1131,8 @@ export default function SettingsPage() {
                       <Switch
                         checked={integration.isEnabled}
                         onCheckedChange={(checked) =>
-                          setIntegrationsData(
-                            integrationsData.map((i) =>
+                          updateIntegrations(
+                            integrations.map((i) =>
                               i.id === integration.id
                                 ? { ...i, isEnabled: checked }
                                 : i,
@@ -1133,7 +1160,7 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {integrationsData
+              {integrations
                 .filter((i) => i.category === "phone")
                 .map((integration) => (
                   <div
@@ -1186,7 +1213,7 @@ export default function SettingsPage() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {integrationsData
+              {integrations
                 .filter((i) => i.category === "accounting")
                 .map((integration) => (
                   <div
@@ -1206,8 +1233,8 @@ export default function SettingsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setIntegrationsData(
-                            integrationsData.map((i) =>
+                          updateIntegrations(
+                            integrations.map((i) =>
                               i.id === integration.id
                                 ? { ...i, isEnabled: !i.isEnabled }
                                 : i,
@@ -1238,7 +1265,7 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {integrationsData
+              {integrations
                 .filter((i) => i.category === "ai")
                 .map((integration) => (
                   <div
@@ -1397,7 +1424,7 @@ export default function SettingsPage() {
                       checked={addon.isEnabled}
                       disabled={addon.isIncludedInPlan}
                       onCheckedChange={(checked) =>
-                        setAddons(
+                        updateAddons(
                           addons.map((a) =>
                             a.id === addon.id
                               ? { ...a, isEnabled: checked }
