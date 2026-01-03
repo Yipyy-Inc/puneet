@@ -9,8 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Client } from "@/lib/types";
-import type { ModuleConfig } from "@/data/settings";
+import type { Client, Pet, ModuleConfig } from "@/lib/types";
 
 interface ClientPetStepProps {
   searchQuery: string;
@@ -50,6 +49,20 @@ export function ClientPetStep({
     const config = configs[selectedService as "daycare" | "boarding"];
     return config?.settings.evaluation.optional ?? false;
   }, [selectedService, configs]);
+
+  // Check if a pet has a valid (passed) evaluation
+  const hasValidEvaluation = (pet: Pet) => {
+    return pet.evaluations?.some((e) => e.status === "passed");
+  };
+
+  // Check if pet can be selected for evaluation service
+  const canSelectForEvaluation = (pet: Pet) => {
+    // If evaluation service is selected, only allow pets without valid evaluations
+    if (selectedService === "evaluation") {
+      return !hasValidEvaluation(pet);
+    }
+    return true;
+  };
 
   return (
     <div className="space-y-6">
@@ -194,15 +207,20 @@ export function ClientPetStep({
                 <div className="grid grid-cols-2 gap-3 pr-2">
                   {selectedClient.pets.map((pet) => {
                     const isSelected = selectedPetIds.includes(pet.id);
+                    const canSelect = canSelectForEvaluation(pet);
+                    const isDisabled = !canSelect;
                     return (
                       <div
                         key={pet.id}
                         className={`p-3 rounded-lg border transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/5 ring-2 ring-primary/20 cursor-pointer"
-                            : "hover:border-primary/50 cursor-pointer"
+                          isDisabled
+                            ? "opacity-50 cursor-not-allowed bg-muted"
+                            : isSelected
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/20 cursor-pointer"
+                              : "hover:border-primary/50 cursor-pointer"
                         }`}
                         onClick={() => {
+                          if (isDisabled) return;
                           setSelectedPetIds((prev) =>
                             prev.includes(pet.id)
                               ? prev.filter((id) => id !== pet.id)
@@ -240,7 +258,8 @@ export function ClientPetStep({
                                   {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
                                   {pet.weight}kg
                                 </p>
-                                {serviceRequiresEvaluation && (
+                                {(serviceRequiresEvaluation ||
+                                  selectedService === "evaluation") && (
                                   <div className="mt-1">
                                     {pet.evaluations?.some(
                                       (e) => e.status === "passed",
@@ -251,6 +270,13 @@ export function ClientPetStep({
                                       >
                                         <Check className="h-3 w-3 mr-1" />
                                         Evaluation Passed
+                                      </Badge>
+                                    ) : selectedService === "evaluation" ? (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-100"
+                                      >
+                                        Can be evaluated
                                       </Badge>
                                     ) : isEvaluationOptional ? (
                                       <Badge
@@ -271,9 +297,18 @@ export function ClientPetStep({
                                   </div>
                                 )}
                               </div>
-                              {isSelected && (
+                              {isSelected && !isDisabled && (
                                 <Check className="h-5 w-5 text-primary shrink-0" />
                               )}
+                              {isDisabled &&
+                                selectedService === "evaluation" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs shrink-0"
+                                  >
+                                    Already Evaluated
+                                  </Badge>
+                                )}
                             </div>
                           </div>
                         </div>

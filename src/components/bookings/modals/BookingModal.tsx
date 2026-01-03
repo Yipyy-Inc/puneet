@@ -27,6 +27,7 @@ import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
 import { STEPS, DAYCARE_SUB_STEPS, BOARDING_SUB_STEPS } from "./constants";
 import { services } from "@/data/services-pricing";
 import { useSettings } from "@/hooks/use-settings";
+import { evaluationConfig } from "@/data/settings";
 
 import {
   Client,
@@ -115,10 +116,25 @@ export function BookingModal({
   const [selectedService, setSelectedService] = useState<string>(
     preSelectedService ?? "",
   );
+  const handleServiceChange = (service: string) => {
+    setSelectedService(service);
+    if (service === "evaluation") {
+      setServiceType(evaluationConfig.duration);
+    } else if (service === "daycare") {
+      setServiceType("full_day");
+    } else {
+      setServiceType("");
+    }
+    setCurrentSubStep(0);
+  };
 
   // Service-specific state
   const [serviceType, setServiceType] = useState<string>(
-    preSelectedService === "daycare" ? "full_day" : "",
+    preSelectedService === "evaluation"
+      ? evaluationConfig.duration
+      : preSelectedService === "daycare"
+        ? "full_day"
+        : "",
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -246,6 +262,8 @@ export function BookingModal({
         );
         basePrice = basePrice * Math.max(days, 1);
       }
+    } else if (selectedService === "evaluation") {
+      basePrice = evaluationConfig.price;
     }
 
     return {
@@ -258,8 +276,6 @@ export function BookingModal({
     boardingRangeStart,
     boardingRangeEnd,
     daycareSelectedDates.length,
-    daycare.basePrice,
-    boarding.basePrice,
   ]);
 
   // Validation for each step
@@ -274,9 +290,12 @@ export function BookingModal({
         if (selectedService === "daycare" || selectedService === "boarding") {
           return isSubStepComplete(currentSubStep);
         }
-        // For other services, original logic
-        if (!startDate) return false;
-        return true;
+        // For evaluation service
+        if (selectedService === "evaluation") {
+          return !!startDate && !!checkInTime;
+        }
+        // For other services
+        return !!startDate;
       case "confirm":
         return true;
       default:
@@ -290,6 +309,7 @@ export function BookingModal({
     selectedPetIds,
     selectedService,
     startDate,
+    checkInTime,
     isSubStepComplete,
   ]);
 
@@ -362,11 +382,34 @@ export function BookingModal({
       });
 
       if (petsNeedingEvaluation.length > 0) {
-        // Show prompt to staff
+        // Create evaluation bookings for pets that need them
+        petsNeedingEvaluation.forEach((pet) => {
+          const evaluationBooking: NewBooking = {
+            clientId,
+            petId: pet.id,
+            facilityId,
+            service: "evaluation",
+            serviceType: evaluationConfig.duration,
+            startDate: new Date().toISOString().split("T")[0], // Schedule for today or next available
+            endDate: new Date().toISOString().split("T")[0],
+            checkInTime: "09:00",
+            checkOutTime:
+              evaluationConfig.duration === "half-day" ? "12:00" : "17:00",
+            status: "pending",
+            basePrice: evaluationConfig.price,
+            discount: 0,
+            totalCost: evaluationConfig.price,
+            paymentStatus: "pending",
+            notificationEmail: true,
+            notificationSMS: false,
+          };
+          onCreateBooking(evaluationBooking);
+        });
+        // Show confirmation message
         alert(
-          `The following pet(s) have not passed the required evaluation for ${service?.name}: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}. Please schedule an evaluation booking first.`,
+          `Evaluation bookings have been created for: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}. The main booking will be created after evaluations are completed.`,
         );
-        return;
+        // Still create the main booking - evaluations can be completed later
       }
     }
 
@@ -375,7 +418,10 @@ export function BookingModal({
       petId,
       facilityId,
       service: selectedService,
-      serviceType,
+      serviceType:
+        selectedService === "evaluation"
+          ? evaluationConfig.duration
+          : serviceType,
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
           ? daycareSelectedDates[0].toISOString().split("T")[0]
@@ -383,9 +429,11 @@ export function BookingModal({
             ? boardingRangeStart.toISOString().split("T")[0]
             : startDate,
       endDate:
-        selectedService === "boarding" && boardingRangeEnd
-          ? boardingRangeEnd.toISOString().split("T")[0]
-          : endDate || startDate,
+        selectedService === "evaluation"
+          ? startDate
+          : selectedService === "boarding" && boardingRangeEnd
+            ? boardingRangeEnd.toISOString().split("T")[0]
+            : endDate || startDate,
       checkInTime:
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[0].checkInTime
@@ -1056,7 +1104,7 @@ export function BookingModal({
                 {displayedSteps[currentStep]?.id === "service" && (
                   <ServiceStep
                     selectedService={selectedService}
-                    setSelectedService={setSelectedService}
+                    setSelectedService={handleServiceChange}
                     setServiceType={setServiceType}
                     setCurrentSubStep={setCurrentSubStep}
                     configs={configs}
@@ -1094,9 +1142,13 @@ export function BookingModal({
                     setBoardingRangeEnd={setBoardingRangeEnd}
                     boardingDateTimes={boardingDateTimes}
                     setBoardingDateTimes={setBoardingDateTimes}
+                    startDate={startDate}
                     setStartDate={setStartDate}
+                    endDate={endDate}
                     setEndDate={setEndDate}
+                    checkInTime={checkInTime}
                     setCheckInTime={setCheckInTime}
+                    checkOutTime={checkOutTime}
                     setCheckOutTime={setCheckOutTime}
                     serviceType={serviceType}
                     setServiceType={setServiceType}

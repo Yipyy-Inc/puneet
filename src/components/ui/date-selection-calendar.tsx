@@ -92,6 +92,14 @@ const DAYS_OF_WEEK_FULL = [
   "Saturday",
 ];
 
+// Helper to format date without timezone issues
+const formatDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // Helper to get default times based on facility hours
 const getDefaultTimes = (
   facilityHours?: Record<
@@ -306,7 +314,7 @@ export function DateSelectionCalendar({
 
       // Handle time selection
       if (showTimeSelection && !isSelected) {
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = formatDateString(date);
         const facilityHoursForDate = getFacilityHoursForDate(date);
         onDateTimesChange?.([
           {
@@ -322,7 +330,7 @@ export function DateSelectionCalendar({
       }
     } else if (mode === "multi") {
       const isSelected = selectedDates.some((d) => isSameDay(d, date));
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = formatDateString(date);
 
       if (isSelected) {
         const newDates = selectedDates.filter((d) => !isSameDay(d, date));
@@ -379,7 +387,7 @@ export function DateSelectionCalendar({
           while (current <= end) {
             const facilityHoursForDate = getFacilityHoursForDate(current);
             times.push({
-              date: current.toISOString().split("T")[0],
+              date: formatDateString(current),
               checkInTime:
                 facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
               checkOutTime:
@@ -559,11 +567,11 @@ export function DateSelectionCalendar({
               type="date"
               value={
                 recurringPattern?.endDate
-                  ? recurringPattern.endDate.toISOString().split("T")[0]
+                  ? formatDateString(recurringPattern.endDate)
                   : ""
               }
               onChange={(e) => handleRecurringEndDate(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
+              min={formatDateString(new Date())}
             />
           </div>
         </div>
@@ -649,7 +657,8 @@ export function DateSelectionCalendar({
         {/* Time Selection Column */}
         <div className="border rounded-lg p-4 min-h-[200px]">
           {showTimeSelection &&
-          ((mode === "multi" && selectedDates.length > 0) ||
+          ((mode === "single" && selectedDates.length > 0) ||
+            (mode === "multi" && selectedDates.length > 0) ||
             (mode === "range" && rangeStart && rangeEnd)) ? (
             <div className="space-y-2">
               <Label className="text-xs font-medium">Check-in/out Times</Label>
@@ -728,12 +737,53 @@ export function DateSelectionCalendar({
                 </div>
               )}
 
+              {mode === "single" &&
+                dateTimes.length > 0 &&
+                selectedDates[0] && (
+                  <div className="p-3 border rounded-lg space-y-2">
+                    <p className="text-xs font-semibold">
+                      {selectedDates[0].toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                    <TimeRangeSlider
+                      minTime={
+                        getFacilityHoursForDate(selectedDates[0])?.openTime ||
+                        "06:00"
+                      }
+                      maxTime={
+                        getFacilityHoursForDate(selectedDates[0])?.closeTime ||
+                        "22:00"
+                      }
+                      startTime={
+                        dateTimes[0]?.checkInTime || effectiveDefaultCheckInTime
+                      }
+                      endTime={
+                        dateTimes[0]?.checkOutTime ||
+                        effectiveDefaultCheckOutTime
+                      }
+                      onTimeChange={(start, end) => {
+                        const newTimes = dateTimes.map((dt) => ({
+                          ...dt,
+                          checkInTime: start,
+                          checkOutTime: end,
+                        }));
+                        onDateTimesChange?.(newTimes);
+                      }}
+                      onApply={() => {}}
+                      step={30}
+                    />
+                  </div>
+                )}
+
               {mode === "multi" && (
                 <div className="space-y-3">
                   {[...selectedDates]
                     .sort((a, b) => a.getTime() - b.getTime())
                     .map((date, index) => {
-                      const dateStr = date.toISOString().split("T")[0];
+                      const dateStr = formatDateString(date);
                       const timeInfo = getTimeForDate(dateStr);
 
                       return (

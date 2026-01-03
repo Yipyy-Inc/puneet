@@ -1,4 +1,8 @@
-import { DaycareDetails, BoardingDetails } from "../service-details";
+import {
+  DaycareDetails,
+  BoardingDetails,
+  EvaluationDetails,
+} from "../service-details";
 import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
 import { Pet } from "@/lib/types";
 
@@ -32,9 +36,13 @@ interface DetailsStepProps {
   setBoardingDateTimes: (
     value: Array<{ date: string; checkInTime: string; checkOutTime: string }>,
   ) => void;
+  startDate: string;
   setStartDate: (value: string) => void;
+  endDate: string;
   setEndDate: (value: string) => void;
+  checkInTime: string;
   setCheckInTime: (value: string) => void;
+  checkOutTime: string;
   setCheckOutTime: (value: string) => void;
   serviceType: string;
   setServiceType: (value: string) => void;
@@ -68,9 +76,12 @@ export function DetailsStep({
   setBoardingRangeEnd,
   boardingDateTimes,
   setBoardingDateTimes,
+  startDate,
   setStartDate,
   setEndDate,
+  checkInTime,
   setCheckInTime,
+  checkOutTime,
   setCheckOutTime,
   serviceType,
   setServiceType,
@@ -130,6 +141,20 @@ export function DetailsStep({
           setMedications={setMedications}
           extraServices={extraServices}
           setExtraServices={setExtraServices}
+          selectedPets={selectedPets}
+        />
+      )}
+
+      {selectedService === "evaluation" && (
+        <EvaluationDetails
+          currentSubStep={currentSubStep}
+          isSubStepComplete={isSubStepComplete}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          checkInTime={checkInTime}
+          setCheckInTime={setCheckInTime}
+          checkOutTime={checkOutTime}
+          setCheckOutTime={setCheckOutTime}
           selectedPets={selectedPets}
         />
       )}

@@ -13,15 +13,17 @@ import {
   notificationToggles,
   integrations,
   moduleAddons,
-  type ModuleConfig,
-  type EvaluationConfig,
-  type BusinessHours,
-  type BusinessProfile,
-  type BookingRules,
-  type NotificationToggle,
-  type Integration,
-  type ModuleAddon,
 } from "@/data/settings";
+import type {
+  ModuleConfig,
+  EvaluationConfig,
+  BusinessHours,
+  BusinessProfile,
+  BookingRules,
+  NotificationToggle,
+  Integration,
+  ModuleAddon,
+} from "@/lib/types";
 
 interface SettingsContextValue {
   daycare: ModuleConfig;

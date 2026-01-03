@@ -1,7 +1,8 @@
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SERVICE_CATEGORIES } from "../constants";
-import type { ModuleConfig } from "@/data/settings";
+import { evaluationConfig } from "@/data/settings";
+import type { ModuleConfig } from "@/lib/types";
 
 interface ServiceStepProps {
   selectedService: string;
@@ -25,7 +26,12 @@ export function ServiceStep({
         {SERVICE_CATEGORIES.map((service) => {
           const Icon = service.icon;
           const config = configs[service.id as keyof typeof configs];
-          const isDisabled = config?.status.disabled;
+          // Special handling for evaluation service
+          const isEvaluation = service.id === "evaluation";
+          const evaluationDisabled = false; // Evaluation is always available
+          const isDisabled = isEvaluation
+            ? evaluationDisabled
+            : config?.status.disabled;
           return (
             <div
               key={service.id}
@@ -78,18 +84,24 @@ export function ServiceStep({
               <div className="p-4 space-y-3">
                 <div className="text-center">
                   <p className="font-medium">
-                    {config?.clientFacingName || service.name}
+                    {isEvaluation
+                      ? evaluationConfig.customerName
+                      : config?.clientFacingName || service.name}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {config?.slogan || service.description}
+                    {isEvaluation
+                      ? evaluationConfig.description
+                      : config?.slogan || service.description}
                   </p>
-                  {config && (
+                  {config && !isEvaluation && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {isDisabled ? config.status.reason : config.description}
                     </p>
                   )}
                   <p className="font-semibold text-primary">
-                    From ${config?.basePrice || service.basePrice}
+                    {isEvaluation
+                      ? `$${evaluationConfig.price}`
+                      : `From $${config?.basePrice || service.basePrice}`}
                   </p>
                 </div>
               </div>

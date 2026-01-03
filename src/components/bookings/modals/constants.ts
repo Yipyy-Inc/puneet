@@ -1,4 +1,4 @@
-import { Sun, Bed, Scissors, GraduationCap } from "lucide-react";
+import { Sun, Bed, Scissors, GraduationCap, CheckCircle } from "lucide-react";
 import { type Step } from "@/components/ui/stepper";
 
 export const SERVICE_CATEGORIES = [
@@ -33,6 +33,14 @@ export const SERVICE_CATEGORIES = [
     icon: GraduationCap,
     description: "Obedience and specialized training",
     basePrice: 85,
+  },
+  {
+    id: "evaluation",
+    image: "/services/evaluation.jpg",
+    name: "Pet Evaluation",
+    icon: CheckCircle,
+    description: "Assessment to ensure pet readiness",
+    basePrice: 0,
   },
 ];
 

@@ -2,18 +2,25 @@
 // EVALUATION CONFIGURATION DATA
 // ========================================
 
-export interface EvaluationConfig {
-  internalName: string;
-  customerName: string;
-  description: string;
-  price: number;
-  duration: "half-day" | "full-day" | "custom";
-  customHours?: number;
-  taxSettings: {
-    taxable: boolean;
-    taxRate?: number;
-  };
-}
+import {
+  EvaluationConfig,
+  BusinessProfile,
+  BusinessHours,
+  Location,
+  BookingRules,
+  KennelType,
+  PetSizeClass,
+  VaccinationRule,
+  PaymentGateway,
+  TaxRate,
+  CurrencySettings,
+  NotificationToggle,
+  Integration,
+  SubscriptionPlan,
+  ModuleAddon,
+  AuditLogEntry,
+  ModuleConfig,
+} from "@/lib/types";
 
 export const evaluationConfig: EvaluationConfig = {
   internalName: "Pet Evaluation",
@@ -21,7 +28,17 @@ export const evaluationConfig: EvaluationConfig = {
   description:
     "A brief assessment to ensure your pet is ready for the selected service.",
   price: 0,
-  duration: "half-day",
+  duration: "custom",
+  customHours: 1,
+  availableSlots: [
+    { startTime: "09:00", endTime: "09:30", duration: 30 },
+    { startTime: "09:30", endTime: "10:00", duration: 30 },
+    { startTime: "10:00", endTime: "11:00", duration: 60 },
+    { startTime: "11:00", endTime: "12:00", duration: 60 },
+    { startTime: "13:00", endTime: "14:00", duration: 60 },
+    { startTime: "14:00", endTime: "15:00", duration: 60 },
+    { startTime: "15:00", endTime: "16:00", duration: 60 },
+  ],
   taxSettings: {
     taxable: false,
   },
@@ -30,91 +47,6 @@ export const evaluationConfig: EvaluationConfig = {
 // ========================================
 // BUSINESS CONFIGURATION DATA
 // ========================================
-
-export interface BusinessProfile {
-  businessName: string;
-  email: string;
-  phone: string;
-  website: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  logo: string;
-  description: string;
-  socialMedia: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-  };
-}
-
-type DayOfWeek =
-  | "sunday"
-  | "monday"
-  | "tuesday"
-  | "wednesday"
-  | "thursday"
-  | "friday"
-  | "saturday";
-
-export type BusinessHours = {
-  [K in DayOfWeek]: {
-    isOpen: boolean;
-    openTime: string;
-    closeTime: string;
-  };
-};
-
-export interface Location {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  capacity: number;
-  isActive: boolean;
-}
-
-export interface BookingRules {
-  minimumAdvanceBooking: number; // hours
-  maximumAdvanceBooking: number; // days
-  cancelPolicyHours: number;
-  cancelFeePercentage: number;
-  depositPercentage: number;
-  depositRequired: boolean;
-  capacityLimit: number;
-  allowOverBooking: boolean;
-  overBookingPercentage: number;
-}
-
-export interface KennelType {
-  id: string;
-  name: string;
-  size: "small" | "medium" | "large" | "xlarge";
-  dimensions: string;
-  amenities: string[];
-  dailyRate: number;
-  quantity: number;
-}
-
-export interface PetSizeClass {
-  id: string;
-  name: string;
-  weightMin: number;
-  weightMax: number;
-  unit: "lbs" | "kg";
-}
-
-export interface VaccinationRule {
-  id: string;
-  vaccineName: string;
-  required: boolean;
-  expiryWarningDays: number;
-  applicableServices: string[];
-}
 
 export const businessProfile: BusinessProfile = {
   businessName: "PawCare Facility",
@@ -285,38 +217,6 @@ export const vaccinationRules: VaccinationRule[] = [
 // FINANCIAL SETTINGS DATA
 // ========================================
 
-export interface PaymentGateway {
-  provider: "stripe" | "square" | "paypal";
-  isEnabled: boolean;
-  apiKey: string;
-  webhookSecret: string;
-  testMode: boolean;
-}
-
-export interface TaxRate {
-  id: string;
-  name: string;
-  rate: number;
-  applicableServices: string[];
-  isDefault: boolean;
-}
-
-export interface CurrencySettings {
-  currency: string;
-  symbol: string;
-  decimalPlaces: number;
-  thousandSeparator: string;
-  decimalSeparator: string;
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  permissions: {
-    [key: string]: boolean;
-  };
-}
-
 export const paymentGateways: PaymentGateway[] = [
   {
     provider: "stripe",
@@ -362,16 +262,6 @@ export const currencySettings: CurrencySettings = {
 // ========================================
 // NOTIFICATION SETTINGS DATA
 // ========================================
-
-export interface NotificationToggle {
-  id: string;
-  name: string;
-  description: string;
-  email: boolean;
-  sms: boolean;
-  push: boolean;
-  category: "client" | "staff" | "system";
-}
 
 export const notificationToggles: NotificationToggle[] = [
   {
@@ -433,16 +323,6 @@ export const notificationToggles: NotificationToggle[] = [
 // ========================================
 // INTEGRATIONS DATA
 // ========================================
-
-export interface Integration {
-  id: string;
-  name: string;
-  category: "communication" | "accounting" | "ai" | "phone";
-  isEnabled: boolean;
-  config: {
-    [key: string]: string | number | boolean | Record<string, boolean>;
-  };
-}
 
 export const integrations: Integration[] = [
   {
@@ -525,24 +405,6 @@ export const integrations: Integration[] = [
 // SUBSCRIPTION DATA
 // ========================================
 
-export interface SubscriptionPlan {
-  planName: string;
-  planTier: "starter" | "professional" | "enterprise";
-  billingCycle: "monthly" | "annual";
-  price: number;
-  nextBillingDate: string;
-  status: "active" | "trial" | "cancelled";
-}
-
-export interface ModuleAddon {
-  id: string;
-  name: string;
-  description: string;
-  monthlyPrice: number;
-  isEnabled: boolean;
-  isIncludedInPlan: boolean;
-}
-
 export const subscription: SubscriptionPlan = {
   planName: "Professional Plan",
   planTier: "professional",
@@ -606,19 +468,6 @@ export const moduleAddons: ModuleAddon[] = [
 // ========================================
 // AUDIT LOG DATA
 // ========================================
-
-export interface AuditLogEntry {
-  id: string;
-  timestamp: string;
-  userId: string;
-  userName: string;
-  action: "created" | "updated" | "deleted";
-  section: string;
-  settingName: string;
-  oldValue: string;
-  newValue: string;
-  ipAddress: string;
-}
 
 export const auditLog: AuditLogEntry[] = [
   {
@@ -686,25 +535,6 @@ export const auditLog: AuditLogEntry[] = [
 // ========================================
 // MODULE CONFIGURATION DATA
 // ========================================
-
-export interface ModuleConfig {
-  clientFacingName: string;
-  staffFacingName: string;
-  slogan: string;
-  description: string;
-  bannerImage?: string;
-  basePrice: number;
-  settings: {
-    evaluation: {
-      enabled: boolean;
-      optional?: boolean;
-    };
-  };
-  status: {
-    disabled: boolean;
-    reason?: string;
-  };
-}
 
 export const daycareConfig: ModuleConfig = {
   clientFacingName: "Happy Paws Daycare",
