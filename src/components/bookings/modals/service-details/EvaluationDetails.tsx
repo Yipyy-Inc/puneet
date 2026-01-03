@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
-import { evaluationConfig } from "@/data/settings";
 import { useSettings } from "@/hooks/use-settings";
 import type { Pet } from "@/lib/types";
 
@@ -38,7 +37,7 @@ export function EvaluationDetails({
   setCheckInTime,
   setCheckOutTime,
 }: EvaluationDetailsProps) {
-  const { hours, rules } = useSettings();
+  const { hours, rules, evaluation } = useSettings();
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
 
   const selectedDates = React.useMemo(() => {
@@ -70,7 +69,7 @@ export function EvaluationDetails({
   };
 
   const handleSlotSelect = (slotStartTime: string) => {
-    const slot = evaluationConfig.availableSlots.find(
+    const slot = evaluation.availableSlots.find(
       (s) => s.startTime === slotStartTime,
     );
     if (!slot) return;
@@ -88,8 +87,7 @@ export function EvaluationDetails({
             <div>
               <Label className="text-base">Select Evaluation Date</Label>
               <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Choose a date for your pet evaluation.{" "}
-                {evaluationConfig.description}
+                Choose a date for your pet evaluation. {evaluation.description}
               </p>
               <DateSelectionCalendar
                 mode="single"
@@ -121,7 +119,7 @@ export function EvaluationDetails({
                     </p>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {evaluationConfig.availableSlots.map((slot) => {
+                      {evaluation.availableSlots.map((slot) => {
                         const isSelected = selectedSlot === slot.startTime;
                         return (
                           <Button
@@ -145,7 +143,7 @@ export function EvaluationDetails({
                       })}
                     </div>
 
-                    {evaluationConfig.availableSlots.length === 0 && (
+                    {evaluation.availableSlots.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No time slots available for evaluation.
                       </p>
@@ -156,13 +154,13 @@ export function EvaluationDetails({
                         <p className="text-sm font-medium text-primary">
                           Selected:{" "}
                           {
-                            evaluationConfig.availableSlots.find(
+                            evaluation.availableSlots.find(
                               (s) => s.startTime === selectedSlot,
                             )?.startTime
                           }{" "}
                           -{" "}
                           {
-                            evaluationConfig.availableSlots.find(
+                            evaluation.availableSlots.find(
                               (s) => s.startTime === selectedSlot,
                             )?.endTime
                           }

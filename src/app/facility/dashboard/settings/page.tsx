@@ -254,56 +254,63 @@ function BusinessHoursCard() {
     <SettingsBlock title="Business Hours" data={hours} onSave={updateHours}>
       {(isEditing, localHours, setLocalHours) => (
         <div className="space-y-3">
-          {Object.entries(localHours).map(([day, schedule]: [string, any]) => (
-            <div
-              key={day}
-              className="flex items-center justify-between p-3 border rounded-lg"
-            >
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-32 font-medium capitalize">{day}</div>
-                <Switch
-                  checked={schedule.isOpen}
-                  disabled={!isEditing}
-                  onCheckedChange={(checked) =>
-                    setLocalHours({
-                      ...localHours,
-                      [day]: { ...schedule, isOpen: checked },
-                    })
-                  }
-                />
-                {schedule.isOpen && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      value={schedule.openTime}
-                      onChange={(e) =>
-                        setLocalHours({
-                          ...localHours,
-                          [day]: { ...schedule, openTime: e.target.value },
-                        })
-                      }
-                      className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                      readOnly={!isEditing}
-                    />
-                    <span>to</span>
-                    <Input
-                      type="time"
-                      value={schedule.closeTime}
-                      onChange={(e) =>
-                        setLocalHours({
-                          ...localHours,
-                          [day]: { ...schedule, closeTime: e.target.value },
-                        })
-                      }
-                      className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                      readOnly={!isEditing}
-                    />
-                  </div>
-                )}
-                {!schedule.isOpen && <Badge variant="secondary">Closed</Badge>}
+          {Object.entries(localHours).map(
+            ([day, schedule]: [
+              string,
+              { isOpen: boolean; openTime: string; closeTime: string },
+            ]) => (
+              <div
+                key={day}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-32 font-medium capitalize">{day}</div>
+                  <Switch
+                    checked={schedule.isOpen}
+                    disabled={!isEditing}
+                    onCheckedChange={(checked) =>
+                      setLocalHours({
+                        ...localHours,
+                        [day]: { ...schedule, isOpen: checked },
+                      })
+                    }
+                  />
+                  {schedule.isOpen && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={schedule.openTime}
+                        onChange={(e) =>
+                          setLocalHours({
+                            ...localHours,
+                            [day]: { ...schedule, openTime: e.target.value },
+                          })
+                        }
+                        className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        readOnly={!isEditing}
+                      />
+                      <span>to</span>
+                      <Input
+                        type="time"
+                        value={schedule.closeTime}
+                        onChange={(e) =>
+                          setLocalHours({
+                            ...localHours,
+                            [day]: { ...schedule, closeTime: e.target.value },
+                          })
+                        }
+                        className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        readOnly={!isEditing}
+                      />
+                    </div>
+                  )}
+                  {!schedule.isOpen && (
+                    <Badge variant="secondary">Closed</Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       )}
     </SettingsBlock>
@@ -413,6 +420,22 @@ function BookingRulesCard() {
                 className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Daily Capacity Limit</Label>
+            <Input
+              type="number"
+              value={localRules.dailyCapacityLimit}
+              onChange={(e) =>
+                setLocalRules({
+                  ...localRules,
+                  dailyCapacityLimit: parseInt(e.target.value),
+                })
+              }
+              readOnly={!isEditing}
+              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+            />
           </div>
 
           <div className="flex items-center justify-between p-3 border rounded-lg">

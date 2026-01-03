@@ -57,56 +57,80 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [daycare, setDaycare] = useState<ModuleConfig>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-daycare");
-      return stored ? JSON.parse(stored) : daycareConfig;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(daycareConfig)
+        ? parsed || daycareConfig
+        : { ...daycareConfig, ...parsed };
     }
     return daycareConfig;
   });
   const [boarding, setBoarding] = useState<ModuleConfig>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-boarding");
-      return stored ? JSON.parse(stored) : boardingConfig;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(boardingConfig)
+        ? parsed || boardingConfig
+        : { ...boardingConfig, ...parsed };
     }
     return boardingConfig;
   });
   const [grooming, setGrooming] = useState<ModuleConfig>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-grooming");
-      return stored ? JSON.parse(stored) : groomingConfig;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(groomingConfig)
+        ? parsed || groomingConfig
+        : { ...groomingConfig, ...parsed };
     }
     return groomingConfig;
   });
   const [training, setTraining] = useState<ModuleConfig>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-training");
-      return stored ? JSON.parse(stored) : trainingConfig;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(trainingConfig)
+        ? parsed || trainingConfig
+        : { ...trainingConfig, ...parsed };
     }
     return trainingConfig;
   });
   const [evaluation, setEvaluation] = useState<EvaluationConfig>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-evaluation");
-      return stored ? JSON.parse(stored) : evaluationConfig;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(evaluationConfig)
+        ? parsed || evaluationConfig
+        : { ...evaluationConfig, ...parsed };
     }
     return evaluationConfig;
   });
   const [hours, setHours] = useState<BusinessHours>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-hours");
-      return stored ? JSON.parse(stored) : businessHours;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(businessHours)
+        ? parsed || businessHours
+        : { ...businessHours, ...parsed };
     }
     return businessHours;
   });
   const [profile, setProfile] = useState<BusinessProfile>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-profile");
-      return stored ? JSON.parse(stored) : businessProfile;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(businessProfile)
+        ? parsed || businessProfile
+        : { ...businessProfile, ...parsed };
     }
     return businessProfile;
   });
   const [rules, setRules] = useState<BookingRules>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("settings-rules");
-      return stored ? JSON.parse(stored) : bookingRules;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return Array.isArray(bookingRules)
+        ? parsed || bookingRules
+        : { ...bookingRules, ...parsed };
     }
     return bookingRules;
   });

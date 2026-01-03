@@ -64,8 +64,53 @@ export function ClientPetStep({
     return true;
   };
 
+  // Get selected pets
+  const selectedPets = React.useMemo(() => {
+    if (!selectedClient) return [];
+    return selectedClient.pets.filter((pet) => selectedPetIds.includes(pet.id));
+  }, [selectedClient, selectedPetIds]);
+
+  // Check if there are pets that need evaluation
+  const petsNeedingEvaluation = React.useMemo(() => {
+    if (!serviceRequiresEvaluation || isEvaluationOptional) return [];
+    return selectedPets.filter((pet) => !hasValidEvaluation(pet));
+  }, [selectedPets, serviceRequiresEvaluation, isEvaluationOptional]);
+
   return (
     <div className="space-y-6">
+      {/* Evaluation Warning */}
+      {petsNeedingEvaluation.length > 0 && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <FileWarning className="h-5 w-5 text-red-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-800">
+                Evaluation Required
+              </h4>
+              <p className="text-sm text-red-700 mt-1">
+                The following pets require a passed evaluation before booking
+                this service:
+              </p>
+              <ul className="mt-2 space-y-1">
+                {petsNeedingEvaluation.map((pet) => (
+                  <li
+                    key={pet.id}
+                    className="text-sm text-red-700 flex items-center gap-2"
+                  >
+                    <PawPrint className="h-4 w-4" />
+                    {pet.name} ({pet.type})
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-red-700 mt-2">
+                Please complete evaluations for these pets or select different
+                pets to proceed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Client Selection */}
       {!preSelectedClientId && (
         <>

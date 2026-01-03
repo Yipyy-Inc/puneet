@@ -227,6 +227,7 @@ export interface BookingRules {
   depositPercentage: number;
   depositRequired: boolean;
   capacityLimit: number;
+  dailyCapacityLimit: number;
   allowOverBooking: boolean;
   overBookingPercentage: number;
 }

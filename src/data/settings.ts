@@ -107,6 +107,7 @@ export const bookingRules: BookingRules = {
   depositPercentage: 25,
   depositRequired: true,
   capacityLimit: 50,
+  dailyCapacityLimit: 50,
   allowOverBooking: false,
   overBookingPercentage: 10,
 };

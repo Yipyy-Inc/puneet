@@ -276,7 +276,21 @@ export function BookingModal({
     boardingRangeStart,
     boardingRangeEnd,
     daycareSelectedDates.length,
+    boarding.basePrice,
+    daycare.basePrice,
   ]);
+
+  // Check if service requires evaluation
+  const serviceRequiresEvaluation = useMemo(() => {
+    const config = configs[selectedService as "daycare" | "boarding"];
+    return config?.settings.evaluation.enabled ?? false;
+  }, [selectedService, configs]);
+
+  // Check if evaluation is optional
+  const isEvaluationOptional = useMemo(() => {
+    const config = configs[selectedService as "daycare" | "boarding"];
+    return config?.settings.evaluation.optional ?? false;
+  }, [selectedService, configs]);
 
   // Validation for each step
   const canProceed = useMemo(() => {
@@ -285,7 +299,15 @@ export function BookingModal({
       case "service":
         return selectedService !== "";
       case "client-pet":
-        return selectedClientId !== null && selectedPetIds.length > 0;
+        if (selectedClientId === null || selectedPetIds.length === 0)
+          return false;
+        if (serviceRequiresEvaluation && !isEvaluationOptional) {
+          const petsWithoutEvaluation = selectedPets.filter(
+            (pet) => !pet.evaluations?.some((e) => e.status === "passed"),
+          );
+          return petsWithoutEvaluation.length === 0;
+        }
+        return true;
       case "details":
         if (selectedService === "daycare" || selectedService === "boarding") {
           return isSubStepComplete(currentSubStep);
@@ -311,6 +333,9 @@ export function BookingModal({
     startDate,
     checkInTime,
     isSubStepComplete,
+    serviceRequiresEvaluation,
+    isEvaluationOptional,
+    selectedPets,
   ]);
 
   const handleNext = () => {
