@@ -135,6 +135,8 @@ export interface NewBooking {
   vetReason?: string;
   vetSymptoms?: string;
   isEmergency?: boolean;
+  evaluationEvaluator?: string;
+  evaluationSpace?: string;
   kennel?: string;
   feedingSchedule?: FeedingScheduleItem[];
   walkSchedule?: string;

@@ -6,6 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Clock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { Pet } from "@/lib/types";
@@ -27,6 +35,13 @@ interface EvaluationDetailsProps {
   setCheckInTime: (time: string) => void;
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
+  evaluationTargetService: string;
+  setEvaluationTargetService: (value: string) => void;
+  evaluationEvaluator: string;
+  setEvaluationEvaluator: (value: string) => void;
+  evaluationSpace: string;
+  setEvaluationSpace: (value: string) => void;
+  evaluatorOptions: Array<{ value: string; label: string }>;
   selectedPets: Pet[];
 }
 
@@ -36,6 +51,13 @@ export function EvaluationDetails({
   setStartDate,
   setCheckInTime,
   setCheckOutTime,
+  evaluationTargetService,
+  setEvaluationTargetService,
+  evaluationEvaluator,
+  setEvaluationEvaluator,
+  evaluationSpace,
+  setEvaluationSpace,
+  evaluatorOptions,
 }: EvaluationDetailsProps) {
   const { hours, rules, evaluation } = useSettings();
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
@@ -173,6 +195,54 @@ export function EvaluationDetails({
             )}
           </div>
         )}
+      </div>
+
+      {/* Staff assignment and space */}
+      <div className="space-y-4">
+        <div>
+          <Label className="text-base">Target Service</Label>
+          <Select
+            value={evaluationTargetService}
+            onValueChange={setEvaluationTargetService}
+          >
+            <SelectTrigger className="w-full mt-2">
+              <SelectValue placeholder="Select Daycare or Boarding" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daycare">Daycare</SelectItem>
+              <SelectItem value="boarding">Boarding</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-base">Assign Evaluator</Label>
+          <Select
+            value={evaluationEvaluator}
+            onValueChange={setEvaluationEvaluator}
+          >
+            <SelectTrigger className="w-full mt-2">
+              <SelectValue placeholder="Select staff member" />
+            </SelectTrigger>
+            <SelectContent>
+              {evaluatorOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-base">Space / Room</Label>
+          <Input
+            className="mt-2"
+            placeholder="e.g. Room A"
+            value={evaluationSpace}
+            onChange={(e) => setEvaluationSpace(e.target.value)}
+          />
+        </div>
       </div>
     </div>
   );

@@ -119,7 +119,8 @@ export function BookingModal({
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
-      setServiceType(evaluationConfig.duration);
+      setServiceType("evaluation");
+      setEvaluationTargetService("");
     } else if (service === "daycare") {
       setServiceType("full_day");
     } else {
@@ -140,6 +141,9 @@ export function BookingModal({
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("08:00");
   const [checkOutTime, setCheckOutTime] = useState("17:00");
+  const [evaluationEvaluator, setEvaluationEvaluator] = useState("");
+  const [evaluationSpace, setEvaluationSpace] = useState("");
+  const [evaluationTargetService, setEvaluationTargetService] = useState("");
 
   // Daycare specific - multi-date selection
   const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
@@ -314,7 +318,13 @@ export function BookingModal({
         }
         // For evaluation service
         if (selectedService === "evaluation") {
-          return !!startDate && !!checkInTime;
+          return (
+            !!startDate &&
+            !!checkInTime &&
+            !!evaluationEvaluator &&
+            !!evaluationSpace.trim() &&
+            !!evaluationTargetService
+          );
         }
         // For other services
         return !!startDate;
@@ -445,7 +455,7 @@ export function BookingModal({
       service: selectedService,
       serviceType:
         selectedService === "evaluation"
-          ? evaluationConfig.duration
+          ? evaluationTargetService
           : serviceType,
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
@@ -467,6 +477,10 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
+      evaluationEvaluator:
+        selectedService === "evaluation" ? evaluationEvaluator : undefined,
+      evaluationSpace:
+        selectedService === "evaluation" ? evaluationSpace.trim() : undefined,
       status: "pending",
       basePrice: calculatePrice.basePrice,
       discount: 0,
@@ -511,6 +525,9 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
+    setEvaluationEvaluator("");
+    setEvaluationSpace("");
+    setEvaluationTargetService("");
 
     setKennel("");
     setRoomAssignments([]);
@@ -1175,6 +1192,13 @@ export function BookingModal({
                     setCheckInTime={setCheckInTime}
                     checkOutTime={checkOutTime}
                     setCheckOutTime={setCheckOutTime}
+                    evaluationEvaluator={evaluationEvaluator}
+                    setEvaluationEvaluator={setEvaluationEvaluator}
+                    evaluationSpace={evaluationSpace}
+                    setEvaluationSpace={setEvaluationSpace}
+                    evaluationTargetService={evaluationTargetService}
+                    setEvaluationTargetService={setEvaluationTargetService}
+                    evaluatorOptions={staffOptions}
                     serviceType={serviceType}
                     setServiceType={setServiceType}
                     feedingSchedule={feedingSchedule}

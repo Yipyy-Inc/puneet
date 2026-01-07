@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DetailsModal } from "@/components/modals/DetailsModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EvaluationModal } from "@/components/modals/EvaluationModal";
+import { Button } from "@/components/ui/button";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Calendar,
@@ -160,12 +161,9 @@ export function BookingModal({ booking }: BookingModalProps) {
         <TabsContent value="details" className="space-y-6">
           {requiresEvaluationForService && !hasPassedEvaluation && (
             <div className="flex justify-end">
-              <button
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-                onClick={() => setShowEvaluationModal(true)}
-              >
+              <Button size="sm" onClick={() => setShowEvaluationModal(true)}>
                 Add Evaluation to This Stay
-              </button>
+              </Button>
             </div>
           )}
 
