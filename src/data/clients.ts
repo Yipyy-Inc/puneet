@@ -87,7 +87,7 @@ export const clients = [
           {
             id: "eval-max-expired",
             petId: 3,
-            status: "passed",
+            status: "passed" as const,
             isExpired: true,
             evaluatedAt: "2024-01-01T10:00:00Z",
             evaluatedBy: "Staff User",
@@ -513,7 +513,7 @@ export const clients = [
           {
             id: "eval-bella-failed",
             petId: 19,
-            status: "failed",
+            status: "failed" as const,
             isExpired: false,
             evaluatedAt: "2024-12-01T10:00:00Z",
             evaluatedBy: "Staff User",
