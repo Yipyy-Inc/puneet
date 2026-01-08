@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, PawPrint, Check, Cat, FileWarning, Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
@@ -52,7 +53,25 @@ export function ClientPetStep({
 
   // Check if a pet has a valid (passed) evaluation
   const hasValidEvaluation = (pet: Pet) => {
-    return pet.evaluations?.some((e) => e.status === "passed");
+    return pet.evaluations?.some(
+      (e) =>
+        e.status === "passed" &&
+        e.isExpired !== true &&
+        // Approved services check (if provided)
+        (Array.isArray(e.approvedServices)
+          ? e.approvedServices.length > 0
+          : true),
+    );
+  };
+
+  const hasExpiredEvaluation = (pet: Pet) => {
+    return pet.evaluations?.some(
+      (e) => (e.status === "passed" && e.isExpired === true) || e.status === "outdated",
+    );
+  };
+
+  const hasFailedEvaluation = (pet: Pet) => {
+    return pet.evaluations?.some((e) => e.status === "failed");
   };
 
   // Check if pet can be selected for evaluation service
@@ -76,8 +95,60 @@ export function ClientPetStep({
     return selectedPets.filter((pet) => !hasValidEvaluation(pet));
   }, [selectedPets, serviceRequiresEvaluation, isEvaluationOptional]);
 
+  const petsWithExpiredEvaluation = React.useMemo(() => {
+    if (!serviceRequiresEvaluation) return [];
+    return selectedPets.filter((pet) => hasExpiredEvaluation(pet));
+  }, [selectedPets, serviceRequiresEvaluation]);
+
+  const petsWithFailedEvaluation = React.useMemo(() => {
+    if (!serviceRequiresEvaluation) return [];
+    return selectedPets.filter((pet) => hasFailedEvaluation(pet));
+  }, [selectedPets, serviceRequiresEvaluation]);
+
   return (
     <div className="space-y-6">
+      {/* Expired Evaluation Warning (customer-facing) */}
+      {selectedService !== "evaluation" && petsWithExpiredEvaluation.length > 0 && (
+        <Alert variant="destructive">
+          <FileWarning className="h-4 w-4" />
+          <AlertTitle>Evaluation expired</AlertTitle>
+          <AlertDescription>
+            <p>
+              Evaluation expired — please book a new evaluation to unlock services.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {petsWithExpiredEvaluation.map((pet) => (
+                <li key={pet.id} className="flex items-center gap-2">
+                  <PawPrint className="h-4 w-4" />
+                  {pet.name} ({pet.type})
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Failed Evaluation Warning (customer-facing, no reason shown) */}
+      {selectedService !== "evaluation" && petsWithFailedEvaluation.length > 0 && (
+        <Alert variant="destructive">
+          <FileWarning className="h-4 w-4" />
+          <AlertTitle>Evaluation required</AlertTitle>
+          <AlertDescription>
+            <p>
+              Evaluation not passed — please book a new evaluation to unlock services.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {petsWithFailedEvaluation.map((pet) => (
+                <li key={pet.id} className="flex items-center gap-2">
+                  <PawPrint className="h-4 w-4" />
+                  {pet.name} ({pet.type})
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Evaluation Warning */}
       {petsNeedingEvaluation.length > 0 && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -306,9 +377,15 @@ export function ClientPetStep({
                                 {(serviceRequiresEvaluation ||
                                   selectedService === "evaluation") && (
                                   <div className="mt-1">
-                                    {pet.evaluations?.some(
-                                      (e) => e.status === "passed",
-                                    ) ? (
+                                    {hasExpiredEvaluation(pet) ? (
+                                      <Badge
+                                        variant="destructive"
+                                        className="text-xs"
+                                      >
+                                        <FileWarning className="h-3 w-3 mr-1" />
+                                        Evaluation Expired
+                                      </Badge>
+                                    ) : hasValidEvaluation(pet) ? (
                                       <Badge
                                         variant="secondary"
                                         className="text-xs bg-green-100 text-green-800 hover:bg-green-100"

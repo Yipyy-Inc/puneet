@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
@@ -49,8 +49,9 @@ import {
   Users,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import type { Evaluation, NewBooking as BookingData } from "@/lib/types";
+import type { Evaluation, NewBooking as BookingData, Client } from "@/lib/types";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
+import { DataTable } from "@/components/ui/DataTable";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission } from "@/lib/role-utils";
 
@@ -147,6 +148,37 @@ export default function PetDetailPage({
       minute: "2-digit",
     });
   };
+
+  const petEvaluations = (pet as { evaluations?: Evaluation[] }).evaluations;
+
+  const hasValidEvaluation =
+    petEvaluations?.some(
+      (e) => e.status === "passed" && e.isExpired !== true,
+    ) ?? false;
+
+  const hasExpiredEvaluation =
+    petEvaluations?.some(
+      (e) => (e.status === "passed" && e.isExpired === true) || e.status === "outdated",
+    ) ?? false;
+
+  const latestEvaluation = useMemo(() => {
+    const evals = petEvaluations || [];
+    return [...evals].sort((a, b) => {
+      const da = a.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
+      const db = b.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
+      return db - da;
+    })[0];
+  }, [petEvaluations]);
+
+  const latestFailedEvaluation = useMemo(() => {
+    const failed = petEvaluations?.filter((e) => e.status === "failed") || [];
+    return failed
+      .map((e) => ({
+        ...e,
+        evaluatedAtValue: e.evaluatedAt ? new Date(e.evaluatedAt).getTime() : 0,
+      }))
+      .sort((a, b) => b.evaluatedAtValue - a.evaluatedAtValue)[0];
+  }, [petEvaluations]);
 
   const getVaccinationStatus = (
     vaccination: (typeof vaccinationRecords)[0],
@@ -364,6 +396,52 @@ export default function PetDetailPage({
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">
+                Evaluation Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {hasValidEvaluation ? "Valid" : "Expired"}
+                </div>
+                <Badge
+                  variant={
+                    hasValidEvaluation && !hasExpiredEvaluation
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  {hasValidEvaluation && !hasExpiredEvaluation ? "Valid" : "Expired"}
+                </Badge>
+              </div>
+                {latestEvaluation && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span className="font-medium">Last outcome:</span>
+                    <Badge
+                      variant={
+                        latestEvaluation.status === "passed" ? "secondary" : "destructive"
+                      }
+                      className="capitalize"
+                    >
+                      {latestEvaluation.status}
+                    </Badge>
+                    {latestEvaluation.isExpired && (
+                      <Badge variant="destructive">Expired</Badge>
+                    )}
+                  </div>
+                )}
+              {latestFailedEvaluation?.notes && (
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="font-semibold">Last failure reason (staff)</p>
+                  <p>{latestFailedEvaluation.notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">
@@ -1067,45 +1145,93 @@ export default function PetDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(
-                  ("evaluations" in (pet as unknown as Record<string, unknown>)
-                    ? ((pet as unknown as { evaluations?: Evaluation[] })
-                        .evaluations ?? [])
-                    : []) as Evaluation[]
-                ).length > 0 ? (
-                  (
+                {(() => {
+                  const evals = (
                     ("evaluations" in (pet as unknown as Record<string, unknown>)
                       ? ((pet as unknown as { evaluations?: Evaluation[] })
                           .evaluations ?? [])
                       : []) as Evaluation[]
-                  ).map((ev: Evaluation) => (
-                    <div
-                      key={ev.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{ev.status}</Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {ev.evaluatedAt
-                              ? formatDateTime(ev.evaluatedAt)
-                              : "Not completed"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          ID: {ev.id}
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => setActiveEvaluation(ev)}>
-                        Complete Evaluation
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No evaluations found for this pet.
-                  </p>
-                )}
+                  ).map((ev) => {
+                    const expired = (ev as any).isExpired === true || ev.status === "outdated";
+                    const outcome =
+                      ev.status === "passed"
+                        ? "PASS"
+                        : ev.status === "failed"
+                          ? "FAIL"
+                          : ev.status.toUpperCase();
+                    const validity = expired ? "Expired" : "Valid";
+                    return { ...ev, expired, outcome, validity };
+                  });
+
+                  if (evals.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground">
+                        No evaluations found for this pet.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <DataTable
+                      data={evals}
+                      searchKeys={["id", "status", "evaluatedBy", "notes"]}
+                      searchPlaceholder="Search evaluations..."
+                      columns={[
+                        {
+                          key: "evaluatedAt",
+                          label: "Date",
+                          render: (row: any) =>
+                            row.evaluatedAt ? formatDateTime(row.evaluatedAt) : "Not completed",
+                        },
+                        {
+                          key: "outcome",
+                          label: "Outcome",
+                          render: (row: any) => (
+                            <Badge
+                              variant={row.outcome === "PASS" ? "secondary" : row.outcome === "FAIL" ? "destructive" : "outline"}
+                            >
+                              {row.outcome}
+                            </Badge>
+                          ),
+                        },
+                        {
+                          key: "validity",
+                          label: "Validity",
+                          render: (row: any) =>
+                            row.status === "passed" || row.status === "outdated" ? (
+                              <Badge variant={row.expired ? "destructive" : "secondary"}>
+                                {row.validity}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            ),
+                        },
+                        {
+                          key: "evaluatedBy",
+                          label: "Evaluator",
+                          render: (row: any) => row.evaluatedBy || "—",
+                        },
+                        {
+                          key: "notes",
+                          label: "Notes (staff)",
+                          render: (row: any) =>
+                            row.notes ? (
+                              <span className="text-muted-foreground line-clamp-2">
+                                {row.notes}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            ),
+                        },
+                      ]}
+                      actions={(row: any) => (
+                        <Button size="sm" onClick={() => setActiveEvaluation(row)}>
+                          Complete Evaluation
+                        </Button>
+                      )}
+                    />
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -1124,11 +1250,11 @@ export default function PetDetailPage({
       <BookingModal
         open={bookingModalOpen}
         onOpenChange={setBookingModalOpen}
-        clients={clients}
+        clients={clients as Client[]}
         facilityId={1} // Assuming facility ID is 1
         facilityName="Sample Facility"
         onCreateBooking={handleCreateBooking}
-        preSelectedClientId={parseInt(id)}
+        preSelectedClientId={Number(id)}
         preSelectedPetId={parseInt(petId)}
       />
     </div>

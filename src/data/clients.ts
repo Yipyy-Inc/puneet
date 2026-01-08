@@ -83,6 +83,17 @@ export const clients = [
         allergies: "Beef",
         specialNeeds: "Hip dysplasia",
         imageUrl: "/dogs/dog-2.jpg",
+        evaluations: [
+          {
+            id: "eval-max-expired",
+            petId: 3,
+            status: "passed",
+            isExpired: true,
+            evaluatedAt: "2024-01-01T10:00:00Z",
+            evaluatedBy: "Staff User",
+            notes: "Demo: expired evaluation for booking lock",
+          },
+        ],
       },
     ],
   },
@@ -498,7 +509,17 @@ export const clients = [
         allergies: "None",
         specialNeeds: "Herding instinct, needs mental stimulation",
         imageUrl: "/dogs/dog-4.jpg",
-        evaluations: [],
+        evaluations: [
+          {
+            id: "eval-bella-failed",
+            petId: 19,
+            status: "failed",
+            isExpired: false,
+            evaluatedAt: "2024-12-01T10:00:00Z",
+            evaluatedBy: "Staff User",
+            notes: "Demo: failed evaluation — staff can see this reason",
+          },
+        ],
       },
       {
         id: 20,
