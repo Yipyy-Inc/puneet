@@ -9,6 +9,18 @@ export interface Evaluation {
   evaluatedAt?: string;
   evaluatedBy?: string;
   notes?: string;
+  // Evaluation validity rules are configured by the facility and provided by API.
+  // UI should treat isExpired === true as NOT approved, regardless of PASS.
+  validityType?: "ALWAYS_VALID" | "EXPIRES_AFTER_INACTIVITY";
+  lastActivityAt?: string;
+  expiresAt?: string;
+  isExpired?: boolean;
+  approvedServices?: {
+    daycare?: boolean;
+    boarding?: boolean;
+    customApproved?: string[];
+    customDenied?: string[];
+  };
 }
 
 export interface Pet {

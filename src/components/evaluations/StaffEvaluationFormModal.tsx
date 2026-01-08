@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -19,6 +21,7 @@ import type { Evaluation } from "@/lib/types";
 import { X } from "lucide-react";
 
 type YesNo = "yes" | "no" | "";
+type EvaluationResult = "pass" | "fail" | "";
 
 type FormState = {
   dogFriendly: YesNo;
@@ -34,6 +37,13 @@ type FormState = {
   playGroup: "" | "small" | "large" | "mixed" | "solo" | "puppies" | "seniors";
   behaviorTags: string[];
   internalWarnings: string[];
+  evaluationResult: EvaluationResult;
+  approvedServices: {
+    daycare: boolean;
+    boarding: boolean;
+    customApproved: string[];
+    customDenied: string[];
+  };
 };
 
 const defaultState: FormState = {
@@ -50,6 +60,13 @@ const defaultState: FormState = {
   playGroup: "",
   behaviorTags: [],
   internalWarnings: [],
+  evaluationResult: "",
+  approvedServices: {
+    daycare: false,
+    boarding: false,
+    customApproved: [],
+    customDenied: [],
+  },
 };
 
 function storageKey(evaluationId: string) {
@@ -61,11 +78,13 @@ function TagInput({
   value,
   onChange,
   placeholder,
+  disabled,
 }: {
   label: string;
   value: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -87,6 +106,7 @@ function TagInput({
         <Input
           placeholder={placeholder}
           value={draft}
+          disabled={disabled}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -95,7 +115,7 @@ function TagInput({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={add}>
+        <Button type="button" variant="outline" onClick={add} disabled={disabled}>
           Add
         </Button>
       </div>
@@ -133,6 +153,7 @@ export function StaffEvaluationFormModal({
 }) {
   const key = useMemo(() => storageKey(evaluation.id), [evaluation.id]);
   const [form, setForm] = useState<FormState>(defaultState);
+  const [resultError, setResultError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -155,9 +176,28 @@ export function StaffEvaluationFormModal({
     form.anxietyLevel !== "" &&
     form.reactivity !== "" &&
     form.playStyle !== "" &&
-    form.playGroup !== "";
+    form.playGroup !== "" &&
+    form.evaluationResult !== "" &&
+    (form.evaluationResult === "fail" ||
+      form.approvedServices.daycare ||
+      form.approvedServices.boarding ||
+      form.approvedServices.customApproved.length > 0);
 
   const save = () => {
+    if (!form.evaluationResult) {
+      setResultError("Please select Pass or Fail before saving.");
+      return;
+    }
+    if (
+      form.evaluationResult === "pass" &&
+      !form.approvedServices.daycare &&
+      !form.approvedServices.boarding &&
+      form.approvedServices.customApproved.length === 0
+    ) {
+      setResultError("Please select at least one service approval.");
+      return;
+    }
+    setResultError("");
     localStorage.setItem(key, JSON.stringify(form));
     onOpenChange(false);
   };
@@ -368,6 +408,151 @@ export function StaffEvaluationFormModal({
             />
           </div>
         </div>
+
+        {/* Evaluation Result (staff-only) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Evaluation Result</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Result</Label>
+              <RadioGroup
+                value={form.evaluationResult}
+                onValueChange={(v) => {
+                  const next = v as EvaluationResult;
+                  setResultError("");
+                  setForm((p) => {
+                    if (next === "fail") {
+                      return {
+                        ...p,
+                        evaluationResult: next,
+                        approvedServices: {
+                          daycare: false,
+                          boarding: false,
+                          customApproved: [],
+                          customDenied: [],
+                        },
+                      };
+                    }
+                    return { ...p, evaluationResult: next };
+                  });
+                }}
+                className="grid grid-cols-2 gap-3"
+              >
+                <label className="flex items-center gap-2 rounded-md border p-3">
+                  <RadioGroupItem value="pass" />
+                  Pass
+                </label>
+                <label className="flex items-center gap-2 rounded-md border p-3">
+                  <RadioGroupItem value="fail" />
+                  Fail
+                </label>
+              </RadioGroup>
+              {resultError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {resultError}
+                </p>
+              )}
+            </div>
+
+            <div
+              data-disabled={form.evaluationResult === "fail"}
+              className="space-y-3 data-[disabled=true]:opacity-50"
+            >
+              <Label>Service approvals</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="flex items-center gap-2 rounded-md border p-3">
+                  <Checkbox
+                    checked={form.approvedServices.daycare}
+                    disabled={form.evaluationResult !== "pass"}
+                    onCheckedChange={(checked) =>
+                      setForm((p) => ({
+                        ...p,
+                        approvedServices: {
+                          ...p.approvedServices,
+                          daycare: checked === true,
+                        },
+                      }))
+                    }
+                  />
+                  Daycare
+                </label>
+                <label className="flex items-center gap-2 rounded-md border p-3">
+                  <Checkbox
+                    checked={form.approvedServices.boarding}
+                    disabled={form.evaluationResult !== "pass"}
+                    onCheckedChange={(checked) =>
+                      setForm((p) => ({
+                        ...p,
+                        approvedServices: {
+                          ...p.approvedServices,
+                          boarding: checked === true,
+                        },
+                      }))
+                    }
+                  />
+                  Boarding
+                </label>
+                <label className="flex items-center gap-2 rounded-md border p-3">
+                  <Checkbox
+                    checked={
+                      form.approvedServices.daycare && form.approvedServices.boarding
+                    }
+                    disabled={form.evaluationResult !== "pass"}
+                    onCheckedChange={(checked) =>
+                      setForm((p) => ({
+                        ...p,
+                        approvedServices: {
+                          ...p.approvedServices,
+                          daycare: checked === true,
+                          boarding: checked === true,
+                        },
+                      }))
+                    }
+                  />
+                  Both
+                </label>
+              </div>
+
+              <TagInput
+                label="Custom services — Approved (optional)"
+                value={form.approvedServices.customApproved}
+                onChange={(next) =>
+                  setForm((p) => ({
+                    ...p,
+                    approvedServices: {
+                      ...p.approvedServices,
+                      customApproved: next.filter(
+                        (x) => !p.approvedServices.customDenied.includes(x),
+                      ),
+                    },
+                  }))
+                }
+                placeholder="e.g. grooming, training"
+                disabled={form.evaluationResult !== "pass"}
+              />
+
+              <TagInput
+                label="Custom services — Denied (optional)"
+                value={form.approvedServices.customDenied}
+                onChange={(next) =>
+                  setForm((p) => ({
+                    ...p,
+                    approvedServices: {
+                      ...p.approvedServices,
+                      customDenied: next.filter(
+                        (x) => !p.approvedServices.customApproved.includes(x),
+                      ),
+                    },
+                  }))
+                }
+                placeholder="e.g. grooming, training"
+                disabled={form.evaluationResult !== "pass"}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

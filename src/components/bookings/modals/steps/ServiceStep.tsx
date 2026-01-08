@@ -1,8 +1,9 @@
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
-import type { ModuleConfig } from "@/lib/types";
+import type { ModuleConfig, Pet } from "@/lib/types";
 
 interface ServiceStepProps {
   selectedService: string;
@@ -10,6 +11,7 @@ interface ServiceStepProps {
   setServiceType: (type: string) => void;
   setCurrentSubStep: (step: number) => void;
   configs: Record<string, ModuleConfig>;
+  selectedPets?: Pet[];
 }
 
 export function ServiceStep({
@@ -18,7 +20,64 @@ export function ServiceStep({
   setServiceType,
   setCurrentSubStep,
   configs,
+  selectedPets = [],
 }: ServiceStepProps) {
+  const getLatestEvaluation = (pet: Pet) => {
+    const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
+    if (evals.length === 0) return null;
+    return [...evals].sort((a, b) => {
+      const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
+      const db = b?.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
+      return db - da;
+    })[0];
+  };
+
+  const isExpiredEvaluation = (ev: any) => {
+    return ev?.isExpired === true || ev?.status === "outdated";
+  };
+
+  const isPassedEvaluation = (ev: any) => ev?.status === "passed";
+  const isFailedEvaluation = (ev: any) => ev?.status === "failed";
+
+  const isServiceApprovedByEvaluation = (ev: any, serviceId: string) => {
+    if (!ev || !isPassedEvaluation(ev) || isExpiredEvaluation(ev)) return false;
+    const approvals =
+      ev.approvedServices ?? ev.serviceApprovals ?? ev.approvals ?? null;
+    // Backwards-compat: if API doesn't provide approvals, treat PASS as approved.
+    if (!approvals) return true;
+
+    // boolean map: { daycare: true, boarding: false, customApproved: [...] }
+    if (typeof approvals === "object" && !Array.isArray(approvals)) {
+      if (serviceId === "daycare" && "daycare" in approvals)
+        return Boolean((approvals as any).daycare);
+      if (serviceId === "boarding" && "boarding" in approvals)
+        return Boolean((approvals as any).boarding);
+      const customApproved: unknown = (approvals as any).customApproved;
+      if (Array.isArray(customApproved)) return customApproved.includes(serviceId);
+      const custom: unknown = (approvals as any).custom;
+      if (Array.isArray(custom)) return custom.includes(serviceId);
+    }
+
+    // array of ids
+    if (Array.isArray(approvals)) return approvals.includes(serviceId);
+
+    // string modes (rare)
+    if (approvals === "both") return serviceId === "daycare" || serviceId === "boarding";
+    if (approvals === "daycare") return serviceId === "daycare";
+    if (approvals === "boarding") return serviceId === "boarding";
+
+    return false;
+  };
+
+  const isPetUnlockedForService = (pet: Pet, serviceId: string) => {
+    const latest = getLatestEvaluation(pet);
+    if (!latest) return false;
+    if (isFailedEvaluation(latest)) return false;
+    if (!isPassedEvaluation(latest)) return false;
+    if (isExpiredEvaluation(latest)) return false;
+    return isServiceApprovedByEvaluation(latest, serviceId);
+  };
+
   return (
     <div className="space-y-4">
       <Label className="text-base">Select a service</Label>
@@ -29,9 +88,19 @@ export function ServiceStep({
           // Special handling for evaluation service
           const isEvaluation = service.id === "evaluation";
           const evaluationDisabled = false; // Evaluation is always available
+          const requiresEvaluation =
+            !isEvaluation &&
+            (config?.settings.evaluation.enabled ?? false) &&
+            !(config?.settings.evaluation.optional ?? false);
+          const hasPetContext = selectedPets.length > 0;
+          const isLockedByEvaluation =
+            requiresEvaluation && hasPetContext
+              ? selectedPets.some((p) => !isPetUnlockedForService(p, service.id))
+              : false;
+
           const isDisabled = isEvaluation
             ? evaluationDisabled
-            : config?.status.disabled;
+            : (config?.status.disabled ?? false) || isLockedByEvaluation;
           return (
             <div
               key={service.id}
@@ -52,6 +121,13 @@ export function ServiceStep({
                 }
               }}
             >
+              {isLockedByEvaluation && (
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge variant="destructive" className="text-xs">
+                    Locked
+                  </Badge>
+                </div>
+              )}
               {config?.bannerImage ? (
                 <div className="w-full h-32">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,7 +171,11 @@ export function ServiceStep({
                   </p>
                   {config && !isEvaluation && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {isDisabled ? config.status.reason : config.description}
+                      {isLockedByEvaluation
+                        ? "Evaluation required (expired, failed, or not approved)"
+                        : isDisabled
+                          ? config.status.reason
+                          : config.description}
                     </p>
                   )}
                   <p className="font-semibold text-primary">
