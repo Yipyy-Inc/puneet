@@ -7,13 +7,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Check, Clock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 
 interface EvaluationModalProps {
@@ -21,6 +21,51 @@ interface EvaluationModalProps {
   onClose: () => void;
   bookingId: number;
 }
+
+type EvaluationTargetService = "daycare" | "boarding";
+
+// NOTE: mock "existing rooms" (same idea as Daycare/Boarding details).
+// Later this should come from backend / facility settings.
+const DAYCARE_ROOMS = [
+  {
+    id: "playroom-a",
+    name: "Playroom A",
+    description: "Main playroom for active dogs",
+  },
+  {
+    id: "playroom-b",
+    name: "Playroom B",
+    description: "Smaller dogs and calm play",
+  },
+  {
+    id: "quiet-zone",
+    name: "Quiet Zone",
+    description: "Low-energy pets and seniors",
+  },
+  {
+    id: "outdoor-yard",
+    name: "Outdoor Yard",
+    description: "Outdoor supervised play area",
+  },
+];
+
+const BOARDING_TYPES = [
+  {
+    id: "standard",
+    name: "Standard Room",
+    description: "Comfortable indoor kennel with bedding",
+  },
+  {
+    id: "deluxe",
+    name: "Deluxe Suite",
+    description: "Spacious suite with play area and webcam",
+  },
+  {
+    id: "vip",
+    name: "VIP Suite",
+    description: "Luxury suite with private outdoor access",
+  },
+];
 
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -45,9 +90,22 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
   const [checkInTime, setCheckInTime] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [room, setRoom] = useState("");
+  const [targetService, setTargetService] = useState<EvaluationTargetService | "">("");
+  const [roomId, setRoomId] = useState("");
 
   const { hours, rules, evaluation } = useSettings();
+
+  const roomOptions = useMemo(() => {
+    if (targetService === "daycare") return DAYCARE_ROOMS;
+    if (targetService === "boarding") return BOARDING_TYPES;
+    return [];
+  }, [targetService]);
+
+  // reset room if target changes
+  const handleTargetChange = (value: string) => {
+    setTargetService(value as EvaluationTargetService);
+    setRoomId("");
+  };
 
   const selectedDates = useMemo(() => {
     if (!startDate) return [];
@@ -92,7 +150,8 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
       startDate,
       checkInTime,
       checkOutTime,
-      room,
+      targetService,
+      roomId,
       status: "pending",
     });
     onClose();
@@ -195,6 +254,19 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
         )}
 
         <div>
+          <label className="block text-sm font-medium mb-1">Target Service</label>
+          <Select value={targetService} onValueChange={handleTargetChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Daycare or Boarding" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daycare">Daycare</SelectItem>
+              <SelectItem value="boarding">Boarding</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-1">Assign Evaluator</label>
           <Select value={evaluator} onValueChange={setEvaluator}>
             <SelectTrigger className="w-full">
@@ -211,12 +283,51 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Room / Lodging</label>
-          <Input
-            type="text"
-            value={room}
-            onChange={(e) => setRoom(e.target.value)}
-          />
+          <label className="block text-sm font-medium mb-1">Room</label>
+          {!targetService ? (
+            <div className="bg-muted/50 border border-dashed rounded-lg p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Select target service first
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              {roomOptions.map((room) => {
+                const isSelected = roomId === room.id;
+                return (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => setRoomId(room.id)}
+                    className={cn(
+                      "text-left border-2 rounded-lg p-4 transition-all hover:border-primary/60",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {room.name}
+                        </p>
+                        {room.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {room.description}
+                          </p>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <span className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-4 w-4" />
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
@@ -225,7 +336,8 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
             onClick={handleSave}
             disabled={
               !evaluator ||
-              !room.trim() ||
+              !targetService ||
+              !roomId ||
               !startDate ||
               !checkInTime ||
               !checkOutTime
@@ -238,4 +350,3 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
     </Modal>
   );
 }
-``
