@@ -49,7 +49,10 @@ import {
   Users,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import type { NewBooking as BookingData } from "@/lib/types";
+import type { Evaluation, NewBooking as BookingData } from "@/lib/types";
+import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
+import { useFacilityRole } from "@/hooks/use-facility-role";
+import { hasPermission } from "@/lib/role-utils";
 
 interface Pet {
   id: number;
@@ -62,6 +65,7 @@ interface Pet {
   microchip: string;
   allergies: string;
   specialNeeds: string;
+  evaluations?: Evaluation[];
 }
 
 export default function PetDetailPage({
@@ -74,6 +78,15 @@ export default function PetDetailPage({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const { role, userId } = useFacilityRole();
+  const canUseEvaluationForm = hasPermission(
+    role,
+    "add_pet_notes",
+    userId ?? undefined,
+  );
+  const [activeEvaluation, setActiveEvaluation] = useState<Evaluation | null>(
+    null,
+  );
 
   const client = clients.find((c) => c.id === parseInt(id));
   const pet = client?.pets.find((p) => p.id === parseInt(petId));
@@ -328,7 +341,9 @@ export default function PetDetailPage({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList
+          className={`grid w-full ${canUseEvaluationForm ? "grid-cols-7" : "grid-cols-6"}`}
+        >
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="relationships">
             Relationships
@@ -342,6 +357,9 @@ export default function PetDetailPage({
           <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
           <TabsTrigger value="history">Stay History</TabsTrigger>
           <TabsTrigger value="reports">Report Cards</TabsTrigger>
+          {canUseEvaluationForm && (
+            <TabsTrigger value="evaluations">Evaluations</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Overview Tab */}
@@ -1039,6 +1057,68 @@ export default function PetDetailPage({
             </Card>
           )}
         </TabsContent>
+
+        {canUseEvaluationForm && (
+          <TabsContent value="evaluations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">
+                  Evaluations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(
+                  ("evaluations" in (pet as unknown as Record<string, unknown>)
+                    ? ((pet as unknown as { evaluations?: Evaluation[] })
+                        .evaluations ?? [])
+                    : []) as Evaluation[]
+                ).length > 0 ? (
+                  (
+                    ("evaluations" in (pet as unknown as Record<string, unknown>)
+                      ? ((pet as unknown as { evaluations?: Evaluation[] })
+                          .evaluations ?? [])
+                      : []) as Evaluation[]
+                  ).map((ev: Evaluation) => (
+                    <div
+                      key={ev.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{ev.status}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {ev.evaluatedAt
+                              ? formatDateTime(ev.evaluatedAt)
+                              : "Not completed"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          ID: {ev.id}
+                        </div>
+                      </div>
+                      <Button size="sm" onClick={() => setActiveEvaluation(ev)}>
+                        Complete Evaluation
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No evaluations found for this pet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {activeEvaluation && (
+              <StaffEvaluationFormModal
+                open={!!activeEvaluation}
+                onOpenChange={(open) => !open && setActiveEvaluation(null)}
+                evaluation={activeEvaluation}
+                petName={pet.name}
+              />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       <BookingModal

@@ -24,7 +24,12 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
-import { STEPS, DAYCARE_SUB_STEPS, BOARDING_SUB_STEPS } from "./constants";
+import {
+  STEPS,
+  DAYCARE_SUB_STEPS,
+  BOARDING_SUB_STEPS,
+  EVALUATION_SUB_STEPS,
+} from "./constants";
 import { services } from "@/data/services-pricing";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
@@ -119,7 +124,8 @@ export function BookingModal({
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
-      setServiceType(evaluationConfig.duration);
+      setServiceType("evaluation");
+      setEvaluationTargetService("");
     } else if (service === "daycare") {
       setServiceType("full_day");
     } else {
@@ -140,6 +146,9 @@ export function BookingModal({
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("08:00");
   const [checkOutTime, setCheckOutTime] = useState("17:00");
+  const [evaluationEvaluator, setEvaluationEvaluator] = useState("");
+  const [evaluationSpace, setEvaluationSpace] = useState("");
+  const [evaluationTargetService, setEvaluationTargetService] = useState("");
 
   // Daycare specific - multi-date selection
   const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
@@ -177,6 +186,7 @@ export function BookingModal({
   const currentSubSteps = useMemo(() => {
     if (selectedService === "daycare") return DAYCARE_SUB_STEPS;
     if (selectedService === "boarding") return BOARDING_SUB_STEPS;
+    if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
     return [];
   }, [selectedService]);
 
@@ -211,6 +221,18 @@ export function BookingModal({
             return false;
         }
       }
+      if (selectedService === "evaluation") {
+        switch (stepIndex) {
+          case 0:
+            return !!startDate && !!checkInTime && !!checkOutTime;
+          case 1:
+            return !!evaluationTargetService && !!evaluationEvaluator;
+          case 2:
+            return !!evaluationSpace.trim();
+          default:
+            return false;
+        }
+      }
       return true;
     },
     [
@@ -220,6 +242,12 @@ export function BookingModal({
       selectedPetIds,
       boardingRangeStart,
       boardingRangeEnd,
+      startDate,
+      checkInTime,
+      checkOutTime,
+      evaluationTargetService,
+      evaluationEvaluator,
+      evaluationSpace,
     ],
   );
 
@@ -309,12 +337,12 @@ export function BookingModal({
         }
         return true;
       case "details":
-        if (selectedService === "daycare" || selectedService === "boarding") {
+        if (
+          selectedService === "daycare" ||
+          selectedService === "boarding" ||
+          selectedService === "evaluation"
+        ) {
           return isSubStepComplete(currentSubStep);
-        }
-        // For evaluation service
-        if (selectedService === "evaluation") {
-          return !!startDate && !!checkInTime;
         }
         // For other services
         return !!startDate;
@@ -343,7 +371,9 @@ export function BookingModal({
     // Handle sub-steps for daycare/boarding on details step
     if (
       currentStepId === "details" &&
-      (selectedService === "daycare" || selectedService === "boarding")
+      (selectedService === "daycare" ||
+        selectedService === "boarding" ||
+        selectedService === "evaluation")
     ) {
       if (currentSubStep < currentSubSteps.length - 1) {
         setCurrentSubStep(currentSubStep + 1);
@@ -362,7 +392,9 @@ export function BookingModal({
     // Handle sub-steps for daycare/boarding on details step
     if (
       currentStepId === "details" &&
-      (selectedService === "daycare" || selectedService === "boarding")
+      (selectedService === "daycare" ||
+        selectedService === "boarding" ||
+        selectedService === "evaluation")
     ) {
       if (currentSubStep > 0) {
         setCurrentSubStep(currentSubStep - 1);
@@ -374,7 +406,9 @@ export function BookingModal({
       // Reset to last sub-step if going back to details with daycare/boarding
       if (
         prevStepId === "details" &&
-        (selectedService === "daycare" || selectedService === "boarding")
+        (selectedService === "daycare" ||
+          selectedService === "boarding" ||
+          selectedService === "evaluation")
       ) {
         setCurrentSubStep(currentSubSteps.length - 1);
       } else {
@@ -445,7 +479,7 @@ export function BookingModal({
       service: selectedService,
       serviceType:
         selectedService === "evaluation"
-          ? evaluationConfig.duration
+          ? evaluationTargetService
           : serviceType,
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
@@ -467,6 +501,10 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
+      evaluationEvaluator:
+        selectedService === "evaluation" ? evaluationEvaluator : undefined,
+      evaluationSpace:
+        selectedService === "evaluation" ? evaluationSpace.trim() : undefined,
       status: "pending",
       basePrice: calculatePrice.basePrice,
       discount: 0,
@@ -511,6 +549,9 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
+    setEvaluationEvaluator("");
+    setEvaluationSpace("");
+    setEvaluationTargetService("");
 
     setKennel("");
     setRoomAssignments([]);
@@ -996,7 +1037,8 @@ export function BookingModal({
                     step.id === "details" &&
                     isActive &&
                     (selectedService === "daycare" ||
-                      selectedService === "boarding");
+                      selectedService === "boarding" ||
+                      selectedService === "evaluation");
 
                   return (
                     <div key={step.id}>
@@ -1119,7 +1161,8 @@ export function BookingModal({
                 </h2>
                 {displayedSteps[currentStep]?.id === "details" &&
                   (selectedService === "daycare" ||
-                    selectedService === "boarding") && (
+                    selectedService === "boarding" ||
+                    selectedService === "evaluation") && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {currentSubSteps[currentSubStep]?.title}
                     </p>
@@ -1175,6 +1218,13 @@ export function BookingModal({
                     setCheckInTime={setCheckInTime}
                     checkOutTime={checkOutTime}
                     setCheckOutTime={setCheckOutTime}
+                    evaluationEvaluator={evaluationEvaluator}
+                    setEvaluationEvaluator={setEvaluationEvaluator}
+                    evaluationSpace={evaluationSpace}
+                    setEvaluationSpace={setEvaluationSpace}
+                    evaluationTargetService={evaluationTargetService}
+                    setEvaluationTargetService={setEvaluationTargetService}
+                    evaluatorOptions={staffOptions}
                     serviceType={serviceType}
                     setServiceType={setServiceType}
                     feedingSchedule={feedingSchedule}
@@ -1194,6 +1244,9 @@ export function BookingModal({
                     selectedPets={selectedPets}
                     selectedService={selectedService}
                     serviceType={serviceType}
+                    evaluationTargetService={evaluationTargetService}
+                    evaluationEvaluator={evaluationEvaluator}
+                    evaluationSpace={evaluationSpace}
                     startDate={startDate}
                     endDate={endDate}
                     checkInTime={checkInTime}

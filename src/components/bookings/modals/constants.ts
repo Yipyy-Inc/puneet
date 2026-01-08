@@ -111,3 +111,9 @@ export const BOARDING_SUB_STEPS = [
   { id: 2, title: "Add-ons", description: "Add-on services" },
   { id: 3, title: "Feeding & Medication", description: "Care instructions" },
 ];
+
+export const EVALUATION_SUB_STEPS = [
+  { id: 0, title: "Schedule", description: "Select date and time slot" },
+  { id: 1, title: "Staff", description: "Assign evaluator" },
+  { id: 2, title: "Room", description: "Choose room" },
+];
