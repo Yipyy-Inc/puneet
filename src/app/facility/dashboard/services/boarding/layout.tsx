@@ -16,6 +16,7 @@ import {
   DollarSign,
   ClipboardList,
   CreditCard,
+  LayoutGrid,
   Settings,
 } from "lucide-react";
 
@@ -44,6 +45,11 @@ const tabs = [
     name: "Kennel Cards",
     href: "/facility/dashboard/services/boarding/kennel-cards",
     icon: CreditCard,
+  },
+  {
+    name: "Operations",
+    href: "/facility/dashboard/services/boarding/ops",
+    icon: LayoutGrid,
   },
   {
     name: "Settings",
