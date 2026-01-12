@@ -395,37 +395,39 @@ export function BoardingRequestDialog({
                   form={workingPreCheck ?? request.preCheck}
                   onChange={(next) => setWorkingPreCheck(next)}
                   onApprove={() => {
+                    const auditEvent: PreCheckAuditEvent = {
+                      id: `ae-${Date.now()}`,
+                      at: new Date().toISOString(),
+                      actorType: "staff",
+                      actorName: "Staff User",
+                      action: "Approved PreCheck",
+                    };
                     const next = {
                       ...(workingPreCheck ?? request.preCheck),
                       status: "approved" as const,
                       approvedAt: new Date().toISOString(),
                       audit: [
                         ...(workingPreCheck ?? request.preCheck).audit,
-                        {
-                          id: `ae-${Date.now()}`,
-                          at: new Date().toISOString(),
-                          actorType: "staff",
-                          actorName: "Staff User",
-                          action: "Approved PreCheck",
-                        },
+                        auditEvent,
                       ],
                     };
                     setWorkingPreCheck(next);
                   }}
                   onRequestCorrections={() => {
+                    const auditEvent: PreCheckAuditEvent = {
+                      id: `ae-${Date.now()}`,
+                      at: new Date().toISOString(),
+                      actorType: "staff",
+                      actorName: "Staff User",
+                      action: "Requested corrections",
+                      details: "Customer needs to update PreCheck fields.",
+                    };
                     const next = {
                       ...(workingPreCheck ?? request.preCheck),
                       status: "corrections-requested" as const,
                       audit: [
                         ...(workingPreCheck ?? request.preCheck).audit,
-                        {
-                          id: `ae-${Date.now()}`,
-                          at: new Date().toISOString(),
-                          actorType: "staff",
-                          actorName: "Staff User",
-                          action: "Requested corrections",
-                          details: "Customer needs to update PreCheck fields.",
-                        },
+                        auditEvent,
                       ],
                     };
                     setWorkingPreCheck(next);
