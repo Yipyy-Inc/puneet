@@ -262,8 +262,8 @@ export function BoardingDetails({
             <div>
               <h3 className="text-base font-semibold">Select Room Type</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Drag and drop pets into room types or double-click pets and
-                click on rooms
+                Select a pet, then click a room type — or drag & drop pets into
+                room types
               </p>
             </div>
 
@@ -292,6 +292,11 @@ export function BoardingDetails({
                           draggable
                           onDragStart={() => setDraggedPet(pet)}
                           onDragEnd={() => setDraggedPet(null)}
+                          onClick={() =>
+                            setSelectedPet(
+                              selectedPet?.id === pet.id ? null : pet,
+                            )
+                          }
                           onDoubleClick={() =>
                             setSelectedPet(
                               selectedPet?.id === pet.id ? null : pet,
@@ -384,16 +389,25 @@ export function BoardingDetails({
                           }
                         }}
                         onClick={() => {
+                          const unassigned = selectedPets.filter(
+                            (pet) =>
+                              !roomAssignments.find((a) => a.petId === pet.id),
+                          );
+                          const petToAssign =
+                            selectedPet ??
+                            (selectedPets.length === 1 ? selectedPets[0] : null) ??
+                            (unassigned.length === 1 ? unassigned[0] : null);
+
                           if (
-                            selectedPet &&
+                            petToAssign &&
                             availableRooms > assignedPets.length &&
-                            type.allowedPetTypes.includes(selectedPet.type)
+                            type.allowedPetTypes.includes(petToAssign.type)
                           ) {
                             setRoomAssignments([
                               ...roomAssignments.filter(
-                                (a) => a.petId !== selectedPet.id,
+                                (a) => a.petId !== petToAssign.id,
                               ),
-                              { petId: selectedPet.id, roomId: type.id },
+                              { petId: petToAssign.id, roomId: type.id },
                             ]);
                             setSelectedPet(null);
                             // Set serviceType to first assigned room type
