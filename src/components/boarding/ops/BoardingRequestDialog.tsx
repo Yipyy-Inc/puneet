@@ -34,7 +34,11 @@ import type { Evaluation, Pet } from "@/lib/types";
 function getLatestEvaluation(pet?: Pet): Evaluation | null {
   const evals = pet?.evaluations ?? [];
   if (!evals.length) return null;
-  return [...evals].sort((a, b) => (a.evaluatedAt < b.evaluatedAt ? 1 : -1))[0];
+  const toTime = (e: Evaluation) => {
+    const t = e.evaluatedAt ? Date.parse(e.evaluatedAt) : Number.NaN;
+    return Number.isFinite(t) ? t : 0;
+  };
+  return [...evals].sort((a, b) => toTime(b) - toTime(a))[0];
 }
 
 function hasValidVaccination(petId: number) {
