@@ -193,7 +193,7 @@ export function PreCheckReviewPanel({
             </Button>
             <Button
               type="button"
-              variant="success"
+              variant="default"
               className="sm:flex-1"
               onClick={onApprove}
             >
