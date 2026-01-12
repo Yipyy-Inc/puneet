@@ -155,7 +155,7 @@ export function BoardingRequestDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[98vw] max-w-none sm:max-w-none max-h-[94vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3">
             <span className="truncate">Boarding Request • {request?.id}</span>
