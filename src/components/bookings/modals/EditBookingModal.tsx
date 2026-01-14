@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -158,38 +159,46 @@ export function EditBookingModal({
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
+                <Label>Start Date</Label>
+                <DatePicker
                   value={formData.startDate}
-                  onChange={(e) => {
-                    setFormData({ ...formData, startDate: e.target.value });
-                    if (errors.startDate) {
-                      setErrors({ ...errors, startDate: "" });
-                    }
+                  onValueChange={(next) => {
+                    setFormData((prev) => {
+                      if (!next) return { ...prev, startDate: "", endDate: "" };
+                      return {
+                        ...prev,
+                        startDate: next,
+                        endDate:
+                          prev.endDate && prev.endDate < next ? next : prev.endDate,
+                      };
+                    });
+                    setErrors((prev) => ({
+                      ...prev,
+                      startDate: "",
+                      endDate: "",
+                    }));
                   }}
+                  placeholder="Select start date"
                   className={errors.startDate ? "border-destructive" : ""}
-                  required
                 />
                 {errors.startDate && (
                   <p className="text-sm text-destructive">{errors.startDate}</p>
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
+                <Label>End Date</Label>
+                <DatePicker
                   value={formData.endDate}
-                  onChange={(e) => {
-                    setFormData({ ...formData, endDate: e.target.value });
-                    if (errors.endDate) {
-                      setErrors({ ...errors, endDate: "" });
-                    }
+                  min={formData.startDate || undefined}
+                  disabled={!formData.startDate}
+                  onValueChange={(next) => {
+                    // Guard: never allow end date before start date
+                    if (formData.startDate && next && next < formData.startDate) return;
+                    setFormData((prev) => ({ ...prev, endDate: next }));
+                    setErrors((prev) => ({ ...prev, endDate: "" }));
                   }}
+                  placeholder="Select end date"
                   className={errors.endDate ? "border-destructive" : ""}
-                  required
                 />
                 {errors.endDate && (
                   <p className="text-sm text-destructive">{errors.endDate}</p>

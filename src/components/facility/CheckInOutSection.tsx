@@ -10,6 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
   LogIn,
   LogOut,
   Search,
@@ -21,7 +31,6 @@ import {
   Filter,
   AlertTriangle,
   CheckCircle,
-  Eye,
   CreditCard,
   MapPin,
   Mail,
@@ -624,89 +633,71 @@ export function CheckInOutSection() {
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">
-        {/* Header with Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Compact header: title + search + dropdown filters */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <PawPrint className="h-5 w-5 text-primary" />
             <h3 className="text-lg font-semibold">Daycare & Boarding</h3>
           </div>
 
-          <div className="flex flex-col items-start gap-3">
-            {/* Service Filter Buttons */}
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <div className="flex rounded-lg border p-1">
-                <Button
-                  size="sm"
-                  variant={serviceFilter === "all" ? "default" : "ghost"}
-                  onClick={() => setServiceFilter("all")}
-                  className="h-7 px-3"
-                >
-                  All
-                </Button>
-                <Button
-                  size="sm"
-                  variant={serviceFilter === "daycare" ? "default" : "ghost"}
-                  onClick={() => setServiceFilter("daycare")}
-                  className="h-7 px-3"
-                >
-                  <Sun className="h-3 w-3 mr-1" />
-                  Daycare
-                </Button>
-                <Button
-                  size="sm"
-                  variant={serviceFilter === "boarding" ? "default" : "ghost"}
-                  onClick={() => setServiceFilter("boarding")}
-                  className="h-7 px-3"
-                >
-                  <Bed className="h-3 w-3 mr-1" />
-                  Boarding
-                </Button>
-              </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-[340px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by pet name, owner, breed, or phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
 
-            {/* Section Visibility Toggle */}
-            <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <div className="flex rounded-lg border p-1 gap-1">
-                <Button
-                  size="sm"
-                  variant={showCheckedIn ? "default" : "ghost"}
-                  onClick={() => setShowCheckedIn(!showCheckedIn)}
-                  className="h-7 px-3"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Service</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={serviceFilter}
+                  onValueChange={(v) => setServiceFilter(v as ServiceFilter)}
+                >
+                  <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="daycare">
+                    Daycare
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="boarding">
+                    Boarding
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Show sections</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  checked={showCheckedIn}
+                  onCheckedChange={(v) => setShowCheckedIn(!!v)}
                 >
                   Checked In
-                </Button>
-                <Button
-                  size="sm"
-                  variant={showScheduled ? "default" : "ghost"}
-                  onClick={() => setShowScheduled(!showScheduled)}
-                  className="h-7 px-3"
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showScheduled}
+                  onCheckedChange={(v) => setShowScheduled(!!v)}
                 >
                   Scheduled
-                </Button>
-                <Button
-                  size="sm"
-                  variant={showCheckedOut ? "default" : "ghost"}
-                  onClick={() => setShowCheckedOut(!showCheckedOut)}
-                  className="h-7 px-3"
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showCheckedOut}
+                  onCheckedChange={(v) => setShowCheckedOut(!!v)}
                 >
                   Checked Out
-                </Button>
-              </div>
-            </div>
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by pet name, owner, breed, or phone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
         </div>
 
         <div

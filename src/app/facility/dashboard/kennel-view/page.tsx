@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -1444,19 +1445,32 @@ export default function KennelViewPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Check-In Date</Label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={formCheckIn}
-                        onChange={(e) => setFormCheckIn(e.target.value)}
+                        onValueChange={(next) => {
+                          setFormCheckIn(next);
+                          if (!next) {
+                            setFormCheckOut("");
+                            return;
+                          }
+                          if (formCheckOut && formCheckOut < next) {
+                            setFormCheckOut(next);
+                          }
+                        }}
+                        placeholder="Select check-in date"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Expected Check-Out</Label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={formCheckOut}
-                        onChange={(e) => setFormCheckOut(e.target.value)}
-                        min={formCheckIn}
+                        min={formCheckIn || undefined}
+                        onValueChange={(next) => {
+                          if (formCheckIn && next && next < formCheckIn) return;
+                          setFormCheckOut(next);
+                        }}
+                        placeholder="Select check-out date"
+                        disabled={!formCheckIn}
                       />
                     </div>
                   </div>
