@@ -30,6 +30,7 @@ import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { RefundBookingModal } from "@/components/bookings/modals/RefundBookingModal";
+import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import {
   Download,
   Calendar,
@@ -43,6 +44,7 @@ import {
   CalendarDays,
   CalendarX,
   CheckSquare,
+  Pencil,
 } from "lucide-react";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
@@ -168,6 +170,7 @@ export default function FacilityBookingsPage() {
   );
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(
     null,
@@ -490,6 +493,14 @@ export default function FacilityBookingsPage() {
     );
   };
 
+  const handleSaveBooking = (updatedBooking: Booking) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b)),
+    );
+    setEditingBooking(null);
+    alert(`Booking #${updatedBooking.id} has been updated.`);
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -748,6 +759,14 @@ export default function FacilityBookingsPage() {
                         <Eye className="mr-2 h-4 w-4" />
                         {"View Details"}
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setEditingBooking(booking as unknown as Booking)
+                        }
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {"Edit Booking"}
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuLabel>{"Status"}</DropdownMenuLabel>
                       {booking.status === "pending" && (
@@ -858,6 +877,16 @@ export default function FacilityBookingsPage() {
           open={!!refundingBooking}
           onOpenChange={(open) => !open && setRefundingBooking(null)}
           onConfirm={handleProcessRefund}
+        />
+      )}
+
+      {/* Edit Booking Modal */}
+      {editingBooking && (
+        <EditBookingModal
+          booking={editingBooking}
+          open={!!editingBooking}
+          onOpenChange={(open) => !open && setEditingBooking(null)}
+          onSave={handleSaveBooking}
         />
       )}
 
