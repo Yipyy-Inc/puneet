@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 export interface TimeRangeSliderProps {
   minTime?: string; // HH:mm format, default "06:00"
@@ -27,40 +30,33 @@ export function TimeRangeSlider({
   step = 30,
   className,
 }: TimeRangeSliderProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState<"start" | "end" | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const isValidTime = (time: string) => /^\d{2}:\d{2}$/.test(time);
 
   // Convert time string to minutes since midnight
   const timeToMinutes = (time: string): number => {
+    if (!isValidTime(time)) return 0;
     const [hours, minutes] = time.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
   // Convert minutes to time string
   const minutesToTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
+    const safe = Math.max(0, Math.min(24 * 60 - 1, Math.round(minutes)));
+    const hours = Math.floor(safe / 60);
+    const mins = safe % 60;
     return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
   };
 
-  // Snap to nearest step
-  const snapToStep = useCallback(
-    (minutes: number): number => {
-      return Math.round(minutes / step) * step;
-    },
-    [step],
-  );
+  // Snap/clamp helpers
+  const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+  const snap = (minutes: number) => Math.round(minutes / step) * step;
 
   const minMinutes = timeToMinutes(minTime);
   const maxMinutes = timeToMinutes(maxTime);
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
-  const totalMinutes = maxMinutes - minMinutes;
-
-  // Calculate positions as percentages
-  const startPercent = ((startMinutes - minMinutes) / totalMinutes) * 100;
-  const endPercent = ((endMinutes - minMinutes) / totalMinutes) * 100;
 
   // Calculate duration
   const durationMinutes = endMinutes - startMinutes;
@@ -71,170 +67,83 @@ export function TimeRangeSlider({
   // Determine if it's half-day or full-day
   const daycareType = durationMinutes / 60 <= 5 ? "Half Day" : "Full Day";
 
-  const handleMouseDown = (handle: "start" | "end") => {
-    setIsDragging(handle);
-  };
+  const enforceAndEmit = (nextStartMinutes: number, nextEndMinutes: number) => {
+    // Keep within bounds and enforce at least `step` gap
+    const minEnd = minMinutes + step;
+    const maxStart = maxMinutes - step;
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent | TouchEvent) => {
-      if (!isDragging || !trackRef.current) return;
+    let s = snap(clamp(nextStartMinutes, minMinutes, maxStart));
+    let e = snap(clamp(nextEndMinutes, minEnd, maxMinutes));
 
-      const track = trackRef.current;
-      const rect = track.getBoundingClientRect();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const x = clientX - rect.left;
-      const percent = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      const minutes = minMinutes + (percent / 100) * totalMinutes;
-      const snappedMinutes = snapToStep(minutes);
-
-      if (isDragging === "start") {
-        // Ensure start doesn't go past end (minus minimum gap)
-        const maxStart = endMinutes - step;
-        const newStart = Math.min(snappedMinutes, maxStart);
-        if (newStart >= minMinutes && newStart <= maxMinutes) {
-          onTimeChange(minutesToTime(newStart), endTime);
-        }
+    if (e - s < step) {
+      // Prefer moving the end forward; if impossible, move start backward.
+      const candidateEnd = s + step;
+      if (candidateEnd <= maxMinutes) {
+        e = candidateEnd;
       } else {
-        // Ensure end doesn't go before start (plus minimum gap)
-        const minEnd = startMinutes + step;
-        const newEnd = Math.max(snappedMinutes, minEnd);
-        if (newEnd >= minMinutes && newEnd <= maxMinutes) {
-          onTimeChange(startTime, minutesToTime(newEnd));
-        }
+        s = Math.max(minMinutes, e - step);
       }
-    },
-    [
-      isDragging,
-      endTime,
-      startTime,
-      minMinutes,
-      maxMinutes,
-      totalMinutes,
-      step,
-      onTimeChange,
-      endMinutes,
-      startMinutes,
-      snapToStep,
-    ],
-  );
-
-  const handleMouseUp = () => {
-    setIsDragging(null);
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      const handleMove = (e: MouseEvent | TouchEvent) => handleMouseMove(e);
-      const handleUp = () => handleMouseUp();
-
-      window.addEventListener("mousemove", handleMove);
-      window.addEventListener("mouseup", handleUp);
-      window.addEventListener("touchmove", handleMove);
-      window.addEventListener("touchend", handleUp);
-
-      return () => {
-        window.removeEventListener("mousemove", handleMove);
-        window.removeEventListener("mouseup", handleUp);
-        window.removeEventListener("touchmove", handleMove);
-        window.removeEventListener("touchend", handleUp);
-      };
     }
-  }, [isDragging, handleMouseMove]);
 
-  // Generate time markers (every 2 hours)
-  const markers: string[] = [];
-  for (let m = minMinutes; m <= maxMinutes; m += 120) {
-    markers.push(minutesToTime(m));
-  }
+    onTimeChange(minutesToTime(s), minutesToTime(e));
+  };
 
   if (!isExpanded) {
-    // Minimal view when not editing
     return (
-      <div
-        className={cn(
-          "flex items-center justify-between text-xs cursor-pointer hover:bg-muted/30 p-1.5 rounded transition-colors select-none",
-          className,
-        )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={cn("w-full justify-between font-normal", className)}
         onClick={() => setIsExpanded(true)}
       >
         <span className="text-muted-foreground">
           {startTime} - {endTime}
         </span>
-        <span className="font-medium text-primary">{daycareType}</span>
-      </div>
+        <Badge variant="secondary">{daycareType}</Badge>
+      </Button>
     );
   }
 
   return (
-    <div className={cn("space-y-4 select-none", className)}>
-      {/* Time Display */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium">Check-in Time</p>
-          <p className="text-lg font-semibold">{startTime}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">Duration</p>
-          <p className="text-sm font-medium">{durationText}</p>
-          <p className="text-xs text-primary font-semibold">{daycareType}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-medium">Check-out Time</p>
-          <p className="text-lg font-semibold">{endTime}</p>
-        </div>
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs text-muted-foreground">{durationText}</div>
+        <Badge variant="secondary">{daycareType}</Badge>
       </div>
 
-      {/* Slider Track */}
-      <div className="px-4 pb-6">
-        <div
-          ref={trackRef}
-          className="relative h-2 bg-muted rounded-full cursor-pointer"
-        >
-          {/* Selected Range */}
-          <div
-            className="absolute h-full bg-primary rounded-full"
-            style={{
-              left: `${startPercent}%`,
-              width: `${endPercent - startPercent}%`,
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Check-in</Label>
+          <Input
+            type="time"
+            value={startTime}
+            min={minTime}
+            max={minutesToTime(endMinutes - step)}
+            step={step * 60}
+            className="h-9"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!isValidTime(v)) return;
+              enforceAndEmit(timeToMinutes(v), endMinutes);
             }}
           />
-
-          {/* Start Handle */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-primary border-2 border-background rounded-full cursor-grab active:cursor-grabbing shadow-lg hover:scale-110 transition-transform z-10"
-            style={{ left: `${startPercent}%` }}
-            onMouseDown={() => handleMouseDown("start")}
-            onTouchStart={() => handleMouseDown("start")}
-          />
-
-          {/* End Handle */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-primary border-2 border-background rounded-full cursor-grab active:cursor-grabbing shadow-lg hover:scale-110 transition-transform z-10"
-            style={{ left: `${endPercent}%` }}
-            onMouseDown={() => handleMouseDown("end")}
-            onTouchStart={() => handleMouseDown("end")}
-          />
         </div>
-
-        {/* Time Markers */}
-        <div className="relative mt-2 overflow-visible">
-          {markers.map((marker, index) => {
-            const markerMinutes = timeToMinutes(marker);
-            const markerPercent =
-              ((markerMinutes - minMinutes) / totalMinutes) * 100;
-            return (
-              <div
-                key={index}
-                className="absolute -translate-x-1/2"
-                style={{ left: `${markerPercent}%` }}
-              >
-                <div className="w-px h-1.5 bg-muted-foreground/30 mx-auto" />
-                <p className="text-[9px] text-muted-foreground mt-0.5 whitespace-nowrap">
-                  {marker}
-                </p>
-              </div>
-            );
-          })}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Check-out</Label>
+          <Input
+            type="time"
+            value={endTime}
+            min={minutesToTime(startMinutes + step)}
+            max={maxTime}
+            step={step * 60}
+            className="h-9"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!isValidTime(v)) return;
+              enforceAndEmit(startMinutes, timeToMinutes(v));
+            }}
+          />
         </div>
       </div>
 
@@ -249,19 +158,21 @@ export function TimeRangeSlider({
             setIsExpanded(false);
           }}
         >
-          Apply
+          Done
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            onApplyToAll?.();
-            setIsExpanded(false);
-          }}
-        >
-          Apply to All
-        </Button>
+        {onApplyToAll && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              onApplyToAll?.();
+              setIsExpanded(false);
+            }}
+          >
+            Apply to All
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { TimeRangeSlider } from "@/components/ui/time-range-slider";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   ChevronLeft,
   ChevronRight,
@@ -79,6 +80,9 @@ export interface DateSelectionCalendarProps {
 
   // Styling
   className?: string;
+
+  // Optional: set the initial visible month (useful for compact date pickers)
+  initialMonth?: Date;
 }
 
 const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -150,8 +154,9 @@ export function DateSelectionCalendar({
   disabledDates = [],
   unavailableDates = [],
   className,
+  initialMonth,
 }: DateSelectionCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => initialMonth ?? new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
 
   // Compute effective default times
@@ -577,8 +582,12 @@ export function DateSelectionCalendar({
         </div>
       )}
 
-      {/* Calendar Grid and Time Selection Side by Side */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Calendar Grid and (optional) Time Selection */}
+      <div
+        className={cn(
+          showTimeSelection ? "grid grid-cols-2 gap-4" : "grid grid-cols-1",
+        )}
+      >
         {/* Calendar Grid Column */}
         <div className="relative">
           {mode !== "recurring" && (
@@ -655,13 +664,13 @@ export function DateSelectionCalendar({
         </div>
 
         {/* Time Selection Column */}
-        <div className="border rounded-lg p-4 min-h-[200px]">
-          {showTimeSelection &&
-          ((mode === "single" && selectedDates.length > 0) ||
-            (mode === "multi" && selectedDates.length > 0) ||
-            (mode === "range" && rangeStart && rangeEnd)) ? (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Check-in/out Times</Label>
+        {showTimeSelection && (
+          <div className="border rounded-lg p-4 min-h-[200px]">
+            {((mode === "single" && selectedDates.length > 0) ||
+              (mode === "multi" && selectedDates.length > 0) ||
+              (mode === "range" && rangeStart && rangeEnd)) ? (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Check-in/out Times</Label>
 
               {mode === "range" && dateTimes.length > 0 && (
                 <div className="p-2 border rounded-lg space-y-1.5">
@@ -670,19 +679,19 @@ export function DateSelectionCalendar({
                       <Label className="text-[10px] text-muted-foreground">
                         Check-in Time
                       </Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={
                           dateTimes[0]?.checkInTime ||
                           effectiveDefaultCheckInTime
                         }
-                        onChange={(e) => {
+                        onValueChange={(next) => {
                           const newTimes = dateTimes.map((dt) => ({
                             ...dt,
-                            checkInTime: e.target.value,
+                            checkInTime: next,
                           }));
                           onDateTimesChange?.(newTimes);
                         }}
+                        stepMinutes={30}
                         min={
                           facilityHours && rangeStart
                             ? getFacilityHoursForDate(rangeStart)?.openTime ||
@@ -695,26 +704,25 @@ export function DateSelectionCalendar({
                               "22:00"
                             : "22:00"
                         }
-                        className="h-7 text-xs"
                       />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] text-muted-foreground">
                         Check-out Time
                       </Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={
                           dateTimes[0]?.checkOutTime ||
                           effectiveDefaultCheckOutTime
                         }
-                        onChange={(e) => {
+                        onValueChange={(next) => {
                           const newTimes = dateTimes.map((dt) => ({
                             ...dt,
-                            checkOutTime: e.target.value,
+                            checkOutTime: next,
                           }));
                           onDateTimesChange?.(newTimes);
                         }}
+                        stepMinutes={30}
                         min={
                           facilityHours && rangeStart
                             ? getFacilityHoursForDate(rangeStart)?.openTime ||
@@ -727,7 +735,6 @@ export function DateSelectionCalendar({
                               "22:00"
                             : "22:00"
                         }
-                        className="h-7 text-xs"
                       />
                     </div>
                   </div>
@@ -847,13 +854,14 @@ export function DateSelectionCalendar({
                 </div>
               )}
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground">
-              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Select dates to set check-in/out times</p>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Select dates to set check-in/out times</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
