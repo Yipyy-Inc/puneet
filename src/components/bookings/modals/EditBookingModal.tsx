@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,26 @@ import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Booking } from "@/lib/types";
 import { clients } from "@/data/clients";
+
+const TIME_STEP_MINUTES = 30;
+
+function isValidTime(value: string) {
+  return /^\d{2}:\d{2}$/.test(value);
+}
+
+function timeToMinutes(value: string) {
+  if (!isValidTime(value)) return null;
+  const [h, m] = value.split(":").map((n) => Number(n));
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function minutesToTime(minutes: number) {
+  const safe = Math.max(0, Math.min(24 * 60 - 1, Math.round(minutes)));
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 interface EditBookingModalProps {
   booking: Booking;
@@ -56,6 +77,31 @@ export function EditBookingModal({
   const client = clients.find((c) => c.id === booking.clientId);
   const pet = client?.pets.find((p) => p.id === booking.petId);
 
+  const isSameDay =
+    !!formData.startDate &&
+    !!formData.endDate &&
+    formData.startDate === formData.endDate;
+  // For daycare/grooming (typically same-day), we enforce checkout > checkin.
+  // For boarding across multiple days, times are "time-of-day" on different dates, so ordering isn't required.
+  const requiresCheckoutAfterCheckin = formData.service !== "boarding" || isSameDay;
+
+  const checkInMinutes = timeToMinutes(formData.checkInTime);
+  const checkOutMinutes = timeToMinutes(formData.checkOutTime);
+  const minCheckOutTime =
+    requiresCheckoutAfterCheckin && checkInMinutes !== null
+      ? minutesToTime(checkInMinutes + TIME_STEP_MINUTES)
+      : undefined;
+  const maxCheckInTime =
+    requiresCheckoutAfterCheckin && checkOutMinutes !== null
+      ? minutesToTime(checkOutMinutes - TIME_STEP_MINUTES)
+      : undefined;
+  const sameDayDurationMinutes =
+    requiresCheckoutAfterCheckin &&
+    checkInMinutes !== null &&
+    checkOutMinutes !== null
+      ? checkOutMinutes - checkInMinutes
+      : null;
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -80,6 +126,28 @@ export function EditBookingModal({
     if (formData.discount > 0 && !formData.discountReason.trim()) {
       newErrors.discountReason =
         "Discount reason is required when discount is applied";
+    }
+
+    // Times
+    if (formData.checkInTime && !formData.checkOutTime) {
+      newErrors.checkOutTime = "Check-out time is required";
+    }
+    if (formData.checkOutTime && !formData.checkInTime) {
+      newErrors.checkInTime = "Check-in time is required";
+    }
+    if (formData.checkInTime && !isValidTime(formData.checkInTime)) {
+      newErrors.checkInTime = "Invalid time format";
+    }
+    if (formData.checkOutTime && !isValidTime(formData.checkOutTime)) {
+      newErrors.checkOutTime = "Invalid time format";
+    }
+    if (
+      requiresCheckoutAfterCheckin &&
+      checkInMinutes !== null &&
+      checkOutMinutes !== null &&
+      checkOutMinutes - checkInMinutes < TIME_STEP_MINUTES
+    ) {
+      newErrors.checkOutTime = `Check-out must be at least ${TIME_STEP_MINUTES} minutes after check-in`;
     }
 
     setErrors(newErrors);
@@ -210,25 +278,74 @@ export function EditBookingModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="checkInTime">Check-in Time</Label>
-                <Input
-                  id="checkInTime"
-                  type="time"
-                  value={formData.checkInTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, checkInTime: e.target.value })
-                  }
+                <TimePicker
+                  value={formData.checkInTime || undefined}
+                  onValueChange={(nextCheckIn) => {
+                    setFormData((prev) => {
+                      if (!requiresCheckoutAfterCheckin) {
+                        return { ...prev, checkInTime: nextCheckIn };
+                      }
+                      const nextCheckInMinutes = timeToMinutes(nextCheckIn);
+                      const prevCheckOutMinutes = timeToMinutes(prev.checkOutTime);
+
+                      // If checkout is missing/invalid or now before checkin, auto-bump it by step.
+                      const shouldAutoBump =
+                        nextCheckInMinutes !== null &&
+                        (prevCheckOutMinutes === null ||
+                          prevCheckOutMinutes - nextCheckInMinutes < TIME_STEP_MINUTES);
+
+                      return {
+                        ...prev,
+                        checkInTime: nextCheckIn,
+                        checkOutTime:
+                          shouldAutoBump && nextCheckInMinutes !== null
+                            ? minutesToTime(nextCheckInMinutes + TIME_STEP_MINUTES)
+                            : prev.checkOutTime,
+                      };
+                    });
+                    if (errors.checkInTime || errors.checkOutTime) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        checkInTime: "",
+                        checkOutTime: "",
+                      }));
+                    }
+                  }}
+                  stepMinutes={TIME_STEP_MINUTES}
+                  max={maxCheckInTime}
+                  className={errors.checkInTime ? "border-destructive" : ""}
                 />
+                {errors.checkInTime && (
+                  <p className="text-sm text-destructive">{errors.checkInTime}</p>
+                )}
+                {requiresCheckoutAfterCheckin && (
+                  <p className="text-xs text-muted-foreground">
+                    Increments of {TIME_STEP_MINUTES} minutes
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="checkOutTime">Check-out Time</Label>
-                <Input
-                  id="checkOutTime"
-                  type="time"
-                  value={formData.checkOutTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, checkOutTime: e.target.value })
-                  }
+                <TimePicker
+                  value={formData.checkOutTime || undefined}
+                  onValueChange={(nextCheckOut) => {
+                    setFormData((prev) => ({ ...prev, checkOutTime: nextCheckOut }));
+                    if (errors.checkOutTime) {
+                      setErrors((prev) => ({ ...prev, checkOutTime: "" }));
+                    }
+                  }}
+                  stepMinutes={TIME_STEP_MINUTES}
+                  min={minCheckOutTime}
+                  className={errors.checkOutTime ? "border-destructive" : ""}
                 />
+                {errors.checkOutTime && (
+                  <p className="text-sm text-destructive">{errors.checkOutTime}</p>
+                )}
+                {requiresCheckoutAfterCheckin && sameDayDurationMinutes !== null && (
+                  <p className="text-xs text-muted-foreground">
+                    Duration: {(sameDayDurationMinutes / 60).toFixed(1)} hours
+                  </p>
+                )}
               </div>
             </div>
 
