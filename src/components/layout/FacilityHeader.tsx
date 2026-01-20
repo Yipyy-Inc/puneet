@@ -11,6 +11,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { Plus, User, Calendar, List, Zap } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { facilities } from "@/data/facilities";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
@@ -127,13 +133,26 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create New
-          </Button>
-        </DropdownMenuTrigger>
+      <TooltipProvider delayDuration={150}>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id="facility-create-new-trigger"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-xl"
+                  aria-label="Create"
+                >
+                  <Plus className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              Create
+            </TooltipContent>
+          </Tooltip>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setIsCreateClientModalOpen(true)}>
             <User className="mr-2 h-4 w-4" />
@@ -161,7 +180,8 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
             Quick Daycare Check-in
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </TooltipProvider>
 
       {/* Create Client Modal */}
       <CreateClientModal

@@ -8,6 +8,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
+import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -36,9 +38,15 @@ export default async function DashboardLayout({
             <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted transition-colors" />
           </div>
 
+          <GlobalSearchNext className="max-w-[520px]" />
+
           <div className="flex items-center">
             {/* User Profile & Notifications */}
-            <UserProfileSheet />
+            <TopBarIconsNext
+              inboxHref="/dashboard/communication/live-support"
+              notificationsHref="/dashboard/system-health/alerts-notifications"
+            />
+            <UserProfileSheet showNotifications={false} />
           </div>
         </header>
         <main className="flex-1">{children}</main>

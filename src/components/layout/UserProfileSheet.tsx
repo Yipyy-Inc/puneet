@@ -126,7 +126,11 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
   }
 };
 
-export function UserProfileSheet() {
+export function UserProfileSheet({
+  showNotifications = true,
+}: {
+  showNotifications?: boolean;
+}) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -182,19 +186,21 @@ export function UserProfileSheet() {
   return (
     <div className="flex items-center gap-3">
       {/* Notification Bell Icon */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 rounded-xl hover:bg-muted transition-colors relative"
-        onClick={() => setIsSheetOpen(true)}
-      >
-        <Bell className="h-5 w-5 text-muted-foreground" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Button>
+      {showNotifications && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-xl hover:bg-muted transition-colors relative"
+          onClick={() => setIsSheetOpen(true)}
+        >
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Button>
+      )}
 
       {/* Avatar Dropdown */}
       <DropdownMenu>
@@ -275,7 +281,8 @@ export function UserProfileSheet() {
       </DropdownMenu>
 
       {/* Notifications Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      {showNotifications && (
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
           <div className="flex flex-col h-full">
             {/* Header */}
@@ -356,7 +363,8 @@ export function UserProfileSheet() {
             </div>
           </div>
         </SheetContent>
-      </Sheet>
+        </Sheet>
+      )}
     </div>
   );
 }
