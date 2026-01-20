@@ -6,6 +6,8 @@ import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
+import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 
 export default async function FacilityLayout({
   children,
@@ -26,9 +28,16 @@ export default async function FacilityLayout({
         <SidebarProvider>
           <FacilitySidebar />
           <SidebarInset>
-            <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
-              <FacilityHeader />
-              <UserProfileSheet />
+            <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
+              <GlobalSearchNext
+                className="max-w-[520px]"
+                canCreateCustomer={userRole === "facility_admin"}
+              />
+              <div className="flex items-center gap-2">
+                <TopBarIconsNext />
+                <FacilityHeader />
+                <UserProfileSheet showNotifications={false} />
+              </div>
             </header>
             {children}
           </SidebarInset>
