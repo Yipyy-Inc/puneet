@@ -8,7 +8,7 @@ import { Clock, CalendarClock, ChevronRight } from "lucide-react";
 import { type BookingRequest } from "@/data/booking-requests";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,12 @@ import { Label } from "@/components/ui/label";
 
 type NotifyMode = "none" | "text" | "email" | "both";
 type ConfirmAction = "decline" | "waitlist";
+type BookingRequestsPanelVariant = "card" | "dropdown";
+
+export interface BookingRequestsPanelProps {
+  /** Default: "card" (for dashboard pages). Use "dropdown" for top-bar popovers. */
+  variant?: BookingRequestsPanelVariant;
+}
 
 const SCHEDULE_DRAFT_KEY = "booking_requests_schedule_draft";
 
@@ -51,7 +57,7 @@ function servicesLabel(services: BookingRequest["services"]) {
     .join(", ");
 }
 
-export function BookingRequestsPanel() {
+export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelProps) {
   const router = useRouter();
   const facilityId = 11;
   const { requests, setRequests } = useBookingRequestsStore();
@@ -181,51 +187,64 @@ export function BookingRequestsPanel() {
     },
   ];
 
+  const header = (
+    <div className="flex flex-row items-center justify-between gap-3">
+      <div className="space-y-1">
+        <div className="text-base font-semibold leading-none tracking-tight">
+          Booking Requests
+        </div>
+        <div className="text-xs text-muted-foreground">Act quickly on new requests</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/facility/dashboard/online-booking")}
+          className="gap-1"
+        >
+          View all
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const table = (
+    <DataTable
+      data={sorted}
+      columns={columns}
+      itemsPerPage={variant === "dropdown" ? 3 : 5}
+      onRowClick={(r) => setSelected(r)}
+      rowClassName={() => "cursor-pointer"}
+      actions={(r) => (
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" onClick={() => schedule(r)}>
+            Schedule
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+            Decline
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
+            To Waitlist
+          </Button>
+        </div>
+      )}
+    />
+  );
+
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-base">Booking Requests</CardTitle>
-            <div className="text-xs text-muted-foreground">
-              Act quickly on new requests
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/facility/dashboard/online-booking")}
-              className="gap-1"
-            >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={sorted}
-            columns={columns}
-            itemsPerPage={5}
-            onRowClick={(r) => setSelected(r)}
-            rowClassName={() => "cursor-pointer"}
-            actions={(r) => (
-              <div className="flex items-center justify-end gap-2">
-                <Button size="sm" onClick={() => schedule(r)}>
-                  Schedule
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
-                  Decline
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
-                  To Waitlist
-                </Button>
-              </div>
-            )}
-          />
-        </CardContent>
-      </Card>
+      {variant === "card" ? (
+        <Card>
+          <CardHeader>{header}</CardHeader>
+          <CardContent>{table}</CardContent>
+        </Card>
+      ) : (
+        <div className="p-4">
+          {header}
+          <div className="mt-3">{table}</div>
+        </div>
+      )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="sm:max-w-md">

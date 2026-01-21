@@ -3,7 +3,6 @@
 import { facilities } from "@/data/facilities";
 
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
-import { BookingRequestsPanel } from "@/components/facility/BookingRequestsPanel";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
 
@@ -18,9 +17,6 @@ export default function FacilityDashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-      {/* Booking Requests (fast actions) */}
-      <BookingRequestsPanel />
-
       {/* Daycare & Boarding Check-In/Out Section */}
       <CheckInOutSection />
 
