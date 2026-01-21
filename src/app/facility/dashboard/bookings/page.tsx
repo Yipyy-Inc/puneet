@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -184,6 +184,48 @@ export default function FacilityBookingsPage() {
 
   const [activeTab, setActiveTab] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+
+  useEffect(() => {
+    const raw = localStorage.getItem("booking_requests_schedule_draft");
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw) as {
+        requestId: string;
+        clientId: number;
+        petId: number;
+        service: string;
+        appointmentAt: string;
+      };
+      // Create a draft booking that staff can edit, then Save will add it.
+      const appointment = new Date(draft.appointmentAt);
+      const isoDate = appointment.toISOString().slice(0, 10);
+      const hh = String(appointment.getHours()).padStart(2, "0");
+      const mm = String(appointment.getMinutes()).padStart(2, "0");
+      const time = `${hh}:${mm}`;
+
+      const maxId = Math.max(...initialBookings.map((b) => b.id ?? 0), 0);
+      setEditingBooking({
+        id: maxId + 1,
+        clientId: draft.clientId,
+        petId: draft.petId,
+        facilityId,
+        service: draft.service,
+        startDate: isoDate,
+        endDate: isoDate,
+        checkInTime: time,
+        checkOutTime: time,
+        status: "pending",
+        basePrice: 0,
+        discount: 0,
+        totalCost: 0,
+        paymentStatus: "pending",
+        specialRequests: `Scheduled from request ${draft.requestId}`,
+      } as Booking);
+      setViewMode("calendar");
+    } finally {
+      localStorage.removeItem("booking_requests_schedule_draft");
+    }
+  }, [facilityId]);
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -494,9 +536,12 @@ export default function FacilityBookingsPage() {
   };
 
   const handleSaveBooking = (updatedBooking: Booking) => {
-    setBookings((prev) =>
-      prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b)),
-    );
+    setBookings((prev) => {
+      const exists = prev.some((b) => b.id === updatedBooking.id);
+      return exists
+        ? prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
+        : [updatedBooking, ...prev];
+    });
     setEditingBooking(null);
     alert(`Booking #${updatedBooking.id} has been updated.`);
   };
