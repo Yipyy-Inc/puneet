@@ -5,6 +5,7 @@ import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { Booking } from "@/lib/types";
+import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -160,6 +161,7 @@ const isPast = (dateString: string): boolean => {
 export default function FacilityBookingsPage() {
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
+  const { setRequests: setBookingRequests } = useBookingRequestsStore();
 
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
@@ -543,6 +545,17 @@ export default function FacilityBookingsPage() {
         : [updatedBooking, ...prev];
     });
     setEditingBooking(null);
+    // If this booking originated from a booking request, mark that request as scheduled.
+    const special = updatedBooking.specialRequests ?? "";
+    const match = typeof special === "string"
+      ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
+      : null;
+    const requestId = match?.[1];
+    if (requestId) {
+      setBookingRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: "scheduled" } : r)),
+      );
+    }
     alert(`Booking #${updatedBooking.id} has been updated.`);
   };
 

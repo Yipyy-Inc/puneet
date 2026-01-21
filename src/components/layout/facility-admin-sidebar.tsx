@@ -6,6 +6,7 @@ import {
   Users,
   PawPrint,
   Calendar,
+  CalendarClock,
   UserCheck,
   Package,
   Clock,
@@ -115,6 +116,12 @@ export function FacilitySidebar() {
             icon: Calendar,
             disabled: false,
             count: 8,
+          },
+          {
+            title: "Online Booking",
+            url: "/facility/dashboard/online-booking",
+            icon: CalendarClock,
+            disabled: false,
           },
           {
             title: "Users",

@@ -1,16 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Clock, CalendarClock, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { CalendarClock, Clock } from "lucide-react";
 
 import { type BookingRequest } from "@/data/booking-requests";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Sheet,
   SheetContent,
@@ -38,8 +44,9 @@ const SCHEDULE_DRAFT_KEY = "booking_requests_schedule_draft";
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString(undefined, {
-    month: "short",
+    month: "2-digit",
     day: "2-digit",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -51,25 +58,35 @@ function servicesLabel(services: BookingRequest["services"]) {
     .join(", ");
 }
 
-export function BookingRequestsPanel() {
+export default function OnlineBookingPage() {
   const router = useRouter();
   const facilityId = 11;
   const { requests, setRequests } = useBookingRequestsStore();
 
-  const pending = React.useMemo(
-    () => requests.filter((r) => r.facilityId === facilityId && r.status === "pending"),
+  const facilityRequests = React.useMemo(
+    () => requests.filter((r) => r.facilityId === facilityId),
     [requests, facilityId],
   );
-  // Default sort (matches MoeGo expectation: newest submitted first)
-  const sorted = React.useMemo(
-    () => [...pending].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
-    [pending],
+
+  const pending = React.useMemo(
+    () => facilityRequests.filter((r) => r.status === "pending"),
+    [facilityRequests],
   );
 
+  const waitlisted = React.useMemo(
+    () => facilityRequests.filter((r) => r.status === "waitlisted"),
+    [facilityRequests],
+  );
+
+  const [activeTab, setActiveTab] = React.useState<"requests" | "waitlist" | "settings">(
+    "requests",
+  );
   const [selected, setSelected] = React.useState<BookingRequest | null>(null);
+
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmAction, setConfirmAction] = React.useState<ConfirmAction>("decline");
   const [confirmTarget, setConfirmTarget] = React.useState<BookingRequest | null>(null);
+
   const [postActionOpen, setPostActionOpen] = React.useState(false);
   const [postActionType, setPostActionType] = React.useState<ConfirmAction>("decline");
   const [postActionTarget, setPostActionTarget] = React.useState<BookingRequest | null>(null);
@@ -82,7 +99,6 @@ export function BookingRequestsPanel() {
   };
 
   const schedule = (req: BookingRequest) => {
-    // Frontend-only: store a draft and navigate to bookings page to edit/save.
     localStorage.setItem(
       SCHEDULE_DRAFT_KEY,
       JSON.stringify({
@@ -94,7 +110,7 @@ export function BookingRequestsPanel() {
       }),
     );
     router.push("/facility/dashboard/bookings");
-    toast.success("Opened booking for scheduling");
+    toast.success("Opened booking details for scheduling");
   };
 
   const applyConfirm = () => {
@@ -102,18 +118,19 @@ export function BookingRequestsPanel() {
     const action = confirmAction;
     const target = confirmTarget;
 
-    // 1) Apply the action outcome
     if (action === "decline") {
       // MoeGo behavior: declining removes the request.
       setRequests((prev) => prev.filter((r) => r.id !== target.id));
     } else {
-      setRequests((prev) => prev.map((r) => (r.id === target.id ? { ...r, status: "waitlisted" } : r)));
+      setRequests((prev) =>
+        prev.map((r) => (r.id === target.id ? { ...r, status: "waitlisted" } : r)),
+      );
     }
 
-    // Close the details drawer if it was open for this request
+    // Close the drawer if it was showing this request
     setSelected((prev) => (prev?.id === target.id ? null : prev));
 
-    // 2) Close confirm and open post-action notification chooser
+    // Confirm -> Notify step
     setConfirmOpen(false);
     setPostActionType(action);
     setPostActionTarget(target);
@@ -140,7 +157,7 @@ export function BookingRequestsPanel() {
   const columns: ColumnDef<BookingRequest>[] = [
     {
       key: "createdAt",
-      label: "Submitted",
+      label: "Submit date & time",
       icon: Clock,
       sortable: true,
       sortValue: (r) => +new Date(r.createdAt),
@@ -148,91 +165,161 @@ export function BookingRequestsPanel() {
     },
     {
       key: "appointmentAt",
-      label: "Appointment",
+      label: "Appt date & time",
       icon: CalendarClock,
       sortable: true,
       sortValue: (r) => +new Date(r.appointmentAt),
       render: (r) => <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>,
     },
     {
-      key: "customer",
-      label: "Customer / Pet",
-      sortable: false,
-      render: (r) => (
-        <div className="min-w-0">
-          <div className="truncate font-medium">{r.clientName}</div>
-          <div className="truncate text-xs text-muted-foreground">{r.petName}</div>
-        </div>
-      ),
+      key: "clientName",
+      label: "Client name",
+      sortable: true,
+      sortValue: (r) => r.clientName.toLowerCase(),
+      render: (r) => <div className="text-sm font-medium">{r.clientName}</div>,
     },
     {
-      key: "services",
-      label: "Service(s)",
+      key: "clientContact",
+      label: "Contact",
       sortable: false,
-      render: (r) => (
-        <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
-      ),
+      render: (r) => <div className="text-xs text-muted-foreground">{r.clientContact}</div>,
     },
     {
-      key: "status",
-      label: "Status",
-      sortable: false,
-      render: () => <Badge variant="warning">Pending</Badge>,
+      key: "petName",
+      label: "Pet",
+      sortable: true,
+      sortValue: (r) => r.petName.toLowerCase(),
+      render: (r) => <div className="text-sm">{r.petName}</div>,
     },
   ];
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-base">Booking Requests</CardTitle>
-            <div className="text-xs text-muted-foreground">
-              Act quickly on new requests
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/facility/dashboard/online-booking")}
-              className="gap-1"
-            >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={sorted}
-            columns={columns}
-            itemsPerPage={5}
-            onRowClick={(r) => setSelected(r)}
-            rowClassName={() => "cursor-pointer"}
-            actions={(r) => (
-              <div className="flex items-center justify-end gap-2">
-                <Button size="sm" onClick={() => schedule(r)}>
-                  Schedule
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
-                  Decline
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
-                  To Waitlist
-                </Button>
-              </div>
-            )}
-          />
-        </CardContent>
-      </Card>
+    <div className="flex-1 space-y-4 p-4 pt-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Online booking</h2>
+        <p className="text-muted-foreground">Booking requests &amp; waiting list</p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+        <TabsList className="grid w-full grid-cols-3 max-w-xl">
+          <TabsTrigger value="requests" className="flex items-center gap-2">
+            Booking requests
+            <Badge variant={pending.length > 0 ? "warning" : "secondary"} className="ml-1">
+              {pending.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="waitlist" className="flex items-center gap-2">
+            Waiting list
+            <Badge variant="secondary" className="ml-1">
+              {waitlisted.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="settings">Setting</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="requests" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Booking requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                data={[...pending].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))}
+                columns={[
+                  ...columns,
+                  {
+                    key: "services",
+                    label: "Service(s)",
+                    sortable: false,
+                    render: (r) => (
+                      <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
+                    ),
+                  },
+                ]}
+                itemsPerPage={10}
+                onRowClick={(r) => setSelected(r)}
+                rowClassName={() => "cursor-pointer"}
+                getSearchValue={(r) =>
+                  `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
+                }
+                searchPlaceholder="Search by client, contact, pet..."
+                actions={(r) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button size="sm" onClick={() => schedule(r)}>
+                      Schedule
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+                      Decline
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
+                      To waitlist
+                    </Button>
+                  </div>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="waitlist" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Waiting list</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                data={[...waitlisted].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))}
+                columns={[
+                  ...columns,
+                  {
+                    key: "services",
+                    label: "Service(s)",
+                    sortable: false,
+                    render: (r) => (
+                      <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
+                    ),
+                  },
+                ]}
+                itemsPerPage={10}
+                onRowClick={(r) => setSelected(r)}
+                rowClassName={() => "cursor-pointer"}
+                getSearchValue={(r) =>
+                  `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
+                }
+                searchPlaceholder="Search by client, contact, pet..."
+                actions={(r) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button size="sm" onClick={() => schedule(r)}>
+                      Schedule
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+                      Decline
+                    </Button>
+                  </div>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Online booking settings</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Settings UI isn’t required for this task; this tab is a placeholder for the online booking settings flow.
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="sm:max-w-md">
           {selected && (
             <>
               <SheetHeader>
-                <SheetTitle>Booking Request</SheetTitle>
+                <SheetTitle>Booking request</SheetTitle>
               </SheetHeader>
               <div className="p-4 space-y-4">
                 <div className="space-y-1">
@@ -265,19 +352,13 @@ export function BookingRequestsPanel() {
                   <Button className="flex-1" onClick={() => schedule(selected)}>
                     Schedule
                   </Button>
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => openConfirm("decline", selected)}
-                  >
+                  {selected.status === "pending" && (
+                    <Button className="flex-1" variant="outline" onClick={() => openConfirm("waitlist", selected)}>
+                      To waitlist
+                    </Button>
+                  )}
+                  <Button className="flex-1" variant="outline" onClick={() => openConfirm("decline", selected)}>
                     Decline
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => openConfirm("waitlist", selected)}
-                  >
-                    To Waitlist
                   </Button>
                 </div>
               </div>
@@ -296,12 +377,9 @@ export function BookingRequestsPanel() {
               This action will update the request immediately. You can choose whether to notify the customer on the next step.
             </AlertDialogDescription>
           </AlertDialogHeader>
-
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={applyConfirm}>
-              Confirm
-            </AlertDialogAction>
+            <AlertDialogAction onClick={applyConfirm}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -325,32 +403,30 @@ export function BookingRequestsPanel() {
 
           <RadioGroup value={notifyMode} onValueChange={(v) => setNotifyMode(v as NotifyMode)}>
             <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-none" value="none" />
-              <Label htmlFor="post-notify-none">None</Label>
+              <RadioGroupItem id="post-notify-none-online" value="none" />
+              <Label htmlFor="post-notify-none-online">None</Label>
             </div>
             <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-text" value="text" />
-              <Label htmlFor="post-notify-text">Send text</Label>
+              <RadioGroupItem id="post-notify-text-online" value="text" />
+              <Label htmlFor="post-notify-text-online">Send text</Label>
             </div>
             <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-email" value="email" />
-              <Label htmlFor="post-notify-email">Send email</Label>
+              <RadioGroupItem id="post-notify-email-online" value="email" />
+              <Label htmlFor="post-notify-email-online">Send email</Label>
             </div>
             <div className="flex items-center gap-2">
-              <RadioGroupItem id="post-notify-both" value="both" />
-              <Label htmlFor="post-notify-both">Send text + email</Label>
+              <RadioGroupItem id="post-notify-both-online" value="both" />
+              <Label htmlFor="post-notify-both-online">Send text + email</Label>
             </div>
           </RadioGroup>
 
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
-            <AlertDialogAction onClick={completePostAction}>
-              Done
-            </AlertDialogAction>
+            <AlertDialogAction onClick={completePostAction}>Done</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
 
