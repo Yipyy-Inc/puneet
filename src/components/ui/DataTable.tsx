@@ -66,6 +66,7 @@ interface DataTableProps<T> {
   itemsPerPage?: number;
   actions?: (item: T) => React.ReactNode;
   rowClassName?: (item: T) => string;
+  onRowClick?: (item: T) => void;
 }
 
 export function DataTable<T extends object>({
@@ -79,6 +80,7 @@ export function DataTable<T extends object>({
   itemsPerPage = 10,
   actions,
   rowClassName,
+  onRowClick,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -310,7 +312,21 @@ export function DataTable<T extends object>({
               </TableRow>
             ) : (
               paginatedData.map((item, index) => (
-                <TableRow key={index} className={rowClassName?.(item)}>
+                <TableRow
+                  key={index}
+                  className={rowClassName?.(item)}
+                  data-row-clickable={onRowClick ? "true" : "false"}
+                  onClick={() => onRowClick?.(item)}
+                  onKeyDown={(e) => {
+                    if (!onRowClick) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(item);
+                    }
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                >
                   {visibleColumnDefs.map((col) => (
                     <TableCell
                       key={col.key}
@@ -325,7 +341,9 @@ export function DataTable<T extends object>({
                   ))}
                   {actions && (
                     <TableCell className="text-right">
-                      {actions(item)}
+                      <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        {actions(item)}
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
