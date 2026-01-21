@@ -8,6 +8,7 @@ import { BookingModalProviderWrapper } from "@/components/providers/BookingModal
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
+import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
 
 export default async function FacilityLayout({
   children,
@@ -35,6 +36,7 @@ export default async function FacilityLayout({
               />
               <div className="flex items-center gap-2">
                 <TopBarIconsNext />
+                <BookingRequestsTopbarDropdown />
                 <FacilityHeader />
                 <UserProfileSheet showNotifications={false} />
               </div>
