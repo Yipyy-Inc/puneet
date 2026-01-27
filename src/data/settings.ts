@@ -22,6 +22,9 @@ import {
   ModuleConfig,
   FacilityBookingFlowConfig,
   ReportCardConfig,
+  ServiceDateBlock,
+  ScheduleTimeOverride,
+  DropOffPickUpOverride,
 } from "@/lib/types";
 
 export const evaluationConfig: EvaluationConfig = {
@@ -126,6 +129,10 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   servicesRequiringEvaluation: ["daycare"],
   hiddenServices: [],
 };
+
+export const serviceDateBlocks: ServiceDateBlock[] = [];
+export const scheduleTimeOverrides: ScheduleTimeOverride[] = [];
+export const dropOffPickUpOverrides: DropOffPickUpOverride[] = [];
 
 export const reportCardConfig: ReportCardConfig = {
   enabledThemes: [

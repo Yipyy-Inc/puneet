@@ -369,6 +369,35 @@ export interface FacilityBookingFlowConfig {
   hiddenServices: string[];
 }
 
+/** One-day schedule time override: custom open/close for a specific date (overrides regular weekly hours). */
+export interface ScheduleTimeOverride {
+  id: string;
+  date: string; // YYYY-MM-DD
+  openTime: string; // HH:mm
+  closeTime: string; // HH:mm
+}
+
+/** Drop-off and pick-up time windows for a specific date and service(s). Overrides regular facility hours for time selection. */
+export interface DropOffPickUpOverride {
+  id: string;
+  date: string; // YYYY-MM-DD
+  services: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
+  dropOffStart: string; // HH:mm
+  dropOffEnd: string; // HH:mm
+  pickUpStart: string; // HH:mm
+  pickUpEnd: string; // HH:mm
+}
+
+/** Block specific calendar dates for one or more services (overrides regular schedule). */
+export interface ServiceDateBlock {
+  id: string;
+  date: string; // YYYY-MM-DD
+  services: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
+  closed: boolean; // true = service(s) closed on this date
+  /** Customer-facing message explaining the closure (e.g. "Closed for Christmas"). */
+  closureMessage?: string;
+}
+
 export type ReportCardTheme =
   | "everyday"
   | "christmas"

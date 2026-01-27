@@ -12,6 +12,9 @@ import {
   bookingRules,
   facilityBookingFlowConfig,
   reportCardConfig,
+  serviceDateBlocks as defaultServiceDateBlocks,
+  scheduleTimeOverrides as defaultScheduleTimeOverrides,
+  dropOffPickUpOverrides as defaultDropOffPickUpOverrides,
   notificationToggles,
   integrations,
   moduleAddons,
@@ -24,6 +27,9 @@ import type {
   BookingRules,
   FacilityBookingFlowConfig,
   ReportCardConfig,
+  ServiceDateBlock,
+  ScheduleTimeOverride,
+  DropOffPickUpOverride,
   NotificationToggle,
   Integration,
   ModuleAddon,
@@ -40,6 +46,9 @@ interface SettingsContextValue {
   rules: BookingRules;
   bookingFlow: FacilityBookingFlowConfig;
   reportCards: ReportCardConfig;
+  serviceDateBlocks: ServiceDateBlock[];
+  scheduleTimeOverrides: ScheduleTimeOverride[];
+  dropOffPickUpOverrides: DropOffPickUpOverride[];
   notifications: NotificationToggle[];
   integrations: Integration[];
   addons: ModuleAddon[];
@@ -53,6 +62,9 @@ interface SettingsContextValue {
   updateRules: (rules: BookingRules) => void;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => void;
   updateReportCards: (config: ReportCardConfig) => void;
+  updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => void;
+  updateScheduleTimeOverrides: (overrides: ScheduleTimeOverride[]) => void;
+  updateDropOffPickUpOverrides: (overrides: DropOffPickUpOverride[]) => void;
   updateNotifications: (notifications: NotificationToggle[]) => void;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
@@ -74,6 +86,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     useState<FacilityBookingFlowConfig>(facilityBookingFlowConfig);
   const [reportCards, setReportCards] =
     useState<ReportCardConfig>(reportCardConfig);
+  const [serviceDateBlocksState, setServiceDateBlocksState] = useState<
+    ServiceDateBlock[]
+  >(defaultServiceDateBlocks);
+  const [scheduleTimeOverridesState, setScheduleTimeOverridesState] = useState<
+    ScheduleTimeOverride[]
+  >(defaultScheduleTimeOverrides);
+  const [dropOffPickUpOverridesState, setDropOffPickUpOverridesState] =
+    useState<DropOffPickUpOverride[]>(defaultDropOffPickUpOverrides);
   const [notifications, setNotifications] =
     useState<NotificationToggle[]>(notificationToggles);
   const [integrationsData, setIntegrationsData] =
@@ -132,6 +152,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (nextBookingFlow) setBookingFlow(nextBookingFlow);
     const nextReportCards = loadStored("settings-report-cards", reportCardConfig);
     if (nextReportCards) setReportCards(nextReportCards);
+    const nextBlocks = loadStored(
+      "settings-service-date-blocks",
+      defaultServiceDateBlocks,
+    );
+    if (nextBlocks) setServiceDateBlocksState(nextBlocks);
+    const nextOverrides = loadStored(
+      "settings-schedule-time-overrides",
+      defaultScheduleTimeOverrides,
+    );
+    if (nextOverrides) setScheduleTimeOverridesState(nextOverrides);
+    const nextDropOffPickUp = loadStored(
+      "settings-drop-off-pick-up-overrides",
+      defaultDropOffPickUpOverrides,
+    );
+    if (nextDropOffPickUp) setDropOffPickUpOverridesState(nextDropOffPickUp);
     const nextNotifications = loadStored(
       "settings-notifications",
       notificationToggles,
@@ -183,6 +218,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setReportCards(config);
     localStorage.setItem("settings-report-cards", JSON.stringify(config));
   };
+  const updateServiceDateBlocks = (blocks: ServiceDateBlock[]) => {
+    setServiceDateBlocksState(blocks);
+    localStorage.setItem(
+      "settings-service-date-blocks",
+      JSON.stringify(blocks),
+    );
+  };
+  const updateScheduleTimeOverrides = (overrides: ScheduleTimeOverride[]) => {
+    setScheduleTimeOverridesState(overrides);
+    localStorage.setItem(
+      "settings-schedule-time-overrides",
+      JSON.stringify(overrides),
+    );
+  };
+  const updateDropOffPickUpOverrides = (overrides: DropOffPickUpOverride[]) => {
+    setDropOffPickUpOverridesState(overrides);
+    localStorage.setItem(
+      "settings-drop-off-pick-up-overrides",
+      JSON.stringify(overrides),
+    );
+  };
   const updateNotifications = (notifications: NotificationToggle[]) => {
     setNotifications(notifications);
     localStorage.setItem(
@@ -210,6 +266,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setRules(bookingRules);
     setBookingFlow(facilityBookingFlowConfig);
     setReportCards(reportCardConfig);
+    setServiceDateBlocksState(defaultServiceDateBlocks);
+    setScheduleTimeOverridesState(defaultScheduleTimeOverrides);
+    setDropOffPickUpOverridesState(defaultDropOffPickUpOverrides);
     setNotifications(notificationToggles);
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
@@ -223,6 +282,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-rules");
     localStorage.removeItem("settings-booking-flow");
     localStorage.removeItem("settings-report-cards");
+    localStorage.removeItem("settings-service-date-blocks");
+    localStorage.removeItem("settings-schedule-time-overrides");
+    localStorage.removeItem("settings-drop-off-pick-up-overrides");
     localStorage.removeItem("settings-notifications");
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
@@ -241,6 +303,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         rules,
         bookingFlow,
         reportCards,
+        serviceDateBlocks: serviceDateBlocksState,
+        scheduleTimeOverrides: scheduleTimeOverridesState,
+        dropOffPickUpOverrides: dropOffPickUpOverridesState,
         notifications,
         integrations: integrationsData,
         addons,
@@ -254,6 +319,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateRules,
         updateBookingFlow,
         updateReportCards,
+        updateServiceDateBlocks,
+        updateScheduleTimeOverrides,
+        updateDropOffPickUpOverrides,
         updateNotifications,
         updateIntegrations,
         updateAddons,

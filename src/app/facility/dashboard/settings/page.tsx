@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSettings } from "@/hooks/use-settings";
+import type {
+  ServiceDateBlock,
+  ScheduleTimeOverride,
+  DropOffPickUpOverride,
+} from "@/lib/types";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +31,12 @@ import {
   Zap,
   Download,
   Smartphone,
+  CalendarX,
+  Clock,
+  PackageCheck,
+  Plus,
+  Timer,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -315,6 +327,520 @@ function BusinessHoursCard() {
         </div>
       )}
     </SettingsBlock>
+  );
+}
+
+const SERVICE_BLOCK_OPTIONS: { id: string; label: string }[] = [
+  { id: "daycare", label: "Daycare" },
+  { id: "boarding", label: "Boarding" },
+  { id: "grooming", label: "Grooming" },
+  { id: "training", label: "Training" },
+  { id: "evaluation", label: "Evaluation" },
+];
+
+// Service-Specific Day Blocking (override regular schedule)
+function ServiceDayBlockingCard() {
+  const { serviceDateBlocks, updateServiceDateBlocks } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newServices, setNewServices] = useState<string[]>([]);
+  const [newClosureMessage, setNewClosureMessage] = useState("");
+
+  const handleAdd = () => {
+    if (!newDate || newServices.length === 0) return;
+    const block: ServiceDateBlock = {
+      id: `block-${Date.now()}`,
+      date: newDate,
+      services: [...newServices],
+      closed: true,
+      closureMessage: newClosureMessage.trim() || undefined,
+    };
+    updateServiceDateBlocks([...serviceDateBlocks, block]);
+    setNewDate("");
+    setNewServices([]);
+    setNewClosureMessage("");
+  };
+
+  const handleRemove = (id: string) => {
+    updateServiceDateBlocks(serviceDateBlocks.filter((b) => b.id !== id));
+  };
+
+  const toggleService = (id: string) => {
+    setNewServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CalendarX className="h-5 w-5" />
+          Service-Specific Day Blocking
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Block specific calendar days for one or more services (e.g. daycare
+          closed on Christmas) without changing the regular weekly schedule. On
+          blocked dates, customers cannot book and staff cannot create bookings
+          unless overridden by admin/manager.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add block</Label>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Services affected
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`block-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`block-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Closure message (customer-facing)
+              </Label>
+              <Input
+                value={newClosureMessage}
+                onChange={(e) => setNewClosureMessage(e.target.value)}
+                placeholder="e.g. Closed for Christmas, Closed for staff training"
+                className="max-w-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown when a customer hovers over or focuses the blocked date
+                in the booking calendar.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate || newServices.length === 0}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add block
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Blocked dates</Label>
+          {serviceDateBlocks.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No service-specific blocks. Add a date and service(s) above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {serviceDateBlocks
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((block) => (
+                  <li
+                    key={block.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">
+                          {new Date(block.date + "T12:00:00").toLocaleDateString(
+                            "en-US",
+                            {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {block.services.map((s) => (
+                            <Badge
+                              key={s}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                ?.label ?? s}
+                            </Badge>
+                          ))}
+                        </div>
+                        <Badge variant="outline">Closed</Badge>
+                      </div>
+                      {block.closureMessage && (
+                        <p className="text-sm text-muted-foreground">
+                          “{block.closureMessage}”
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(block.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// One-Day Schedule Time Override (Special Hours)
+function OneDayScheduleOverrideCard() {
+  const { scheduleTimeOverrides, updateScheduleTimeOverrides } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newOpenTime, setNewOpenTime] = useState("08:00");
+  const [newCloseTime, setNewCloseTime] = useState("17:00");
+
+  const handleAdd = () => {
+    if (!newDate) return;
+    const override: ScheduleTimeOverride = {
+      id: `override-${Date.now()}`,
+      date: newDate,
+      openTime: newOpenTime,
+      closeTime: newCloseTime,
+    };
+    updateScheduleTimeOverrides([...scheduleTimeOverrides, override]);
+    setNewDate("");
+    setNewOpenTime("08:00");
+    setNewCloseTime("17:00");
+  };
+
+  const handleRemove = (id: string) => {
+    updateScheduleTimeOverrides(
+      scheduleTimeOverrides.filter((o) => o.id !== id),
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          One-Day Schedule Time Override (Special Hours)
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Set custom opening and closing times for a specific date (e.g.
+          Halloween 10:00 AM – 3:00 PM) without changing the regular weekly
+          schedule. The override applies only to that date and automatically
+          reverts to normal hours afterward.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add override</Label>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Opening time</Label>
+              <Input
+                type="time"
+                value={newOpenTime}
+                onChange={(e) => setNewOpenTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Closing time</Label>
+              <Input
+                type="time"
+                value={newCloseTime}
+                onChange={(e) => setNewCloseTime(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add override
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Special hours</Label>
+          {scheduleTimeOverrides.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No one-day overrides. Add a date and times above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {scheduleTimeOverrides
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((override) => (
+                  <li
+                    key={override.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">
+                        {new Date(override.date + "T12:00:00").toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {override.openTime} – {override.closeTime}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(override.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Drop-Off & Pick-Up Time Overrides
+function DropOffPickUpOverrideCard() {
+  const { dropOffPickUpOverrides, updateDropOffPickUpOverrides } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newServices, setNewServices] = useState<string[]>([]);
+  const [newDropOffStart, setNewDropOffStart] = useState("07:30");
+  const [newDropOffEnd, setNewDropOffEnd] = useState("10:00");
+  const [newPickUpStart, setNewPickUpStart] = useState("16:00");
+  const [newPickUpEnd, setNewPickUpEnd] = useState("18:00");
+
+  const handleAdd = () => {
+    if (!newDate || newServices.length === 0) return;
+    const override: DropOffPickUpOverride = {
+      id: `dropoff-pickup-${Date.now()}`,
+      date: newDate,
+      services: [...newServices],
+      dropOffStart: newDropOffStart,
+      dropOffEnd: newDropOffEnd,
+      pickUpStart: newPickUpStart,
+      pickUpEnd: newPickUpEnd,
+    };
+    updateDropOffPickUpOverrides([...dropOffPickUpOverrides, override]);
+    setNewDate("");
+    setNewServices([]);
+    setNewDropOffStart("07:30");
+    setNewDropOffEnd("10:00");
+    setNewPickUpStart("16:00");
+    setNewPickUpEnd("18:00");
+  };
+
+  const handleRemove = (id: string) => {
+    updateDropOffPickUpOverrides(
+      dropOffPickUpOverrides.filter((o) => o.id !== id),
+    );
+  };
+
+  const toggleService = (id: string) => {
+    setNewServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Timer className="h-5 w-5" />
+          Drop-Off &amp; Pick-Up Time Overrides
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Override drop-off and pick-up windows for specific dates (e.g. holiday
+          hours). Customers only see valid time options for each date. Apply
+          overrides per service.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add override</Label>
+          <div className="flex flex-wrap gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Services
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`dopo-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`dopo-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Drop-off start
+                </Label>
+                <Input
+                  type="time"
+                  value={newDropOffStart}
+                  onChange={(e) => setNewDropOffStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Drop-off end
+                </Label>
+                <Input
+                  type="time"
+                  value={newDropOffEnd}
+                  onChange={(e) => setNewDropOffEnd(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Pick-up start
+                </Label>
+                <Input
+                  type="time"
+                  value={newPickUpStart}
+                  onChange={(e) => setNewPickUpStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Pick-up end
+                </Label>
+                <Input
+                  type="time"
+                  value={newPickUpEnd}
+                  onChange={(e) => setNewPickUpEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate || newServices.length === 0}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add override
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Overrides</Label>
+          {dropOffPickUpOverrides.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No drop-off/pick-up overrides. Add a date and service(s) above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {dropOffPickUpOverrides
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((override) => (
+                  <li
+                    key={override.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {new Date(
+                            override.date + "T12:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {override.services.map((s) => (
+                            <Badge
+                              key={s}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                ?.label ?? s}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        Drop-off {override.dropOffStart}–{override.dropOffEnd}{" "}
+                        · Pick-up {override.pickUpStart}–{override.pickUpEnd}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(override.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1457,6 +1983,10 @@ export default function SettingsPage() {
           <BusinessProfileCard />
 
           <BusinessHoursCard />
+
+          <ServiceDayBlockingCard />
+          <OneDayScheduleOverrideCard />
+          <DropOffPickUpOverrideCard />
 
           {/* Locations */}
           <Card>

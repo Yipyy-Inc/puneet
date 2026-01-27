@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Home,
   Users,
@@ -30,6 +30,7 @@ import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
 
 export function FacilitySidebar() {
+  const [isMounted, setIsMounted] = useState(false);
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
     const allMenuSections: MenuSection[] = [
@@ -224,6 +225,17 @@ export function FacilitySidebar() {
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
+  const dateLabel = isMounted
+    ? new Date().toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "";
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <GenericSidebar
@@ -233,11 +245,7 @@ export function FacilitySidebar() {
             {facility?.name || "Facility Dashboard"}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
+            {dateLabel}
           </p>
         </div>
       }

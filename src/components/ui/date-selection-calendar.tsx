@@ -59,6 +59,22 @@ export interface DateSelectionCalendarProps {
     string,
     { isOpen: boolean; openTime: string; closeTime: string }
   >;
+  /** One-day schedule overrides: custom open/close for specific dates (key = YYYY-MM-DD). */
+  scheduleTimeOverrides?: Array<{
+    date: string;
+    openTime: string;
+    closeTime: string;
+  }>;
+  /** Drop-off and pick-up windows per date (key = YYYY-MM-DD). When set, time selection uses these instead of facility open/close. */
+  dropOffPickUpWindowsByDate?: Record<
+    string,
+    {
+      dropOffStart: string;
+      dropOffEnd: string;
+      pickUpStart: string;
+      pickUpEnd: string;
+    }
+  >;
 
   // Booking rules for date constraints
   bookingRules?: {
@@ -70,6 +86,8 @@ export interface DateSelectionCalendarProps {
   minDate?: Date;
   maxDate?: Date;
   disabledDates?: Date[];
+  /** Messages for disabled dates (key = YYYY-MM-DD). Shown when customer hovers over a blocked date. */
+  disabledDateMessages?: Record<string, string>;
   unavailableDates?: Date[];
 
   // Optional features
@@ -148,10 +166,13 @@ export function DateSelectionCalendar({
   defaultCheckInTime,
   defaultCheckOutTime,
   facilityHours,
+  scheduleTimeOverrides,
+  dropOffPickUpWindowsByDate,
   bookingRules,
   minDate,
   maxDate,
   disabledDates = [],
+  disabledDateMessages,
   unavailableDates = [],
   className,
   initialMonth,
@@ -165,8 +186,17 @@ export function DateSelectionCalendar({
   const effectiveDefaultCheckOutTime =
     defaultCheckOutTime || getDefaultTimes(facilityHours).checkOut;
 
-  // Get facility hours for a specific date
+  // Get facility hours for a specific date (one-day override takes precedence)
   const getFacilityHoursForDate = (date: Date) => {
+    const dateStr = formatDateString(date);
+    const override = scheduleTimeOverrides?.find((o) => o.date === dateStr);
+    if (override) {
+      return {
+        isOpen: true,
+        openTime: override.openTime,
+        closeTime: override.closeTime,
+      };
+    }
     if (!facilityHours) return null;
     const days = [
       "sunday",
@@ -179,6 +209,11 @@ export function DateSelectionCalendar({
     ];
     const dayName = days[date.getDay()];
     return facilityHours[dayName];
+  };
+
+  const getDropOffPickUpForDate = (date: Date) => {
+    if (!dropOffPickUpWindowsByDate) return null;
+    return dropOffPickUpWindowsByDate[formatDateString(date)] ?? null;
   };
 
   // Utility functions
@@ -320,14 +355,13 @@ export function DateSelectionCalendar({
       // Handle time selection
       if (showTimeSelection && !isSelected) {
         const dateStr = formatDateString(date);
+        const dropOffPickUp = getDropOffPickUpForDate(date);
         const facilityHoursForDate = getFacilityHoursForDate(date);
         onDateTimesChange?.([
           {
             date: dateStr,
-            checkInTime:
-              facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
-            checkOutTime:
-              facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
+            checkInTime: dropOffPickUp?.dropOffStart ?? facilityHoursForDate?.openTime ?? effectiveDefaultCheckInTime,
+            checkOutTime: dropOffPickUp?.pickUpStart ?? facilityHoursForDate?.closeTime ?? effectiveDefaultCheckOutTime,
           },
         ]);
       } else if (showTimeSelection && isSelected) {
@@ -353,6 +387,7 @@ export function DateSelectionCalendar({
         if (showTimeSelection) {
           const mostRecentTime =
             dateTimes.length > 0 ? dateTimes[dateTimes.length - 1] : null;
+          const dropOffPickUp = getDropOffPickUpForDate(date);
           const facilityHoursForDate = getFacilityHoursForDate(date);
           onDateTimesChange?.([
             ...dateTimes,
@@ -360,10 +395,12 @@ export function DateSelectionCalendar({
               date: dateStr,
               checkInTime:
                 mostRecentTime?.checkInTime ||
+                dropOffPickUp?.dropOffStart ||
                 facilityHoursForDate?.openTime ||
                 effectiveDefaultCheckInTime,
               checkOutTime:
                 mostRecentTime?.checkOutTime ||
+                dropOffPickUp?.pickUpStart ||
                 facilityHoursForDate?.closeTime ||
                 effectiveDefaultCheckOutTime,
             },
@@ -390,13 +427,12 @@ export function DateSelectionCalendar({
           const times: DateTimeInfo[] = [];
           const current = new Date(start);
           while (current <= end) {
+            const dropOffPickUp = getDropOffPickUpForDate(current);
             const facilityHoursForDate = getFacilityHoursForDate(current);
             times.push({
               date: formatDateString(current),
-              checkInTime:
-                facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
-              checkOutTime:
-                facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
+              checkInTime: dropOffPickUp?.dropOffStart ?? facilityHoursForDate?.openTime ?? effectiveDefaultCheckInTime,
+              checkOutTime: dropOffPickUp?.pickUpStart ?? facilityHoursForDate?.closeTime ?? effectiveDefaultCheckOutTime,
             });
             current.setDate(current.getDate() + 1);
           }
@@ -489,6 +525,11 @@ export function DateSelectionCalendar({
       }
     }
 
+    const closureMessage =
+      (disabled || unavailable) && disabledDateMessages
+        ? disabledDateMessages[formatDateString(date)]
+        : undefined;
+
     return (
       <button
         type="button"
@@ -496,6 +537,7 @@ export function DateSelectionCalendar({
         onMouseEnter={() => setHoverDate(date)}
         onMouseLeave={() => setHoverDate(null)}
         disabled={disabled || unavailable}
+        title={closureMessage}
         className={cn(
           "aspect-square w-full m-2 text-[10px] font-medium transition-all relative rounded-full",
           "hover:bg-accent hover:text-accent-foreground",
@@ -693,16 +735,18 @@ export function DateSelectionCalendar({
                         }}
                         stepMinutes={30}
                         min={
-                          facilityHours && rangeStart
-                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
-                              "06:00"
-                            : "06:00"
+                          (rangeStart && getDropOffPickUpForDate(rangeStart)?.dropOffStart) ||
+                          (facilityHours && rangeStart
+                            ? getFacilityHoursForDate(rangeStart)?.openTime
+                            : null) ||
+                          "06:00"
                         }
                         max={
-                          facilityHours && rangeEnd
-                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
-                              "22:00"
-                            : "22:00"
+                          (rangeStart && getDropOffPickUpForDate(rangeStart)?.dropOffEnd) ||
+                          (facilityHours && rangeStart
+                            ? getFacilityHoursForDate(rangeStart)?.closeTime
+                            : null) ||
+                          "22:00"
                         }
                       />
                     </div>
@@ -724,16 +768,18 @@ export function DateSelectionCalendar({
                         }}
                         stepMinutes={30}
                         min={
-                          facilityHours && rangeStart
-                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
-                              "06:00"
-                            : "06:00"
+                          (rangeEnd && getDropOffPickUpForDate(rangeEnd)?.pickUpStart) ||
+                          (facilityHours && rangeEnd
+                            ? getFacilityHoursForDate(rangeEnd)?.openTime
+                            : null) ||
+                          "06:00"
                         }
                         max={
-                          facilityHours && rangeEnd
-                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
-                              "22:00"
-                            : "22:00"
+                          (rangeEnd && getDropOffPickUpForDate(rangeEnd)?.pickUpEnd) ||
+                          (facilityHours && rangeEnd
+                            ? getFacilityHoursForDate(rangeEnd)?.closeTime
+                            : null) ||
+                          "22:00"
                         }
                       />
                     </div>
@@ -815,6 +861,22 @@ export function DateSelectionCalendar({
                                 maxTime={
                                   getFacilityHoursForDate(date)?.closeTime ||
                                   "22:00"
+                                }
+                                dropOffWindow={
+                                  getDropOffPickUpForDate(date)
+                                    ? {
+                                        min: getDropOffPickUpForDate(date)!.dropOffStart,
+                                        max: getDropOffPickUpForDate(date)!.dropOffEnd,
+                                      }
+                                    : undefined
+                                }
+                                pickUpWindow={
+                                  getDropOffPickUpForDate(date)
+                                    ? {
+                                        min: getDropOffPickUpForDate(date)!.pickUpStart,
+                                        max: getDropOffPickUpForDate(date)!.pickUpEnd,
+                                      }
+                                    : undefined
                                 }
                                 startTime={timeInfo.checkInTime}
                                 endTime={timeInfo.checkOutTime}

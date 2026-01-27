@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 export interface TimeRangeSliderProps {
   minTime?: string; // HH:mm format, default "06:00"
   maxTime?: string; // HH:mm format, default "22:00"
+  /** When set, check-in (start) is constrained to [min, max] and check-out (end) uses pickUpWindow. */
+  dropOffWindow?: { min: string; max: string };
+  pickUpWindow?: { min: string; max: string };
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
   onTimeChange: (start: string, end: string) => void;
@@ -22,6 +25,8 @@ export interface TimeRangeSliderProps {
 export function TimeRangeSlider({
   minTime = "06:00",
   maxTime = "22:00",
+  dropOffWindow,
+  pickUpWindow,
   startTime,
   endTime,
   onTimeChange,
@@ -53,6 +58,19 @@ export function TimeRangeSlider({
   const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
   const snap = (minutes: number) => Math.round(minutes / step) * step;
 
+  const startMinMinutes = dropOffWindow
+    ? timeToMinutes(dropOffWindow.min)
+    : timeToMinutes(minTime);
+  const startMaxMinutes = dropOffWindow
+    ? timeToMinutes(dropOffWindow.max)
+    : timeToMinutes(maxTime);
+  const endMinMinutes = pickUpWindow
+    ? timeToMinutes(pickUpWindow.min)
+    : timeToMinutes(minTime);
+  const endMaxMinutes = pickUpWindow
+    ? timeToMinutes(pickUpWindow.max)
+    : timeToMinutes(maxTime);
+
   const minMinutes = timeToMinutes(minTime);
   const maxMinutes = timeToMinutes(maxTime);
   const startMinutes = timeToMinutes(startTime);
@@ -68,23 +86,15 @@ export function TimeRangeSlider({
   const daycareType = durationMinutes / 60 <= 5 ? "Half Day" : "Full Day";
 
   const enforceAndEmit = (nextStartMinutes: number, nextEndMinutes: number) => {
-    // Keep within bounds and enforce at least `step` gap
-    const minEnd = minMinutes + step;
-    const maxStart = maxMinutes - step;
-
-    let s = snap(clamp(nextStartMinutes, minMinutes, maxStart));
-    let e = snap(clamp(nextEndMinutes, minEnd, maxMinutes));
-
+    let s = snap(clamp(nextStartMinutes, startMinMinutes, startMaxMinutes));
+    let e = snap(clamp(nextEndMinutes, endMinMinutes, endMaxMinutes));
     if (e - s < step) {
-      // Prefer moving the end forward; if impossible, move start backward.
-      const candidateEnd = s + step;
-      if (candidateEnd <= maxMinutes) {
-        e = candidateEnd;
+      if (s + step <= endMaxMinutes) {
+        e = s + step;
       } else {
-        s = Math.max(minMinutes, e - step);
+        s = Math.max(startMinMinutes, e - step);
       }
     }
-
     onTimeChange(minutesToTime(s), minutesToTime(e));
   };
 
@@ -118,8 +128,8 @@ export function TimeRangeSlider({
           <Input
             type="time"
             value={startTime}
-            min={minTime}
-            max={minutesToTime(endMinutes - step)}
+            min={minutesToTime(startMinMinutes)}
+            max={minutesToTime(startMaxMinutes)}
             step={step * 60}
             className="h-9"
             onChange={(e) => {
@@ -134,8 +144,8 @@ export function TimeRangeSlider({
           <Input
             type="time"
             value={endTime}
-            min={minutesToTime(startMinutes + step)}
-            max={maxTime}
+            min={minutesToTime(endMinMinutes)}
+            max={minutesToTime(endMaxMinutes)}
             step={step * 60}
             className="h-9"
             onChange={(e) => {

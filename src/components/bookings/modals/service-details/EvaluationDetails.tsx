@@ -41,8 +41,57 @@ export function EvaluationDetails({
   setCheckInTime,
   setCheckOutTime,
 }: EvaluationDetailsProps) {
-  const { hours, rules, evaluation } = useSettings();
+  const {
+    hours,
+    rules,
+    evaluation,
+    serviceDateBlocks,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+  } = useSettings();
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
+
+  const dropOffPickUpWindowsByDateForEvaluation = React.useMemo(() => {
+    const map: Record<
+      string,
+      {
+        dropOffStart: string;
+        dropOffEnd: string;
+        pickUpStart: string;
+        pickUpEnd: string;
+      }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes("evaluation"))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [dropOffPickUpOverrides]);
+
+  const { blockedDatesForEvaluation, blockedDateMessagesForEvaluation } =
+    React.useMemo(() => {
+      const blocks = serviceDateBlocks.filter(
+        (b) => b.closed && b.services.includes("evaluation"),
+      );
+      const dates = blocks.map((b) => {
+        const [y, m, d] = b.date.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      });
+      const messages: Record<string, string> = {};
+      blocks.forEach(
+        (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+      );
+      return {
+        blockedDatesForEvaluation: dates,
+        blockedDateMessagesForEvaluation: messages,
+      };
+    }, [serviceDateBlocks]);
   const durationOptions = evaluation.schedule.durationOptionsMinutes;
   const defaultDuration =
     evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
@@ -160,10 +209,16 @@ export function EvaluationDetails({
                 showTimeSelection={false}
                 dateTimes={dateTimes}
                 facilityHours={hours}
+                scheduleTimeOverrides={scheduleTimeOverrides}
+                dropOffPickUpWindowsByDate={
+                  dropOffPickUpWindowsByDateForEvaluation
+                }
                 bookingRules={{
                   minimumAdvanceBooking: rules.minimumAdvanceBooking,
                   maximumAdvanceBooking: rules.maximumAdvanceBooking,
                 }}
+                disabledDates={blockedDatesForEvaluation}
+                disabledDateMessages={blockedDateMessagesForEvaluation}
               />
             </div>
 

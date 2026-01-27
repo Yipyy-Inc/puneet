@@ -191,9 +191,57 @@ export function BoardingDetails({
   setExtraServices,
   selectedPets,
 }: BoardingDetailsProps) {
-  const { hours, rules } = useSettings();
+  const {
+    hours,
+    rules,
+    serviceDateBlocks,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+  } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
+
+  const dropOffPickUpWindowsByDateForBoarding = React.useMemo(() => {
+    const map: Record<
+      string,
+      {
+        dropOffStart: string;
+        dropOffEnd: string;
+        pickUpStart: string;
+        pickUpEnd: string;
+      }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes("boarding"))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [dropOffPickUpOverrides]);
+
+  const { blockedDatesForBoarding, blockedDateMessagesForBoarding } =
+    React.useMemo(() => {
+      const blocks = serviceDateBlocks.filter(
+        (b) => b.closed && b.services.includes("boarding"),
+      );
+      const dates = blocks.map((b) => {
+        const [y, m, d] = b.date.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      });
+      const messages: Record<string, string> = {};
+      blocks.forEach(
+        (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+      );
+      return {
+        blockedDatesForBoarding: dates,
+        blockedDateMessagesForBoarding: messages,
+      };
+    }, [serviceDateBlocks]);
 
   const allPreviousCompleted = (stepIndex: number) => {
     if (!isSubStepComplete) return true;
@@ -248,10 +296,16 @@ export function BoardingDetails({
                   }
                 }}
                 facilityHours={hours}
+                scheduleTimeOverrides={scheduleTimeOverrides}
+                dropOffPickUpWindowsByDate={
+                  dropOffPickUpWindowsByDateForBoarding
+                }
                 bookingRules={{
                   minimumAdvanceBooking: rules.minimumAdvanceBooking,
                   maximumAdvanceBooking: rules.maximumAdvanceBooking,
                 }}
+                disabledDates={blockedDatesForBoarding}
+                disabledDateMessages={blockedDateMessagesForBoarding}
               />
             </div>
           </div>
