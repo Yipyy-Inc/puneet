@@ -114,6 +114,4 @@ export const BOARDING_SUB_STEPS = [
 
 export const EVALUATION_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time slot" },
-  { id: 1, title: "Staff", description: "Assign evaluator" },
-  { id: 2, title: "Room", description: "Choose room" },
 ];

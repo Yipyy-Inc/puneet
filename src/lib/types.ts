@@ -175,11 +175,18 @@ export interface EvaluationConfig {
   price: number;
   duration: "half-day" | "full-day" | "custom";
   customHours?: number;
-  availableSlots: {
-    startTime: string;
-    endTime: string;
-    duration: number; // in minutes
-  }[];
+  schedule: {
+    durationOptionsMinutes: number[];
+    defaultDurationMinutes?: number;
+    timeWindows: Array<{
+      id: string;
+      label: string;
+      startTime: string;
+      endTime: string;
+    }>;
+    slotMode: "fixed" | "window";
+    fixedStartTimes: string[];
+  };
   taxSettings: {
     taxable: boolean;
     taxRate?: number;
@@ -353,6 +360,46 @@ export interface AuditLogEntry {
   oldValue: string;
   newValue: string;
   ipAddress: string;
+}
+
+export interface FacilityBookingFlowConfig {
+  evaluationRequired: boolean;
+  hideServicesUntilEvaluationCompleted: boolean;
+  servicesRequiringEvaluation: string[];
+  hiddenServices: string[];
+}
+
+export type ReportCardTheme =
+  | "everyday"
+  | "christmas"
+  | "halloween"
+  | "easter"
+  | "thanksgiving"
+  | "new_year"
+  | "valentines";
+
+export interface ReportCardTemplateSet {
+  todaysVibe: string;
+  friendsAndFun: string;
+  careMetrics: string;
+  holidaySparkle: string;
+  closingNote: string;
+}
+
+export interface ReportCardAutoSendConfig {
+  mode: "immediate" | "checkout" | "end_of_day" | "manual";
+  sendTime?: string; // HH:mm (local time)
+  channels: {
+    email: boolean;
+    message: boolean;
+    sms: boolean;
+  };
+}
+
+export interface ReportCardConfig {
+  enabledThemes: ReportCardTheme[];
+  templates: Record<ReportCardTheme, ReportCardTemplateSet>;
+  autoSend: ReportCardAutoSendConfig;
 }
 
 export interface ModuleConfig {

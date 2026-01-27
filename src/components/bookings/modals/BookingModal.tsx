@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +31,6 @@ import {
   BOARDING_SUB_STEPS,
   EVALUATION_SUB_STEPS,
 } from "./constants";
-import { services } from "@/data/services-pricing";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 
@@ -74,7 +73,7 @@ export function BookingModal({
   preSelectedService,
   booking,
 }: NewBookingModalProps) {
-  const { daycare, boarding, grooming, training } = useSettings();
+  const { daycare, boarding, grooming, training, bookingFlow } = useSettings();
   const configs = { daycare, boarding, grooming, training };
 
   // Staff options for assignment
@@ -128,7 +127,6 @@ export function BookingModal({
     setSelectedService(service);
     if (service === "evaluation") {
       setServiceType("evaluation");
-      setEvaluationTargetService("");
     } else if (service === "daycare") {
       setServiceType("full_day");
     } else {
@@ -149,9 +147,6 @@ export function BookingModal({
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("08:00");
   const [checkOutTime, setCheckOutTime] = useState("17:00");
-  const [evaluationEvaluator, setEvaluationEvaluator] = useState("");
-  const [evaluationSpace, setEvaluationSpace] = useState("");
-  const [evaluationTargetService, setEvaluationTargetService] = useState("");
 
   // Daycare specific - multi-date selection
   const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
@@ -228,10 +223,6 @@ export function BookingModal({
         switch (stepIndex) {
           case 0:
             return !!startDate && !!checkInTime && !!checkOutTime;
-          case 1:
-            return !!evaluationTargetService && !!evaluationEvaluator;
-          case 2:
-            return !!evaluationSpace.trim();
           default:
             return false;
         }
@@ -248,9 +239,6 @@ export function BookingModal({
       startDate,
       checkInTime,
       checkOutTime,
-      evaluationTargetService,
-      evaluationEvaluator,
-      evaluationSpace,
     ],
   );
 
@@ -293,6 +281,62 @@ export function BookingModal({
     );
   }, [selectedClient, selectedPetIds]);
 
+  const canAccessLockedServices = useMemo(() => {
+    if (
+      !bookingFlow.evaluationRequired ||
+      !bookingFlow.hideServicesUntilEvaluationCompleted
+    ) {
+      return true;
+    }
+    if (selectedPets.length === 0) return false;
+    return selectedPets.every((pet) => petHasValidEvaluation(pet));
+  }, [bookingFlow, selectedPets, petHasValidEvaluation]);
+
+  useEffect(() => {
+    if (!selectedService || selectedService === "evaluation") return;
+    if (bookingFlow.hiddenServices.includes(selectedService)) {
+      setSelectedService("");
+      return;
+    }
+    if (
+      bookingFlow.evaluationRequired &&
+      bookingFlow.hideServicesUntilEvaluationCompleted &&
+      !canAccessLockedServices
+    ) {
+      setSelectedService("evaluation");
+    }
+  }, [
+    bookingFlow,
+    selectedService,
+    canAccessLockedServices,
+    setSelectedService,
+  ]);
+
+  const requiresEvaluationForService = useCallback(
+    (serviceId: string) => {
+      if (serviceId === "evaluation") return false;
+      if (bookingFlow.evaluationRequired) return true;
+      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId)) return true;
+      const config = configs[
+        serviceId as "daycare" | "boarding" | "grooming" | "training"
+      ];
+      return config?.settings.evaluation.enabled ?? false;
+    },
+    [bookingFlow, configs],
+  );
+
+  const isEvaluationOptionalForService = useCallback(
+    (serviceId: string) => {
+      if (bookingFlow.evaluationRequired) return false;
+      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId)) return false;
+      const config = configs[
+        serviceId as "daycare" | "boarding" | "grooming" | "training"
+      ];
+      return config?.settings.evaluation.optional ?? false;
+    },
+    [bookingFlow, configs],
+  );
+
   // Calculate total price
   const calculatePrice = useMemo(() => {
     let basePrice = 0;
@@ -330,15 +374,13 @@ export function BookingModal({
 
   // Check if service requires evaluation
   const serviceRequiresEvaluation = useMemo(() => {
-    const config = configs[selectedService as "daycare" | "boarding"];
-    return config?.settings.evaluation.enabled ?? false;
-  }, [selectedService, configs]);
+    return requiresEvaluationForService(selectedService);
+  }, [requiresEvaluationForService, selectedService]);
 
   // Check if evaluation is optional
   const isEvaluationOptional = useMemo(() => {
-    const config = configs[selectedService as "daycare" | "boarding"];
-    return config?.settings.evaluation.optional ?? false;
-  }, [selectedService, configs]);
+    return isEvaluationOptionalForService(selectedService);
+  }, [isEvaluationOptionalForService, selectedService]);
 
   // Validation for each step
   const canProceed = useMemo(() => {
@@ -461,14 +503,7 @@ export function BookingModal({
     if (!clientId || !petId) return;
 
     // Check if service requires evaluation
-    const service = services.find((s) => s.id === selectedService);
-    const isDaycareService = service?.category === "daycare";
-    const isBoardingService = service?.category === "boarding";
-    const requiresEvaluation = isDaycareService
-      ? daycare.settings.evaluation.enabled
-      : isBoardingService
-        ? boarding.settings.evaluation.enabled
-        : service?.requiresEvaluation || false;
+    const requiresEvaluation = requiresEvaluationForService(selectedService);
 
     if (requiresEvaluation) {
       const petsNeedingEvaluation = selectedPets.filter((pet) => {
@@ -519,9 +554,7 @@ export function BookingModal({
       facilityId,
       service: selectedService,
       serviceType:
-        selectedService === "evaluation"
-          ? evaluationTargetService
-          : serviceType,
+        selectedService === "evaluation" ? "evaluation" : serviceType,
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
           ? daycareSelectedDates[0].toISOString().split("T")[0]
@@ -542,10 +575,6 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
-      evaluationEvaluator:
-        selectedService === "evaluation" ? evaluationEvaluator : undefined,
-      evaluationSpace:
-        selectedService === "evaluation" ? evaluationSpace.trim() : undefined,
       status: "pending",
       basePrice: calculatePrice.basePrice,
       discount: 0,
@@ -590,7 +619,6 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
-    setEvaluationEvaluator("");
     setEvaluationSpace("");
     setEvaluationTargetService("");
 
@@ -749,11 +777,8 @@ export function BookingModal({
             : "MISSING";
 
     const requiresEvalForBooking =
-      booking.service === "daycare"
-        ? daycare.settings.evaluation.enabled && !daycare.settings.evaluation.optional
-        : booking.service === "boarding"
-          ? boarding.settings.evaluation.enabled && !boarding.settings.evaluation.optional
-          : false;
+      requiresEvaluationForService(booking.service) &&
+      !isEvaluationOptionalForService(booking.service);
 
     const evalCompleted =
       latestEvaluation?.status === "passed" || latestEvaluation?.status === "failed";
@@ -1334,6 +1359,7 @@ export function BookingModal({
                     setServiceType={setServiceType}
                     setCurrentSubStep={setCurrentSubStep}
                     configs={configs}
+                    bookingFlow={bookingFlow}
                     selectedPets={selectedPets}
                   />
                 )}
@@ -1377,13 +1403,6 @@ export function BookingModal({
                     setCheckInTime={setCheckInTime}
                     checkOutTime={checkOutTime}
                     setCheckOutTime={setCheckOutTime}
-                    evaluationEvaluator={evaluationEvaluator}
-                    setEvaluationEvaluator={setEvaluationEvaluator}
-                    evaluationSpace={evaluationSpace}
-                    setEvaluationSpace={setEvaluationSpace}
-                    evaluationTargetService={evaluationTargetService}
-                    setEvaluationTargetService={setEvaluationTargetService}
-                    evaluatorOptions={staffOptions}
                     serviceType={serviceType}
                     setServiceType={setServiceType}
                     feedingSchedule={feedingSchedule}
@@ -1403,9 +1422,6 @@ export function BookingModal({
                     selectedPets={selectedPets}
                     selectedService={selectedService}
                     serviceType={serviceType}
-                    evaluationTargetService={evaluationTargetService}
-                    evaluationEvaluator={evaluationEvaluator}
-                    evaluationSpace={evaluationSpace}
                     startDate={startDate}
                     endDate={endDate}
                     checkInTime={checkInTime}

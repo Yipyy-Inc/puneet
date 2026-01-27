@@ -35,8 +35,10 @@ export default async function FacilityLayout({
                 canCreateCustomer={userRole === "facility_admin"}
               />
               <div className="flex items-center gap-2">
-                <TopBarIconsNext />
-                <BookingRequestsTopbarDropdown />
+                <div className="flex items-center gap-1">
+                  <TopBarIconsNext />
+                  <BookingRequestsTopbarDropdown />
+                </div>
                 <FacilityHeader />
                 <UserProfileSheet showNotifications={false} />
               </div>

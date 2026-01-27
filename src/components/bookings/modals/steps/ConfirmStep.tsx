@@ -32,9 +32,6 @@ interface ConfirmStepProps {
   selectedPets: Pet[];
   selectedService: string;
   serviceType: string;
-  evaluationTargetService?: string;
-  evaluationEvaluator?: string;
-  evaluationSpace?: string;
   startDate: string;
   endDate: string;
   checkInTime: string;
@@ -64,9 +61,6 @@ export function ConfirmStep({
   selectedPets,
   selectedService,
   serviceType,
-  evaluationTargetService,
-  evaluationEvaluator,
-  evaluationSpace,
   startDate,
   endDate,
   checkInTime,
@@ -89,28 +83,6 @@ export function ConfirmStep({
   const displayClient = selectedClient;
   const displayPets = selectedPets;
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
-
-  const evaluationRoomLabel = (() => {
-    if (!evaluationSpace) return "";
-    if (evaluationTargetService === "daycare") {
-      const nameMap: Record<string, string> = {
-        "playroom-a": "Playroom A",
-        "playroom-b": "Playroom B",
-        "quiet-zone": "Quiet Zone",
-        "outdoor-yard": "Outdoor Yard",
-      };
-      return nameMap[evaluationSpace] ?? evaluationSpace;
-    }
-    if (evaluationTargetService === "boarding") {
-      const nameMap: Record<string, string> = {
-        standard: "Standard Room",
-        deluxe: "Deluxe Suite",
-        vip: "VIP Suite",
-      };
-      return nameMap[evaluationSpace] ?? evaluationSpace;
-    }
-    return evaluationSpace;
-  })();
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -269,11 +241,7 @@ export function ConfirmStep({
               <div className="flex justify-between items-center text-sm">
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Evaluation Details</p>
-                  {evaluationTargetService && (
-                    <p>Target: {evaluationTargetService}</p>
-                  )}
-                  {evaluationEvaluator && <p>Evaluator: {evaluationEvaluator}</p>}
-                  {evaluationSpace && <p>Room: {evaluationRoomLabel}</p>}
+                  <p>Scheduled evaluation</p>
                 </div>
               </div>
             )}

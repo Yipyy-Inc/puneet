@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Building2,
   DollarSign,
@@ -638,6 +639,608 @@ function EvaluationSettingsCard() {
               />
             </div>
           )}
+
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Evaluation Scheduling Rules</div>
+                <div className="text-sm text-muted-foreground">
+                  Configure duration options, time windows, and slot logic.
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Duration Options (hours)</Label>
+                <Input
+                  value={localEvaluation.schedule.durationOptionsMinutes
+                    .map((m) => m / 60)
+                    .join(", ")}
+                  onChange={(e) => {
+                    const parsed = e.target.value
+                      .split(",")
+                      .map((v) => Number(v.trim()))
+                      .filter((v) => Number.isFinite(v) && v > 0)
+                      .map((v) => Math.round(v * 60));
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        durationOptionsMinutes: parsed,
+                        defaultDurationMinutes:
+                          localEvaluation.schedule.defaultDurationMinutes ??
+                          parsed[0],
+                      },
+                    });
+                  }}
+                  placeholder="2, 4"
+                  readOnly={!isEditing}
+                  className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Default Duration</Label>
+                <Select
+                  value={String(
+                    localEvaluation.schedule.defaultDurationMinutes ??
+                      localEvaluation.schedule.durationOptionsMinutes[0] ??
+                      "",
+                  )}
+                  disabled={!isEditing}
+                  onValueChange={(value) =>
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        defaultDurationMinutes: Number(value),
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {localEvaluation.schedule.durationOptionsMinutes.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {m / 60}h
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Allowed Time Windows</Label>
+              <div className="space-y-2 rounded-lg border p-3">
+                {localEvaluation.schedule.timeWindows.map((window, idx) => (
+                  <div key={window.id} className="grid grid-cols-3 gap-2">
+                    <Input
+                      value={window.label}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          label: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      placeholder="Label"
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                    <Input
+                      type="time"
+                      value={window.startTime}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          startTime: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                    <Input
+                      type="time"
+                      value={window.endTime}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          endTime: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                  </div>
+                ))}
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const next = [
+                        ...localEvaluation.schedule.timeWindows,
+                        {
+                          id: `window-${Date.now()}`,
+                          label: "New Window",
+                          startTime: "09:00",
+                          endTime: "12:00",
+                        },
+                      ];
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        schedule: {
+                          ...localEvaluation.schedule,
+                          timeWindows: next,
+                        },
+                      });
+                    }}
+                  >
+                    Add Time Window
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Slot Logic</Label>
+                <Select
+                  value={localEvaluation.schedule.slotMode}
+                  disabled={!isEditing}
+                  onValueChange={(value: "fixed" | "window") =>
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        slotMode: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Fixed start times</SelectItem>
+                    <SelectItem value="window">Any time within window</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {localEvaluation.schedule.slotMode === "fixed" && (
+                <div className="space-y-2">
+                  <Label>Fixed Start Times</Label>
+                  <Input
+                    value={localEvaluation.schedule.fixedStartTimes.join(", ")}
+                    onChange={(e) => {
+                      const parsed = e.target.value
+                        .split(",")
+                        .map((v) => v.trim())
+                        .filter(Boolean);
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        schedule: {
+                          ...localEvaluation.schedule,
+                          fixedStartTimes: parsed,
+                        },
+                      });
+                    }}
+                    placeholder="09:00, 11:00, 13:00"
+                    readOnly={!isEditing}
+                    className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+function ReportCardSettingsCard() {
+  const { reportCards, updateReportCards } = useSettings();
+
+  const themeOptions = [
+    { id: "everyday", label: "Everyday" },
+    { id: "christmas", label: "Christmas" },
+    { id: "halloween", label: "Halloween" },
+    { id: "easter", label: "Easter" },
+    { id: "thanksgiving", label: "Thanksgiving" },
+    { id: "new_year", label: "New Year" },
+    { id: "valentines", label: "Valentine's Day" },
+  ] as const;
+
+  return (
+    <SettingsBlock
+      title="Report Card Templates"
+      description="Manage report card themes, wording templates, and auto-send timing."
+      data={reportCards}
+      onSave={updateReportCards}
+    >
+      {(isEditing, localConfig, setLocalConfig) => (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>Enabled Themes</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+              {themeOptions.map((theme) => (
+                <div key={theme.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`theme-${theme.id}`}
+                    checked={localConfig.enabledThemes.includes(theme.id)}
+                    disabled={!isEditing}
+                    onCheckedChange={(checked) => {
+                      const enabled = checked === true;
+                      setLocalConfig({
+                        ...localConfig,
+                        enabledThemes: enabled
+                          ? [...localConfig.enabledThemes, theme.id]
+                          : localConfig.enabledThemes.filter((t) => t !== theme.id),
+                      });
+                    }}
+                  />
+                  <Label htmlFor={`theme-${theme.id}`}>{theme.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Auto-send Timing</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                value={localConfig.autoSend.mode}
+                disabled={!isEditing}
+                onValueChange={(value: "immediate" | "scheduled") =>
+                  setLocalConfig({
+                    ...localConfig,
+                    autoSend: {
+                      ...localConfig.autoSend,
+                      mode: value,
+                    },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="immediate">Send immediately</SelectItem>
+                  <SelectItem value="scheduled">Schedule for time</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="time"
+                value={localConfig.autoSend.sendTime ?? "18:00"}
+                readOnly={!isEditing || localConfig.autoSend.mode !== "scheduled"}
+                className={
+                  !isEditing || localConfig.autoSend.mode !== "scheduled"
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
+                onChange={(e) =>
+                  setLocalConfig({
+                    ...localConfig,
+                    autoSend: {
+                      ...localConfig.autoSend,
+                      sendTime: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rc-send-email"
+                  checked={localConfig.autoSend.channels.email}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalConfig({
+                      ...localConfig,
+                      autoSend: {
+                        ...localConfig.autoSend,
+                        channels: {
+                          ...localConfig.autoSend.channels,
+                          email: checked === true,
+                        },
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="rc-send-email">Send Email</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rc-send-message"
+                  checked={localConfig.autoSend.channels.message}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalConfig({
+                      ...localConfig,
+                      autoSend: {
+                        ...localConfig.autoSend,
+                        channels: {
+                          ...localConfig.autoSend.channels,
+                          message: checked === true,
+                        },
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="rc-send-message">Send Message</Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label>Template Wording (by Theme)</Label>
+            <div className="space-y-4">
+              {themeOptions.map((theme) => (
+                <Card key={theme.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{theme.label}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <Label>Today’s vibe</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].todaysVibe}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                todaysVibe: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Friends & fun</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].friendsAndFun}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                friendsAndFun: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Care metrics</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].careMetrics}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                careMetrics: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Holiday sparkle</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].holidaySparkle}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                holidaySparkle: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Closing note</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].closingNote}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                closingNote: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+// Facility booking access & evaluation requirements
+function FacilityBookingFlowCard() {
+  const { bookingFlow, updateBookingFlow } = useSettings();
+
+  const serviceOptions = [
+    { id: "daycare", label: "Daycare" },
+    { id: "boarding", label: "Boarding" },
+    { id: "grooming", label: "Grooming" },
+    { id: "training", label: "Training" },
+  ];
+
+  const toggleService = (
+    list: string[],
+    serviceId: string,
+    checked: boolean,
+  ) => {
+    if (checked) return [...list, serviceId];
+    return list.filter((item) => item !== serviceId);
+  };
+
+  return (
+    <SettingsBlock
+      title="Booking Access & Evaluation Rules"
+      description="Control when evaluations are required and which services appear in online booking."
+      data={bookingFlow}
+      onSave={updateBookingFlow}
+    >
+      {(isEditing, localFlow, setLocalFlow) => (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Evaluation Required</div>
+              <div className="text-sm text-muted-foreground">
+                Require evaluation before any service booking.
+              </div>
+            </div>
+            <Switch
+              checked={localFlow.evaluationRequired}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalFlow({ ...localFlow, evaluationRequired: checked })
+              }
+            />
+          </div>
+
+          {localFlow.evaluationRequired ? (
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="font-medium">
+                  Hide Services Until Evaluation Completed
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Show only the Evaluation service until it is completed or booked.
+                </div>
+              </div>
+              <Switch
+                checked={localFlow.hideServicesUntilEvaluationCompleted}
+                disabled={!isEditing}
+                onCheckedChange={(checked) =>
+                  setLocalFlow({
+                    ...localFlow,
+                    hideServicesUntilEvaluationCompleted: checked,
+                  })
+                }
+              />
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Services Requiring Evaluation First</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {serviceOptions.map((service) => (
+                    <div key={service.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`eval-${service.id}`}
+                        checked={localFlow.servicesRequiringEvaluation.includes(
+                          service.id,
+                        )}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) =>
+                          setLocalFlow({
+                            ...localFlow,
+                            servicesRequiringEvaluation: toggleService(
+                              localFlow.servicesRequiringEvaluation,
+                              service.id,
+                              !!checked,
+                            ),
+                          })
+                        }
+                      />
+                      <Label htmlFor={`eval-${service.id}`}>
+                        {service.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Hidden From Online Booking</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {serviceOptions.map((service) => (
+                    <div key={service.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`hidden-${service.id}`}
+                        checked={localFlow.hiddenServices.includes(service.id)}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) =>
+                          setLocalFlow({
+                            ...localFlow,
+                            hiddenServices: toggleService(
+                              localFlow.hiddenServices,
+                              service.id,
+                              !!checked,
+                            ),
+                          })
+                        }
+                      />
+                      <Label htmlFor={`hidden-${service.id}`}>
+                        {service.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </SettingsBlock>
@@ -901,6 +1504,8 @@ export default function SettingsPage() {
 
           <BookingRulesCard />
 
+          <FacilityBookingFlowCard />
+
           {/* Vaccination Rules */}
           <Card>
             <CardHeader>
@@ -934,6 +1539,8 @@ export default function SettingsPage() {
           </Card>
 
           <EvaluationSettingsCard />
+
+          <ReportCardSettingsCard />
         </TabsContent>
 
         {/* Financial Settings Tab */}
