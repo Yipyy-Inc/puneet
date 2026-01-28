@@ -86,6 +86,10 @@ export interface DateSelectionCalendarProps {
   minDate?: Date;
   maxDate?: Date;
   disabledDates?: Date[];
+  /** Range mode: dates that cannot be used as check-in (range start). */
+  disabledStartDates?: Date[];
+  /** Range mode: dates that cannot be used as check-out (range end). */
+  disabledEndDates?: Date[];
   /** Messages for disabled dates (key = YYYY-MM-DD). Shown when customer hovers over a blocked date. */
   disabledDateMessages?: Record<string, string>;
   unavailableDates?: Date[];
@@ -172,6 +176,8 @@ export function DateSelectionCalendar({
   minDate,
   maxDate,
   disabledDates = [],
+  disabledStartDates,
+  disabledEndDates,
   disabledDateMessages,
   unavailableDates = [],
   className,
@@ -256,11 +262,34 @@ export function DateSelectionCalendar({
     return max;
   }, [maxDate, bookingRules]);
 
+  const effectiveDisabledDates = useMemo(() => {
+    if (mode === "range") {
+      if (rangeStart && !rangeEnd) {
+        return [
+          ...(disabledDates ?? []),
+          ...(disabledEndDates ?? []),
+        ];
+      }
+      return [
+        ...(disabledDates ?? []),
+        ...(disabledStartDates ?? []),
+      ];
+    }
+    return disabledDates ?? [];
+  }, [
+    mode,
+    rangeStart,
+    rangeEnd,
+    disabledDates,
+    disabledStartDates,
+    disabledEndDates,
+  ]);
+
   const isDateDisabled = (date: Date): boolean => {
     if (effectiveMinDate && date < effectiveMinDate) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
     if (facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
-    return disabledDates.some((d) => isSameDay(d, date));
+    return effectiveDisabledDates.some((d) => isSameDay(d, date));
   };
 
   const isDateUnavailable = (date: Date): boolean => {

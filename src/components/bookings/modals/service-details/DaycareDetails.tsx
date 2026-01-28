@@ -192,6 +192,12 @@ export function DaycareDetails({
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
 
+  const scheduleTimeOverridesForDaycare = React.useMemo(() => {
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes("daycare"),
+    );
+  }, [scheduleTimeOverrides]);
+
   const dropOffPickUpWindowsByDateForDaycare = React.useMemo(() => {
     const map: Record<
       string,
@@ -282,7 +288,7 @@ export function DaycareDetails({
                 }
               }}
               facilityHours={hours}
-              scheduleTimeOverrides={scheduleTimeOverrides}
+              scheduleTimeOverrides={scheduleTimeOverridesForDaycare}
               dropOffPickUpWindowsByDate={dropOffPickUpWindowsByDateForDaycare}
               bookingRules={{
                 minimumAdvanceBooking: rules.minimumAdvanceBooking,

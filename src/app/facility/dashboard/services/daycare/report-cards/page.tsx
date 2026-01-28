@@ -40,6 +40,7 @@ import {
 import { daycareCheckIns } from "@/data/daycare";
 import { boardingGuests } from "@/data/boarding";
 import { useSettings } from "@/hooks/use-settings";
+import type { ReportCardTheme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type ServiceType = "daycare" | "hotel";
@@ -318,7 +319,7 @@ export default function DaycareReportCardsPage() {
     theme: string,
   ): ReportCardGeneratedSections => {
     const templates =
-      reportCardConfig.templates[theme] ??
+      reportCardConfig.templates[theme as ReportCardTheme] ??
       reportCardConfig.templates.everyday;
     const tokens = {
       petName: selectedVisit?.petName ?? "your pet",

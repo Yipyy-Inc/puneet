@@ -338,12 +338,17 @@ const SERVICE_BLOCK_OPTIONS: { id: string; label: string }[] = [
   { id: "evaluation", label: "Evaluation" },
 ];
 
+type BlockType = "full" | "check_in" | "check_out";
+
 // Service-Specific Day Blocking (override regular schedule)
 function ServiceDayBlockingCard() {
   const { serviceDateBlocks, updateServiceDateBlocks } = useSettings();
   const [newDate, setNewDate] = useState("");
   const [newServices, setNewServices] = useState<string[]>([]);
+  const [newBlockType, setNewBlockType] = useState<BlockType>("full");
   const [newClosureMessage, setNewClosureMessage] = useState("");
+
+  const includesBoarding = newServices.includes("boarding");
 
   const handleAdd = () => {
     if (!newDate || newServices.length === 0) return;
@@ -351,12 +356,17 @@ function ServiceDayBlockingCard() {
       id: `block-${Date.now()}`,
       date: newDate,
       services: [...newServices],
-      closed: true,
+      closed: includesBoarding ? newBlockType === "full" : true,
+      blockCheckIn: includesBoarding ? newBlockType === "check_in" : undefined,
+      blockCheckOut: includesBoarding
+        ? newBlockType === "check_out"
+        : undefined,
       closureMessage: newClosureMessage.trim() || undefined,
     };
     updateServiceDateBlocks([...serviceDateBlocks, block]);
     setNewDate("");
     setNewServices([]);
+    setNewBlockType("full");
     setNewClosureMessage("");
   };
 
@@ -398,9 +408,26 @@ function ServiceDayBlockingCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">
-                Services affected
+                Services affected (per service, multiple, or all)
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear all"
+                    : "All services"}
+                </Button>
                 {SERVICE_BLOCK_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
                     <Checkbox
@@ -418,6 +445,50 @@ function ServiceDayBlockingCard() {
                 ))}
               </div>
             </div>
+            {includesBoarding && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Boarding block type
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={newBlockType === "full" ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("full")}
+                  >
+                    Fully close
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      newBlockType === "check_in" ? "default" : "outline"
+                    }
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("check_in")}
+                  >
+                    Block check-in only
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      newBlockType === "check_out" ? "default" : "outline"
+                    }
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("check_out")}
+                  >
+                    Block check-out only
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Fully close = no check-in or check-out. Or block only check-in
+                  or only check-out dates.
+                </p>
+              </div>
+            )}
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">
                 Closure message (customer-facing)
@@ -473,18 +544,42 @@ function ServiceDayBlockingCard() {
                           )}
                         </span>
                         <div className="flex flex-wrap gap-1">
-                          {block.services.map((s) => (
+                          {block.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
                             <Badge
-                              key={s}
                               variant="secondary"
                               className="text-xs"
                             >
-                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
-                                ?.label ?? s}
+                              All services
                             </Badge>
-                          ))}
+                          ) : (
+                            block.services.map((s) => (
+                              <Badge
+                                key={s}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                  ?.label ?? s}
+                              </Badge>
+                            ))
+                          )}
                         </div>
-                        <Badge variant="outline">Closed</Badge>
+                        {block.services.includes("boarding") ? (
+                          <Badge variant="outline" className="text-xs">
+                            {block.closed
+                              ? "Fully closed"
+                              : block.blockCheckIn && block.blockCheckOut
+                                ? "Check-in & check-out blocked"
+                                : block.blockCheckIn
+                                  ? "Check-in blocked"
+                                  : block.blockCheckOut
+                                    ? "Check-out blocked"
+                                    : "Closed"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Closed</Badge>
+                        )}
                       </div>
                       {block.closureMessage && (
                         <p className="text-sm text-muted-foreground">
@@ -514,6 +609,7 @@ function ServiceDayBlockingCard() {
 function OneDayScheduleOverrideCard() {
   const { scheduleTimeOverrides, updateScheduleTimeOverrides } = useSettings();
   const [newDate, setNewDate] = useState("");
+  const [newServices, setNewScheduleServices] = useState<string[]>([]);
   const [newOpenTime, setNewOpenTime] = useState("08:00");
   const [newCloseTime, setNewCloseTime] = useState("17:00");
 
@@ -522,11 +618,17 @@ function OneDayScheduleOverrideCard() {
     const override: ScheduleTimeOverride = {
       id: `override-${Date.now()}`,
       date: newDate,
+      services:
+        newServices.length === 0 ||
+        newServices.length === SERVICE_BLOCK_OPTIONS.length
+          ? undefined
+          : [...newServices],
       openTime: newOpenTime,
       closeTime: newCloseTime,
     };
     updateScheduleTimeOverrides([...scheduleTimeOverrides, override]);
     setNewDate("");
+    setNewScheduleServices([]);
     setNewOpenTime("08:00");
     setNewCloseTime("17:00");
   };
@@ -534,6 +636,12 @@ function OneDayScheduleOverrideCard() {
   const handleRemove = (id: string) => {
     updateScheduleTimeOverrides(
       scheduleTimeOverrides.filter((o) => o.id !== id),
+    );
+  };
+
+  const toggleScheduleService = (id: string) => {
+    setNewScheduleServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
   };
 
@@ -547,14 +655,13 @@ function OneDayScheduleOverrideCard() {
         <p className="text-sm text-muted-foreground">
           Set custom opening and closing times for a specific date (e.g.
           Halloween 10:00 AM – 3:00 PM) without changing the regular weekly
-          schedule. The override applies only to that date and automatically
-          reverts to normal hours afterward.
+          schedule. Choose per service, multiple services, or all services.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-lg border p-4 space-y-4">
           <Label>Add override</Label>
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Date</Label>
               <Input
@@ -564,7 +671,48 @@ function OneDayScheduleOverrideCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Opening time</Label>
+              <Label className="text-xs text-muted-foreground">
+                Services (optional — leave empty for all)
+              </Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewScheduleServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear / All"
+                    : "All services"}
+                </Button>
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`sched-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleScheduleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`sched-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Opening time
+              </Label>
               <Input
                 type="time"
                 value={newOpenTime}
@@ -572,7 +720,9 @@ function OneDayScheduleOverrideCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Closing time</Label>
+              <Label className="text-xs text-muted-foreground">
+                Closing time
+              </Label>
               <Input
                 type="time"
                 value={newCloseTime}
@@ -606,17 +756,43 @@ function OneDayScheduleOverrideCard() {
                     className="flex items-center justify-between p-3 border rounded-lg"
                   >
                     <div className="flex flex-col gap-1">
-                      <span className="font-medium">
-                        {new Date(override.date + "T12:00:00").toLocaleDateString(
-                          "en-US",
-                          {
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">
+                          {new Date(
+                            override.date + "T12:00:00",
+                          ).toLocaleDateString("en-US", {
                             weekday: "short",
                             month: "short",
                             day: "numeric",
                             year: "numeric",
-                          },
+                          })}
+                        </span>
+                        {override.services &&
+                        override.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            All services
+                          </Badge>
+                        ) : override.services && override.services.length > 0 ? (
+                          override.services.map((s) => (
+                            <Badge
+                              key={s}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                ?.label ?? s}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            All services
+                          </Badge>
                         )}
-                      </span>
+                      </div>
                       <span className="text-sm text-muted-foreground">
                         {override.openTime} – {override.closeTime}
                       </span>
@@ -708,9 +884,26 @@ function DropOffPickUpOverrideCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">
-                Services
+                Services (per service, multiple, or all)
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear all"
+                    : "All services"}
+                </Button>
                 {SERVICE_BLOCK_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
                     <Checkbox
@@ -809,16 +1002,26 @@ function DropOffPickUpOverrideCard() {
                           })}
                         </span>
                         <div className="flex flex-wrap gap-1">
-                          {override.services.map((s) => (
+                          {override.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
                             <Badge
-                              key={s}
                               variant="secondary"
                               className="text-xs"
                             >
-                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
-                                ?.label ?? s}
+                              All services
                             </Badge>
-                          ))}
+                          ) : (
+                            override.services.map((s) => (
+                              <Badge
+                                key={s}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                  ?.label ?? s}
+                              </Badge>
+                            ))
+                          )}
                         </div>
                       </div>
                       <span className="text-sm text-muted-foreground">

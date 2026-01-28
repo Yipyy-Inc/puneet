@@ -373,6 +373,8 @@ export interface FacilityBookingFlowConfig {
 export interface ScheduleTimeOverride {
   id: string;
   date: string; // YYYY-MM-DD
+  /** Service(s) this override applies to. Empty or undefined = all services. */
+  services?: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
   openTime: string; // HH:mm
   closeTime: string; // HH:mm
 }
@@ -393,7 +395,12 @@ export interface ServiceDateBlock {
   id: string;
   date: string; // YYYY-MM-DD
   services: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
-  closed: boolean; // true = service(s) closed on this date
+  /** Fully close: no check-in, no check-out on this date. */
+  closed: boolean;
+  /** Boarding-only: block this date as check-in (range start). */
+  blockCheckIn?: boolean;
+  /** Boarding-only: block this date as check-out (range end). */
+  blockCheckOut?: boolean;
   /** Customer-facing message explaining the closure (e.g. "Closed for Christmas"). */
   closureMessage?: string;
 }

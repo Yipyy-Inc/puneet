@@ -51,6 +51,12 @@ export function EvaluationDetails({
   } = useSettings();
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
 
+  const scheduleTimeOverridesForEvaluation = React.useMemo(() => {
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes("evaluation"),
+    );
+  }, [scheduleTimeOverrides]);
+
   const dropOffPickUpWindowsByDateForEvaluation = React.useMemo(() => {
     const map: Record<
       string,
@@ -209,7 +215,7 @@ export function EvaluationDetails({
                 showTimeSelection={false}
                 dateTimes={dateTimes}
                 facilityHours={hours}
-                scheduleTimeOverrides={scheduleTimeOverrides}
+                scheduleTimeOverrides={scheduleTimeOverridesForEvaluation}
                 dropOffPickUpWindowsByDate={
                   dropOffPickUpWindowsByDateForEvaluation
                 }
