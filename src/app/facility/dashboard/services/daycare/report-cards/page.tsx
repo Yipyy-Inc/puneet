@@ -384,7 +384,9 @@ export default function DaycareReportCardsPage() {
             ? entryInput.favoriteActivities
             : (["fetch"] as FavoriteActivity[])
           )
-            .map((activity) => favoriteActivityLabels[activity])
+            .map(
+              (activity: FavoriteActivity) => favoriteActivityLabels[activity],
+            )
             .join(" followed by ")}${entryInput.playNotes.trim() ? `, ${entryInput.playNotes.trim()}` : ""}.`
         : `Social life update: ${petName} bonded closely with our amazing staff team today and enjoyed plenty of one-on-one attention.`,
       careMetrics: [
