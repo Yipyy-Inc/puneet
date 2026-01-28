@@ -382,7 +382,7 @@ export default function DaycareReportCardsPage() {
       friendsAndFun: entryInput.bestFriends.trim()
         ? `Social life update: ${petName} was ${socialLabels[entryInput.socialization]} today! ${petName} especially enjoyed spending time with ${entryInput.bestFriends.trim()}, and ${petName}'s favorite activity was ${(entryInput.favoriteActivities.length
             ? entryInput.favoriteActivities
-            : ["fetch"]
+            : (["fetch"] as FavoriteActivity[])
           )
             .map((activity) => favoriteActivityLabels[activity])
             .join(" followed by ")}${entryInput.playNotes.trim() ? `, ${entryInput.playNotes.trim()}` : ""}.`
