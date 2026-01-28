@@ -619,8 +619,6 @@ export function BookingModal({
     setEndDate("");
     setCheckInTime("08:00");
     setCheckOutTime("17:00");
-    setEvaluationSpace("");
-    setEvaluationTargetService("");
 
     setKennel("");
     setRoomAssignments([]);
