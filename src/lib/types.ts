@@ -423,7 +423,7 @@ export interface ReportCardTemplateSet {
 }
 
 export interface ReportCardAutoSendConfig {
-  mode: "immediate" | "checkout" | "end_of_day" | "manual";
+  mode: "immediate" | "scheduled" | "checkout" | "end_of_day" | "manual";
   sendTime?: string; // HH:mm (local time)
   channels: {
     email: boolean;
