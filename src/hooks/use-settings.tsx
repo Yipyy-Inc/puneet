@@ -109,7 +109,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(fallback)) {
-          return Array.isArray(parsed) ? (parsed as T) : null;
+          return Array.isArray(parsed) ? (parsed as unknown as T) : null;
         }
         if (parsed && typeof parsed === "object") {
           return { ...fallback, ...parsed };
