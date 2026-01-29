@@ -1,5 +1,7 @@
-import { PawPrint } from "lucide-react";
+import { PawPrint, Mail, MessageSquare, Receipt } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import type { Pet, Client } from "@/lib/types";
 import { SERVICE_CATEGORIES } from "../constants";
 
@@ -84,56 +86,74 @@ export function ConfirmStep({
   const displayPets = selectedPets;
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
 
+  const ServiceIcon = serviceInfo?.icon;
+
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Receipt Header */}
-      <div className="bg-primary text-primary-foreground p-4 rounded-t-lg">
-        <div className="text-center">
-          <h2 className="text-xl font-bold">Booking Receipt</h2>
-          <p className="text-sm opacity-90">Pet Care Services</p>
-        </div>
-      </div>
-
-      {/* Receipt Body */}
-      <div className="border-2 border-primary rounded-b-lg bg-white">
-        {/* Client & Pet Info */}
-        <div className="p-4 border-b border-dashed">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Client
-              </p>
-              <p className="font-semibold">
-                {displayClient?.name || "Unknown"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {displayClient?.email}
-              </p>
+      {/* Receipt Card - Paper-like design */}
+      <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
+        {/* Header - Gradient with icon */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 px-6 py-6">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTZzLTItNC0yLTYgMi00IDItNi0yLTQtMi02IDItNCAyLTYtMi00LTIgLTYgMi00IDItNiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              {ServiceIcon ? (
+                <ServiceIcon className="h-7 w-7 text-white" />
+              ) : (
+                <Receipt className="h-7 w-7 text-white" />
+              )}
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                Pet{displayPets.length > 1 ? "s" : ""}
-              </p>
-              <div className="flex gap-1 justify-end mt-1">
-                {displayPets.map((pet) => (
-                  <div
-                    key={pet.id}
-                    className="w-6 h-6 rounded-full bg-muted flex items-center justify-center"
-                    title={pet.name}
-                  >
-                    <PawPrint className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {displayPets.map((p) => p.name).join(", ")}
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                Booking Receipt
+              </h2>
+              <p className="text-sm text-white/90">
+                {serviceInfo?.name || "Pet Care Services"}
               </p>
             </div>
           </div>
         </div>
 
+        {/* Client & Pet Info */}
+        <div className="p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Client
+              </p>
+              <p className="font-semibold text-foreground">
+                {displayClient?.name || "Unknown"}
+              </p>
+              {displayClient?.email && (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {displayClient.email}
+                </p>
+              )}
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Pet{displayPets.length > 1 ? "s" : ""}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {displayPets.map((pet) => (
+                  <Badge
+                    key={pet.id}
+                    variant="secondary"
+                    className="gap-1.5 px-2.5 py-1 font-medium"
+                  >
+                    <PawPrint className="h-3 w-3" />
+                    {pet.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
         {/* Service Details */}
-        <div className="p-4 border-b border-dashed">
+        <div className="p-6">
           <div className="space-y-3">
             {/* Main Service */}
             <div className="flex justify-between items-center">

@@ -173,7 +173,7 @@ export function GenericSidebar({
 
       {/* Navigation Content */}
       <SidebarContent
-        className={cn("py-2 scrollbar-thin", isExpanded ? "px-3" : "px-1")}
+        className={cn("py-2 scrollbar-thin overflow-x-hidden", isExpanded ? "px-3" : "px-1")}
       >
         {filteredMenuSections.map((section, index) => {
           const hasActiveItem = section.items.some(
