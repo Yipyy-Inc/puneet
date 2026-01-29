@@ -1584,7 +1584,7 @@ export function addRetailTransaction(
     status: "completed",
     receiptSent: false,
     createdAt: new Date().toISOString().slice(0, 19),
-  };
+  } as Transaction;
   transactions.push(newTxn);
   return newTxn;
 }
