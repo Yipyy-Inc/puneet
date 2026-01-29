@@ -12,8 +12,7 @@ import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Check, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 
 interface EvaluationModalProps {
@@ -21,51 +20,6 @@ interface EvaluationModalProps {
   onClose: () => void;
   bookingId: number;
 }
-
-type EvaluationTargetService = "daycare" | "boarding";
-
-// NOTE: mock "existing rooms" (same idea as Daycare/Boarding details).
-// Later this should come from backend / facility settings.
-const DAYCARE_ROOMS = [
-  {
-    id: "playroom-a",
-    name: "Playroom A",
-    description: "Main playroom for active dogs",
-  },
-  {
-    id: "playroom-b",
-    name: "Playroom B",
-    description: "Smaller dogs and calm play",
-  },
-  {
-    id: "quiet-zone",
-    name: "Quiet Zone",
-    description: "Low-energy pets and seniors",
-  },
-  {
-    id: "outdoor-yard",
-    name: "Outdoor Yard",
-    description: "Outdoor supervised play area",
-  },
-];
-
-const BOARDING_TYPES = [
-  {
-    id: "standard",
-    name: "Standard Room",
-    description: "Comfortable indoor kennel with bedding",
-  },
-  {
-    id: "deluxe",
-    name: "Deluxe Suite",
-    description: "Spacious suite with play area and webcam",
-  },
-  {
-    id: "vip",
-    name: "VIP Suite",
-    description: "Luxury suite with private outdoor access",
-  },
-];
 
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -90,22 +44,14 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
   const [checkInTime, setCheckInTime] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [targetService, setTargetService] = useState<EvaluationTargetService | "">("");
-  const [roomId, setRoomId] = useState("");
 
   const { hours, rules, evaluation } = useSettings();
-
-  const roomOptions = useMemo(() => {
-    if (targetService === "daycare") return DAYCARE_ROOMS;
-    if (targetService === "boarding") return BOARDING_TYPES;
-    return [];
-  }, [targetService]);
-
-  // reset room if target changes
-  const handleTargetChange = (value: string) => {
-    setTargetService(value as EvaluationTargetService);
-    setRoomId("");
-  };
+  const durationOptions = evaluation.schedule.durationOptionsMinutes;
+  const defaultDuration =
+    evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
+  const [selectedDuration, setSelectedDuration] = useState<number>(
+    defaultDuration,
+  );
 
   const selectedDates = useMemo(() => {
     if (!startDate) return [];
@@ -132,10 +78,64 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
     }
   };
 
+  const timeToMinutes = (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const minutesToTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  const timeWindows =
+    evaluation.schedule.timeWindows.length > 0
+      ? evaluation.schedule.timeWindows
+      : [{ id: "all-day", label: "All day", startTime: "00:00", endTime: "23:59" }];
+
+  const slots = useMemo(() => {
+    const duration = selectedDuration || defaultDuration;
+    const windows = timeWindows;
+    if (evaluation.schedule.slotMode === "fixed") {
+      return evaluation.schedule.fixedStartTimes
+        .map((startTime) => {
+          const start = timeToMinutes(startTime);
+          const end = start + duration;
+          const withinWindow = windows.some(
+            (w) =>
+              start >= timeToMinutes(w.startTime) &&
+              end <= timeToMinutes(w.endTime),
+          );
+          if (!withinWindow) return null;
+          return {
+            startTime,
+            endTime: minutesToTime(end),
+            duration,
+          };
+        })
+        .filter(Boolean) as Array<{ startTime: string; endTime: string; duration: number }>;
+    }
+
+    const generated: Array<{ startTime: string; endTime: string; duration: number }> = [];
+    windows.forEach((window) => {
+      const start = timeToMinutes(window.startTime);
+      const end = timeToMinutes(window.endTime);
+      let current = start;
+      while (current + duration <= end) {
+        generated.push({
+          startTime: minutesToTime(current),
+          endTime: minutesToTime(current + duration),
+          duration,
+        });
+        current += duration;
+      }
+    });
+    return generated;
+  }, [evaluation.schedule, selectedDuration, defaultDuration, timeWindows]);
+
   const handleSlotSelect = (slotStartTime: string) => {
-    const slot = evaluation.availableSlots.find(
-      (s) => s.startTime === slotStartTime,
-    );
+    const slot = slots.find((s) => s.startTime === slotStartTime);
     if (!slot) return;
     setSelectedSlot(slotStartTime);
     setCheckInTime(slot.startTime);
@@ -150,8 +150,6 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
       startDate,
       checkInTime,
       checkOutTime,
-      targetService,
-      roomId,
       status: "pending",
     });
     onClose();
@@ -189,6 +187,32 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
           <Card>
             <CardContent className="pt-6">
               <div className="space-y-4">
+                {durationOptions.length > 1 && (
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Duration</Label>
+                    <Select
+                      value={String(selectedDuration)}
+                      onValueChange={(value) => {
+                        const next = Number(value);
+                        setSelectedDuration(next);
+                        setSelectedSlot(null);
+                        setCheckInTime("");
+                        setCheckOutTime("");
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {durationOptions.map((opt) => (
+                          <SelectItem key={opt} value={String(opt)}>
+                            {opt / 60}h
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-muted-foreground" />
                   <Label className="text-base">
@@ -200,7 +224,7 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
                 </p>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {evaluation.availableSlots.map((slot) => {
+                  {slots.map((slot) => {
                     const isSelected = selectedSlot === slot.startTime;
                     return (
                       <Button
@@ -224,7 +248,7 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
                   })}
                 </div>
 
-                {evaluation.availableSlots.length === 0 && (
+                {slots.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     No time slots available for evaluation.
                   </p>
@@ -235,13 +259,13 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
                     <p className="text-sm font-medium text-primary">
                       Selected:{" "}
                       {
-                        evaluation.availableSlots.find(
+                        slots.find(
                           (s) => s.startTime === selectedSlot,
                         )?.startTime
                       }{" "}
                       -{" "}
                       {
-                        evaluation.availableSlots.find(
+                        slots.find(
                           (s) => s.startTime === selectedSlot,
                         )?.endTime
                       }
@@ -252,19 +276,6 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
             </CardContent>
           </Card>
         )}
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Target Service</label>
-          <Select value={targetService} onValueChange={handleTargetChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select Daycare or Boarding" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daycare">Daycare</SelectItem>
-              <SelectItem value="boarding">Boarding</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Assign Evaluator</label>
@@ -282,62 +293,12 @@ export function EvaluationModal({ isOpen, onClose, bookingId }: EvaluationModalP
           </Select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Room</label>
-          {!targetService ? (
-            <div className="bg-muted/50 border border-dashed rounded-lg p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Select target service first
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-              {roomOptions.map((room) => {
-                const isSelected = roomId === room.id;
-                return (
-                  <button
-                    key={room.id}
-                    type="button"
-                    onClick={() => setRoomId(room.id)}
-                    className={cn(
-                      "text-left border-2 rounded-lg p-4 transition-all hover:border-primary/60",
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-background",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">
-                          {room.name}
-                        </p>
-                        {room.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {room.description}
-                          </p>
-                        )}
-                      </div>
-                      {isSelected && (
-                        <span className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground">
-                          <Check className="h-4 w-4" />
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={handleSave}
             disabled={
               !evaluator ||
-              !targetService ||
-              !roomId ||
               !startDate ||
               !checkInTime ||
               !checkOutTime

@@ -1041,9 +1041,9 @@ const transactions: Transaction[] = [
     paymentMethod: "credit",
     payments: [{ method: "credit", amount: 123.97 }],
     status: "completed",
-    customerId: "cust-001",
-    customerName: "John Smith",
-    customerEmail: "john.smith@email.com",
+    customerId: "15",
+    customerName: "Alice Johnson",
+    customerEmail: "alice@example.com",
     cashierId: "staff-001",
     cashierName: "Emily Brown",
     receiptSent: true,
@@ -1075,6 +1075,9 @@ const transactions: Transaction[] = [
     paymentMethod: "cash",
     payments: [{ method: "cash", amount: 29.99 }],
     status: "completed",
+    customerId: "16",
+    customerName: "Bob Smith",
+    customerEmail: "bob@example.com",
     cashierId: "staff-001",
     cashierName: "Emily Brown",
     receiptSent: false,
@@ -1128,9 +1131,9 @@ const transactions: Transaction[] = [
       { method: "cash", amount: 30.96 },
     ],
     status: "completed",
-    customerId: "cust-002",
-    customerName: "Sarah Johnson",
-    customerEmail: "sarah.j@email.com",
+    customerId: "16",
+    customerName: "Bob Smith",
+    customerEmail: "bob@example.com",
     cashierId: "staff-002",
     cashierName: "Tom Wilson",
     receiptSent: true,
@@ -1172,6 +1175,9 @@ const transactions: Transaction[] = [
     paymentMethod: "debit",
     payments: [{ method: "debit", amount: 54.95 }],
     status: "completed",
+    customerId: "15",
+    customerName: "Alice Johnson",
+    customerEmail: "alice@example.com",
     cashierId: "staff-001",
     cashierName: "Emily Brown",
     receiptSent: false,
@@ -1202,11 +1208,59 @@ const transactions: Transaction[] = [
     paymentMethod: "cash",
     payments: [{ method: "cash", amount: 18.99 }],
     status: "refunded",
+    customerId: "18",
+    customerName: "Diana Prince",
+    customerEmail: "diana@example.com",
     cashierId: "staff-002",
     cashierName: "Tom Wilson",
     receiptSent: false,
     notes: "Customer returned - wrong size",
     createdAt: getDateString(0) + "T11:30:00",
+  },
+  {
+    id: "txn-006",
+    transactionNumber: "TXN-20240312-001",
+    items: [
+      {
+        productId: "prod-001",
+        productName: "Premium Dog Food",
+        variantId: "var-001-1",
+        variantName: "5 lb Bag",
+        sku: "PDF-001-5LB",
+        quantity: 1,
+        unitPrice: 24.99,
+        discount: 0,
+        discountType: "fixed",
+        total: 24.99,
+      },
+      {
+        productId: "prod-006",
+        productName: "Training Treats",
+        variantId: "var-006-1",
+        variantName: "Chicken Flavor",
+        sku: "TRT-006-CHK",
+        quantity: 2,
+        unitPrice: 12.99,
+        discount: 0,
+        discountType: "fixed",
+        total: 25.98,
+      },
+    ],
+    subtotal: 50.97,
+    discountTotal: 0,
+    taxTotal: 0,
+    total: 50.97,
+    paymentMethod: "credit",
+    payments: [{ method: "credit", amount: 50.97 }],
+    status: "completed",
+    customerId: "17",
+    customerName: "Charlie Brown",
+    customerEmail: "charlie@example.com",
+    cashierId: "staff-001",
+    cashierName: "Emily Brown",
+    receiptSent: false,
+    notes: "",
+    createdAt: getDateString(-3) + "T14:00:00",
   },
 ];
 
@@ -1496,4 +1550,41 @@ export function getRetailStats() {
     activeSuppliers: getActiveSuppliers().length,
     ...getTransactionStats(),
   };
+}
+
+/** Get retail purchases for a client (linked to client file). */
+export function getClientRetailPurchases(
+  clientId: number | string,
+): Transaction[] {
+  const id = String(clientId);
+  return transactions
+    .filter((t) => t.customerId === id && t.status === "completed")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+}
+
+/** Add a new retail transaction (used by POS when completing a sale). */
+export function addRetailTransaction(
+  txn: Omit<
+    Transaction,
+    "id" | "transactionNumber" | "createdAt" | "status" | "receiptSent"
+  >,
+): Transaction {
+  const id = `txn-${Date.now()}`;
+  const today = getDateString(0);
+  const count =
+    transactions.filter((t) => t.createdAt.startsWith(today)).length + 1;
+  const transactionNumber = `TXN-${today.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
+  const newTxn: Transaction = {
+    ...txn,
+    id,
+    transactionNumber,
+    status: "completed",
+    receiptSent: false,
+    createdAt: new Date().toISOString().slice(0, 19),
+  } as Transaction;
+  transactions.push(newTxn);
+  return newTxn;
 }

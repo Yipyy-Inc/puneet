@@ -175,11 +175,18 @@ export interface EvaluationConfig {
   price: number;
   duration: "half-day" | "full-day" | "custom";
   customHours?: number;
-  availableSlots: {
-    startTime: string;
-    endTime: string;
-    duration: number; // in minutes
-  }[];
+  schedule: {
+    durationOptionsMinutes: number[];
+    defaultDurationMinutes?: number;
+    timeWindows: Array<{
+      id: string;
+      label: string;
+      startTime: string;
+      endTime: string;
+    }>;
+    slotMode: "fixed" | "window";
+    fixedStartTimes: string[];
+  };
   taxSettings: {
     taxable: boolean;
     taxRate?: number;
@@ -353,6 +360,82 @@ export interface AuditLogEntry {
   oldValue: string;
   newValue: string;
   ipAddress: string;
+}
+
+export interface FacilityBookingFlowConfig {
+  evaluationRequired: boolean;
+  hideServicesUntilEvaluationCompleted: boolean;
+  servicesRequiringEvaluation: string[];
+  hiddenServices: string[];
+}
+
+/** One-day schedule time override: custom open/close for a specific date (overrides regular weekly hours). */
+export interface ScheduleTimeOverride {
+  id: string;
+  date: string; // YYYY-MM-DD
+  /** Service(s) this override applies to. Empty or undefined = all services. */
+  services?: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
+  openTime: string; // HH:mm
+  closeTime: string; // HH:mm
+}
+
+/** Drop-off and pick-up time windows for a specific date and service(s). Overrides regular facility hours for time selection. */
+export interface DropOffPickUpOverride {
+  id: string;
+  date: string; // YYYY-MM-DD
+  services: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
+  dropOffStart: string; // HH:mm
+  dropOffEnd: string; // HH:mm
+  pickUpStart: string; // HH:mm
+  pickUpEnd: string; // HH:mm
+}
+
+/** Block specific calendar dates for one or more services (overrides regular schedule). */
+export interface ServiceDateBlock {
+  id: string;
+  date: string; // YYYY-MM-DD
+  services: string[]; // "daycare" | "boarding" | "grooming" | "training" | "evaluation"
+  /** Fully close: no check-in, no check-out on this date. */
+  closed: boolean;
+  /** Boarding-only: block this date as check-in (range start). */
+  blockCheckIn?: boolean;
+  /** Boarding-only: block this date as check-out (range end). */
+  blockCheckOut?: boolean;
+  /** Customer-facing message explaining the closure (e.g. "Closed for Christmas"). */
+  closureMessage?: string;
+}
+
+export type ReportCardTheme =
+  | "everyday"
+  | "christmas"
+  | "halloween"
+  | "easter"
+  | "thanksgiving"
+  | "new_year"
+  | "valentines";
+
+export interface ReportCardTemplateSet {
+  todaysVibe: string;
+  friendsAndFun: string;
+  careMetrics: string;
+  holidaySparkle: string;
+  closingNote: string;
+}
+
+export interface ReportCardAutoSendConfig {
+  mode: "immediate" | "scheduled" | "checkout" | "end_of_day" | "manual";
+  sendTime?: string; // HH:mm (local time)
+  channels: {
+    email: boolean;
+    message: boolean;
+    sms: boolean;
+  };
+}
+
+export interface ReportCardConfig {
+  enabledThemes: ReportCardTheme[];
+  templates: Record<ReportCardTheme, ReportCardTemplateSet>;
+  autoSend: ReportCardAutoSendConfig;
 }
 
 export interface ModuleConfig {

@@ -191,9 +191,72 @@ export function BoardingDetails({
   setExtraServices,
   selectedPets,
 }: BoardingDetailsProps) {
-  const { hours, rules } = useSettings();
+  const {
+    hours,
+    rules,
+    serviceDateBlocks,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+  } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
+
+  const scheduleTimeOverridesForBoarding = React.useMemo(() => {
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes("boarding"),
+    );
+  }, [scheduleTimeOverrides]);
+
+  const dropOffPickUpWindowsByDateForBoarding = React.useMemo(() => {
+    const map: Record<
+      string,
+      {
+        dropOffStart: string;
+        dropOffEnd: string;
+        pickUpStart: string;
+        pickUpEnd: string;
+      }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes("boarding"))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [dropOffPickUpOverrides]);
+
+  const {
+    blockedStartDatesForBoarding,
+    blockedEndDatesForBoarding,
+    blockedDateMessagesForBoarding,
+  } = React.useMemo(() => {
+    const boardingBlocks = serviceDateBlocks.filter((b) =>
+      b.services.includes("boarding"),
+    );
+    const startDates: Date[] = [];
+    const endDates: Date[] = [];
+    const messages: Record<string, string> = {};
+    boardingBlocks.forEach((b) => {
+      const [y, m, d] = b.date.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      const isStartBlocked = b.closed || b.blockCheckIn;
+      const isEndBlocked = b.closed || b.blockCheckOut;
+      if (isStartBlocked) startDates.push(date);
+      if (isEndBlocked) endDates.push(date);
+      if (b.closureMessage && (isStartBlocked || isEndBlocked))
+        messages[b.date] = b.closureMessage;
+    });
+    return {
+      blockedStartDatesForBoarding: startDates,
+      blockedEndDatesForBoarding: endDates,
+      blockedDateMessagesForBoarding: messages,
+    };
+  }, [serviceDateBlocks]);
 
   const allPreviousCompleted = (stepIndex: number) => {
     if (!isSubStepComplete) return true;
@@ -248,10 +311,17 @@ export function BoardingDetails({
                   }
                 }}
                 facilityHours={hours}
+                scheduleTimeOverrides={scheduleTimeOverridesForBoarding}
+                dropOffPickUpWindowsByDate={
+                  dropOffPickUpWindowsByDateForBoarding
+                }
                 bookingRules={{
                   minimumAdvanceBooking: rules.minimumAdvanceBooking,
                   maximumAdvanceBooking: rules.maximumAdvanceBooking,
                 }}
+                disabledStartDates={blockedStartDatesForBoarding}
+                disabledEndDates={blockedEndDatesForBoarding}
+                disabledDateMessages={blockedDateMessagesForBoarding}
               />
             </div>
           </div>

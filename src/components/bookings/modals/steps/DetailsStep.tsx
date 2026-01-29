@@ -44,13 +44,6 @@ interface DetailsStepProps {
   setCheckInTime: (value: string) => void;
   checkOutTime: string;
   setCheckOutTime: (value: string) => void;
-  evaluationTargetService: string;
-  setEvaluationTargetService: (value: string) => void;
-  evaluationEvaluator: string;
-  setEvaluationEvaluator: (value: string) => void;
-  evaluationSpace: string;
-  setEvaluationSpace: (value: string) => void;
-  evaluatorOptions: Array<{ value: string; label: string }>;
   serviceType: string;
   setServiceType: (value: string) => void;
   // Common
@@ -90,13 +83,6 @@ export function DetailsStep({
   setCheckInTime,
   checkOutTime,
   setCheckOutTime,
-  evaluationTargetService,
-  setEvaluationTargetService,
-  evaluationEvaluator,
-  setEvaluationEvaluator,
-  evaluationSpace,
-  setEvaluationSpace,
-  evaluatorOptions,
   serviceType,
   setServiceType,
   feedingSchedule,
@@ -162,21 +148,12 @@ export function DetailsStep({
       {selectedService === "evaluation" && (
         <EvaluationDetails
           currentSubStep={currentSubStep}
-          isSubStepComplete={isSubStepComplete}
           startDate={startDate}
           setStartDate={setStartDate}
           checkInTime={checkInTime}
           setCheckInTime={setCheckInTime}
           checkOutTime={checkOutTime}
           setCheckOutTime={setCheckOutTime}
-          evaluationTargetService={evaluationTargetService}
-          setEvaluationTargetService={setEvaluationTargetService}
-          evaluationEvaluator={evaluationEvaluator}
-          setEvaluationEvaluator={setEvaluationEvaluator}
-          evaluationSpace={evaluationSpace}
-          setEvaluationSpace={setEvaluationSpace}
-          evaluatorOptions={evaluatorOptions}
-          selectedPets={selectedPets}
         />
       )}
     </div>

@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
-import type { ModuleConfig, Pet } from "@/lib/types";
+import type { FacilityBookingFlowConfig, ModuleConfig, Pet } from "@/lib/types";
 
 interface ServiceStepProps {
   selectedService: string;
@@ -11,6 +11,7 @@ interface ServiceStepProps {
   setServiceType: (type: string) => void;
   setCurrentSubStep: (step: number) => void;
   configs: Record<string, ModuleConfig>;
+  bookingFlow: FacilityBookingFlowConfig;
   selectedPets?: Pet[];
 }
 
@@ -20,6 +21,7 @@ export function ServiceStep({
   setServiceType,
   setCurrentSubStep,
   configs,
+  bookingFlow,
   selectedPets = [],
 }: ServiceStepProps) {
   const getLatestEvaluation = (pet: Pet) => {
@@ -38,6 +40,14 @@ export function ServiceStep({
 
   const isPassedEvaluation = (ev: any) => ev?.status === "passed";
   const isFailedEvaluation = (ev: any) => ev?.status === "failed";
+  const hasValidEvaluation = (pet: Pet) => {
+    const latest = getLatestEvaluation(pet);
+    if (!latest) return false;
+    if (isFailedEvaluation(latest)) return false;
+    if (!isPassedEvaluation(latest)) return false;
+    if (isExpiredEvaluation(latest)) return false;
+    return true;
+  };
 
   const isServiceApprovedByEvaluation = (ev: any, serviceId: string) => {
     if (!ev || !isPassedEvaluation(ev) || isExpiredEvaluation(ev)) return false;
@@ -82,7 +92,18 @@ export function ServiceStep({
     <div className="space-y-4">
       <Label className="text-base">Select a service</Label>
       <div className="grid grid-cols-2 gap-4">
-        {SERVICE_CATEGORIES.map((service) => {
+        {SERVICE_CATEGORIES.filter((service) => {
+          if (service.id === "evaluation") return true;
+          if (bookingFlow.hiddenServices.includes(service.id)) return false;
+          if (
+            bookingFlow.evaluationRequired &&
+            bookingFlow.hideServicesUntilEvaluationCompleted
+          ) {
+            if (selectedPets.length === 0) return false;
+            return selectedPets.every((pet) => hasValidEvaluation(pet));
+          }
+          return true;
+        }).map((service) => {
           const Icon = service.icon;
           const config = configs[service.id as keyof typeof configs];
           // Special handling for evaluation service
@@ -90,8 +111,10 @@ export function ServiceStep({
           const evaluationDisabled = false; // Evaluation is always available
           const requiresEvaluation =
             !isEvaluation &&
-            (config?.settings.evaluation.enabled ?? false) &&
-            !(config?.settings.evaluation.optional ?? false);
+            (bookingFlow.evaluationRequired ||
+              bookingFlow.servicesRequiringEvaluation.includes(service.id) ||
+              ((config?.settings.evaluation.enabled ?? false) &&
+                !(config?.settings.evaluation.optional ?? false)));
           const hasPetContext = selectedPets.length > 0;
           const isLockedByEvaluation =
             requiresEvaluation && hasPetContext

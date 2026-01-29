@@ -20,6 +20,11 @@ import {
   ModuleAddon,
   AuditLogEntry,
   ModuleConfig,
+  FacilityBookingFlowConfig,
+  ReportCardConfig,
+  ServiceDateBlock,
+  ScheduleTimeOverride,
+  DropOffPickUpOverride,
 } from "@/lib/types";
 
 export const evaluationConfig: EvaluationConfig = {
@@ -30,15 +35,21 @@ export const evaluationConfig: EvaluationConfig = {
   price: 0,
   duration: "custom",
   customHours: 1,
-  availableSlots: [
-    { startTime: "09:00", endTime: "09:30", duration: 30 },
-    { startTime: "09:30", endTime: "10:00", duration: 30 },
-    { startTime: "10:00", endTime: "11:00", duration: 60 },
-    { startTime: "11:00", endTime: "12:00", duration: 60 },
-    { startTime: "13:00", endTime: "14:00", duration: 60 },
-    { startTime: "14:00", endTime: "15:00", duration: 60 },
-    { startTime: "15:00", endTime: "16:00", duration: 60 },
-  ],
+  schedule: {
+    durationOptionsMinutes: [120, 240],
+    defaultDurationMinutes: 120,
+    timeWindows: [
+      { id: "morning", label: "Morning", startTime: "09:00", endTime: "12:00" },
+      {
+        id: "afternoon",
+        label: "Afternoon",
+        startTime: "13:00",
+        endTime: "17:00",
+      },
+    ],
+    slotMode: "fixed",
+    fixedStartTimes: ["09:00", "11:00", "13:00", "15:00"],
+  },
   taxSettings: {
     taxable: false,
   },
@@ -110,6 +121,120 @@ export const bookingRules: BookingRules = {
   dailyCapacityLimit: 50,
   allowOverBooking: false,
   overBookingPercentage: 10,
+};
+
+export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
+  evaluationRequired: false,
+  hideServicesUntilEvaluationCompleted: false,
+  servicesRequiringEvaluation: ["daycare"],
+  hiddenServices: [],
+};
+
+export const serviceDateBlocks: ServiceDateBlock[] = [];
+export const scheduleTimeOverrides: ScheduleTimeOverride[] = [];
+export const dropOffPickUpOverrides: DropOffPickUpOverride[] = [];
+
+export const reportCardConfig: ReportCardConfig = {
+  enabledThemes: [
+    "everyday",
+    "christmas",
+    "halloween",
+    "easter",
+    "thanksgiving",
+    "new_year",
+    "valentines",
+  ],
+  templates: {
+    everyday: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy at {facilityName}.",
+      friendsAndFun:
+        "{petName} was {socialLabel} during playtime. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} enjoyed a little seasonal fun today. {holidayNote}",
+      closingNote:
+        "Thanks for trusting {facilityName} with {petName}, {ownerName}! {closingComment}",
+    },
+    christmas: {
+      todaysVibe:
+        "{petName} jingled through the day with a {moodLabel} mood and {energyLabel} energy.",
+      friendsAndFun:
+        "{petName} was {socialLabel} with friends. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} joined our Christmas cheer. {holidayNote}",
+      closingNote:
+        "Happy holidays from {facilityName}! {closingComment}",
+    },
+    halloween: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy — spooky fun included!",
+      friendsAndFun:
+        "{petName} was {socialLabel} during playtime. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} joined our Halloween festivities. {holidayNote}",
+      closingNote:
+        "Tricks, treats, and tail wags from {facilityName}. {closingComment}",
+    },
+    easter: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy — a springtime hop!",
+      friendsAndFun:
+        "{petName} was {socialLabel} with pals. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} enjoyed our Easter fun. {holidayNote}",
+      closingNote:
+        "Warm wishes from {facilityName}. {closingComment}",
+    },
+    thanksgiving: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy and lots of gratitude.",
+      friendsAndFun:
+        "{petName} was {socialLabel} during playtime. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} joined our Thanksgiving cheer. {holidayNote}",
+      closingNote:
+        "We’re thankful for {petName} at {facilityName}. {closingComment}",
+    },
+    new_year: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy to ring in the New Year!",
+      friendsAndFun:
+        "{petName} was {socialLabel} during playtime. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} joined our New Year celebration. {holidayNote}",
+      closingNote:
+        "Cheers from {facilityName}! {closingComment}",
+    },
+    valentines: {
+      todaysVibe:
+        "{petName} had a {moodLabel} day with {energyLabel} energy and lots of love.",
+      friendsAndFun:
+        "{petName} was {socialLabel} during playtime. {playNote}",
+      careMetrics:
+        "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
+      holidaySparkle:
+        "{petName} enjoyed our Valentine's sparkle. {holidayNote}",
+      closingNote:
+        "With love from {facilityName}. {closingComment}",
+    },
+  },
+  autoSend: {
+    mode: "immediate",
+    sendTime: "18:00",
+    channels: { email: true, message: true, sms: false },
+  },
 };
 
 export const kennelTypes: KennelType[] = [

@@ -75,7 +75,7 @@ export function DatePicker({
   };
 
   const displayValue = selectedDate
-    ? selectedDate.toLocaleDateString(undefined, {
+    ? selectedDate.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "2-digit",

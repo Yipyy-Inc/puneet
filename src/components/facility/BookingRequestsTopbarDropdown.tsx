@@ -6,7 +6,7 @@ import { CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -37,11 +37,11 @@ export function BookingRequestsTopbarDropdown({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <TooltipProvider delayDuration={150}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
+            <DialogTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
@@ -52,12 +52,15 @@ export function BookingRequestsTopbarDropdown({
               >
                 <CalendarClock className="h-5 w-5 text-muted-foreground" />
                 {badge ? (
-                  <span className="absolute -right-1 -top-1 min-w-5 h-5 px-1.5 rounded-full bg-destructive text-white text-[10px] leading-5 text-center font-medium">
+                  <span
+                    data-slot="topbar-badge"
+                    className="absolute -right-1 -top-1 min-w-5 h-5 px-1.5 rounded-full bg-destructive text-white text-[10px] leading-5 text-center font-medium"
+                  >
                     {badge}
                   </span>
                 ) : null}
               </Button>
-            </PopoverTrigger>
+            </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center">
             Booking requests
@@ -65,14 +68,13 @@ export function BookingRequestsTopbarDropdown({
         </Tooltip>
       </TooltipProvider>
 
-      <PopoverContent
-        align="end"
-        sideOffset={10}
-        className="w-[720px] max-w-[calc(100vw-1.5rem)] p-0 max-h-[70vh] overflow-auto"
-      >
-        <BookingRequestsPanel variant="dropdown" />
-      </PopoverContent>
-    </Popover>
+      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogTitle className="sr-only">Booking requests</DialogTitle>
+        <div className="flex-1 overflow-auto">
+          <BookingRequestsPanel variant="card" />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

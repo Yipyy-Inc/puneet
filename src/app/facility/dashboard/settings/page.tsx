@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSettings } from "@/hooks/use-settings";
+import type {
+  ServiceDateBlock,
+  ScheduleTimeOverride,
+  DropOffPickUpOverride,
+} from "@/lib/types";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Building2,
   DollarSign,
@@ -24,6 +31,12 @@ import {
   Zap,
   Download,
   Smartphone,
+  CalendarX,
+  Clock,
+  PackageCheck,
+  Plus,
+  Timer,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -314,6 +327,723 @@ function BusinessHoursCard() {
         </div>
       )}
     </SettingsBlock>
+  );
+}
+
+const SERVICE_BLOCK_OPTIONS: { id: string; label: string }[] = [
+  { id: "daycare", label: "Daycare" },
+  { id: "boarding", label: "Boarding" },
+  { id: "grooming", label: "Grooming" },
+  { id: "training", label: "Training" },
+  { id: "evaluation", label: "Evaluation" },
+];
+
+type BlockType = "full" | "check_in" | "check_out";
+
+// Service-Specific Day Blocking (override regular schedule)
+function ServiceDayBlockingCard() {
+  const { serviceDateBlocks, updateServiceDateBlocks } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newServices, setNewServices] = useState<string[]>([]);
+  const [newBlockType, setNewBlockType] = useState<BlockType>("full");
+  const [newClosureMessage, setNewClosureMessage] = useState("");
+
+  const includesBoarding = newServices.includes("boarding");
+
+  const handleAdd = () => {
+    if (!newDate || newServices.length === 0) return;
+    const block: ServiceDateBlock = {
+      id: `block-${Date.now()}`,
+      date: newDate,
+      services: [...newServices],
+      closed: includesBoarding ? newBlockType === "full" : true,
+      blockCheckIn: includesBoarding ? newBlockType === "check_in" : undefined,
+      blockCheckOut: includesBoarding
+        ? newBlockType === "check_out"
+        : undefined,
+      closureMessage: newClosureMessage.trim() || undefined,
+    };
+    updateServiceDateBlocks([...serviceDateBlocks, block]);
+    setNewDate("");
+    setNewServices([]);
+    setNewBlockType("full");
+    setNewClosureMessage("");
+  };
+
+  const handleRemove = (id: string) => {
+    updateServiceDateBlocks(serviceDateBlocks.filter((b) => b.id !== id));
+  };
+
+  const toggleService = (id: string) => {
+    setNewServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CalendarX className="h-5 w-5" />
+          Service-Specific Day Blocking
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Block specific calendar days for one or more services (e.g. daycare
+          closed on Christmas) without changing the regular weekly schedule. On
+          blocked dates, customers cannot book and staff cannot create bookings
+          unless overridden by admin/manager.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add block</Label>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Services affected (per service, multiple, or all)
+              </Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear all"
+                    : "All services"}
+                </Button>
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`block-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`block-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {includesBoarding && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Boarding block type
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={newBlockType === "full" ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("full")}
+                  >
+                    Fully close
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      newBlockType === "check_in" ? "default" : "outline"
+                    }
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("check_in")}
+                  >
+                    Block check-in only
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      newBlockType === "check_out" ? "default" : "outline"
+                    }
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setNewBlockType("check_out")}
+                  >
+                    Block check-out only
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Fully close = no check-in or check-out. Or block only check-in
+                  or only check-out dates.
+                </p>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Closure message (customer-facing)
+              </Label>
+              <Input
+                value={newClosureMessage}
+                onChange={(e) => setNewClosureMessage(e.target.value)}
+                placeholder="e.g. Closed for Christmas, Closed for staff training"
+                className="max-w-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown when a customer hovers over or focuses the blocked date
+                in the booking calendar.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate || newServices.length === 0}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add block
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Blocked dates</Label>
+          {serviceDateBlocks.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No service-specific blocks. Add a date and service(s) above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {serviceDateBlocks
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((block) => (
+                  <li
+                    key={block.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">
+                          {new Date(block.date + "T12:00:00").toLocaleDateString(
+                            "en-US",
+                            {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {block.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              All services
+                            </Badge>
+                          ) : (
+                            block.services.map((s) => (
+                              <Badge
+                                key={s}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                  ?.label ?? s}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                        {block.services.includes("boarding") ? (
+                          <Badge variant="outline" className="text-xs">
+                            {block.closed
+                              ? "Fully closed"
+                              : block.blockCheckIn && block.blockCheckOut
+                                ? "Check-in & check-out blocked"
+                                : block.blockCheckIn
+                                  ? "Check-in blocked"
+                                  : block.blockCheckOut
+                                    ? "Check-out blocked"
+                                    : "Closed"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Closed</Badge>
+                        )}
+                      </div>
+                      {block.closureMessage && (
+                        <p className="text-sm text-muted-foreground">
+                          “{block.closureMessage}”
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(block.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// One-Day Schedule Time Override (Special Hours)
+function OneDayScheduleOverrideCard() {
+  const { scheduleTimeOverrides, updateScheduleTimeOverrides } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newServices, setNewScheduleServices] = useState<string[]>([]);
+  const [newOpenTime, setNewOpenTime] = useState("08:00");
+  const [newCloseTime, setNewCloseTime] = useState("17:00");
+
+  const handleAdd = () => {
+    if (!newDate) return;
+    const override: ScheduleTimeOverride = {
+      id: `override-${Date.now()}`,
+      date: newDate,
+      services:
+        newServices.length === 0 ||
+        newServices.length === SERVICE_BLOCK_OPTIONS.length
+          ? undefined
+          : [...newServices],
+      openTime: newOpenTime,
+      closeTime: newCloseTime,
+    };
+    updateScheduleTimeOverrides([...scheduleTimeOverrides, override]);
+    setNewDate("");
+    setNewScheduleServices([]);
+    setNewOpenTime("08:00");
+    setNewCloseTime("17:00");
+  };
+
+  const handleRemove = (id: string) => {
+    updateScheduleTimeOverrides(
+      scheduleTimeOverrides.filter((o) => o.id !== id),
+    );
+  };
+
+  const toggleScheduleService = (id: string) => {
+    setNewScheduleServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          One-Day Schedule Time Override (Special Hours)
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Set custom opening and closing times for a specific date (e.g.
+          Halloween 10:00 AM – 3:00 PM) without changing the regular weekly
+          schedule. Choose per service, multiple services, or all services.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add override</Label>
+          <div className="flex flex-wrap gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Services (optional — leave empty for all)
+              </Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewScheduleServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear / All"
+                    : "All services"}
+                </Button>
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`sched-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleScheduleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`sched-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Opening time
+              </Label>
+              <Input
+                type="time"
+                value={newOpenTime}
+                onChange={(e) => setNewOpenTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Closing time
+              </Label>
+              <Input
+                type="time"
+                value={newCloseTime}
+                onChange={(e) => setNewCloseTime(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add override
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Special hours</Label>
+          {scheduleTimeOverrides.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No one-day overrides. Add a date and times above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {scheduleTimeOverrides
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((override) => (
+                  <li
+                    key={override.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">
+                          {new Date(
+                            override.date + "T12:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        {override.services &&
+                        override.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            All services
+                          </Badge>
+                        ) : override.services && override.services.length > 0 ? (
+                          override.services.map((s) => (
+                            <Badge
+                              key={s}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                ?.label ?? s}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            All services
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {override.openTime} – {override.closeTime}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(override.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Drop-Off & Pick-Up Time Overrides
+function DropOffPickUpOverrideCard() {
+  const { dropOffPickUpOverrides, updateDropOffPickUpOverrides } = useSettings();
+  const [newDate, setNewDate] = useState("");
+  const [newServices, setNewServices] = useState<string[]>([]);
+  const [newDropOffStart, setNewDropOffStart] = useState("07:30");
+  const [newDropOffEnd, setNewDropOffEnd] = useState("10:00");
+  const [newPickUpStart, setNewPickUpStart] = useState("16:00");
+  const [newPickUpEnd, setNewPickUpEnd] = useState("18:00");
+
+  const handleAdd = () => {
+    if (!newDate || newServices.length === 0) return;
+    const override: DropOffPickUpOverride = {
+      id: `dropoff-pickup-${Date.now()}`,
+      date: newDate,
+      services: [...newServices],
+      dropOffStart: newDropOffStart,
+      dropOffEnd: newDropOffEnd,
+      pickUpStart: newPickUpStart,
+      pickUpEnd: newPickUpEnd,
+    };
+    updateDropOffPickUpOverrides([...dropOffPickUpOverrides, override]);
+    setNewDate("");
+    setNewServices([]);
+    setNewDropOffStart("07:30");
+    setNewDropOffEnd("10:00");
+    setNewPickUpStart("16:00");
+    setNewPickUpEnd("18:00");
+  };
+
+  const handleRemove = (id: string) => {
+    updateDropOffPickUpOverrides(
+      dropOffPickUpOverrides.filter((o) => o.id !== id),
+    );
+  };
+
+  const toggleService = (id: string) => {
+    setNewServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Timer className="h-5 w-5" />
+          Drop-Off &amp; Pick-Up Time Overrides
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Override drop-off and pick-up windows for specific dates (e.g. holiday
+          hours). Customers only see valid time options for each date. Apply
+          overrides per service.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-lg border p-4 space-y-4">
+          <Label>Add override</Label>
+          <div className="flex flex-wrap gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Services (per service, multiple, or all)
+              </Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setNewServices(
+                      newServices.length === SERVICE_BLOCK_OPTIONS.length
+                        ? []
+                        : SERVICE_BLOCK_OPTIONS.map((o) => o.id),
+                    )
+                  }
+                >
+                  {newServices.length === SERVICE_BLOCK_OPTIONS.length
+                    ? "Clear all"
+                    : "All services"}
+                </Button>
+                {SERVICE_BLOCK_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`dopo-svc-${opt.id}`}
+                      checked={newServices.includes(opt.id)}
+                      onCheckedChange={() => toggleService(opt.id)}
+                    />
+                    <Label
+                      htmlFor={`dopo-svc-${opt.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {opt.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Drop-off start
+                </Label>
+                <Input
+                  type="time"
+                  value={newDropOffStart}
+                  onChange={(e) => setNewDropOffStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Drop-off end
+                </Label>
+                <Input
+                  type="time"
+                  value={newDropOffEnd}
+                  onChange={(e) => setNewDropOffEnd(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Pick-up start
+                </Label>
+                <Input
+                  type="time"
+                  value={newPickUpStart}
+                  onChange={(e) => setNewPickUpStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Pick-up end
+                </Label>
+                <Input
+                  type="time"
+                  value={newPickUpEnd}
+                  onChange={(e) => setNewPickUpEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!newDate || newServices.length === 0}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add override
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Overrides</Label>
+          {dropOffPickUpOverrides.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+              No drop-off/pick-up overrides. Add a date and service(s) above.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {dropOffPickUpOverrides
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((override) => (
+                  <li
+                    key={override.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {new Date(
+                            override.date + "T12:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {override.services.length ===
+                          SERVICE_BLOCK_OPTIONS.length ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              All services
+                            </Badge>
+                          ) : (
+                            override.services.map((s) => (
+                              <Badge
+                                key={s}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                  ?.label ?? s}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        Drop-off {override.dropOffStart}–{override.dropOffEnd}{" "}
+                        · Pick-up {override.pickUpStart}–{override.pickUpEnd}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemove(override.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -638,6 +1368,608 @@ function EvaluationSettingsCard() {
               />
             </div>
           )}
+
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Evaluation Scheduling Rules</div>
+                <div className="text-sm text-muted-foreground">
+                  Configure duration options, time windows, and slot logic.
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Duration Options (hours)</Label>
+                <Input
+                  value={localEvaluation.schedule.durationOptionsMinutes
+                    .map((m) => m / 60)
+                    .join(", ")}
+                  onChange={(e) => {
+                    const parsed = e.target.value
+                      .split(",")
+                      .map((v) => Number(v.trim()))
+                      .filter((v) => Number.isFinite(v) && v > 0)
+                      .map((v) => Math.round(v * 60));
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        durationOptionsMinutes: parsed,
+                        defaultDurationMinutes:
+                          localEvaluation.schedule.defaultDurationMinutes ??
+                          parsed[0],
+                      },
+                    });
+                  }}
+                  placeholder="2, 4"
+                  readOnly={!isEditing}
+                  className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Default Duration</Label>
+                <Select
+                  value={String(
+                    localEvaluation.schedule.defaultDurationMinutes ??
+                      localEvaluation.schedule.durationOptionsMinutes[0] ??
+                      "",
+                  )}
+                  disabled={!isEditing}
+                  onValueChange={(value) =>
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        defaultDurationMinutes: Number(value),
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {localEvaluation.schedule.durationOptionsMinutes.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {m / 60}h
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Allowed Time Windows</Label>
+              <div className="space-y-2 rounded-lg border p-3">
+                {localEvaluation.schedule.timeWindows.map((window, idx) => (
+                  <div key={window.id} className="grid grid-cols-3 gap-2">
+                    <Input
+                      value={window.label}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          label: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      placeholder="Label"
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                    <Input
+                      type="time"
+                      value={window.startTime}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          startTime: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                    <Input
+                      type="time"
+                      value={window.endTime}
+                      onChange={(e) => {
+                        const next = [...localEvaluation.schedule.timeWindows];
+                        next[idx] = {
+                          ...window,
+                          endTime: e.target.value,
+                        };
+                        setLocalEvaluation({
+                          ...localEvaluation,
+                          schedule: {
+                            ...localEvaluation.schedule,
+                            timeWindows: next,
+                          },
+                        });
+                      }}
+                      readOnly={!isEditing}
+                      className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                  </div>
+                ))}
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const next = [
+                        ...localEvaluation.schedule.timeWindows,
+                        {
+                          id: `window-${Date.now()}`,
+                          label: "New Window",
+                          startTime: "09:00",
+                          endTime: "12:00",
+                        },
+                      ];
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        schedule: {
+                          ...localEvaluation.schedule,
+                          timeWindows: next,
+                        },
+                      });
+                    }}
+                  >
+                    Add Time Window
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Slot Logic</Label>
+                <Select
+                  value={localEvaluation.schedule.slotMode}
+                  disabled={!isEditing}
+                  onValueChange={(value: "fixed" | "window") =>
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      schedule: {
+                        ...localEvaluation.schedule,
+                        slotMode: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Fixed start times</SelectItem>
+                    <SelectItem value="window">Any time within window</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {localEvaluation.schedule.slotMode === "fixed" && (
+                <div className="space-y-2">
+                  <Label>Fixed Start Times</Label>
+                  <Input
+                    value={localEvaluation.schedule.fixedStartTimes.join(", ")}
+                    onChange={(e) => {
+                      const parsed = e.target.value
+                        .split(",")
+                        .map((v) => v.trim())
+                        .filter(Boolean);
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        schedule: {
+                          ...localEvaluation.schedule,
+                          fixedStartTimes: parsed,
+                        },
+                      });
+                    }}
+                    placeholder="09:00, 11:00, 13:00"
+                    readOnly={!isEditing}
+                    className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+function ReportCardSettingsCard() {
+  const { reportCards, updateReportCards } = useSettings();
+
+  const themeOptions = [
+    { id: "everyday", label: "Everyday" },
+    { id: "christmas", label: "Christmas" },
+    { id: "halloween", label: "Halloween" },
+    { id: "easter", label: "Easter" },
+    { id: "thanksgiving", label: "Thanksgiving" },
+    { id: "new_year", label: "New Year" },
+    { id: "valentines", label: "Valentine's Day" },
+  ] as const;
+
+  return (
+    <SettingsBlock
+      title="Report Card Templates"
+      description="Manage report card themes, wording templates, and auto-send timing."
+      data={reportCards}
+      onSave={updateReportCards}
+    >
+      {(isEditing, localConfig, setLocalConfig) => (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>Enabled Themes</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+              {themeOptions.map((theme) => (
+                <div key={theme.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`theme-${theme.id}`}
+                    checked={localConfig.enabledThemes.includes(theme.id)}
+                    disabled={!isEditing}
+                    onCheckedChange={(checked) => {
+                      const enabled = checked === true;
+                      setLocalConfig({
+                        ...localConfig,
+                        enabledThemes: enabled
+                          ? [...localConfig.enabledThemes, theme.id]
+                          : localConfig.enabledThemes.filter((t) => t !== theme.id),
+                      });
+                    }}
+                  />
+                  <Label htmlFor={`theme-${theme.id}`}>{theme.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Auto-send Timing</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                value={localConfig.autoSend.mode}
+                disabled={!isEditing}
+                onValueChange={(value: "immediate" | "scheduled") =>
+                  setLocalConfig({
+                    ...localConfig,
+                    autoSend: {
+                      ...localConfig.autoSend,
+                      mode: value,
+                    },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="immediate">Send immediately</SelectItem>
+                  <SelectItem value="scheduled">Schedule for time</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="time"
+                value={localConfig.autoSend.sendTime ?? "18:00"}
+                readOnly={!isEditing || localConfig.autoSend.mode !== "scheduled"}
+                className={
+                  !isEditing || localConfig.autoSend.mode !== "scheduled"
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : ""
+                }
+                onChange={(e) =>
+                  setLocalConfig({
+                    ...localConfig,
+                    autoSend: {
+                      ...localConfig.autoSend,
+                      sendTime: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rc-send-email"
+                  checked={localConfig.autoSend.channels.email}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalConfig({
+                      ...localConfig,
+                      autoSend: {
+                        ...localConfig.autoSend,
+                        channels: {
+                          ...localConfig.autoSend.channels,
+                          email: checked === true,
+                        },
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="rc-send-email">Send Email</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rc-send-message"
+                  checked={localConfig.autoSend.channels.message}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalConfig({
+                      ...localConfig,
+                      autoSend: {
+                        ...localConfig.autoSend,
+                        channels: {
+                          ...localConfig.autoSend.channels,
+                          message: checked === true,
+                        },
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="rc-send-message">Send Message</Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label>Template Wording (by Theme)</Label>
+            <div className="space-y-4">
+              {themeOptions.map((theme) => (
+                <Card key={theme.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{theme.label}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <Label>Today’s vibe</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].todaysVibe}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                todaysVibe: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Friends & fun</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].friendsAndFun}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                friendsAndFun: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Care metrics</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].careMetrics}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                careMetrics: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Holiday sparkle</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].holidaySparkle}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                holidaySparkle: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Closing note</Label>
+                      <Textarea
+                        value={localConfig.templates[theme.id].closingNote}
+                        readOnly={!isEditing}
+                        onChange={(e) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            templates: {
+                              ...localConfig.templates,
+                              [theme.id]: {
+                                ...localConfig.templates[theme.id],
+                                closingNote: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+// Facility booking access & evaluation requirements
+function FacilityBookingFlowCard() {
+  const { bookingFlow, updateBookingFlow } = useSettings();
+
+  const serviceOptions = [
+    { id: "daycare", label: "Daycare" },
+    { id: "boarding", label: "Boarding" },
+    { id: "grooming", label: "Grooming" },
+    { id: "training", label: "Training" },
+  ];
+
+  const toggleService = (
+    list: string[],
+    serviceId: string,
+    checked: boolean,
+  ) => {
+    if (checked) return [...list, serviceId];
+    return list.filter((item) => item !== serviceId);
+  };
+
+  return (
+    <SettingsBlock
+      title="Booking Access & Evaluation Rules"
+      description="Control when evaluations are required and which services appear in online booking."
+      data={bookingFlow}
+      onSave={updateBookingFlow}
+    >
+      {(isEditing, localFlow, setLocalFlow) => (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium">Evaluation Required</div>
+              <div className="text-sm text-muted-foreground">
+                Require evaluation before any service booking.
+              </div>
+            </div>
+            <Switch
+              checked={localFlow.evaluationRequired}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalFlow({ ...localFlow, evaluationRequired: checked })
+              }
+            />
+          </div>
+
+          {localFlow.evaluationRequired ? (
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="font-medium">
+                  Hide Services Until Evaluation Completed
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Show only the Evaluation service until it is completed or booked.
+                </div>
+              </div>
+              <Switch
+                checked={localFlow.hideServicesUntilEvaluationCompleted}
+                disabled={!isEditing}
+                onCheckedChange={(checked) =>
+                  setLocalFlow({
+                    ...localFlow,
+                    hideServicesUntilEvaluationCompleted: checked,
+                  })
+                }
+              />
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Services Requiring Evaluation First</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {serviceOptions.map((service) => (
+                    <div key={service.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`eval-${service.id}`}
+                        checked={localFlow.servicesRequiringEvaluation.includes(
+                          service.id,
+                        )}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) =>
+                          setLocalFlow({
+                            ...localFlow,
+                            servicesRequiringEvaluation: toggleService(
+                              localFlow.servicesRequiringEvaluation,
+                              service.id,
+                              !!checked,
+                            ),
+                          })
+                        }
+                      />
+                      <Label htmlFor={`eval-${service.id}`}>
+                        {service.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Hidden From Online Booking</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {serviceOptions.map((service) => (
+                    <div key={service.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`hidden-${service.id}`}
+                        checked={localFlow.hiddenServices.includes(service.id)}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) =>
+                          setLocalFlow({
+                            ...localFlow,
+                            hiddenServices: toggleService(
+                              localFlow.hiddenServices,
+                              service.id,
+                              !!checked,
+                            ),
+                          })
+                        }
+                      />
+                      <Label htmlFor={`hidden-${service.id}`}>
+                        {service.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </SettingsBlock>
@@ -855,6 +2187,10 @@ export default function SettingsPage() {
 
           <BusinessHoursCard />
 
+          <ServiceDayBlockingCard />
+          <OneDayScheduleOverrideCard />
+          <DropOffPickUpOverrideCard />
+
           {/* Locations */}
           <Card>
             <CardHeader>
@@ -901,6 +2237,8 @@ export default function SettingsPage() {
 
           <BookingRulesCard />
 
+          <FacilityBookingFlowCard />
+
           {/* Vaccination Rules */}
           <Card>
             <CardHeader>
@@ -934,6 +2272,8 @@ export default function SettingsPage() {
           </Card>
 
           <EvaluationSettingsCard />
+
+          <ReportCardSettingsCard />
         </TabsContent>
 
         {/* Financial Settings Tab */}

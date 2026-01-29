@@ -130,7 +130,10 @@ function normalizeToUnifiedCheckIn(
 }
 
 export function CheckInOutSection() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+  const [checkedInQuery, setCheckedInQuery] = useState("");
+  const [scheduledQuery, setScheduledQuery] = useState("");
+  const [checkedOutQuery, setCheckedOutQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
   const [selectedItem, setSelectedItem] = useState<UnifiedCheckIn | null>(null);
   const [pickupPerson, setPickupPerson] = useState("");
@@ -145,6 +148,10 @@ export function CheckInOutSection() {
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Helper function to find client for a pet
   const findClientForPet = (petId: number) => {
@@ -197,20 +204,31 @@ export function CheckInOutSection() {
     });
   }, [filteredByService]);
 
-  // Search results
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const query = searchQuery.toLowerCase();
-    return checkedInPets.filter(
-      (item) =>
-        item.petName.toLowerCase().includes(query) ||
-        item.ownerName.toLowerCase().includes(query) ||
-        item.petBreed.toLowerCase().includes(query) ||
-        item.ownerPhone.includes(query),
+  const matchesSearch = (item: UnifiedCheckIn, query: string) => {
+    if (!query.trim()) return true;
+    const value = query.toLowerCase();
+    return (
+      item.petName.toLowerCase().includes(value) ||
+      item.ownerName.toLowerCase().includes(value) ||
+      item.petBreed.toLowerCase().includes(value) ||
+      item.ownerPhone.includes(value)
     );
-  }, [checkedInPets, searchQuery]);
+  };
 
-  const displayedPets = searchResults ?? checkedInPets;
+  const filteredCheckedIn = useMemo(
+    () => checkedInPets.filter((item) => matchesSearch(item, checkedInQuery)),
+    [checkedInPets, checkedInQuery],
+  );
+
+  const filteredScheduled = useMemo(
+    () => scheduledArrivals.filter((item) => matchesSearch(item, scheduledQuery)),
+    [scheduledArrivals, scheduledQuery],
+  );
+
+  const filteredCheckedOut = useMemo(
+    () => checkedOutToday.filter((item) => matchesSearch(item, checkedOutQuery)),
+    [checkedOutToday, checkedOutQuery],
+  );
 
   const handleCheckIn = (item: UnifiedCheckIn) => {
     setSelectedItem(item);
@@ -630,10 +648,14 @@ export function CheckInOutSection() {
     );
   };
 
+  if (!isMounted) {
+    return null;
+  }
+
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">
-        {/* Compact header: title + search + dropdown filters */}
+        {/* Compact header: title + dropdown filters */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <PawPrint className="h-5 w-5 text-primary" />
@@ -641,16 +663,6 @@ export function CheckInOutSection() {
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <div className="relative w-full sm:w-[340px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by pet name, owner, breed, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -714,36 +726,49 @@ export function CheckInOutSection() {
           {/* Scheduled Arrivals */}
           {showScheduled && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                  Scheduled Arrivals
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{scheduledArrivals.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {
-                      scheduledArrivals.filter(
-                        (p) => p.serviceType === "boarding",
-                      ).length
-                    }{" "}
-                    boarding,{" "}
-                    {
-                      scheduledArrivals.filter(
-                        (p) => p.serviceType === "daycare",
-                      ).length
-                    }{" "}
-                    daycare
-                  </span>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                    Scheduled Arrivals
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{filteredScheduled.length}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {
+                        filteredScheduled.filter(
+                          (p) => p.serviceType === "boarding",
+                        ).length
+                      }{" "}
+                      boarding,{" "}
+                      {
+                        filteredScheduled.filter(
+                          (p) => p.serviceType === "daycare",
+                        ).length
+                      }{" "}
+                      daycare
+                    </span>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search arrivals..."
+                    value={scheduledQuery}
+                    onChange={(e) => setScheduledQuery(e.target.value)}
+                    className="h-8 pl-9 text-sm"
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
-                {scheduledArrivals.length === 0 ? (
+                {filteredScheduled.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    No arrivals scheduled
+                    {scheduledQuery
+                      ? "No arrivals match your search"
+                      : "No arrivals scheduled"}
                   </p>
                 ) : (
-                  scheduledArrivals.map((item) => {
+                  filteredScheduled.map((item) => {
                     const client = findClientForPet(item.petId);
                     return (
                       <div
@@ -833,36 +858,49 @@ export function CheckInOutSection() {
           {/* Currently Checked In */}
           {showCheckedIn && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <LogIn className="h-4 w-4 text-green-600" />
-                  Currently Checked In
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{displayedPets.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {
-                      displayedPets.filter((p) => p.serviceType === "boarding")
-                        .length
-                    }{" "}
-                    boarding,{" "}
-                    {
-                      displayedPets.filter((p) => p.serviceType === "daycare")
-                        .length
-                    }{" "}
-                    daycare
-                  </span>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <LogIn className="h-4 w-4 text-green-600" />
+                    Currently Checked In
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{filteredCheckedIn.length}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {
+                        filteredCheckedIn.filter(
+                          (p) => p.serviceType === "boarding",
+                        ).length
+                      }{" "}
+                      boarding,{" "}
+                      {
+                        filteredCheckedIn.filter(
+                          (p) => p.serviceType === "daycare",
+                        ).length
+                      }{" "}
+                      daycare
+                    </span>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search checked-in pets..."
+                    value={checkedInQuery}
+                    onChange={(e) => setCheckedInQuery(e.target.value)}
+                    className="h-8 pl-9 text-sm"
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
-                {displayedPets.length === 0 ? (
+                {filteredCheckedIn.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {searchQuery
+                    {checkedInQuery
                       ? "No pets match your search"
                       : "No pets currently checked in"}
                   </p>
                 ) : (
-                  displayedPets.map((item) => {
+                  filteredCheckedIn.map((item) => {
                     const client = findClientForPet(item.petId);
                     return (
                       <div
@@ -974,35 +1012,51 @@ export function CheckInOutSection() {
           {/* Checked Out Today */}
           {showCheckedOut && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
-                  Checked Out Today
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{checkedOutToday.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {
-                      checkedOutToday.filter(
-                        (p) => p.serviceType === "boarding",
-                      ).length
-                    }{" "}
-                    boarding,{" "}
-                    {
-                      checkedOutToday.filter((p) => p.serviceType === "daycare")
-                        .length
-                    }{" "}
-                    daycare
-                  </span>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CheckCircle className="h-4 w-4 text-gray-600" />
+                    Checked Out Today
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {filteredCheckedOut.length}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {
+                        filteredCheckedOut.filter(
+                          (p) => p.serviceType === "boarding",
+                        ).length
+                      }{" "}
+                      boarding,{" "}
+                      {
+                        filteredCheckedOut.filter(
+                          (p) => p.serviceType === "daycare",
+                        ).length
+                      }{" "}
+                      daycare
+                    </span>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search checkouts..."
+                    value={checkedOutQuery}
+                    onChange={(e) => setCheckedOutQuery(e.target.value)}
+                    className="h-8 pl-9 text-sm"
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
-                {checkedOutToday.length === 0 ? (
+                {filteredCheckedOut.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    No checkouts today
+                    {checkedOutQuery
+                      ? "No checkouts match your search"
+                      : "No checkouts today"}
                   </p>
                 ) : (
-                  checkedOutToday.map((item) => {
+                  filteredCheckedOut.map((item) => {
                     const client = findClientForPet(item.petId);
                     return (
                       <div

@@ -123,16 +123,19 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
             <div className="space-y-2">
               <Label htmlFor="callerType">Caller Type (Optional)</Label>
               <Select
-                value={formData.callerType}
+                value={formData.callerType || "__any__"}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, callerType: value })
+                  setFormData({
+                    ...formData,
+                    callerType: value === "__any__" ? "" : value,
+                  })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Any caller type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
+                  <SelectItem value="__any__">Any</SelectItem>
                   <SelectItem value="new">New Callers</SelectItem>
                   <SelectItem value="existing">Existing Customers</SelectItem>
                   <SelectItem value="vip">VIP Customers</SelectItem>

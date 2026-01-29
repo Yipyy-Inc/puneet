@@ -182,9 +182,63 @@ export function DaycareDetails({
   setExtraServices,
   selectedPets,
 }: DaycareDetailsProps) {
-  const { hours, rules } = useSettings();
+  const {
+    hours,
+    rules,
+    serviceDateBlocks,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+  } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
+
+  const scheduleTimeOverridesForDaycare = React.useMemo(() => {
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes("daycare"),
+    );
+  }, [scheduleTimeOverrides]);
+
+  const dropOffPickUpWindowsByDateForDaycare = React.useMemo(() => {
+    const map: Record<
+      string,
+      {
+        dropOffStart: string;
+        dropOffEnd: string;
+        pickUpStart: string;
+        pickUpEnd: string;
+      }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes("daycare"))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [dropOffPickUpOverrides]);
+
+  const { blockedDatesForDaycare, blockedDateMessagesForDaycare } =
+    React.useMemo(() => {
+      const blocks = serviceDateBlocks.filter(
+        (b) => b.closed && b.services.includes("daycare"),
+      );
+      const dates = blocks.map((b) => {
+        const [y, m, d] = b.date.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      });
+      const messages: Record<string, string> = {};
+      blocks.forEach(
+        (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+      );
+      return {
+        blockedDatesForDaycare: dates,
+        blockedDateMessagesForDaycare: messages,
+      };
+    }, [serviceDateBlocks]);
 
   const allPreviousCompleted = (stepIndex: number) => {
     if (!isSubStepComplete) return true;
@@ -234,10 +288,14 @@ export function DaycareDetails({
                 }
               }}
               facilityHours={hours}
+              scheduleTimeOverrides={scheduleTimeOverridesForDaycare}
+              dropOffPickUpWindowsByDate={dropOffPickUpWindowsByDateForDaycare}
               bookingRules={{
                 minimumAdvanceBooking: rules.minimumAdvanceBooking,
                 maximumAdvanceBooking: rules.maximumAdvanceBooking,
               }}
+              disabledDates={blockedDatesForDaycare}
+              disabledDateMessages={blockedDateMessagesForDaycare}
             />
           </div>
         )}

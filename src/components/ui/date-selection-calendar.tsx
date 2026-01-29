@@ -59,6 +59,22 @@ export interface DateSelectionCalendarProps {
     string,
     { isOpen: boolean; openTime: string; closeTime: string }
   >;
+  /** One-day schedule overrides: custom open/close for specific dates (key = YYYY-MM-DD). */
+  scheduleTimeOverrides?: Array<{
+    date: string;
+    openTime: string;
+    closeTime: string;
+  }>;
+  /** Drop-off and pick-up windows per date (key = YYYY-MM-DD). When set, time selection uses these instead of facility open/close. */
+  dropOffPickUpWindowsByDate?: Record<
+    string,
+    {
+      dropOffStart: string;
+      dropOffEnd: string;
+      pickUpStart: string;
+      pickUpEnd: string;
+    }
+  >;
 
   // Booking rules for date constraints
   bookingRules?: {
@@ -70,6 +86,12 @@ export interface DateSelectionCalendarProps {
   minDate?: Date;
   maxDate?: Date;
   disabledDates?: Date[];
+  /** Range mode: dates that cannot be used as check-in (range start). */
+  disabledStartDates?: Date[];
+  /** Range mode: dates that cannot be used as check-out (range end). */
+  disabledEndDates?: Date[];
+  /** Messages for disabled dates (key = YYYY-MM-DD). Shown when customer hovers over a blocked date. */
+  disabledDateMessages?: Record<string, string>;
   unavailableDates?: Date[];
 
   // Optional features
@@ -148,10 +170,15 @@ export function DateSelectionCalendar({
   defaultCheckInTime,
   defaultCheckOutTime,
   facilityHours,
+  scheduleTimeOverrides,
+  dropOffPickUpWindowsByDate,
   bookingRules,
   minDate,
   maxDate,
   disabledDates = [],
+  disabledStartDates,
+  disabledEndDates,
+  disabledDateMessages,
   unavailableDates = [],
   className,
   initialMonth,
@@ -165,8 +192,17 @@ export function DateSelectionCalendar({
   const effectiveDefaultCheckOutTime =
     defaultCheckOutTime || getDefaultTimes(facilityHours).checkOut;
 
-  // Get facility hours for a specific date
+  // Get facility hours for a specific date (one-day override takes precedence)
   const getFacilityHoursForDate = (date: Date) => {
+    const dateStr = formatDateString(date);
+    const override = scheduleTimeOverrides?.find((o) => o.date === dateStr);
+    if (override) {
+      return {
+        isOpen: true,
+        openTime: override.openTime,
+        closeTime: override.closeTime,
+      };
+    }
     if (!facilityHours) return null;
     const days = [
       "sunday",
@@ -179,6 +215,11 @@ export function DateSelectionCalendar({
     ];
     const dayName = days[date.getDay()];
     return facilityHours[dayName];
+  };
+
+  const getDropOffPickUpForDate = (date: Date) => {
+    if (!dropOffPickUpWindowsByDate) return null;
+    return dropOffPickUpWindowsByDate[formatDateString(date)] ?? null;
   };
 
   // Utility functions
@@ -221,11 +262,34 @@ export function DateSelectionCalendar({
     return max;
   }, [maxDate, bookingRules]);
 
+  const effectiveDisabledDates = useMemo(() => {
+    if (mode === "range") {
+      if (rangeStart && !rangeEnd) {
+        return [
+          ...(disabledDates ?? []),
+          ...(disabledEndDates ?? []),
+        ];
+      }
+      return [
+        ...(disabledDates ?? []),
+        ...(disabledStartDates ?? []),
+      ];
+    }
+    return disabledDates ?? [];
+  }, [
+    mode,
+    rangeStart,
+    rangeEnd,
+    disabledDates,
+    disabledStartDates,
+    disabledEndDates,
+  ]);
+
   const isDateDisabled = (date: Date): boolean => {
     if (effectiveMinDate && date < effectiveMinDate) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
     if (facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
-    return disabledDates.some((d) => isSameDay(d, date));
+    return effectiveDisabledDates.some((d) => isSameDay(d, date));
   };
 
   const isDateUnavailable = (date: Date): boolean => {
@@ -320,14 +384,13 @@ export function DateSelectionCalendar({
       // Handle time selection
       if (showTimeSelection && !isSelected) {
         const dateStr = formatDateString(date);
+        const dropOffPickUp = getDropOffPickUpForDate(date);
         const facilityHoursForDate = getFacilityHoursForDate(date);
         onDateTimesChange?.([
           {
             date: dateStr,
-            checkInTime:
-              facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
-            checkOutTime:
-              facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
+            checkInTime: dropOffPickUp?.dropOffStart ?? facilityHoursForDate?.openTime ?? effectiveDefaultCheckInTime,
+            checkOutTime: dropOffPickUp?.pickUpStart ?? facilityHoursForDate?.closeTime ?? effectiveDefaultCheckOutTime,
           },
         ]);
       } else if (showTimeSelection && isSelected) {
@@ -353,6 +416,7 @@ export function DateSelectionCalendar({
         if (showTimeSelection) {
           const mostRecentTime =
             dateTimes.length > 0 ? dateTimes[dateTimes.length - 1] : null;
+          const dropOffPickUp = getDropOffPickUpForDate(date);
           const facilityHoursForDate = getFacilityHoursForDate(date);
           onDateTimesChange?.([
             ...dateTimes,
@@ -360,10 +424,12 @@ export function DateSelectionCalendar({
               date: dateStr,
               checkInTime:
                 mostRecentTime?.checkInTime ||
+                dropOffPickUp?.dropOffStart ||
                 facilityHoursForDate?.openTime ||
                 effectiveDefaultCheckInTime,
               checkOutTime:
                 mostRecentTime?.checkOutTime ||
+                dropOffPickUp?.pickUpStart ||
                 facilityHoursForDate?.closeTime ||
                 effectiveDefaultCheckOutTime,
             },
@@ -390,13 +456,12 @@ export function DateSelectionCalendar({
           const times: DateTimeInfo[] = [];
           const current = new Date(start);
           while (current <= end) {
+            const dropOffPickUp = getDropOffPickUpForDate(current);
             const facilityHoursForDate = getFacilityHoursForDate(current);
             times.push({
               date: formatDateString(current),
-              checkInTime:
-                facilityHoursForDate?.openTime || effectiveDefaultCheckInTime,
-              checkOutTime:
-                facilityHoursForDate?.closeTime || effectiveDefaultCheckOutTime,
+              checkInTime: dropOffPickUp?.dropOffStart ?? facilityHoursForDate?.openTime ?? effectiveDefaultCheckInTime,
+              checkOutTime: dropOffPickUp?.pickUpStart ?? facilityHoursForDate?.closeTime ?? effectiveDefaultCheckOutTime,
             });
             current.setDate(current.getDate() + 1);
           }
@@ -489,6 +554,11 @@ export function DateSelectionCalendar({
       }
     }
 
+    const closureMessage =
+      (disabled || unavailable) && disabledDateMessages
+        ? disabledDateMessages[formatDateString(date)]
+        : undefined;
+
     return (
       <button
         type="button"
@@ -496,6 +566,7 @@ export function DateSelectionCalendar({
         onMouseEnter={() => setHoverDate(date)}
         onMouseLeave={() => setHoverDate(null)}
         disabled={disabled || unavailable}
+        title={closureMessage}
         className={cn(
           "aspect-square w-full m-2 text-[10px] font-medium transition-all relative rounded-full",
           "hover:bg-accent hover:text-accent-foreground",
@@ -672,72 +743,62 @@ export function DateSelectionCalendar({
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Check-in/out Times</Label>
 
-              {mode === "range" && dateTimes.length > 0 && (
-                <div className="p-2 border rounded-lg space-y-1.5">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">
-                        Check-in Time
-                      </Label>
-                      <TimePicker
-                        value={
-                          dateTimes[0]?.checkInTime ||
-                          effectiveDefaultCheckInTime
-                        }
-                        onValueChange={(next) => {
-                          const newTimes = dateTimes.map((dt) => ({
-                            ...dt,
-                            checkInTime: next,
-                          }));
-                          onDateTimesChange?.(newTimes);
-                        }}
-                        stepMinutes={30}
-                        min={
-                          facilityHours && rangeStart
-                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
-                              "06:00"
-                            : "06:00"
-                        }
-                        max={
-                          facilityHours && rangeEnd
-                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
-                              "22:00"
-                            : "22:00"
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">
-                        Check-out Time
-                      </Label>
-                      <TimePicker
-                        value={
-                          dateTimes[0]?.checkOutTime ||
-                          effectiveDefaultCheckOutTime
-                        }
-                        onValueChange={(next) => {
-                          const newTimes = dateTimes.map((dt) => ({
-                            ...dt,
-                            checkOutTime: next,
-                          }));
-                          onDateTimesChange?.(newTimes);
-                        }}
-                        stepMinutes={30}
-                        min={
-                          facilityHours && rangeStart
-                            ? getFacilityHoursForDate(rangeStart)?.openTime ||
-                              "06:00"
-                            : "06:00"
-                        }
-                        max={
-                          facilityHours && rangeEnd
-                            ? getFacilityHoursForDate(rangeEnd)?.closeTime ||
-                              "22:00"
-                            : "22:00"
-                        }
-                      />
-                    </div>
-                  </div>
+              {mode === "range" && dateTimes.length > 0 && rangeStart && rangeEnd && (
+                <div className="p-3 border rounded-lg space-y-2">
+                  <p className="text-xs font-semibold">
+                    {rangeStart.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    –{" "}
+                    {rangeEnd.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <TimeRangeSlider
+                    minTime={
+                      getFacilityHoursForDate(rangeStart)?.openTime || "06:00"
+                    }
+                    maxTime={
+                      getFacilityHoursForDate(rangeEnd)?.closeTime || "22:00"
+                    }
+                    dropOffWindow={
+                      getDropOffPickUpForDate(rangeStart)
+                        ? {
+                            min: getDropOffPickUpForDate(rangeStart)!.dropOffStart,
+                            max: getDropOffPickUpForDate(rangeStart)!.dropOffEnd,
+                          }
+                        : undefined
+                    }
+                    pickUpWindow={
+                      getDropOffPickUpForDate(rangeEnd)
+                        ? {
+                            min: getDropOffPickUpForDate(rangeEnd)!.pickUpStart,
+                            max: getDropOffPickUpForDate(rangeEnd)!.pickUpEnd,
+                          }
+                        : undefined
+                    }
+                    startTime={
+                      dateTimes[0]?.checkInTime || effectiveDefaultCheckInTime
+                    }
+                    endTime={
+                      dateTimes[0]?.checkOutTime ||
+                      effectiveDefaultCheckOutTime
+                    }
+                    onTimeChange={(start, end) => {
+                      const newTimes = dateTimes.map((dt) => ({
+                        ...dt,
+                        checkInTime: start,
+                        checkOutTime: end,
+                      }));
+                      onDateTimesChange?.(newTimes);
+                    }}
+                    onApply={() => {}}
+                    step={30}
+                  />
                   <p className="text-[10px] text-muted-foreground">
                     Same times for all days in range
                   </p>
@@ -763,6 +824,22 @@ export function DateSelectionCalendar({
                       maxTime={
                         getFacilityHoursForDate(selectedDates[0])?.closeTime ||
                         "22:00"
+                      }
+                      dropOffWindow={
+                        getDropOffPickUpForDate(selectedDates[0])
+                          ? {
+                              min: getDropOffPickUpForDate(selectedDates[0])!.dropOffStart,
+                              max: getDropOffPickUpForDate(selectedDates[0])!.dropOffEnd,
+                            }
+                          : undefined
+                      }
+                      pickUpWindow={
+                        getDropOffPickUpForDate(selectedDates[0])
+                          ? {
+                              min: getDropOffPickUpForDate(selectedDates[0])!.pickUpStart,
+                              max: getDropOffPickUpForDate(selectedDates[0])!.pickUpEnd,
+                            }
+                          : undefined
                       }
                       startTime={
                         dateTimes[0]?.checkInTime || effectiveDefaultCheckInTime
@@ -815,6 +892,22 @@ export function DateSelectionCalendar({
                                 maxTime={
                                   getFacilityHoursForDate(date)?.closeTime ||
                                   "22:00"
+                                }
+                                dropOffWindow={
+                                  getDropOffPickUpForDate(date)
+                                    ? {
+                                        min: getDropOffPickUpForDate(date)!.dropOffStart,
+                                        max: getDropOffPickUpForDate(date)!.dropOffEnd,
+                                      }
+                                    : undefined
+                                }
+                                pickUpWindow={
+                                  getDropOffPickUpForDate(date)
+                                    ? {
+                                        min: getDropOffPickUpForDate(date)!.pickUpStart,
+                                        max: getDropOffPickUpForDate(date)!.pickUpEnd,
+                                      }
+                                    : undefined
                                 }
                                 startTime={timeInfo.checkInTime}
                                 endTime={timeInfo.checkOutTime}

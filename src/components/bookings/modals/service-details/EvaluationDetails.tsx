@@ -13,10 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { Check, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
-import type { Pet } from "@/lib/types";
 
 // Helper to format date without timezone issues
 const formatDateString = (date: Date): string => {
@@ -28,147 +26,84 @@ const formatDateString = (date: Date): string => {
 
 interface EvaluationDetailsProps {
   currentSubStep: number;
-  isSubStepComplete?: (stepIndex: number) => boolean;
   startDate: string;
   setStartDate: (date: string) => void;
   checkInTime: string;
   setCheckInTime: (time: string) => void;
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
-  evaluationTargetService: string;
-  setEvaluationTargetService: (value: string) => void;
-  evaluationEvaluator: string;
-  setEvaluationEvaluator: (value: string) => void;
-  evaluationSpace: string;
-  setEvaluationSpace: (value: string) => void;
-  evaluatorOptions: Array<{ value: string; label: string }>;
-  selectedPets: Pet[];
 }
-
-type EvaluationTargetService = "daycare" | "boarding";
-
-// NOTE: mock "existing rooms" (same idea as Daycare/Boarding details).
-// Later this should come from backend / facility settings.
-const DAYCARE_ROOMS = [
-  {
-    id: "playroom-a",
-    name: "Playroom A",
-    description: "Main playroom for active dogs",
-    capacity: 15,
-    currentBookings: 12,
-    imageUrl: "/rooms/room-1.jpg",
-  },
-  {
-    id: "playroom-b",
-    name: "Playroom B",
-    description: "Smaller dogs and calm play",
-    capacity: 10,
-    currentBookings: 6,
-    imageUrl: "/rooms/room-2.jpg",
-  },
-  {
-    id: "quiet-zone",
-    name: "Quiet Zone",
-    description: "Low-energy pets and seniors",
-    capacity: 8,
-    currentBookings: 3,
-    imageUrl: "/rooms/room-3.jpg",
-  },
-  {
-    id: "outdoor-yard",
-    name: "Outdoor Yard",
-    description: "Outdoor supervised play area",
-    capacity: 20,
-    currentBookings: 15,
-  },
-];
-
-const BOARDING_TYPES = [
-  {
-    id: "standard",
-    name: "Standard Room",
-    description: "Comfortable indoor kennel with bedding",
-    image: "/rooms/room-1.jpg",
-    totalRooms: 10,
-    bookedRooms: 7,
-  },
-  {
-    id: "deluxe",
-    name: "Deluxe Suite",
-    description: "Spacious suite with play area and webcam",
-    image: "/rooms/room-2.jpg",
-    totalRooms: 5,
-    bookedRooms: 2,
-  },
-  {
-    id: "vip",
-    name: "VIP Suite",
-    description: "Luxury suite with private outdoor access",
-    image: "/rooms/room-3.jpg",
-    totalRooms: 3,
-    bookedRooms: 1,
-  },
-];
 
 export function EvaluationDetails({
   currentSubStep,
-  isSubStepComplete,
   startDate,
   setStartDate,
   setCheckInTime,
   setCheckOutTime,
-  evaluationTargetService,
-  setEvaluationTargetService,
-  evaluationEvaluator,
-  setEvaluationEvaluator,
-  evaluationSpace,
-  setEvaluationSpace,
-  evaluatorOptions,
 }: EvaluationDetailsProps) {
-  const { hours, rules, evaluation } = useSettings();
+  const {
+    hours,
+    rules,
+    evaluation,
+    serviceDateBlocks,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+  } = useSettings();
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
 
-  const isStepAccessible = React.useCallback(
-    (stepIndex: number) => {
-      if (stepIndex === 0) return true;
-      if (!isSubStepComplete) return true;
-      return isSubStepComplete(stepIndex - 1);
-    },
-    [isSubStepComplete],
+  const scheduleTimeOverridesForEvaluation = React.useMemo(() => {
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes("evaluation"),
+    );
+  }, [scheduleTimeOverrides]);
+
+  const dropOffPickUpWindowsByDateForEvaluation = React.useMemo(() => {
+    const map: Record<
+      string,
+      {
+        dropOffStart: string;
+        dropOffEnd: string;
+        pickUpStart: string;
+        pickUpEnd: string;
+      }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes("evaluation"))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [dropOffPickUpOverrides]);
+
+  const { blockedDatesForEvaluation, blockedDateMessagesForEvaluation } =
+    React.useMemo(() => {
+      const blocks = serviceDateBlocks.filter(
+        (b) => b.closed && b.services.includes("evaluation"),
+      );
+      const dates = blocks.map((b) => {
+        const [y, m, d] = b.date.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      });
+      const messages: Record<string, string> = {};
+      blocks.forEach(
+        (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+      );
+      return {
+        blockedDatesForEvaluation: dates,
+        blockedDateMessagesForEvaluation: messages,
+      };
+    }, [serviceDateBlocks]);
+  const durationOptions = evaluation.schedule.durationOptionsMinutes;
+  const defaultDuration =
+    evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
+  const [selectedDuration, setSelectedDuration] = React.useState<number>(
+    defaultDuration,
   );
-
-  const normalizedTarget =
-    evaluationTargetService === "daycare" || evaluationTargetService === "boarding"
-      ? (evaluationTargetService as EvaluationTargetService)
-      : null;
-
-  const roomOptions = React.useMemo(() => {
-    if (!normalizedTarget) return [];
-    if (normalizedTarget === "daycare") {
-      return DAYCARE_ROOMS.map((r) => ({
-        id: r.id,
-        name: r.name,
-        description: r.description,
-      }));
-    }
-    return BOARDING_TYPES.map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-    }));
-  }, [normalizedTarget]);
-
-  // If target service changes, reset room if it doesn't belong to the new service.
-  React.useEffect(() => {
-    if (!evaluationSpace) return;
-    if (roomOptions.length === 0) {
-      setEvaluationSpace("");
-      return;
-    }
-    const stillValid = roomOptions.some((r) => r.id === evaluationSpace);
-    if (!stillValid) setEvaluationSpace("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evaluationTargetService, roomOptions.length]);
 
   const selectedDates = React.useMemo(() => {
     if (!startDate) return [];
@@ -198,10 +133,64 @@ export function EvaluationDetails({
     }
   };
 
+  const timeToMinutes = (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const minutesToTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  const timeWindows =
+    evaluation.schedule.timeWindows.length > 0
+      ? evaluation.schedule.timeWindows
+      : [{ id: "all-day", label: "All day", startTime: "00:00", endTime: "23:59" }];
+
+  const slots = React.useMemo(() => {
+    const duration = selectedDuration || defaultDuration;
+    const windows = timeWindows;
+    if (evaluation.schedule.slotMode === "fixed") {
+      return evaluation.schedule.fixedStartTimes
+        .map((startTime) => {
+          const start = timeToMinutes(startTime);
+          const end = start + duration;
+          const withinWindow = windows.some(
+            (w) =>
+              start >= timeToMinutes(w.startTime) &&
+              end <= timeToMinutes(w.endTime),
+          );
+          if (!withinWindow) return null;
+          return {
+            startTime,
+            endTime: minutesToTime(end),
+            duration,
+          };
+        })
+        .filter(Boolean) as Array<{ startTime: string; endTime: string; duration: number }>;
+    }
+
+    const generated: Array<{ startTime: string; endTime: string; duration: number }> = [];
+    windows.forEach((window) => {
+      const start = timeToMinutes(window.startTime);
+      const end = timeToMinutes(window.endTime);
+      let current = start;
+      while (current + duration <= end) {
+        generated.push({
+          startTime: minutesToTime(current),
+          endTime: minutesToTime(current + duration),
+          duration,
+        });
+        current += duration;
+      }
+    });
+    return generated;
+  }, [evaluation.schedule, selectedDuration, defaultDuration, timeWindows]);
+
   const handleSlotSelect = (slotStartTime: string) => {
-    const slot = evaluation.availableSlots.find(
-      (s) => s.startTime === slotStartTime,
-    );
+    const slot = slots.find((s) => s.startTime === slotStartTime);
     if (!slot) return;
 
     setSelectedSlot(slotStartTime);
@@ -226,10 +215,16 @@ export function EvaluationDetails({
                 showTimeSelection={false}
                 dateTimes={dateTimes}
                 facilityHours={hours}
+                scheduleTimeOverrides={scheduleTimeOverridesForEvaluation}
+                dropOffPickUpWindowsByDate={
+                  dropOffPickUpWindowsByDateForEvaluation
+                }
                 bookingRules={{
                   minimumAdvanceBooking: rules.minimumAdvanceBooking,
                   maximumAdvanceBooking: rules.maximumAdvanceBooking,
                 }}
+                disabledDates={blockedDatesForEvaluation}
+                disabledDateMessages={blockedDateMessagesForEvaluation}
               />
             </div>
 
@@ -238,6 +233,32 @@ export function EvaluationDetails({
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
+                    {durationOptions.length > 1 && (
+                      <div className="grid gap-2">
+                        <Label className="text-sm">Duration</Label>
+                        <Select
+                          value={String(selectedDuration)}
+                          onValueChange={(value) => {
+                            const next = Number(value);
+                            setSelectedDuration(next);
+                            setSelectedSlot(null);
+                            setCheckInTime("");
+                            setCheckOutTime("");
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select duration" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {durationOptions.map((opt) => (
+                              <SelectItem key={opt} value={String(opt)}>
+                                {opt / 60}h
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Clock className="h-5 w-5 text-muted-foreground" />
                       <Label className="text-base">
@@ -249,7 +270,7 @@ export function EvaluationDetails({
                     </p>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {evaluation.availableSlots.map((slot) => {
+                      {slots.map((slot) => {
                         const isSelected = selectedSlot === slot.startTime;
                         return (
                           <Button
@@ -273,7 +294,7 @@ export function EvaluationDetails({
                       })}
                     </div>
 
-                    {evaluation.availableSlots.length === 0 && (
+                    {slots.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No time slots available for evaluation.
                       </p>
@@ -284,13 +305,13 @@ export function EvaluationDetails({
                         <p className="text-sm font-medium text-primary">
                           Selected:{" "}
                           {
-                            evaluation.availableSlots.find(
+                            slots.find(
                               (s) => s.startTime === selectedSlot,
                             )?.startTime
                           }{" "}
                           -{" "}
                           {
-                            evaluation.availableSlots.find(
+                            slots.find(
                               (s) => s.startTime === selectedSlot,
                             )?.endTime
                           }
@@ -300,141 +321,6 @@ export function EvaluationDetails({
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        )}
-
-        {currentSubStep === 1 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">Staff & Target Service</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Choose the service to evaluate for and assign an evaluator.
-              </p>
-            </div>
-
-            {!isStepAccessible(1) && (
-              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
-                <p className="text-muted-foreground">
-                  Please complete the Schedule step first
-                </p>
-              </div>
-            )}
-
-            {isStepAccessible(1) && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-base">Target Service</Label>
-                  <Select
-                    value={evaluationTargetService}
-                    onValueChange={(value) => {
-                      setEvaluationTargetService(value);
-                      setEvaluationSpace("");
-                    }}
-                  >
-                    <SelectTrigger className="w-full mt-2">
-                      <SelectValue placeholder="Select Daycare or Boarding" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daycare">Daycare</SelectItem>
-                      <SelectItem value="boarding">Boarding</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-base">Assign Evaluator</Label>
-                  <Select
-                    value={evaluationEvaluator}
-                    onValueChange={setEvaluationEvaluator}
-                  >
-                    <SelectTrigger className="w-full mt-2">
-                      <SelectValue placeholder="Select staff member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {evaluatorOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {currentSubStep === 2 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">Choose Room</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Select one of the existing rooms for this evaluation.
-              </p>
-            </div>
-
-            {!isStepAccessible(2) && (
-              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
-                <p className="text-muted-foreground">
-                  Please complete the Staff step first
-                </p>
-              </div>
-            )}
-
-            {isStepAccessible(2) && (
-              <>
-                {!normalizedTarget ? (
-                  <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">
-                      Select target service first
-                    </p>
-                  </div>
-                ) : roomOptions.length === 0 ? (
-                  <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">
-                      No rooms available for this service
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {roomOptions.map((room) => {
-                      const isSelected = evaluationSpace === room.id;
-                      return (
-                        <button
-                          key={room.id}
-                          type="button"
-                          onClick={() => setEvaluationSpace(room.id)}
-                          className={cn(
-                            "text-left border-2 rounded-lg p-4 transition-all hover:border-primary/60",
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="font-semibold text-sm truncate">
-                                {room.name}
-                              </p>
-                              {room.description && (
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                  {room.description}
-                                </p>
-                              )}
-                            </div>
-                            {isSelected && (
-                              <span className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground">
-                                <Check className="h-4 w-4" />
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
             )}
           </div>
         )}

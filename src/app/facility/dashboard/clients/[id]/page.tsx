@@ -22,6 +22,7 @@ import {
   giftCards,
   customerCredits,
 } from "@/data/payments";
+import { getClientRetailPurchases } from "@/data/retail";
 import { Evaluation } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import Link from "next/link";
 import {
   ArrowLeft,
   Building,
@@ -83,6 +85,8 @@ import {
   Save,
   X,
   Plus,
+  ShoppingBag,
+  Receipt,
 } from "lucide-react";
 
 interface Pet {
@@ -170,6 +174,13 @@ export default function ClientDetailPage({
     (gc) => gc.purchasedByClientId === client.id,
   );
   const clientCredits = customerCredits.filter((c) => c.clientId === client.id);
+
+  // Retail purchase history (linked to client file)
+  const clientRetailPurchases = getClientRetailPurchases(client.id);
+  const totalRetailSpent = clientRetailPurchases.reduce(
+    (sum, t) => sum + t.total,
+    0,
+  );
 
   // Calculate billing stats
   const totalRevenue = clientPayments
@@ -470,7 +481,7 @@ export default function ClientDetailPage({
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{totalBookings}</div>
@@ -495,14 +506,27 @@ export default function ClientDetailPage({
             <div className="text-xs text-muted-foreground">Documents</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">
+              ${totalRetailSpent.toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Retail Purchases ({clientRetailPurchases.length})
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pets">Pets ({client.pets.length})</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
+          <TabsTrigger value="purchases">
+            Purchases ({clientRetailPurchases.length})
+          </TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
         </TabsList>
@@ -1025,6 +1049,83 @@ export default function ClientDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Purchase History (Retail) */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Purchase History
+              </CardTitle>
+              {clientRetailPurchases.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab("purchases")}
+                >
+                  View All
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {clientRetailPurchases.length > 0 ? (
+                <div className="space-y-3">
+                  {clientRetailPurchases.slice(0, 5).map((txn) => (
+                    <div
+                      key={txn.id}
+                      className="flex items-start justify-between p-3 rounded-lg border bg-card hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-amber-100">
+                          <Receipt className="h-4 w-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-sm">
+                            {txn.transactionNumber}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {txn.items.length} item
+                            {txn.items.length !== 1 ? "s" : ""} •{" "}
+                            {txn.items
+                              .map((i) => i.productName)
+                              .slice(0, 2)
+                              .join(", ")}
+                            {txn.items.length > 2 && "..."}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDateTime(txn.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">
+                          ${txn.total.toFixed(2)}
+                        </p>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {txn.paymentMethod}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {clientRetailPurchases.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2">
+                      Showing 5 of {clientRetailPurchases.length} purchases
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <ShoppingBag className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">
+                    No retail purchases yet
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Purchases from the store will appear here
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Pets Tab */}
@@ -1489,6 +1590,122 @@ export default function ClientDetailPage({
                   )}
                 </TabsContent>
               </Tabs>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Purchase History (Retail) Tab */}
+        <TabsContent value="purchases" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" />
+                  Retail Purchase History
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Food, accessories, and other items purchased from the store
+                </p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={`/facility/dashboard/services/retail?clientId=${client.id}`}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  New Sale
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {clientRetailPurchases.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <span className="text-sm font-medium">Total Spent</span>
+                    <span className="text-xl font-bold text-amber-600">
+                      ${totalRetailSpent.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {clientRetailPurchases.map((txn) => (
+                      <div
+                        key={txn.id}
+                        className="rounded-lg border bg-card overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-amber-100">
+                              <Receipt className="h-4 w-4 text-amber-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm">
+                                {txn.transactionNumber}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(txn.createdAt)} •{" "}
+                                {txn.paymentMethod}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">
+                              ${txn.total.toFixed(2)}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {txn.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                            Items
+                          </p>
+                          <div className="space-y-2">
+                            {txn.items.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between text-sm"
+                              >
+                                <span>
+                                  {item.productName}
+                                  {item.variantName && (
+                                    <span className="text-muted-foreground">
+                                      {" "}
+                                      ({item.variantName})
+                                    </span>
+                                  )}
+                                  <span className="text-muted-foreground ml-1">
+                                    × {item.quantity}
+                                  </span>
+                                </span>
+                                <span className="font-medium">
+                                  ${item.total.toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {txn.discountTotal > 0 && (
+                            <div className="flex justify-between text-sm mt-2 pt-2 border-t text-muted-foreground">
+                              <span>Discount</span>
+                              <span>-${txn.discountTotal.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+                  <h3 className="font-semibold text-lg mb-2">
+                    No retail purchases yet
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    When this customer buys food, accessories, or other products
+                    from your store, their purchases will appear here.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

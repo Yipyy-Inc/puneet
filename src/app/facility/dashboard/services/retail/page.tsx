@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ShoppingCart,
   Barcode,
@@ -45,17 +46,20 @@ import {
   products,
   getProductByBarcode,
   getRetailStats,
+  addRetailTransaction,
   type Product,
   type ProductVariant,
   type CartItem,
   type PaymentMethod,
 } from "@/data/retail";
+import { clients } from "@/data/clients";
 
 interface CartItemWithId extends CartItem {
   id: string;
 }
 
 export default function POSPage() {
+  const searchParams = useSearchParams();
   const [cart, setCart] = useState<CartItemWithId[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,8 +68,22 @@ export default function POSPage() {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [selectedCartItem, setSelectedCartItem] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+
+  // Pre-select client when navigating from client file (e.g. ?clientId=15)
+  useEffect(() => {
+    const clientId = searchParams.get("clientId");
+    if (clientId) {
+      setSelectedClientId(clientId);
+      const client = clients.find((c) => String(c.id) === clientId);
+      if (client) {
+        setCustomerName(client.name);
+        setCustomerEmail(client.email || "");
+      }
+    }
+  }, [searchParams]);
 
   const [discountForm, setDiscountForm] = useState({
     type: "fixed" as "fixed" | "percent",
@@ -191,7 +209,40 @@ export default function POSPage() {
   };
 
   const handlePayment = () => {
-    // In a real app, this would process the payment
+    // Record transaction and link to client file when client is selected
+    const customerId =
+      selectedClientId && selectedClientId !== "__walk_in__"
+        ? selectedClientId
+        : undefined;
+    const name =
+      customerName ||
+      (selectedClientId && selectedClientId !== "__walk_in__"
+        ? clients.find((c) => String(c.id) === selectedClientId)?.name
+        : undefined);
+    const email =
+      customerEmail ||
+      (selectedClientId && selectedClientId !== "__walk_in__"
+        ? clients.find((c) => String(c.id) === selectedClientId)?.email
+        : undefined);
+
+    addRetailTransaction({
+      items: cart.map(({ id, ...item }) => item),
+      subtotal,
+      discountTotal,
+      taxTotal,
+      total: grandTotal,
+      paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+      payments: paymentForm.splitPayments
+        ? paymentForm.payments
+        : [{ method: paymentForm.method, amount: grandTotal }],
+      customerId,
+      customerName: name,
+      customerEmail: email,
+      cashierId: "staff-001",
+      cashierName: "Staff",
+      notes: "",
+    });
+
     setIsPaymentModalOpen(false);
     setIsReceiptModalOpen(true);
   };
@@ -203,6 +254,7 @@ export default function POSPage() {
     }
     // Reset cart and customer info
     setCart([]);
+    setSelectedClientId("");
     setCustomerName("");
     setCustomerEmail("");
     setIsReceiptModalOpen(false);
@@ -211,6 +263,20 @@ export default function POSPage() {
       splitPayments: false,
       payments: [{ method: "cash", amount: 0 }],
     });
+  };
+
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    if (clientId === "__walk_in__") {
+      setCustomerName("");
+      setCustomerEmail("");
+      return;
+    }
+    const client = clients.find((c) => String(c.id) === clientId);
+    if (client) {
+      setCustomerName(client.name);
+      setCustomerEmail(client.email || "");
+    }
   };
 
   const filteredProducts = products.filter(
@@ -370,27 +436,59 @@ export default function POSPage() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-col h-[calc(100%-8rem)]">
-            {/* Customer Info */}
-            <div className="flex gap-2 mb-3">
-              <div className="relative flex-1">
-                <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="Customer name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="pl-7 h-8 text-sm"
-                />
+            {/* Customer / Client Link - Links sale to client file */}
+            <div className="space-y-2 mb-3">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                Link to Client (optional)
+              </Label>
+              <Select
+                value={selectedClientId}
+                onValueChange={handleClientSelect}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select client to track purchase..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__walk_in__">Walk-in (no client)</SelectItem>
+                  {clients
+                    .filter((c) => c.status === "active")
+                    .map((client) => (
+                      <SelectItem
+                        key={client.id}
+                        value={String(client.id)}
+                      >
+                        {client.name} {client.email && `(${client.email})`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Customer name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="pl-7 h-8 text-sm"
+                  />
+                </div>
+                <div className="relative flex-1">
+                  <Mail className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Email for receipt"
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="pl-7 h-8 text-sm"
+                  />
+                </div>
               </div>
-              <div className="relative flex-1">
-                <Mail className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="Email for receipt"
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="pl-7 h-8 text-sm"
-                />
-              </div>
+              {selectedClientId && selectedClientId !== "__walk_in__" && (
+                <p className="text-xs text-muted-foreground">
+                  Purchase will appear in client&apos;s Purchase History
+                </p>
+              )}
             </div>
 
             <Separator className="mb-3" />
