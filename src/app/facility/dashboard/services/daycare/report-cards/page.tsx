@@ -36,6 +36,12 @@ import {
   Check,
   Sparkles,
   CalendarClock,
+  Bell,
+  Ghost,
+  Egg,
+  Heart,
+  PartyPopper,
+  Star,
 } from "lucide-react";
 import { daycareCheckIns } from "@/data/daycare";
 import { boardingGuests } from "@/data/boarding";
@@ -165,44 +171,100 @@ const favoriteActivityLabels: Record<FavoriteActivity, string> = {
   rest: "cozy rest time",
 };
 
-const themeMeta: Record<
-  string,
-  { label: string; emoji: string; bannerClass: string }
-> = {
+interface ThemeStyle {
+  label: string;
+  emoji: string;
+  bannerClass: string;
+  /** Full card background - the outer themed wrapper */
+  cardBg: string;
+  /** Accent color for date band, section headers */
+  accentBg: string;
+  accentText: string;
+  /** Decorative icon component - shown in corner */
+  DecorativeIcon: React.ComponentType<{ className?: string }>;
+  /** Position of main decorative icon */
+  iconPosition: "top-right" | "top-left" | "bottom-right" | "bottom-left";
+  /** Background pattern - snowflakes, spiderwebs, etc. */
+  patternClass?: string;
+}
+
+const themeMeta: Record<string, ThemeStyle> = {
   everyday: {
     label: "Everyday",
     emoji: "✨",
     bannerClass: "bg-gradient-to-r from-slate-100 to-slate-200",
+    cardBg: "bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200",
+    accentBg: "bg-slate-600",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-dots",
   },
   christmas: {
     label: "Christmas Edition",
     emoji: "🎄",
     bannerClass: "bg-gradient-to-r from-emerald-100 to-red-100",
+    cardBg: "bg-gradient-to-br from-red-600 via-red-500 to-rose-600",
+    accentBg: "bg-emerald-600",
+    accentText: "text-white",
+    DecorativeIcon: Bell,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-snowflakes",
   },
   halloween: {
     label: "Halloween Edition",
     emoji: "🎃",
     bannerClass: "bg-gradient-to-r from-orange-100 to-violet-100",
+    cardBg: "bg-gradient-to-br from-violet-700 via-purple-600 to-violet-800",
+    accentBg: "bg-orange-500",
+    accentText: "text-white",
+    DecorativeIcon: Ghost,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-spiderweb",
   },
   easter: {
     label: "Easter Edition",
     emoji: "🐣",
     bannerClass: "bg-gradient-to-r from-yellow-100 to-pink-100",
+    cardBg: "bg-gradient-to-br from-amber-200 via-pink-100 to-yellow-200",
+    accentBg: "bg-pink-500",
+    accentText: "text-white",
+    DecorativeIcon: Egg,
+    iconPosition: "bottom-right",
+    patternClass: "report-card-pattern-dots",
   },
   thanksgiving: {
     label: "Thanksgiving Edition",
     emoji: "🦃",
     bannerClass: "bg-gradient-to-r from-amber-100 to-orange-100",
+    cardBg: "bg-gradient-to-br from-amber-700 via-orange-600 to-amber-800",
+    accentBg: "bg-amber-500",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-dots",
   },
   new_year: {
     label: "New Year Edition",
     emoji: "🎉",
     bannerClass: "bg-gradient-to-r from-blue-100 to-indigo-100",
+    cardBg: "bg-gradient-to-br from-blue-700 via-indigo-600 to-blue-800",
+    accentBg: "bg-amber-400",
+    accentText: "text-blue-900",
+    DecorativeIcon: PartyPopper,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-dots",
   },
   valentines: {
     label: "Valentine's Day Edition",
     emoji: "💘",
     bannerClass: "bg-gradient-to-r from-pink-100 to-rose-100",
+    cardBg: "bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600",
+    accentBg: "bg-rose-600",
+    accentText: "text-white",
+    DecorativeIcon: Heart,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-dots",
   },
 };
 
@@ -1050,79 +1112,103 @@ export default function DaycareReportCardsPage() {
           </DialogHeader>
           {viewingCard && (
             <div className="space-y-6">
-              <div className="rounded-xl border overflow-hidden">
+              {/* Full themed card - like the reference images */}
+              <div
+                className={cn(
+                  "relative rounded-2xl overflow-hidden p-6 min-h-[320px]",
+                  viewingThemeMeta.cardBg,
+                  viewingThemeMeta.patternClass,
+                )}
+              >
+                {/* Decorative icon - themed (bell, ghost, etc.) */}
                 <div
                   className={cn(
-                    "flex items-center justify-between px-4 py-3 text-sm",
-                    viewingThemeMeta.bannerClass,
+                    "absolute w-16 h-16 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-white",
+                    viewingThemeMeta.iconPosition === "top-right" &&
+                      "top-4 right-4",
+                    viewingThemeMeta.iconPosition === "top-left" && "top-4 left-4",
+                    viewingThemeMeta.iconPosition === "bottom-right" &&
+                      "bottom-4 right-4",
+                    viewingThemeMeta.iconPosition === "bottom-left" &&
+                      "bottom-4 left-4",
                   )}
                 >
-                  <span className="font-medium">
-                    {viewingThemeMeta.emoji} {viewingThemeMeta.label}
-                  </span>
-                  <Badge variant="outline" className="bg-white/80">
-                    {viewingThemeMeta.label}
-                  </Badge>
+                  <viewingThemeMeta.DecorativeIcon className="h-8 w-8" />
                 </div>
-                <div className="p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg border bg-white flex items-center justify-center overflow-hidden">
-                        {profile.logo ? (
-                          <img
-                            src={profile.logo}
-                            alt={`${facilityName} logo`}
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <PawPrint className="h-5 w-5 text-muted-foreground" />
-                        )}
+
+                {/* Title on themed background */}
+                <h2 className="text-xl font-bold text-white mb-4 drop-shadow-sm">
+                  {viewingThemeMeta.emoji} {viewingThemeMeta.label}
+                </h2>
+
+                {/* Inner white "paper" card - hangs on the themed background */}
+                <div className="relative bg-white rounded-xl shadow-lg overflow-hidden -mt-1">
+                  {/* Themed date band - like tear-off calendar */}
+                  <div
+                    className={cn(
+                      "px-4 py-2.5 text-sm font-medium",
+                      viewingThemeMeta.accentBg,
+                      viewingThemeMeta.accentText,
+                    )}
+                  >
+                    {new Date(viewingCard.visitDate).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg border bg-muted/50 flex items-center justify-center overflow-hidden">
+                          {profile.logo ? (
+                            <img
+                              src={profile.logo}
+                              alt={`${facilityName} logo`}
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <PawPrint className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Facility
+                          </p>
+                          <p className="font-semibold">{facilityName}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Dog name
+                        </p>
+                        <p className="font-medium">{viewingCard.petName}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Facility
+                        <p className="text-xs text-muted-foreground">
+                          Parent name
                         </p>
-                        <p className="font-semibold">{facilityName}</p>
+                        <p className="font-medium">{viewingCard.ownerName}</p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Date</p>
-                      <p className="font-medium">
-                        {new Date(viewingCard.visitDate).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Dog name</p>
-                      <p className="font-medium">{viewingCard.petName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Parent name
-                      </p>
-                      <p className="font-medium">{viewingCard.ownerName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Service type
-                      </p>
-                      <p className="font-medium capitalize">
-                        {viewingCard.serviceType}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Theme</p>
-                      <p className="font-medium">
-                        {viewingThemeMeta.emoji} {viewingThemeMeta.label}
-                      </p>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Service type
+                        </p>
+                        <p className="font-medium capitalize">
+                          {viewingCard.serviceType}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Theme</p>
+                        <p className="font-medium">
+                          {viewingThemeMeta.emoji} {viewingThemeMeta.label}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
