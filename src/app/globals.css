@@ -668,3 +668,23 @@
 button {
   cursor: pointer;
 }
+
+/* Report card theme patterns - decorative backgrounds */
+.report-card-pattern-dots {
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.15) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
+.report-card-pattern-snowflakes {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='0.5'%3E%3Cpath d='M20 0v40M0 20h40M5 5l30 30M35 5L5 35'/%3E%3Cpath d='M20 5v30M5 20h30' transform='rotate(45 20 20)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 40px 40px;
+}
+
+.report-card-pattern-spiderweb {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='0.3'%3E%3Cellipse cx='30' cy='30' rx='25' ry='25'/%3E%3Cellipse cx='30' cy='30' rx='18' ry='18'/%3E%3Cellipse cx='30' cy='30' rx='10' ry='10'/%3E%3Cpath d='M30 5v50M5 30h50M12 12l36 36M48 12L12 48'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 60px 60px;
+}
