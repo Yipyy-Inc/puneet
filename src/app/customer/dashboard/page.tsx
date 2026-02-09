@@ -21,7 +21,7 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => window.location.href = "/customer/pets"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">My Pets</CardTitle>
               <Dog className="h-4 w-4 text-muted-foreground" />
@@ -89,9 +89,11 @@ export default function CustomerDashboardPage() {
                   Book a Service
                 </a>
               </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Dog className="mr-2 h-4 w-4" />
-                Add a Pet
+              <Button className="w-full justify-start" variant="outline" asChild>
+                <a href="/customer/pets">
+                  <Dog className="mr-2 h-4 w-4" />
+                  Manage Pets
+                </a>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
                 <a href="/customer/messages">

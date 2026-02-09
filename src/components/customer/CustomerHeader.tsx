@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings, MessageSquare } from "lucide-react";
+import { User, LogOut, Settings, MessageSquare, Dog } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +118,12 @@ export function CustomerHeader() {
               <Link href="/customer/messages" className="cursor-pointer">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Messages
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/customer/pets" className="cursor-pointer">
+                <Dog className="mr-2 h-4 w-4" />
+                My Pets
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
