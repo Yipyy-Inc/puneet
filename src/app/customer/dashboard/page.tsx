@@ -1,17 +1,22 @@
 "use client";
 
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dog, Calendar, MessageSquare, FileText } from "lucide-react";
 
 export default function CustomerDashboardPage() {
+  const { selectedFacility } = useCustomerFacility();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">Welcome back!</h1>
           <p className="text-muted-foreground">
-            Manage your pets and book services with ease
+            {selectedFacility
+              ? `Manage your pets and book services at ${selectedFacility.name}`
+              : "Manage your pets and book services with ease"}
           </p>
         </div>
 
