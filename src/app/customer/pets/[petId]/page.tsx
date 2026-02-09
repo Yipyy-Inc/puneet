@@ -37,11 +37,15 @@ import {
   Upload,
   AlertTriangle,
   CheckCircle2,
+  XCircle,
   Image as ImageIcon,
 } from "lucide-react";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
+import { vaccinationRules } from "@/data/settings";
+import { facilityConfig } from "@/data/facility-config";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -71,6 +75,7 @@ export default function CustomerPetDetailPage({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isSaving, setIsSaving] = useState(false);
+  const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -177,6 +182,61 @@ export default function CustomerPetDetailPage({
   const updatePetProfile = async (petData: Pet) => {
     // TODO: API call to update pet profile
     await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
+  // Get facility vaccination requirements
+  const facilityRequirements = useMemo(() => {
+    return facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
+      (v) => v.required
+    );
+  }, []);
+
+  // Check vaccination status against facility requirements
+  const getVaccinationCompliance = useMemo(() => {
+    const compliance: {
+      required: string[];
+      missing: string[];
+      expired: string[];
+      expiringSoon: string[];
+      upToDate: string[];
+    } = {
+      required: [],
+      missing: [],
+      expired: [],
+      expiringSoon: [],
+      upToDate: [],
+    };
+
+    facilityRequirements.forEach((req) => {
+      compliance.required.push(req.name);
+      const petVaccination = vaccinations.find(
+        (v) => v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
+              req.name.toLowerCase().includes(v.vaccineName.toLowerCase())
+      );
+
+      if (!petVaccination) {
+        compliance.missing.push(req.name);
+      } else {
+        const status = getVaccinationStatus(petVaccination);
+        if (status.status === "expired") {
+          compliance.expired.push(req.name);
+        } else if (status.status === "expiring-soon") {
+          compliance.expiringSoon.push(req.name);
+        } else {
+          compliance.upToDate.push(req.name);
+        }
+      }
+    });
+
+    return compliance;
+  }, [facilityRequirements, vaccinations]);
+
+  const handleAddVaccination = async (vaccination: Omit<typeof vaccinationRecords[0], "id">) => {
+    // TODO: Replace with actual API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    toast.success("Vaccination record added successfully!");
+    // Refresh vaccinations list
+    router.refresh();
   };
 
   const PetIcon = pet.type === "Cat" ? Cat : Dog;
@@ -553,11 +613,81 @@ export default function CustomerPetDetailPage({
 
           {/* Vaccinations Tab */}
           <TabsContent value="vaccinations" className="space-y-4">
+            {/* Facility Requirements Status */}
+            {facilityRequirements.length > 0 && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Syringe className="h-5 w-5" />
+                    Facility Vaccination Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {getVaccinationCompliance.required.map((vaccine) => {
+                    const isMissing = getVaccinationCompliance.missing.includes(vaccine);
+                    const isExpired = getVaccinationCompliance.expired.includes(vaccine);
+                    const isExpiringSoon = getVaccinationCompliance.expiringSoon.includes(vaccine);
+                    const isUpToDate = getVaccinationCompliance.upToDate.includes(vaccine);
+
+                    return (
+                      <div
+                        key={vaccine}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-background"
+                      >
+                        <div className="flex items-center gap-3">
+                          {isUpToDate ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          ) : isExpiringSoon ? (
+                            <AlertTriangle className="h-5 w-5 text-warning" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-destructive" />
+                          )}
+                          <div>
+                            <p className="font-medium">{vaccine}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isMissing
+                                ? "Missing - Required for booking"
+                                : isExpired
+                                  ? "Expired - Update required"
+                                  : isExpiringSoon
+                                    ? "Expiring soon - Update recommended"
+                                    : "Up to date"}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            isUpToDate
+                              ? "default"
+                              : isExpiringSoon
+                                ? "secondary"
+                                : "destructive"
+                          }
+                        >
+                          {isUpToDate
+                            ? "Current"
+                            : isExpiringSoon
+                              ? "Expiring Soon"
+                              : isExpired
+                                ? "Expired"
+                                : "Missing"}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold">Vaccination Records</CardTitle>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVaccinationModalOpen(true)}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Record
                   </Button>
@@ -568,7 +698,12 @@ export default function CustomerPetDetailPage({
                   <div className="text-center py-8 text-muted-foreground">
                     <Syringe className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No vaccination records yet</p>
-                    <Button variant="outline" className="mt-4" size="sm">
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      size="sm"
+                      onClick={() => setVaccinationModalOpen(true)}
+                    >
                       <Upload className="h-4 w-4 mr-2" />
                       Upload First Record
                     </Button>
@@ -758,6 +893,15 @@ export default function CustomerPetDetailPage({
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Add Vaccination Modal */}
+        <AddVaccinationModal
+          open={vaccinationModalOpen}
+          onOpenChange={setVaccinationModalOpen}
+          petId={pet.id}
+          petName={pet.name}
+          onSave={handleAddVaccination}
+        />
       </div>
     </div>
   );

@@ -41,6 +41,10 @@ import {
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Booking, Pet } from "@/lib/types";
 import { toast } from "sonner";
+import { vaccinationRecords } from "@/data/pet-data";
+import { facilityConfig } from "@/data/facility-config";
+import { vaccinationRules } from "@/data/settings";
+import { Syringe } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -160,23 +164,129 @@ export function CustomerBookingModal({
     [customerPets, selectedPetIds]
   );
 
+  // Check vaccination status for a pet
+  const getPetVaccinationStatus = useCallback((pet: Pet) => {
+    const petVaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
+    const facilityRequirements = facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
+      (v) => v.required
+    );
+
+    const status: {
+      missing: string[];
+      expired: string[];
+      expiringSoon: string[];
+      upToDate: string[];
+    } = {
+      missing: [],
+      expired: [],
+      expiringSoon: [],
+      upToDate: [],
+    };
+
+    facilityRequirements.forEach((req) => {
+      const petVaccination = petVaccinations.find(
+        (v) => v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
+              req.name.toLowerCase().includes(v.vaccineName.toLowerCase())
+      );
+
+      if (!petVaccination) {
+        status.missing.push(req.name);
+      } else {
+        const expiryDate = new Date(petVaccination.expiryDate);
+        const now = new Date();
+        const daysUntilExpiry = Math.floor(
+          (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysUntilExpiry < 0) {
+          status.expired.push(req.name);
+        } else if (daysUntilExpiry <= 30) {
+          status.expiringSoon.push(req.name);
+        } else {
+          status.upToDate.push(req.name);
+        }
+      }
+    });
+
+    return status;
+  }, []);
+
+  // Check if pets have required vaccinations for the selected service
+  const vaccinationCompliance = useMemo(() => {
+    if (selectedPets.length === 0 || !selectedService) return null;
+
+    const serviceType = selectedService.toLowerCase();
+    const applicableRules = vaccinationRules.filter((rule) =>
+      rule.applicableServices.some((s) => s.toLowerCase() === serviceType)
+    );
+
+    const requiredVaccines = applicableRules
+      .filter((rule) => rule.required)
+      .map((rule) => rule.vaccineName);
+
+    if (requiredVaccines.length === 0) return null;
+
+    const allPetsCompliant = selectedPets.every((pet) => {
+      const petStatus = getPetVaccinationStatus(pet);
+      return (
+        petStatus.missing.length === 0 &&
+        petStatus.expired.length === 0
+      );
+    });
+
+    const allPetsIssues: { petName: string; issues: string[] }[] = selectedPets.map((pet) => {
+      const petStatus = getPetVaccinationStatus(pet);
+      const issues: string[] = [];
+      
+      requiredVaccines.forEach((vaccine) => {
+        if (petStatus.missing.includes(vaccine)) {
+          issues.push(`${vaccine} is missing`);
+        } else if (petStatus.expired.includes(vaccine)) {
+          issues.push(`${vaccine} is expired`);
+        }
+      });
+
+      return { petName: pet.name, issues };
+    }).filter((p) => p.issues.length > 0);
+
+    return {
+      allCompliant: allPetsCompliant,
+      issues: allPetsIssues,
+      requiredVaccines,
+    };
+  }, [selectedPets, selectedService, getPetVaccinationStatus]);
+
   // Validation
   const canProceed = useMemo(() => {
     switch (currentStep) {
       case 0:
         return selectedService !== "";
       case 1:
-        return selectedPetIds.length > 0;
+        if (selectedPetIds.length === 0) return false;
+        // Block if vaccinations are missing/expired (unless facility allows warnings only)
+        if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
+          // Check if facility blocks bookings or just warns
+          if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
+            return false; // Block booking
+          }
+        }
+        return true;
       case 2:
         return startDate !== "" && (selectedService !== "boarding" || endDate !== "");
       case 3:
         return true;
       case 4:
+        // Final check before confirmation
+        if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
+          if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
+            return false; // Block booking
+          }
+        }
         return true;
       default:
         return false;
     }
-  }, [currentStep, selectedService, selectedPetIds, startDate, endDate]);
+  }, [currentStep, selectedService, selectedPetIds, startDate, endDate, vaccinationCompliance]);
 
   const handleNext = () => {
     if (canProceed && currentStep < STEPS.length - 1) {
@@ -334,6 +444,33 @@ export function CustomerBookingModal({
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <Label className="text-base">Select pets</Label>
+                  
+                  {/* Vaccination Warning */}
+                  {vaccinationCompliance && !vaccinationCompliance.allCompliant && (
+                    <Alert className={facilityConfig.vaccinationRequirements.mandatoryRecords ? "border-destructive" : "border-warning"}>
+                      <Syringe className="h-4 w-4" />
+                      <AlertDescription>
+                        <div className="space-y-2">
+                          <p className="font-semibold">
+                            {facilityConfig.vaccinationRequirements.mandatoryRecords
+                              ? "Vaccination Required"
+                              : "Vaccination Warning"}
+                          </p>
+                          {vaccinationCompliance.issues.map((issue) => (
+                            <div key={issue.petName} className="text-sm">
+                              <strong>{issue.petName}:</strong> {issue.issues.join(", ")}
+                            </div>
+                          ))}
+                          {facilityConfig.vaccinationRequirements.mandatoryRecords && (
+                            <p className="text-sm font-medium text-destructive">
+                              Please update vaccinations before booking.
+                            </p>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="space-y-2">
                     {customerPets.map((pet) => {
                       const hasEval = hasValidEvaluation(pet);
@@ -341,6 +478,11 @@ export function CustomerBookingModal({
                         ? serviceRequiresEvaluation(selectedService)
                         : false;
                       const canSelect = !requiresEval || hasEval || selectedService === "evaluation";
+                      
+                      // Get vaccination status for this pet
+                      const petVaxStatus = getPetVaccinationStatus(pet);
+                      const hasVaxIssues = petVaxStatus.missing.length > 0 || petVaxStatus.expired.length > 0;
+                      const isBlocked = facilityConfig.vaccinationRequirements.mandatoryRecords && hasVaxIssues;
 
                       return (
                         <Card
@@ -349,11 +491,17 @@ export function CustomerBookingModal({
                             selectedPetIds.includes(pet.id)
                               ? "ring-2 ring-primary"
                               : "hover:border-primary/50"
-                          } ${!canSelect ? "opacity-50" : ""}`}
+                          } ${!canSelect || isBlocked ? "opacity-50" : ""}`}
                           onClick={() => {
                             if (!canSelect) {
                               toast.warning(
                                 `${pet.name} needs evaluation before booking this service`
+                              );
+                              return;
+                            }
+                            if (isBlocked) {
+                              toast.error(
+                                `${pet.name} has missing or expired vaccinations. Please update them first.`
                               );
                               return;
                             }
@@ -368,8 +516,9 @@ export function CustomerBookingModal({
                             <div className="flex items-center gap-3">
                               <Checkbox
                                 checked={selectedPetIds.includes(pet.id)}
+                                disabled={!canSelect || isBlocked}
                                 onCheckedChange={(checked) => {
-                                  if (!canSelect) return;
+                                  if (!canSelect || isBlocked) return;
                                   if (checked) {
                                     setSelectedPetIds([...selectedPetIds, pet.id]);
                                   } else {
@@ -380,18 +529,35 @@ export function CustomerBookingModal({
                               <div className="flex-1">
                                 <div className="flex items-center justify-between">
                                   <h3 className="font-semibold">{pet.name}</h3>
-                                  {requiresEval && (
-                                    <Badge
-                                      variant={hasEval ? "default" : "destructive"}
-                                      className="text-xs"
-                                    >
-                                      {hasEval ? "Evaluated" : "Needs Evaluation"}
-                                    </Badge>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {requiresEval && (
+                                      <Badge
+                                        variant={hasEval ? "default" : "destructive"}
+                                        className="text-xs"
+                                      >
+                                        {hasEval ? "Evaluated" : "Needs Evaluation"}
+                                      </Badge>
+                                    )}
+                                    {hasVaxIssues && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="text-xs flex items-center gap-1"
+                                      >
+                                        <Syringe className="h-3 w-3" />
+                                        {petVaxStatus.missing.length > 0 ? "Missing Vax" : "Expired Vax"}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                   {pet.breed} • {pet.age} years old
                                 </p>
+                                {hasVaxIssues && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    {petVaxStatus.missing.length > 0 && `${petVaxStatus.missing.join(", ")} missing. `}
+                                    {petVaxStatus.expired.length > 0 && `${petVaxStatus.expired.join(", ")} expired.`}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </CardContent>
