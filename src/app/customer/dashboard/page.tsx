@@ -83,9 +83,11 @@ export default function CustomerDashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="mr-2 h-4 w-4" />
-                Book a Service
+              <Button className="w-full justify-start" variant="outline" asChild>
+                <a href="/customer/bookings">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Book a Service
+                </a>
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <Dog className="mr-2 h-4 w-4" />
