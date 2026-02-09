@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,6 +80,14 @@ export function CustomerHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Messages Button */}
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/customer/messages">
+            <MessageSquare className="h-5 w-5" />
+            <span className="sr-only">Messages</span>
+          </Link>
+        </Button>
+
         {/* Facility Switcher */}
         <FacilitySwitcher />
 
@@ -104,6 +112,12 @@ export function CustomerHeader() {
               <Link href="/customer/dashboard" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/customer/messages" className="cursor-pointer">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Messages
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

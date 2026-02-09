@@ -47,7 +47,7 @@ export default function CustomerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => window.location.href = "/customer/messages"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Messages</CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -93,9 +93,11 @@ export default function CustomerDashboardPage() {
                 <Dog className="mr-2 h-4 w-4" />
                 Add a Pet
               </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Message Facility
+              <Button className="w-full justify-start" variant="outline" asChild>
+                <a href="/customer/messages">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Message Facility
+                </a>
               </Button>
             </CardContent>
           </Card>
