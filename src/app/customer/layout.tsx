@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { CustomerFacilityProvider } from "@/hooks/use-customer-facility";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { CustomerSidebar } from "@/components/customer/CustomerSidebar";
 
 export default function CustomerLayout({
   children,
@@ -16,11 +18,23 @@ export default function CustomerLayout({
   return (
     <SettingsProviderWrapper>
       <CustomerFacilityProvider>
-        <div className="min-h-screen flex flex-col">
-          {!isAuthRoute && <CustomerHeader />}
-          <main className="flex-1">{children}</main>
-        </div>
+        {isAuthRoute ? (
+          <div className="min-h-screen flex flex-col">
+            <main className="flex-1">{children}</main>
+          </div>
+        ) : (
+          <SidebarProvider>
+            <>
+              <CustomerSidebar />
+              <SidebarInset className="flex flex-col min-h-screen">
+                <CustomerHeader />
+                <main className="flex-1 overflow-x-hidden">{children}</main>
+              </SidebarInset>
+            </>
+          </SidebarProvider>
+        )}
       </CustomerFacilityProvider>
     </SettingsProviderWrapper>
   );
 }
+
