@@ -1,13 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dog, Calendar, MessageSquare, FileText, CreditCard } from "lucide-react";
+import { Dog, Calendar, MessageSquare, FileText, CreditCard, Camera } from "lucide-react";
 import Link from "next/link";
+import { petCams } from "@/data/additional-features";
 
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
+
+  // Check if cameras are enabled for customers
+  const camerasEnabled = useMemo(() => {
+    const customerAccessibleCameras = petCams.filter(
+      (cam) =>
+        cam.accessLevel === "public" || cam.accessLevel === "customers_only"
+    );
+    return customerAccessibleCameras.length > 0;
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4">
@@ -114,6 +125,14 @@ export default function CustomerDashboardPage() {
                   Message Facility
                 </Link>
               </Button>
+              {camerasEnabled && (
+                <Button className="w-full justify-start" variant="outline" asChild>
+                  <Link href="/customer/cameras">
+                    <Camera className="mr-2 h-4 w-4" />
+                    Live Cameras
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 
