@@ -94,7 +94,7 @@ export default function CustomerMessagesPage() {
           facilityId: booking.facilityId,
           facilityName: facilities.find((f) => f.id === booking.facilityId)?.name || "Facility",
           subject: `Booking Confirmed - ${booking.service}`,
-          content: `Your ${booking.service} booking for ${new Date(booking.startDate).toLocaleDateString()} has been confirmed.`,
+          content: `Your ${booking.service} booking for ${new Date(booking.startDate).toLocaleDateString("en-US")} has been confirmed.`,
           timestamp: booking.startDate,
           isRead: true,
           direction: "outbound",

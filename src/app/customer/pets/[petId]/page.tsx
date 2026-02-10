@@ -46,6 +46,7 @@ import { Separator } from "@/components/ui/separator";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { vaccinationRules } from "@/data/settings";
 import { facilityConfig } from "@/data/facility-config";
+import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -855,39 +856,27 @@ export default function CustomerPetDetailPage({
           <TabsContent value="photos" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold">Photo Gallery</CardTitle>
-                  <Button variant="outline" size="sm">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Photo
-                  </Button>
-                </div>
+                <CardTitle className="text-sm font-semibold">Photo Gallery</CardTitle>
+                <CardDescription>
+                  Photos from your pet's stays, organized by date
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {photos.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No photos yet</p>
-                    <Button variant="outline" className="mt-4" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload First Photo
-                    </Button>
+                    <p className="text-sm mt-2">
+                      Photos from your pet's stays will appear here
+                    </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {photos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="aspect-square rounded-lg bg-muted overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <img
-                          src={photo.url}
-                          alt={photo.caption || "Pet photo"}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <PhotoAlbums
+                    photos={photos}
+                    bookings={petBookings}
+                    reportCards={reports}
+                    formatDate={formatDate}
+                  />
                 )}
               </CardContent>
             </Card>
