@@ -4,6 +4,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dog, Calendar, MessageSquare, FileText } from "lucide-react";
+import Link from "next/link";
 
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
@@ -60,7 +61,7 @@ export default function CustomerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => window.location.href = "/customer/report-cards"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Report Cards</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -84,22 +85,28 @@ export default function CustomerDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button className="w-full justify-start" variant="outline" asChild>
-                <a href="/customer/bookings">
+                <Link href="/customer/bookings">
                   <Calendar className="mr-2 h-4 w-4" />
                   Book a Service
-                </a>
+                </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
-                <a href="/customer/pets">
+                <Link href="/customer/pets">
                   <Dog className="mr-2 h-4 w-4" />
                   Manage Pets
-                </a>
+                </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
-                <a href="/customer/messages">
+                <Link href="/customer/report-cards">
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Report Cards
+                </Link>
+              </Button>
+              <Button className="w-full justify-start" variant="outline" asChild>
+                <Link href="/customer/messages">
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Message Facility
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
