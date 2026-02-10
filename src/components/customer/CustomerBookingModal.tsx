@@ -94,6 +94,9 @@ export function CustomerBookingModal({
   const [recurringEndDate, setRecurringEndDate] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tipAmount, setTipAmount] = useState(0);
+  const [customTipAmount, setCustomTipAmount] = useState("");
+  const [tipPercentage, setTipPercentage] = useState<number | null>(null);
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
@@ -336,6 +339,14 @@ export function CustomerBookingModal({
     }
   };
 
+  // Check if tips are enabled for this service
+  // TODO: Get from facility settings - for now, enable tips for grooming services
+  const tipsEnabled = useMemo(() => {
+    // In production, check facility settings
+    // For now, enable tips for grooming services
+    return selectedService === "grooming";
+  }, [selectedService]);
+
   // Calculate price (simplified)
   const calculatedPrice = useMemo(() => {
     if (!selectedService) return 0;
@@ -344,6 +355,27 @@ export function CustomerBookingModal({
     const basePrice = service.basePrice;
     return basePrice * selectedPetIds.length;
   }, [selectedService, selectedPetIds]);
+
+  const totalPrice = useMemo(() => {
+    return calculatedPrice + tipAmount;
+  }, [calculatedPrice, tipAmount]);
+
+  // Tip percentage options
+  const tipPercentages = [15, 18, 20, 25];
+  
+  const handleTipPercentage = (percentage: number) => {
+    setTipPercentage(percentage);
+    const tip = (calculatedPrice * percentage) / 100;
+    setTipAmount(tip);
+    setCustomTipAmount("");
+  };
+
+  const handleCustomTip = (value: string) => {
+    setCustomTipAmount(value);
+    setTipPercentage(null);
+    const tip = parseFloat(value) || 0;
+    setTipAmount(tip);
+  };
 
   // Reset when modal closes
   useEffect(() => {
@@ -355,6 +387,9 @@ export function CustomerBookingModal({
       setEndDate("");
       setSpecialRequests("");
       setIsRecurring(false);
+      setTipAmount(0);
+      setCustomTipAmount("");
+      setTipPercentage(null);
     }
   }, [open]);
 
@@ -782,11 +817,86 @@ export function CustomerBookingModal({
                       </div>
                       <Separator />
                       <div>
-                        <h3 className="font-semibold mb-2">Total</h3>
-                        <p className="text-2xl font-bold text-primary">
-                          ${calculatedPrice.toFixed(2)}
-                        </p>
+                        <h3 className="font-semibold mb-2">Pricing</h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Service:</span>
+                            <span>${calculatedPrice.toFixed(2)}</span>
+                          </div>
+                          {tipsEnabled && (
+                            <>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Tip:</span>
+                                <span className={tipAmount > 0 ? "text-green-600 font-semibold" : ""}>
+                                  {tipAmount > 0 ? `$${tipAmount.toFixed(2)}` : "Optional"}
+                                </span>
+                              </div>
+                              <Separator />
+                            </>
+                          )}
+                          <div className="flex justify-between text-lg font-bold">
+                            <span>Total:</span>
+                            <span className="text-primary">${totalPrice.toFixed(2)}</span>
+                          </div>
+                        </div>
                       </div>
+                      {tipsEnabled && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="font-semibold mb-3 flex items-center gap-2">
+                              <span>💝</span>
+                              <span>Add a Tip (Optional)</span>
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Show your appreciation to the team who cares for your pet!
+                            </p>
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-4 gap-2">
+                                {tipPercentages.map((percent) => (
+                                  <Button
+                                    key={percent}
+                                    variant={tipPercentage === percent ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => handleTipPercentage(percent)}
+                                    className="text-sm"
+                                  >
+                                    {percent}%
+                                  </Button>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="Custom amount"
+                                  value={customTipAmount}
+                                  onChange={(e) => handleCustomTip(e.target.value)}
+                                  className="flex-1"
+                                  min="0"
+                                  step="0.01"
+                                />
+                                <span className="text-sm text-muted-foreground">or</span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setTipAmount(0);
+                                    setTipPercentage(null);
+                                    setCustomTipAmount("");
+                                  }}
+                                >
+                                  No tip
+                                </Button>
+                              </div>
+                              {tipAmount > 0 && (
+                                <p className="text-sm text-green-600 font-medium">
+                                  Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the team.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

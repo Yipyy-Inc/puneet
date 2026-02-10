@@ -3,7 +3,7 @@
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dog, Calendar, MessageSquare, FileText } from "lucide-react";
+import { Dog, Calendar, MessageSquare, FileText, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 export default function CustomerDashboardPage() {
@@ -100,6 +100,12 @@ export default function CustomerDashboardPage() {
                 <Link href="/customer/report-cards">
                   <FileText className="mr-2 h-4 w-4" />
                   View Report Cards
+                </Link>
+              </Button>
+              <Button className="w-full justify-start" variant="outline" asChild>
+                <Link href="/customer/billing">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Billing & Payments
                 </Link>
               </Button>
               <Button className="w-full justify-start" variant="outline" asChild>
