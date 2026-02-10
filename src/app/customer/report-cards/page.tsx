@@ -22,6 +22,8 @@ import {
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
+type Client = (typeof clients)[number];
+
 export default function CustomerReportCardsPage() {
   const { selectedFacility } = useCustomerFacility();
 
@@ -45,7 +47,7 @@ export default function CustomerReportCardsPage() {
     : customer?.facility ?? "Your Facility";
 
   const petById = useMemo(() => {
-    const map = new Map<number, (typeof customer.pets)[number]>();
+    const map = new Map<number, Client["pets"][number]>();
     customer?.pets.forEach((pet) => map.set(pet.id, pet));
     return map;
   }, [customer]);
