@@ -834,15 +834,7 @@ export default function CustomerPetDetailPage({
                             </div>
                           )}
 
-                          {/* Daily Notes - These are customer-visible notes from the facility */}
-                          {report.staffNotes && (
-                            <div>
-                              <p className="text-sm font-medium mb-2">Daily Notes</p>
-                              <p className="text-sm text-muted-foreground">
-                                {report.staffNotes}
-                              </p>
-                            </div>
-                          )}
+                          {/* Do not display internal staff notes in the customer view */}
                         </CardContent>
                       </Card>
                     ))}

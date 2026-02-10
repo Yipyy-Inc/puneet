@@ -242,15 +242,6 @@ export default function CustomerReportCardsPage() {
                             </div>
                           </div>
                         )}
-
-                        {item.staffNotes && (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">Notes from the team</p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {item.staffNotes}
-                            </p>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   </div>

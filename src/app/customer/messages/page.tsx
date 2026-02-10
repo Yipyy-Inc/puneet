@@ -148,7 +148,8 @@ export default function CustomerMessagesPage() {
             facilityId: booking.facilityId,
             facilityName: "Facility",
             subject: `${rc.serviceType} Report Card`,
-            content: rc.staffNotes || "Daily report card available",
+            // Do not expose internal staff notes to customers
+            content: `Your ${rc.serviceType} report card for this stay is ready.`,
             timestamp: rc.date,
             isRead: !rc.sentToOwner,
             direction: "outbound",
