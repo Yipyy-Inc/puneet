@@ -69,9 +69,15 @@ export default function CustomerMessagesPage() {
         facilityMessages[comm.facilityId].push({
           id: comm.id,
           type: "message",
-          channel: comm.type === "call" ? undefined : comm.type,
+          // Map underlying communication type to a customer-facing channel.
+          // Only allow \"email\", \"sms\", or \"in-app\"; everything else becomes undefined.
+          channel:
+            comm.type === "email" || comm.type === "sms" || comm.type === "in-app"
+              ? comm.type
+              : undefined,
           facilityId: comm.facilityId,
-          facilityName: facilities.find((f) => f.id === comm.facilityId)?.name || "Facility",
+          facilityName:
+            facilities.find((f) => f.id === comm.facilityId)?.name || "Facility",
           subject: comm.subject,
           content: comm.content,
           timestamp: comm.timestamp,

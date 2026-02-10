@@ -112,7 +112,7 @@ export function GenericSidebar({
   }, [menuSections, searchQuery]);
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r-0 bg-sidebar z-50 pb-16">
       {/* Header */}
       <SidebarHeader
         className={cn(
