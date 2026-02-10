@@ -610,7 +610,7 @@ export function CustomerBookingModal({
                   {selectedService === "daycare" ? (
                     <div className="space-y-4">
                       <DateSelectionCalendar
-                        mode="multiple"
+                        mode="multi"
                         selectedDates={startDate ? [new Date(startDate)] : []}
                         onSelectionChange={(dates) => {
                           if (dates.length > 0) {
