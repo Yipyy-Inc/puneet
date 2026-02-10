@@ -73,12 +73,15 @@ export default function CustomerSettingsPage() {
     emailCheckInOut: true,
     emailReportCards: true,
     emailPaymentReceipts: true,
+    // Explicit consent for marketing email
     emailMarketing: false,
     // SMS notifications
     smsBookingReminders: true,
     smsEmergencyAlerts: true,
     smsCheckInOut: false,
-    // Push notifications
+    // Explicit consent for marketing SMS
+    smsMarketing: false,
+    // Push notifications (in‑app / device)
     pushBookingConfirmations: true,
     pushBookingReminders: true,
     pushReportCards: true,
@@ -685,6 +688,25 @@ export default function CustomerSettingsPage() {
                       setNotificationPreferences({
                         ...notificationPreferences,
                         smsEmergencyAlerts: checked,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Marketing SMS</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Occasional offers and updates by text. Standard message and data rates may apply.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notificationPreferences.smsMarketing}
+                    onCheckedChange={(checked) =>
+                      setNotificationPreferences({
+                        ...notificationPreferences,
+                        smsMarketing: checked,
                       })
                     }
                     disabled={!isEditing}
