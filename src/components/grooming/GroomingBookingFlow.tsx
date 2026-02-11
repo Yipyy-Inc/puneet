@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +97,18 @@ interface ServiceVariant {
   durationModifier: number; // Additional minutes
   priceModifier: number; // Additional dollars
   requiresPhotos?: boolean; // Whether photos are required for this variant
+  enabled?: boolean; // Can be disabled by facility
+}
+
+// Add-on definitions
+interface GroomingAddOn {
+  id: string;
+  name: string;
+  description: string;
+  durationMinutes: number; // Additional minutes
+  price: number; // Additional dollars
+  hiddenForAnxious?: boolean; // Hide if pet is anxious/aggressive
+  suggestedForSenior?: boolean; // Suggest for senior dogs
   enabled?: boolean; // Can be disabled by facility
 }
 
@@ -289,13 +302,84 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
   ],
 };
 
+// Available add-ons
+const GROOMING_ADD_ONS: GroomingAddOn[] = [
+  {
+    id: "nail-grinding",
+    name: "Nail Grinding",
+    description: "Smooth nail finish with grinder",
+    durationMinutes: 10,
+    price: 15,
+    enabled: true,
+  },
+  {
+    id: "teeth-brushing",
+    name: "Teeth Brushing",
+    description: "Fresh breath and clean teeth",
+    durationMinutes: 5,
+    price: 10,
+    enabled: true,
+  },
+  {
+    id: "blueberry-facial",
+    name: "Blueberry Facial",
+    description: "Deep cleansing facial treatment",
+    durationMinutes: 10,
+    price: 12,
+    enabled: true,
+  },
+  {
+    id: "paw-pad-trim",
+    name: "Paw Pad Trim",
+    description: "Trim and shape paw pads",
+    durationMinutes: 5,
+    price: 8,
+    enabled: true,
+  },
+  {
+    id: "de-shedding-treatment",
+    name: "De-shedding Treatment",
+    description: "Specialized treatment to reduce shedding",
+    durationMinutes: 20,
+    price: 25,
+    enabled: true,
+  },
+  {
+    id: "premium-shampoo",
+    name: "Premium Shampoo Upgrade",
+    description: "Luxury shampoo and conditioner",
+    durationMinutes: 0,
+    price: 5,
+    enabled: true,
+  },
+  {
+    id: "nail-polish",
+    name: "Nail Polish",
+    description: "Colorful nail polish application",
+    durationMinutes: 10,
+    price: 10,
+    hiddenForAnxious: true, // Requires stillness
+    enabled: true,
+  },
+  {
+    id: "joint-relief-massage",
+    name: "Joint Relief Massage",
+    description: "Therapeutic massage for joint comfort",
+    durationMinutes: 15,
+    price: 20,
+    suggestedForSenior: true,
+    enabled: true,
+  },
+];
+
 export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState("");
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
@@ -586,6 +670,104 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setCustomPhotos([]);
   };
 
+  // Check if pet is anxious/aggressive or senior
+  const petFlags = useMemo(() => {
+    if (!selectedPet) return { isAnxious: false, isSenior: false };
+    
+    // Check pet age for senior (typically 7+ years for dogs, 10+ for cats)
+    const isSenior = selectedPet.age >= (selectedPet.type === "Dog" ? 7 : 10);
+    
+    // Check specialNeeds or behavior flags (in production, this would come from pet profile)
+    const specialNeeds = (selectedPet as any).specialNeeds || "";
+    const isAnxious = /anxious|aggressive|nervous|fearful/i.test(specialNeeds);
+    
+    return { isAnxious, isSenior };
+  }, [selectedPet]);
+
+  // Get available add-ons (filtered by pet flags)
+  const availableAddOns = useMemo(() => {
+    return GROOMING_ADD_ONS.filter((addon) => {
+      // Hide if disabled
+      if (addon.enabled === false) return false;
+      
+      // Hide nail polish for anxious pets
+      if (addon.hiddenForAnxious && petFlags.isAnxious) return false;
+      
+      return true;
+    });
+  }, [petFlags]);
+
+  // Get suggested add-ons (e.g., joint relief for senior dogs)
+  const suggestedAddOns = useMemo(() => {
+    return availableAddOns.filter((addon) => {
+      if (addon.suggestedForSenior && petFlags.isSenior) return true;
+      return false;
+    });
+  }, [availableAddOns, petFlags]);
+
+  // Calculate total duration with add-ons
+  const totalDurationWithAddOns = useMemo(() => {
+    let total = calculatedDuration;
+    
+    selectedAddOns.forEach((addOnId) => {
+      const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
+      if (addOn) {
+        total += addOn.durationMinutes;
+      }
+    });
+    
+    return total;
+  }, [calculatedDuration, selectedAddOns]);
+
+  // Calculate total price with add-ons
+  const totalPriceWithAddOns = useMemo(() => {
+    let total = calculatedPrice;
+    
+    selectedAddOns.forEach((addOnId) => {
+      const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
+      if (addOn) {
+        total += addOn.price;
+      }
+    });
+    
+    return total;
+  }, [calculatedPrice, selectedAddOns]);
+
+  // Check for duration conflicts
+  const durationConflict = useMemo(() => {
+    if (!selectedServiceCategory) return null;
+    
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    if (!category) return null;
+    
+    // If add-ons add significant time to a short service, show warning
+    const baseDuration = category.estimatedDuration;
+    const addOnDuration = selectedAddOns.reduce((sum, id) => {
+      const addOn = GROOMING_ADD_ONS.find((a) => a.id === id);
+      return sum + (addOn?.durationMinutes || 0);
+    }, 0);
+    
+    // If add-ons add more than 50% of base duration, show warning
+    if (addOnDuration > baseDuration * 0.5 && totalDurationWithAddOns > 60) {
+      return {
+        message: `This may require extending to a ${Math.ceil(totalDurationWithAddOns / 30) * 30}-minute appointment—limited availability`,
+        severity: "warning" as const,
+      };
+    }
+    
+    return null;
+  }, [selectedServiceCategory, selectedAddOns, totalDurationWithAddOns]);
+
+  const handleAddOnToggle = (addOnId: string) => {
+    setSelectedAddOns((prev) => {
+      if (prev.includes(addOnId)) {
+        return prev.filter((id) => id !== addOnId);
+      } else {
+        return [...prev, addOnId];
+      }
+    });
+  };
+
   const handleContinueFromStep3 = () => {
     if (!selectedVariant) return;
     
@@ -595,6 +777,15 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       return;
     }
     
+    // Navigate to Step 4 (Add-ons)
+    setCurrentStep(4);
+  };
+
+  const handleBackToStep3 = () => {
+    setCurrentStep(3);
+  };
+
+  const handleContinueFromStep4 = () => {
     // TODO: Navigate to next step (date/time selection)
     // For now, just close and show a message
     onOpenChange(false);
@@ -615,7 +806,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? "Step 1: Who are we pampering today?"
               : currentStep === 2
               ? `Step 2: What does ${selectedPet?.name ?? "your pet"} need today?`
-              : "Step 3: Choose the specific service style"
+              : currentStep === 3
+              ? "Step 3: Choose the specific service style"
+              : `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
             }
           </DialogDescription>
         </DialogHeader>
@@ -945,7 +1138,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             </div>
           </div>
         </div>
-        ) : (
+        ) : currentStep === 3 ? (
         /* Step 3: Service Specification & Variants */
         <div className="space-y-6">
           {/* Live Price and Duration Display */}
@@ -1119,6 +1312,172 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                 onClick={handleContinueFromStep3}
                 disabled={!selectedVariant || (requiresPhotos && customPhotos.length === 0)}
               >
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        ) : (
+        /* Step 4: Add-On Selection */
+        <div className="space-y-6">
+          {/* Total Duration and Price Display */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Total Duration</p>
+                  <p className="text-2xl font-bold flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    {totalDurationWithAddOns} mins
+                    {totalDurationWithAddOns > 60 && (
+                      <Badge variant="outline" className="ml-2">
+                        {Math.ceil(totalDurationWithAddOns / 30) * 30} min slot
+                      </Badge>
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground mb-1">Total Price</p>
+                  <p className="text-2xl font-bold flex items-center gap-2 justify-end">
+                    <DollarSign className="h-5 w-5" />
+                    ${totalPriceWithAddOns}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Duration Conflict Warning */}
+          {durationConflict && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-amber-900 mb-1">
+                      Extended Appointment Required
+                    </h4>
+                    <p className="text-sm text-amber-800">
+                      {durationConflict.message}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Suggested Add-Ons for Senior Dogs */}
+          {suggestedAddOns.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-1">Recommended for {selectedPet?.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Based on {selectedPet?.name}'s profile, we recommend:
+                    </p>
+                    <div className="space-y-2">
+                      {suggestedAddOns.map((addon) => (
+                        <div
+                          key={addon.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-background border border-primary/20 cursor-pointer hover:bg-primary/5"
+                          onClick={() => handleAddOnToggle(addon.id)}
+                        >
+                          <Checkbox
+                            checked={selectedAddOns.includes(addon.id)}
+                            onCheckedChange={() => handleAddOnToggle(addon.id)}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{addon.name}</p>
+                            <p className="text-xs text-muted-foreground">{addon.description}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-primary">
+                              +${addon.price}
+                            </p>
+                            {addon.durationMinutes > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                +{addon.durationMinutes} mins
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Available Add-Ons */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Add-On Services</h3>
+            <div className="grid gap-3">
+              {availableAddOns.map((addon) => {
+                const isSelected = selectedAddOns.includes(addon.id);
+                const isSuggested = suggestedAddOns.some((a) => a.id === addon.id);
+
+                return (
+                  <Card
+                    key={addon.id}
+                    className={`cursor-pointer transition-all hover:border-primary/50 ${
+                      isSelected ? "ring-2 ring-primary border-primary" : ""
+                    } ${isSuggested ? "border-primary/20 bg-primary/5" : ""}`}
+                    onClick={() => handleAddOnToggle(addon.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleAddOnToggle(addon.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold">{addon.name}</h4>
+                            {isSuggested && (
+                              <Badge variant="outline" className="text-xs">
+                                Recommended
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {addon.description}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {addon.durationMinutes > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                +{addon.durationMinutes} mins
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 font-semibold text-primary">
+                              <DollarSign className="h-3 w-3" />
+                              +${addon.price}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep3}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContinueFromStep4}>
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
