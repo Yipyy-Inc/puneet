@@ -51,6 +51,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
+import { 
+  handleImmediatePostBookingActions, 
+  schedule24HourReminder,
+  type GroomingBookingData 
+} from "@/lib/grooming-post-booking";
+import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -1717,27 +1723,95 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       return;
     }
 
-    if (depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold") {
-      // In production, this would process payment
-      // For now, we'll just simulate the booking
+    if (!selectedDate || !selectedTimeSlot || !selectedPet || !selectedServiceCategory) {
+      setFormErrors({ booking: "Please complete all required fields" });
+      return;
     }
 
     setIsBooking(true);
     try {
-      // TODO: Replace with actual API calls
-      // 1. Slot hold (10-minute timer if payment pending)
-      // 2. SMS confirmation to client
-      // 3. Calendar block for groomer
-      // 4. Email with "Add to Calendar" .ics file
-      // 5. If mobile: Route recalculation for that van's entire day
-      
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
+      // Process payment if required
+      if (depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold") {
+        // TODO: Process payment
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      // Create booking data
+      const bookingId = `grooming-${Date.now()}`;
+      const appointmentDateTime = new Date(selectedDate);
+      const [hours, minutes] = (serviceLocation === "mobile" 
+        ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
+        : selectedTimeSlot).split(":").map(Number);
+      appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+      // Get last visit date
+      const lastGroomingBooking = bookings
+        .filter(
+          (b) =>
+            b.clientId === customer?.id &&
+            b.petId === selectedPet.id &&
+            b.service.toLowerCase() === "grooming" &&
+            b.status === "completed"
+        )
+        .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0];
+
+      const bookingData: GroomingBookingData = {
+        id: bookingId,
+        clientId: customer?.id || 0,
+        clientName: clientName || customer?.name || "",
+        clientEmail: clientEmail || customer?.email || "",
+        clientPhone: clientPhone || customer?.phone || "",
+        petId: selectedPet.id,
+        petName: selectedPet.name,
+        serviceCategory: selectedServiceCategoryName,
+        serviceVariant: selectedVariantName || undefined,
+        addOns: selectedAddOnsList.map((a) => a?.name || "").filter(Boolean),
+        groomerId: selectedGroomerId || undefined,
+        groomerName: selectedGroomerName !== "System assigned" ? selectedGroomerName : undefined,
+        groomerTier: selectedGroomerTier || undefined,
+        serviceLocation: serviceLocation || "salon",
+        address: serviceLocation === "mobile" ? mobileAddress : undefined,
+        salonLocationId: serviceLocation === "salon" ? salonLocationId || undefined : undefined,
+        appointmentDate: appointmentDateTime,
+        appointmentTime: selectedTimeSlot,
+        duration: totalDurationWithAddOns,
+        totalPrice: finalPrice.finalPrice,
+        depositAmount: depositAmount,
+        depositMethod: depositPaymentMethod || "venue",
+        recurringEnabled: recurringEnabled,
+        recurringFrequency: recurringFrequency === "custom" ? customFrequency : recurringFrequency,
+        recurringEndAfter: recurringEndAfter,
+        recurringOccurrences: recurringOccurrences,
+        recurringEndDate: recurringEndDate || undefined,
+        keepSameGroomer: keepSameGroomer,
+        petBehaviorNotes: petBehaviorUpdate || undefined,
+        specialInstructions: specialInstructions || undefined,
+        lastVisitDate: lastGroomingBooking ? new Date(lastGroomingBooking.endDate) : undefined,
+        petNotes: petBehaviorUpdate || undefined,
+      };
+
+      // Execute immediate post-booking actions
+      const postBookingResult = await handleImmediatePostBookingActions(bookingData);
+
+      // Schedule 24-hour reminder
+      await schedule24HourReminder(bookingData);
+
       // Success - close modal and show success message
       onOpenChange(false);
-      // TODO: Show success toast/notification
+      
+      toast.success("Booking confirmed!", {
+        description: `Your appointment for ${selectedPet.name} has been scheduled. Check your email for confirmation details.`,
+        action: {
+          label: "Manage Booking",
+          onClick: () => router.push(`/customer/bookings/${bookingId}`),
+        },
+      });
     } catch (error) {
+      console.error("Booking error:", error);
       setFormErrors({ booking: "Failed to book appointment. Please try again." });
+      toast.error("Booking failed", {
+        description: "There was an error processing your booking. Please try again.",
+      });
     } finally {
       setIsBooking(false);
     }
