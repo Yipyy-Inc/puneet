@@ -153,11 +153,20 @@ export default function BookingDetailPage({
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Add-ons</p>
                   <div className="flex flex-wrap gap-2">
-                    {booking.extraServices.map((service, index) => (
-                      <Badge key={index} variant="outline">
-                        {service}
-                      </Badge>
-                    ))}
+                    {booking.extraServices.map((service, index) => {
+                      // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
+                      const serviceName = typeof service === "string" 
+                        ? service 
+                        : typeof service === "object" && "serviceId" in service
+                        ? service.serviceId.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+                        : String(service);
+                      
+                      return (
+                        <Badge key={index} variant="outline">
+                          {serviceName}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
