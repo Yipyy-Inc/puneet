@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Calendar, CreditCard, Users, Package } from "lucide-react";
 
 export default function TestGroomingValidationPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const {
     isAvailable,
     availableCategories,
@@ -16,6 +18,10 @@ export default function TestGroomingValidationPage() {
     validation,
     nextAvailableSlot,
   } = useGroomingValidation();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-8">
@@ -67,7 +73,9 @@ export default function TestGroomingValidationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {nextAvailableSlot ? (
+                {!isMounted ? (
+                  <p className="text-muted-foreground">Chargement...</p>
+                ) : nextAvailableSlot ? (
                   <div className="space-y-2">
                     <p className="text-2xl font-bold">
                       {nextAvailableSlot.toLocaleDateString("fr-FR", {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { bookings } from "@/data/bookings";
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CustomerBookingModal } from "@/components/customer/CustomerBookingModal";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
+import { GroomingBookingFlow } from "@/components/grooming/GroomingBookingFlow";
 import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
@@ -29,11 +30,21 @@ const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerBookingsPage() {
   const { selectedFacility } = useCustomerFacility();
-  const { bookingFlow } = useSettings();
+  const { bookingFlow, grooming } = useSettings();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isGroomingBookingOpen, setIsGroomingBookingOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<typeof bookings[0] | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Check if grooming is enabled (status.disabled !== true means enabled)
+  const isGroomingEnabled = grooming?.status?.disabled !== true;
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Get customer's bookings for selected facility
   const customerBookings = useMemo(() => {
@@ -43,8 +54,12 @@ export default function CustomerBookingsPage() {
     );
   }, [selectedFacility]);
 
-  // Separate upcoming and past bookings
+  // Separate upcoming and past bookings (only on client to avoid hydration issues)
   const { upcomingBookings, pastBookings } = useMemo(() => {
+    if (!isMounted) {
+      // Return safe defaults during SSR
+      return { upcomingBookings: [], pastBookings: [] };
+    }
     const now = new Date();
     const upcoming = customerBookings.filter((b) => {
       const bookingDate = new Date(b.startDate);
@@ -55,7 +70,7 @@ export default function CustomerBookingsPage() {
       return bookingDate < now || b.status === "completed" || b.status === "cancelled";
     });
     return { upcomingBookings: upcoming, pastBookings: past };
-  }, [customerBookings]);
+  }, [customerBookings, isMounted]);
 
   const handleCancelBooking = (booking: typeof bookings[0]) => {
     setBookingToCancel(booking);
@@ -82,6 +97,7 @@ export default function CustomerBookingsPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!isMounted) return dateString; // Return raw string during SSR
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -90,6 +106,7 @@ export default function CustomerBookingsPage() {
   };
 
   const formatDateTime = (dateString: string, timeString?: string) => {
+    if (!isMounted) return dateString; // Return raw string during SSR
     const date = new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -195,10 +212,18 @@ export default function CustomerBookingsPage() {
               View and manage your service bookings
             </p>
           </div>
-          <Button onClick={() => setIsBookingModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
+          <div className="flex gap-2">
+            {isGroomingEnabled && (
+              <Button onClick={() => setIsGroomingBookingOpen(true)} variant="default">
+                <Plus className="h-4 w-4 mr-2" />
+                Book Grooming
+              </Button>
+            )}
+            <Button onClick={() => setIsBookingModalOpen(true)} variant={isGroomingEnabled ? "outline" : "default"}>
+              <Plus className="h-4 w-4 mr-2" />
+              {isGroomingEnabled ? "Book Other Service" : "New Booking"}
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -299,6 +324,20 @@ export default function CustomerBookingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Grooming Booking Flow */}
+      {isGroomingEnabled && (
+        <GroomingBookingFlow
+          open={isGroomingBookingOpen}
+          onOpenChange={(open) => {
+            setIsGroomingBookingOpen(open);
+            if (!open) {
+              // Refresh bookings list when modal closes
+              toast.success("Grooming booking completed!");
+            }
+          }}
+        />
+      )}
 
       {/* Booking Modal */}
       <CustomerBookingModal

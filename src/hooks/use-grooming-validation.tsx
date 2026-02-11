@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   type GroomingFacilityConfig,
   type GroomingPreBookingValidation,
@@ -24,6 +24,11 @@ import { useSettings } from "@/hooks/use-settings";
  */
 export function useGroomingValidation(requestedDate?: Date) {
   const { grooming } = useSettings();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Get grooming config from settings
   // TODO: In production, this would come from the facility's actual settings
@@ -33,7 +38,7 @@ export function useGroomingValidation(requestedDate?: Date) {
     // This is where you'd integrate with actual facility settings API
     return {
       ...defaultGroomingConfig,
-      enabled: grooming?.status?.enabled ?? defaultGroomingConfig.enabled,
+      enabled: grooming?.status?.disabled !== true,
       // Override with facility-specific settings if available
       bookingRules: {
         ...defaultGroomingConfig.bookingRules,
@@ -61,15 +66,37 @@ export function useGroomingValidation(requestedDate?: Date) {
     };
   }, [grooming, requestedDate]);
 
-  // Perform pre-booking validation
+  // Perform pre-booking validation (only on client to avoid hydration issues)
   const validation: GroomingPreBookingValidation = useMemo(() => {
+    if (!isMounted) {
+      // Return a safe default during SSR
+      return {
+        isAvailable: false,
+        earliestAvailableDate: null,
+        availableCategories: [],
+        groomerSelectionOptions: {
+          mode: "stealth",
+          canSelectGroomer: false,
+          canSelectTier: false,
+          showGroomerNames: false,
+        },
+        depositInfo: {
+          required: false,
+          type: "none",
+          message: "",
+        },
+        validationErrors: [],
+        validationWarnings: [],
+      };
+    }
     return validateGroomingPreBooking(groomingConfig, requestedDate);
-  }, [groomingConfig, requestedDate]);
+  }, [groomingConfig, requestedDate, isMounted]);
 
-  // Get next available booking slot
+  // Get next available booking slot (only on client)
   const nextAvailableSlot = useMemo(() => {
+    if (!isMounted) return null;
     return getNextAvailableBookingSlot(groomingConfig);
-  }, [groomingConfig]);
+  }, [groomingConfig, isMounted]);
 
   return {
     config: groomingConfig,

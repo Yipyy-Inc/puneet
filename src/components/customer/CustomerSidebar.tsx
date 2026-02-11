@@ -34,46 +34,46 @@ export function CustomerSidebar() {
   const menuSections: MenuSection[] = useMemo(
     () => {
       const sections: MenuSection[] = [
-        {
-          label: "Overview",
-          items: [
-            {
-              title: "Dashboard",
-              url: "/customer/dashboard",
-              icon: Home,
-            },
-          ],
-        },
-        {
-          label: "Pets & Stays",
-          items: [
-            {
-              title: "My Pets",
-              url: "/customer/pets",
-              icon: Dog,
-            },
-            {
-              title: "Bookings",
-              url: "/customer/bookings",
-              icon: Calendar,
-            },
-            {
-              title: "Report Cards",
-              url: "/customer/report-cards",
-              icon: FileText,
-            },
-          ],
-        },
-        {
-          label: "Communication",
-          items: [
-            {
-              title: "Messages",
-              url: "/customer/messages",
-              icon: MessageSquare,
-            },
-          ],
-        },
+      {
+        label: "Overview",
+        items: [
+          {
+            title: "Dashboard",
+            url: "/customer/dashboard",
+            icon: Home,
+          },
+        ],
+      },
+      {
+        label: "Pets & Stays",
+        items: [
+          {
+            title: "My Pets",
+            url: "/customer/pets",
+            icon: Dog,
+          },
+          {
+            title: "Bookings",
+            url: "/customer/bookings",
+            icon: Calendar,
+          },
+          {
+            title: "Report Cards",
+            url: "/customer/report-cards",
+            icon: FileText,
+          },
+        ],
+      },
+      {
+        label: "Communication",
+        items: [
+          {
+            title: "Messages",
+            url: "/customer/messages",
+            icon: MessageSquare,
+          },
+        ],
+      },
       ];
 
       // Only add cameras section if enabled
@@ -107,7 +107,7 @@ export function CustomerSidebar() {
       });
 
       return sections;
-    },
+      },
     [camerasEnabled],
   );
 

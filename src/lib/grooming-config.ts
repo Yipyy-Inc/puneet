@@ -54,6 +54,12 @@ export interface GroomingBookingRules {
     categories: GroomingServiceCategory[];
     hideFullyBookedCategories: boolean; // Auto-hide categories that are fully booked
   };
+
+  // Vaccination Requirements
+  vaccination: {
+    requireRecordsBeforeBooking: boolean; // Blocks booking until staff approves
+    requiredVaccines: string[]; // e.g., ["Rabies", "DHPP", "Bordetella"]
+  };
 }
 
 export interface GroomingFacilityConfig {
@@ -108,6 +114,10 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
         { id: "de-shed", name: "De-Shedding", enabled: true },
       ],
       hideFullyBookedCategories: true,
+    },
+    vaccination: {
+      requireRecordsBeforeBooking: true, // Blocks booking until staff approves
+      requiredVaccines: ["Rabies", "DHPP", "Bordetella"],
     },
   },
   operatingHours: {
