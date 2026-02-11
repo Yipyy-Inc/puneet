@@ -91,7 +91,35 @@ export function CustomerFacilityProvider({ children }: { children: ReactNode }) 
 export function useCustomerFacility() {
   const context = useContext(CustomerFacilityContext);
   if (context === undefined) {
-    throw new Error("useCustomerFacility must be used within CustomerFacilityProvider");
+    // Return default values when used outside CustomerFacilityProvider (e.g., in facility context)
+    // This allows components to work in both customer and facility contexts
+    const defaultFacility = facilities.find((f) => f.status === "active");
+    return {
+      selectedFacility: defaultFacility
+        ? {
+            id: defaultFacility.id,
+            name: defaultFacility.name,
+            logo: undefined,
+            primaryColor: undefined,
+            secondaryColor: undefined,
+            contact: defaultFacility.contact,
+          }
+        : null,
+      availableFacilities: facilities
+        .filter((f) => f.status === "active")
+        .map((f) => ({
+          id: f.id,
+          name: f.name,
+          logo: undefined,
+          primaryColor: undefined,
+          secondaryColor: undefined,
+          contact: f.contact,
+        })),
+      setSelectedFacility: () => {
+        // No-op in facility context
+      },
+      isLoading: false,
+    };
   }
   return context;
 }

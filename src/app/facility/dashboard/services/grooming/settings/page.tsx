@@ -106,6 +106,11 @@ export default function GroomingSettingsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a href="/facility/dashboard/services/grooming/settings/booking-rules">
+              Booking Rules Engine
+            </a>
+          </Button>
           {isEditing ? (
             <>
               <Button variant="outline" onClick={handleReset}>

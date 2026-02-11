@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { stylists, stylistAvailability, type Stylist } from "@/data/grooming";
+import { toast } from "sonner";
 
 type StylistWithRecord = Stylist & Record<string, unknown>;
 
@@ -81,7 +82,16 @@ export default function StylistsPage() {
     yearsExperience: 0,
     status: "active" as Stylist["status"],
     bio: "",
+    visibleOnline: true, // New field for online visibility
   });
+
+  // State for groomer visibility (separate from form data for quick toggles)
+  const [groomerVisibility, setGroomerVisibility] = useState<Record<string, boolean>>(
+    stylists.reduce((acc, s) => {
+      acc[s.id] = (s as any).visibleOnline !== false; // Default to true if not set
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
 
   const [availabilityData, setAvailabilityData] = useState<
     Record<number, { isAvailable: boolean; startTime: string; endTime: string }>
@@ -117,6 +127,7 @@ export default function StylistsPage() {
       yearsExperience: 0,
       status: "active",
       bio: "",
+      visibleOnline: false, // New hires hidden by default
     });
     setIsAddEditModalOpen(true);
   };
@@ -132,8 +143,20 @@ export default function StylistsPage() {
       yearsExperience: stylist.yearsExperience,
       status: stylist.status,
       bio: stylist.bio,
+      visibleOnline: groomerVisibility[stylist.id] ?? true,
     });
     setIsAddEditModalOpen(true);
+  };
+
+  const toggleGroomerVisibility = (stylistId: string) => {
+    setGroomerVisibility((prev) => ({
+      ...prev,
+      [stylistId]: !prev[stylistId],
+    }));
+    // TODO: Save to backend
+    toast.success(
+      `Groomer ${groomerVisibility[stylistId] ? "hidden from" : "shown on"} online booking`
+    );
   };
 
   const handleSave = () => {
@@ -267,6 +290,25 @@ export default function StylistsPage() {
           <Badge className={`${colors.bg} ${colors.text}`}>
             {stylist.status}
           </Badge>
+        );
+      },
+    },
+    {
+      key: "visibleOnline",
+      label: "Online Visibility",
+      defaultVisible: true,
+      render: (stylist) => {
+        const isVisible = groomerVisibility[stylist.id] ?? true;
+        return (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={isVisible}
+              onCheckedChange={() => toggleGroomerVisibility(stylist.id)}
+            />
+            <span className="text-sm text-muted-foreground">
+              {isVisible ? "Visible" : "Hidden"}
+            </span>
+          </div>
         );
       },
     },
@@ -519,6 +561,21 @@ export default function StylistsPage() {
                   setFormData({ ...formData, bio: e.target.value })
                 }
                 rows={3}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="visibleOnline">Visible in Online Booking</Label>
+                <p className="text-sm text-muted-foreground">
+                  Toggle to show/hide this groomer from customer booking options. New hires can be hidden until trained.
+                </p>
+              </div>
+              <Switch
+                id="visibleOnline"
+                checked={formData.visibleOnline}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, visibleOnline: checked })
+                }
               />
             </div>
           </div>
