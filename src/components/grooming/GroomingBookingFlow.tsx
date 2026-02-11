@@ -3237,9 +3237,19 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ) : (
                 <Card>
                   <CardContent className="pt-6">
-                    <p className="text-muted-foreground">
-                      {selectedFacility?.name || "Facility"} - {selectedFacility?.address || "Main location"}
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold mb-1">
+                          {selectedFacility?.name || "Facility"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {availableSalonLocations.length > 0 
+                            ? availableSalonLocations[0].address 
+                            : "Main location"}
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
