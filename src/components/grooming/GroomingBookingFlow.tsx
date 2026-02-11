@@ -419,7 +419,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
@@ -469,6 +469,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  // Step 10: Review & Deposit
+  const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<"full" | "deposit" | "hold" | "venue" | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   // Prevent hydration mismatch by only rendering date-dependent content on client
   useEffect(() => {
@@ -866,9 +871,19 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     };
   }, []);
 
-  // Calculate final price with discounts
+  // Get groomer surcharge
+  const groomerSurcharge = useMemo(() => {
+    if (selectedGroomerTier === "Senior Stylist") {
+      return 20;
+    } else if (selectedGroomerTier === "Junior Stylist") {
+      return -Math.round(totalPriceWithAddOns * 0.1); // 10% discount
+    }
+    return 0;
+  }, [selectedGroomerTier, totalPriceWithAddOns]);
+
+  // Calculate final price with discounts and groomer surcharge
   const finalPrice = useMemo(() => {
-    let price = totalPriceWithAddOns;
+    let price = totalPriceWithAddOns + groomerSurcharge;
     let discount = 0;
     let discountReason = "";
 
@@ -905,7 +920,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       discountReason,
       savings: discount,
     };
-  }, [totalPriceWithAddOns, recurringEnabled, upgradeToVIP, useExistingPackage, selectedPackageId]);
+  }, [totalPriceWithAddOns, groomerSurcharge, recurringEnabled, upgradeToVIP, useExistingPackage, selectedPackageId]);
 
   // Check for duration conflicts
   const durationConflict = useMemo(() => {
@@ -1348,6 +1363,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (!salonLocationId || !dropOffPreference) {
         return; // Cannot proceed without location and drop-off preference
       }
+    } else {
+      // No service location selected
+      return;
     }
     
     // Navigate to Step 7 (Date & Time Selection)
@@ -1383,8 +1401,34 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   };
 
   const handleContinueFromStep8 = () => {
-    // Navigate to Step 9 (Client Details & Pet Profile Updates)
-    setCurrentStep(9);
+    // Skip Step 9 for existing clients, go directly to Step 10
+    if (!isNewClient) {
+      // Initialize client details from existing customer data
+      if (customer) {
+        setClientName(customer.name || "");
+        setClientPhone(customer.phone || "");
+        setClientEmail(customer.email || "");
+        setPhoneVerified(true); // Existing clients have verified phone
+      }
+      
+      // Navigate directly to Step 10 (Review & Deposit)
+      setCurrentStep(10);
+      
+      // Auto-select deposit method based on config
+      const depositType = config.bookingRules.deposit.type;
+      if (depositType === "none") {
+        setDepositPaymentMethod("venue");
+      } else if (depositType === "fixed" || depositType === "percentage") {
+        if (config.bookingRules.deposit.requiredAtBooking) {
+          setDepositPaymentMethod("deposit");
+        } else {
+          setDepositPaymentMethod("hold");
+        }
+      }
+    } else {
+      // New clients must complete Step 9 (Client Details & Pet Profile Updates)
+      setCurrentStep(9);
+    }
   };
 
   const handleBackToStep8 = () => {
@@ -1509,9 +1553,194 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       return;
     }
 
-    // TODO: Navigate to final step (review & confirmation)
-    // For now, just close and show a message
-    onOpenChange(false);
+    // Navigate to Step 10 (Review & Deposit)
+    setCurrentStep(10);
+    
+    // Auto-select deposit method based on config
+    const depositType = config.bookingRules.deposit.type;
+    if (depositType === "none") {
+      setDepositPaymentMethod("venue");
+    } else if (depositType === "fixed" || depositType === "percentage") {
+      if (config.bookingRules.deposit.requiredAtBooking) {
+        setDepositPaymentMethod("deposit");
+      } else {
+        setDepositPaymentMethod("hold");
+      }
+    }
+  };
+
+  const handleBackToStep9 = () => {
+    setCurrentStep(9);
+  };
+
+  // Calculate deposit amount
+  const depositAmount = useMemo(() => {
+    if (!depositPaymentMethod || depositPaymentMethod === "venue" || depositPaymentMethod === "hold") {
+      return 0;
+    }
+    
+    const depositConfig = config.bookingRules.deposit;
+    if (depositPaymentMethod === "full") {
+      return finalPrice.finalPrice;
+    } else if (depositPaymentMethod === "deposit") {
+      if (depositConfig.type === "fixed" && depositConfig.amount) {
+        return depositConfig.amount;
+      } else if (depositConfig.type === "percentage" && depositConfig.percentage) {
+        return finalPrice.finalPrice * (depositConfig.percentage / 100);
+      }
+    }
+    
+    return 0;
+  }, [depositPaymentMethod, finalPrice, config]);
+
+  // Get available deposit payment methods
+  const availableDepositMethods = useMemo(() => {
+    const methods: Array<{ id: "full" | "deposit" | "hold" | "venue"; label: string; description: string }> = [];
+    const depositConfig = config.bookingRules.deposit;
+    
+    // Full prepayment
+    methods.push({
+      id: "full",
+      label: "Pay in full now",
+      description: `$${finalPrice.finalPrice.toFixed(2)} will be charged immediately`,
+    });
+    
+    // Deposit (if configured)
+    if (depositConfig.type === "fixed" || depositConfig.type === "percentage") {
+      const depositAmount = depositConfig.type === "fixed" 
+        ? depositConfig.amount || 0
+        : finalPrice.finalPrice * ((depositConfig.percentage || 0) / 100);
+      
+      methods.push({
+        id: "deposit",
+        label: `Pay ${depositConfig.type === "fixed" ? `$${depositAmount.toFixed(2)}` : `${depositConfig.percentage}%`} deposit`,
+        description: `$${depositAmount.toFixed(2)} now, remaining $${(finalPrice.finalPrice - depositAmount).toFixed(2)} at service`,
+      });
+    }
+    
+    // Card hold (if deposit not required at booking)
+    if (!depositConfig.requiredAtBooking) {
+      methods.push({
+        id: "hold",
+        label: "Hold card (no charge)",
+        description: "We'll hold your card but won't charge until service",
+      });
+    }
+    
+    // Pay at venue
+    methods.push({
+      id: "venue",
+      label: "Pay at venue",
+      description: "Pay when you arrive for your appointment",
+    });
+    
+    return methods;
+  }, [config, finalPrice]);
+
+  // Format duration for display
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) {
+      return `${mins} minutes`;
+    } else if (mins === 0) {
+      return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+    } else {
+      return `${hours} ${hours === 1 ? "hour" : "hours"} ${mins} minutes`;
+    }
+  };
+
+  // Format date and time for display
+  const formattedDateTime = useMemo(() => {
+    if (!selectedDate || !selectedTimeSlot) return "Not selected";
+    
+    const date = new Date(selectedDate);
+    const time = serviceLocation === "mobile" 
+      ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
+      : selectedTimeSlot;
+    
+    return `${date.toLocaleDateString("en-US", { 
+      weekday: "long", 
+      month: "short", 
+      day: "numeric" 
+    })} at ${time}`;
+  }, [selectedDate, selectedTimeSlot, serviceLocation]);
+
+  // Get selected groomer name
+  const selectedGroomerName = useMemo(() => {
+    if (selectedGroomerId) {
+      const groomer = stylists.find((s) => s.id === selectedGroomerId);
+      return groomer?.name || "Not selected";
+    } else if (selectedGroomerTier) {
+      return selectedGroomerTier;
+    }
+    return "System assigned";
+  }, [selectedGroomerId, selectedGroomerTier]);
+
+
+  // Get selected service category name
+  const selectedServiceCategoryName = useMemo(() => {
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    return category?.name || "Not selected";
+  }, [selectedServiceCategory]);
+
+  // Get selected variant name
+  const selectedVariantName = useMemo(() => {
+    if (!selectedVariant) return null;
+    const variant = availableVariants.find((v) => v.id === selectedVariant);
+    return variant?.name || null;
+  }, [selectedVariant, availableVariants]);
+
+  // Get selected add-ons
+  const selectedAddOnsList = useMemo(() => {
+    return selectedAddOns.map((id) => {
+      const addon = GROOMING_ADD_ONS.find((a) => a.id === id);
+      return addon;
+    }).filter(Boolean);
+  }, [selectedAddOns]);
+
+  // Get location display
+  const locationDisplay = useMemo(() => {
+    if (serviceLocation === "mobile") {
+      return mobileAddress || "Not specified";
+    } else if (serviceLocation === "salon") {
+      const location = locations.find((l) => l.id === salonLocationId);
+      return location?.address || "Not specified";
+    }
+    return "Not specified";
+  }, [serviceLocation, mobileAddress, salonLocationId]);
+
+  // Handle booking confirmation
+  const handleBookAppointment = async () => {
+    if (!policyAccepted) {
+      setFormErrors({ policy: "You must accept the cancellation policy to continue" });
+      return;
+    }
+
+    if (depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold") {
+      // In production, this would process payment
+      // For now, we'll just simulate the booking
+    }
+
+    setIsBooking(true);
+    try {
+      // TODO: Replace with actual API calls
+      // 1. Slot hold (10-minute timer if payment pending)
+      // 2. SMS confirmation to client
+      // 3. Calendar block for groomer
+      // 4. Email with "Add to Calendar" .ics file
+      // 5. If mobile: Route recalculation for that van's entire day
+      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Success - close modal and show success message
+      onOpenChange(false);
+      // TODO: Show success toast/notification
+    } catch (error) {
+      setFormErrors({ booking: "Failed to book appointment. Please try again." });
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const handleCoatPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1572,7 +1801,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? "Step 7: When works for you?"
               : currentStep === 8
               ? "Step 8: Make this hassle-free"
-              : "Step 9: Confirm your details"
+              : currentStep === 9
+              ? "Step 9: Confirm your details"
+              : "Step 10: Booking Summary"
             }
           </DialogDescription>
         </DialogHeader>
@@ -3675,6 +3906,241 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               <Button onClick={handleContinueFromStep9}>
                 Continue to Review
                 <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Step 10: Review & Deposit */}
+        {currentStep === 10 && (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h4 className="font-semibold">Booking Summary</h4>
+            <p className="text-sm text-muted-foreground">
+              Please review your booking details and complete payment.
+            </p>
+          </div>
+
+          {/* Booking Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Booking Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Service */}
+              <div className="flex items-center justify-between py-2 border-b">
+                <div>
+                  <p className="font-medium">
+                    {selectedServiceCategoryName}
+                    {selectedVariantName && ` (${selectedVariantName})`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedPet?.name} • {formatDuration(calculatedDuration)}
+                  </p>
+                </div>
+                <p className="font-semibold">${calculatedPrice.toFixed(2)}</p>
+              </div>
+
+              {/* Add-ons */}
+              {selectedAddOnsList.length > 0 && (
+                <div className="space-y-2 py-2 border-b">
+                  {selectedAddOnsList.map((addon) => (
+                    <div key={addon?.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">+</span>
+                        <p className="text-sm">{addon?.name}</p>
+                        <span className="text-xs text-muted-foreground">
+                          (+{addon?.durationMinutes} mins)
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium">+${addon?.price.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Groomer */}
+              <div className="flex items-center justify-between py-2 border-b">
+                <div>
+                  <p className="font-medium">Groomer</p>
+                  <p className="text-sm text-muted-foreground">{selectedGroomerName}</p>
+                </div>
+                {groomerSurcharge !== 0 && (
+                  <p className={`text-sm font-medium ${groomerSurcharge > 0 ? "" : "text-green-600"}`}>
+                    {groomerSurcharge > 0 ? "+" : ""}${groomerSurcharge.toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="flex items-center justify-between py-2 border-b">
+                <div>
+                  <p className="font-medium">Location</p>
+                  <p className="text-sm text-muted-foreground">
+                    {serviceLocation === "mobile" ? "Mobile van at" : "Salon at"} {locationDisplay}
+                  </p>
+                </div>
+                {serviceLocation === "mobile" && (
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Date & Time */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="font-medium">Date & Time</p>
+                  <p className="text-sm text-muted-foreground">{formattedDateTime}</p>
+                </div>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              {/* Duration */}
+              <div className="flex items-center justify-between py-2 border-t">
+                <div>
+                  <p className="font-medium">Total Duration</p>
+                </div>
+                <p className="font-semibold">{formatDuration(totalDurationWithAddOns)}</p>
+              </div>
+
+              {/* Total Price */}
+              <div className="flex items-center justify-between pt-4 border-t">
+                <p className="text-lg font-semibold">Total</p>
+                <p className="text-2xl font-bold flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  {useExistingPackage ? (
+                    <span className="text-green-600">$0.00</span>
+                  ) : (
+                    <span>${finalPrice.finalPrice.toFixed(2)}</span>
+                  )}
+                </p>
+              </div>
+              {finalPrice.discount > 0 && (
+                <p className="text-sm text-green-600 text-right">
+                  You saved ${finalPrice.savings.toFixed(2)}!
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Deposit Collection */}
+          {config.bookingRules.deposit.type !== "none" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payment Method</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <RadioGroup
+                  value={depositPaymentMethod || ""}
+                  onValueChange={(value) => setDepositPaymentMethod(value as "full" | "deposit" | "hold" | "venue")}
+                >
+                  {availableDepositMethods.map((method) => (
+                    <Card
+                      key={method.id}
+                      className={`cursor-pointer transition-all ${
+                        depositPaymentMethod === method.id
+                          ? "ring-2 ring-primary border-primary"
+                          : "hover:border-primary/50"
+                      }`}
+                      onClick={() => setDepositPaymentMethod(method.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value={method.id} id={method.id} />
+                          <Label htmlFor={method.id} className="cursor-pointer flex-1">
+                            <div>
+                              <p className="font-medium">{method.label}</p>
+                              <p className="text-xs text-muted-foreground">{method.description}</p>
+                            </div>
+                          </Label>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </RadioGroup>
+                {depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold" && (
+                  <div className="bg-muted rounded-md p-3 mt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        {depositPaymentMethod === "full" ? "Total amount" : "Deposit amount"}
+                      </p>
+                      <p className="text-lg font-bold">${depositAmount.toFixed(2)}</p>
+                    </div>
+                    {depositPaymentMethod === "deposit" && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Remaining ${(finalPrice.finalPrice - depositAmount).toFixed(2)} due at service
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Policy Acceptance */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="policy-accept"
+                    checked={policyAccepted}
+                    onCheckedChange={(checked) => {
+                      setPolicyAccepted(checked === true);
+                      setFormErrors((prev) => {
+                        const { policy, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
+                    className={formErrors.policy ? "border-destructive" : ""}
+                  />
+                  <Label htmlFor="policy-accept" className="cursor-pointer flex-1">
+                    <span>
+                      I agree to the{" "}
+                      <Link
+                        href="/terms"
+                        target="_blank"
+                        className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        24-hour cancellation policy
+                      </Link>
+                      {" "}({selectedFacility?.name || "facility"}'s specific terms)
+                    </span>
+                  </Label>
+                </div>
+                {formErrors.policy && (
+                  <p className="text-sm text-destructive">{formErrors.policy}</p>
+                )}
+                {formErrors.booking && (
+                  <p className="text-sm text-destructive">{formErrors.booking}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep9}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBookAppointment}
+                disabled={!policyAccepted || isBooking}
+                className="min-w-[150px]"
+              >
+                {isBooking ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Booking...
+                  </>
+                ) : (
+                  "Book Appointment"
+                )}
               </Button>
             </div>
           </div>
