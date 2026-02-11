@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings, MessageSquare, Dog, FileText, CreditCard } from "lucide-react";
+import { User, LogOut, Settings, MessageSquare, Dog, FileText, CreditCard, Building2, Shield } from "lucide-react";
+import { useTransition } from "react";
+import { setUserRole } from "@/lib/role-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +18,21 @@ import Link from "next/link";
 
 export function CustomerHeader() {
   const { selectedFacility } = useCustomerFacility();
+  const [isPending, startTransition] = useTransition();
+
+  const switchToFacility = () => {
+    startTransition(() => {
+      setUserRole("facility_admin");
+      window.location.href = "/facility/dashboard";
+    });
+  };
+
+  const switchToAdmin = () => {
+    startTransition(() => {
+      setUserRole("super_admin");
+      window.location.href = "/dashboard";
+    });
+  };
 
   // Apply facility colors via CSS variables
   useEffect(() => {
@@ -143,6 +160,35 @@ export function CustomerHeader() {
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={switchToFacility}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              Switch to Facility
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                startTransition(() => {
+                  window.location.href = "/customer/dashboard";
+                });
+              }}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Switch to Customer
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={switchToAdmin}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Switch to Admin
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

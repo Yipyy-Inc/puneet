@@ -75,22 +75,48 @@ export function HeaderDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Context Switcher (UI Testing)</DropdownMenuLabel>
         {isSuperAdmin && (
-          <DropdownMenuItem
-            onClick={() => switchRole("facility_admin")}
-            disabled={isPending}
-            className="cursor-pointer"
-          >
-            Switch to Facility Admin
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={() => switchRole("facility_admin")}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              Switch to Facility Admin
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                startTransition(() => {
+                  window.location.href = "/customer/dashboard";
+                });
+              }}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              Switch to Customer
+            </DropdownMenuItem>
+          </>
         )}
         {currentRole === "facility_admin" && (
-          <DropdownMenuItem
-            onClick={() => switchRole("super_admin")}
-            disabled={isPending}
-            className="cursor-pointer"
-          >
-            Switch to Super Admin
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={() => switchRole("super_admin")}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              Switch to Super Admin
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                startTransition(() => {
+                  window.location.href = "/customer/dashboard";
+                });
+              }}
+              disabled={isPending}
+              className="cursor-pointer"
+            >
+              Switch to Customer
+            </DropdownMenuItem>
+          </>
         )}
         {/* Show facility role switcher when in facility portal */}
         {isFacilityPortal && <FacilityRoleSwitcher />}

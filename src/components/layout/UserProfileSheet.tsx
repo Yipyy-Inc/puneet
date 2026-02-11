@@ -30,6 +30,8 @@ import {
   User,
   Settings,
   ArrowRightLeft,
+  Building2,
+  Shield,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
 
@@ -250,24 +252,52 @@ export function UserProfileSheet({
             Context Switcher
           </DropdownMenuLabel>
           {isSuperAdmin && (
-            <DropdownMenuItem
-              onClick={() => switchRole("facility_admin")}
-              disabled={isPending}
-              className="flex items-center gap-2"
-            >
-              <ArrowRightLeft className="h-4 w-4" />
-              Switch to Facility Admin
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                onClick={() => switchRole("facility_admin")}
+                disabled={isPending}
+                className="flex items-center gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                Switch to Facility Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  startTransition(() => {
+                    window.location.href = "/customer/dashboard";
+                  });
+                }}
+                disabled={isPending}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Switch to Customer
+              </DropdownMenuItem>
+            </>
           )}
           {currentRole === "facility_admin" && (
-            <DropdownMenuItem
-              onClick={() => switchRole("super_admin")}
-              disabled={isPending}
-              className="flex items-center gap-2"
-            >
-              <ArrowRightLeft className="h-4 w-4" />
-              Switch to Super Admin
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                onClick={() => switchRole("super_admin")}
+                disabled={isPending}
+                className="flex items-center gap-2"
+              >
+                <Shield className="h-4 w-4" />
+                Switch to Super Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  startTransition(() => {
+                    window.location.href = "/customer/dashboard";
+                  });
+                }}
+                disabled={isPending}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Switch to Customer
+              </DropdownMenuItem>
+            </>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem

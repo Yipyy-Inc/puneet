@@ -1,21 +1,30 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useTransition } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dog, Calendar, MessageSquare, FileText, CreditCard, Camera } from "lucide-react";
+import { Dog, Calendar, MessageSquare, FileText, CreditCard, Camera, Shield } from "lucide-react";
 import Link from "next/link";
 import { petCams } from "@/data/additional-features";
+import { setUserRole } from "@/lib/role-utils";
 
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
   const [isMounted, setIsMounted] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   // Prevent hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const switchToAdmin = () => {
+    startTransition(() => {
+      setUserRole("super_admin");
+      window.location.href = "/dashboard";
+    });
+  };
 
   // Check if cameras are enabled for customers
   const camerasEnabled = useMemo(() => {
@@ -140,6 +149,15 @@ export default function CustomerDashboardPage() {
                   </Link>
                 </Button>
               )}
+              <Button 
+                className="w-full justify-start" 
+                variant="outline" 
+                onClick={switchToAdmin}
+                disabled={isPending}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Switch to Admin
+              </Button>
             </CardContent>
           </Card>
 
