@@ -1192,8 +1192,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     localStorage.setItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`, JSON.stringify(progress));
   };
 
-  // Load booking progress from localStorage
+  // Load booking progress from localStorage (only on client)
   const loadBookingProgress = () => {
+    if (!isMounted || typeof window === "undefined") return null;
     const stored = localStorage.getItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`);
     if (!stored) return null;
     
@@ -1206,6 +1207,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Check if booking was abandoned (progress saved but not completed)
   useEffect(() => {
+    if (!isMounted) return;
     if (open && currentStep === 1) {
       const progress = loadBookingProgress();
       if (progress && progress.step >= 5) {
@@ -1221,7 +1223,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         }
       }
     }
-  }, [open, currentStep]);
+  }, [open, currentStep, isMounted]);
 
   const handleBackToStep5 = () => {
     setCurrentStep(5);
@@ -1387,16 +1389,26 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     return [];
   }, [serviceLocation, generateSalonTimeSlots, generateMobileTimeSlots]);
 
-  // Get minimum date based on lead time
+  // Get minimum date based on lead time (only on client to avoid hydration issues)
   const minBookingDate = useMemo(() => {
+    if (!isMounted) {
+      // Return a safe default during SSR
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 1);
+      return defaultDate;
+    }
     const now = new Date();
     const minimumHours = config.bookingRules.leadTime.minimumHours;
     const minDate = new Date(now.getTime() + minimumHours * 60 * 60 * 1000);
     return minDate;
-  }, [config]);
+  }, [config, isMounted]);
 
-  // Get disabled dates (days with no availability)
+  // Get disabled dates (days with no availability) - only on client to avoid hydration issues
   const disabledDates = useMemo(() => {
+    if (!isMounted) {
+      // Return empty array during SSR
+      return [];
+    }
     const disabled: Date[] = [];
     // In production, check actual availability
     // For now, disable past dates and dates before minimum lead time
@@ -1422,7 +1434,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     }
     
     return disabled;
-  }, [minBookingDate, serviceLocation, mobileAddressValidation]);
+  }, [minBookingDate, serviceLocation, mobileAddressValidation, isMounted]);
 
   const handleContinueFromStep6 = () => {
     // Validate based on service location
@@ -1882,9 +1894,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     }
   };
 
-  // Format date and time for display
+  // Format date and time for display (only on client to avoid hydration issues)
   const formattedDateTime = useMemo(() => {
-    if (!selectedDate || !selectedTimeSlot) return "Not selected";
+    if (!isMounted || !selectedDate || !selectedTimeSlot) return "Not selected";
     
     const date = new Date(selectedDate);
     const time = serviceLocation === "mobile" 
@@ -1896,7 +1908,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       month: "short", 
       day: "numeric" 
     })} at ${time}`;
-  }, [selectedDate, selectedTimeSlot, serviceLocation]);
+  }, [selectedDate, selectedTimeSlot, serviceLocation, isMounted]);
 
   // Get selected groomer name
   const selectedGroomerName = useMemo(() => {
@@ -3411,7 +3423,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                         }}
                         className="w-full justify-start text-left"
                       >
-                        Book on {mobileZoneConflict.nextAvailableDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                        Book on {isMounted ? mobileZoneConflict.nextAvailableDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "Next available date"}
                       </Button>
                     )}
                   </div>
@@ -3544,7 +3556,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                       // Extract date and time from slot.time (format: "YYYY-MM-DD HH:mm" for mobile)
                       const [datePart, timePart] = slot.time.split(" ");
                       const displayTime = timePart || slot.time;
-                      const displayDate = datePart ? new Date(datePart).toLocaleDateString("en-US", { 
+                      const displayDate = datePart && isMounted ? new Date(datePart).toLocaleDateString("en-US", { 
                         weekday: "short", 
                         month: "short", 
                         day: "numeric" 
@@ -3791,7 +3803,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                         {pkg.creditsRemaining} of {pkg.creditsTotal} credits remaining
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Valid until {pkg.validUntil.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        Valid until {isMounted ? pkg.validUntil.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -289,6 +289,17 @@ function ReservationsCard({
 }: {
   totalReservations: number;
 }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Format number only on client to avoid hydration issues
+  const formattedNumber = isMounted 
+    ? totalReservations.toLocaleString("en-US")
+    : totalReservations.toString();
+
   return (
     <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
       <CardContent className="p-5">
@@ -299,7 +310,7 @@ function ReservationsCard({
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">
-                {totalReservations.toLocaleString()}
+                {formattedNumber}
               </h3>
               <span className="inline-flex items-center text-xs font-medium text-success">
                 <TrendingUp className="h-3 w-3 mr-0.5" />

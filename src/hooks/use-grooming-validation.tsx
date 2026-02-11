@@ -40,27 +40,20 @@ export function useGroomingValidation(requestedDate?: Date) {
       ...defaultGroomingConfig,
       enabled: grooming?.status?.disabled !== true,
       // Override with facility-specific settings if available
+      // Note: ModuleConfig doesn't have bookingRules, so we use default config
+      // In production, booking rules would come from a separate facility settings API
       bookingRules: {
         ...defaultGroomingConfig.bookingRules,
-        // Facility can override lead time
+        // Facility can override lead time (would come from facility settings in production)
+        // For now, use defaults
         leadTime: {
-          minimumHours: grooming?.bookingRules?.minimumAdvanceBookingHours ?? 
-                        defaultGroomingConfig.bookingRules.leadTime.minimumHours,
-          allowSameDay: grooming?.bookingRules?.allowSameDayBooking ?? 
-                       defaultGroomingConfig.bookingRules.leadTime.allowSameDay,
-          allowTomorrow: true, // Default to allowing tomorrow
+          minimumHours: defaultGroomingConfig.bookingRules.leadTime.minimumHours,
+          allowSameDay: defaultGroomingConfig.bookingRules.leadTime.allowSameDay,
+          allowTomorrow: defaultGroomingConfig.bookingRules.leadTime.allowTomorrow,
         },
-        // Facility can override deposit settings
+        // Facility can override deposit settings (would come from facility settings in production)
         deposit: {
-          type: grooming?.bookingRules?.depositRequired 
-            ? (grooming.bookingRules.depositAmount 
-                ? "fixed" 
-                : "percentage")
-            : "none",
-          amount: grooming?.bookingRules?.depositAmount,
-          percentage: grooming?.bookingRules?.depositPercentage,
-          refundable: grooming?.bookingRules?.depositRefundable ?? true,
-          requiredAtBooking: true,
+          ...defaultGroomingConfig.bookingRules.deposit,
         },
       },
     };
