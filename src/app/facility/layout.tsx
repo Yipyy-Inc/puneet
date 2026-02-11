@@ -28,7 +28,7 @@ export default async function FacilityLayout({
       <BookingModalProviderWrapper>
         <SidebarProvider>
           <FacilitySidebar />
-          <SidebarInset>
+          <SidebarInset className="flex flex-col min-h-screen">
             <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r from-background to-muted/20 px-6 backdrop-blur-sm">
               <GlobalSearchNext
                 className="max-w-[520px]"
@@ -43,7 +43,10 @@ export default async function FacilityLayout({
                 <UserProfileSheet showNotifications={false} />
               </div>
             </header>
-            {children}
+            <main className="flex-1">{children}</main>
+            <footer className="border-t px-4 py-3 text-xs text-muted-foreground flex items-center justify-center">
+              © 2026 Yipyy. All rights reserved.
+            </footer>
           </SidebarInset>
         </SidebarProvider>
       </BookingModalProviderWrapper>

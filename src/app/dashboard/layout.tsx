@@ -32,7 +32,7 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="w-full overflow-x-hidden">
+      <SidebarInset className="flex flex-col min-h-screen w-full overflow-x-hidden">
         <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/50 bg-background/80 backdrop-blur-md px-6">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted transition-colors" />
@@ -50,6 +50,9 @@ export default async function DashboardLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        <footer className="border-t px-4 py-3 text-xs text-muted-foreground flex items-center justify-center">
+          © 2026 Yipyy. All rights reserved.
+        </footer>
       </SidebarInset>
     </SidebarProvider>
   );

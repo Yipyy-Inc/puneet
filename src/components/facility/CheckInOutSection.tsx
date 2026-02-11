@@ -1278,7 +1278,7 @@ export function CheckInOutSection() {
                       <p className="font-medium">
                         {new Date(
                           selectedItem.checkInTime,
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString("en-US")}
                       </p>
                     </div>
                     <div>
@@ -1286,7 +1286,7 @@ export function CheckInOutSection() {
                       <p className="font-medium">
                         {new Date(
                           selectedItem.scheduledCheckOut,
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString("en-US")}
                       </p>
                     </div>
                     <div>
@@ -1466,7 +1466,7 @@ export function CheckInOutSection() {
                       <p className="font-medium">
                         {new Date(
                           selectedItem.checkInTime,
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString("en-US")}
                       </p>
                     </div>
                     <div>
@@ -1474,7 +1474,7 @@ export function CheckInOutSection() {
                       <p className="font-medium">
                         {new Date(
                           selectedItem.scheduledCheckOut,
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString("en-US")}
                       </p>
                     </div>
                     <div>
