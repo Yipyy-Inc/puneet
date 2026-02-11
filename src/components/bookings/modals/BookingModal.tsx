@@ -703,23 +703,46 @@ export function BookingModal({
 
     // Extra services
     if (booking.extraServices) {
-      booking.extraServices.forEach((service) => {
-        taskList.push({
-          id: `service-${service.serviceId}-${service.petId}`,
-          bookingId: booking.id,
-          petId: service.petId,
-          type: "service",
-          title: `Perform ${service.serviceId} service`,
-          time: null,
-          details: `Quantity: ${service.quantity}`,
-          assignedStaff:
-            taskAssignments[`service-${service.serviceId}-${service.petId}`] ||
-            undefined,
-          completionStatus: "pending",
-          assignable:
-            isFutureBooking &&
-            !taskAssignments[`service-${service.serviceId}-${service.petId}`],
-        });
+      booking.extraServices.forEach((service, index) => {
+        // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
+        if (typeof service === "string") {
+          // For string type (grooming), use the string as service name
+          const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+          taskList.push({
+            id: `service-${service}-${petId}-${index}`,
+            bookingId: booking.id,
+            petId: petId,
+            type: "service",
+            title: `Perform ${service}`,
+            time: null,
+            details: "Extra service",
+            assignedStaff:
+              taskAssignments[`service-${service}-${petId}-${index}`] ||
+              undefined,
+            completionStatus: "pending",
+            assignable:
+              isFutureBooking &&
+              !taskAssignments[`service-${service}-${petId}-${index}`],
+          });
+        } else {
+          // For ExtraService object type (daycare/boarding)
+          taskList.push({
+            id: `service-${service.serviceId}-${service.petId}`,
+            bookingId: booking.id,
+            petId: service.petId,
+            type: "service",
+            title: `Perform ${service.serviceId} service`,
+            time: null,
+            details: `Quantity: ${service.quantity}`,
+            assignedStaff:
+              taskAssignments[`service-${service.serviceId}-${service.petId}`] ||
+              undefined,
+            completionStatus: "pending",
+            assignable:
+              isFutureBooking &&
+              !taskAssignments[`service-${service.serviceId}-${service.petId}`],
+          });
+        }
       });
     }
 
