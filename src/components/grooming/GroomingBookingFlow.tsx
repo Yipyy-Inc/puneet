@@ -8,6 +8,8 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,9 @@ import {
   Droplets,
   Clock,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -81,6 +85,18 @@ interface ServiceCategoryOption {
     L?: number;
     XL?: number;
   };
+  hasVariants?: boolean; // Whether this category has style variants
+}
+
+// Service variant definitions
+interface ServiceVariant {
+  id: string;
+  name: string;
+  description: string;
+  durationModifier: number; // Additional minutes
+  priceModifier: number; // Additional dollars
+  requiresPhotos?: boolean; // Whether photos are required for this variant
+  enabled?: boolean; // Can be disabled by facility
 }
 
 const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
@@ -104,7 +120,8 @@ const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
     description: "Full groom with haircut and styling",
     icon: Scissors,
     basePrice: 65,
-    estimatedDuration: 120,
+    estimatedDuration: 90, // Base duration for Medium dog
+    hasVariants: true,
     sizePricing: {
       S: 55,
       M: 65,
@@ -119,6 +136,7 @@ const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
     icon: Sparkles,
     basePrice: 95,
     estimatedDuration: 180,
+    hasVariants: true,
     sizePricing: {
       S: 85,
       M: 95,
@@ -133,6 +151,7 @@ const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
     icon: Droplets,
     basePrice: 55,
     estimatedDuration: 90,
+    hasVariants: true,
     sizePricing: {
       S: 45,
       M: 55,
@@ -147,15 +166,138 @@ const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
     icon: Scissors,
     basePrice: 25,
     estimatedDuration: 30,
+    hasVariants: true,
   },
 ];
+
+// Service variants by category
+const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
+  "haircut": [
+    {
+      id: "breed-standard",
+      name: "Breed Standard",
+      description: "AKC cut with specific blade requirements",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "teddy-bear",
+      name: "Teddy Bear",
+      description: "Round face, longer body",
+      durationModifier: 15,
+      priceModifier: 10,
+      enabled: true,
+    },
+    {
+      id: "puppy-cut",
+      name: "Puppy Cut",
+      description: "Uniform length all over",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "hand-scissor",
+      name: "Hand Scissor Finish",
+      description: "Precision scissor work for detailed finish",
+      durationModifier: 15,
+      priceModifier: 15,
+      enabled: true,
+    },
+    {
+      id: "custom",
+      name: "Custom",
+      description: "Describe your preferred style",
+      durationModifier: 20,
+      priceModifier: 20,
+      requiresPhotos: true, // Facility can require photos for custom
+      enabled: true,
+    },
+  ],
+  "bath-brush": [
+    {
+      id: "standard",
+      name: "Standard Bath",
+      description: "Regular bath and brush",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "premium",
+      name: "Premium Bath",
+      description: "With premium shampoo and conditioner",
+      durationModifier: 10,
+      priceModifier: 10,
+      enabled: true,
+    },
+  ],
+  "spa": [
+    {
+      id: "deluxe",
+      name: "Spa Day Deluxe",
+      description: "Full spa experience with all treatments",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "signature",
+      name: "Signature Spa",
+      description: "Premium spa with aromatherapy",
+      durationModifier: 30,
+      priceModifier: 25,
+      enabled: true,
+    },
+  ],
+  "de-shed": [
+    {
+      id: "standard",
+      name: "Standard De-shedding",
+      description: "Basic de-shedding treatment",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "intensive",
+      name: "Intensive De-shedding",
+      description: "Deep treatment for heavy shedders",
+      durationModifier: 20,
+      priceModifier: 15,
+      enabled: true,
+    },
+  ],
+  "ala-carte": [
+    {
+      id: "nails-only",
+      name: "Nails Only",
+      description: "Nail trim and filing",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+    {
+      id: "face-trim",
+      name: "Face Trim Only",
+      description: "Face and eye trim",
+      durationModifier: 0,
+      priceModifier: 0,
+      enabled: true,
+    },
+  ],
+};
 
 export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  const [customNotes, setCustomNotes] = useState("");
+  const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -342,8 +484,117 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setSelectedServiceCategory(null);
   };
 
+  // Get variants for selected service category
+  const availableVariants = useMemo(() => {
+    if (!selectedServiceCategory) return [];
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    if (!category?.hasVariants) return [];
+    
+    const variants = SERVICE_VARIANTS[selectedServiceCategory] || [];
+    // Filter out disabled variants (in production, this would check facility config)
+    return variants.filter((v) => v.enabled !== false);
+  }, [selectedServiceCategory]);
+
+  // Check if selected category has variants
+  const selectedCategoryHasVariants = useMemo(() => {
+    if (!selectedServiceCategory) return false;
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    return category?.hasVariants === true;
+  }, [selectedServiceCategory]);
+
+  // Calculate total duration and price based on pet size and variant
+  const calculatedDuration = useMemo(() => {
+    if (!selectedServiceCategory || !selectedPet) return 0;
+    
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    if (!category) return 0;
+    
+    let baseDuration = category.estimatedDuration;
+    
+    // Add variant modifier if variant is selected
+    if (selectedVariant) {
+      const variant = availableVariants.find((v) => v.id === selectedVariant);
+      if (variant) {
+        baseDuration += variant.durationModifier;
+      }
+    }
+    
+    return baseDuration;
+  }, [selectedServiceCategory, selectedPet, selectedVariant, availableVariants]);
+
+  const calculatedPrice = useMemo(() => {
+    if (!selectedServiceCategory || !selectedPet) return 0;
+    
+    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    if (!category) return 0;
+    
+    let basePrice = getServicePrice(category, selectedPet.size);
+    
+    // Add variant modifier if variant is selected
+    if (selectedVariant) {
+      const variant = availableVariants.find((v) => v.id === selectedVariant);
+      if (variant) {
+        basePrice += variant.priceModifier;
+      }
+    }
+    
+    return basePrice;
+  }, [selectedServiceCategory, selectedPet, selectedVariant, availableVariants]);
+
+  // Check if photos are required for selected variant
+  const requiresPhotos = useMemo(() => {
+    if (!selectedVariant) return false;
+    const variant = availableVariants.find((v) => v.id === selectedVariant);
+    return variant?.requiresPhotos === true;
+  }, [selectedVariant, availableVariants]);
+
   const handleContinueFromStep2 = () => {
     if (!selectedServiceCategory) return;
+    
+    // If category has variants, go to Step 3
+    if (selectedCategoryHasVariants) {
+      setCurrentStep(3);
+    } else {
+      // No variants, skip to next step (date/time selection)
+      // TODO: Navigate to next step
+      onOpenChange(false);
+    }
+  };
+
+  const handleVariantSelect = (variantId: string) => {
+    setSelectedVariant(variantId);
+    // Clear custom notes and photos if switching away from custom
+    if (variantId !== "custom") {
+      setCustomNotes("");
+      setCustomPhotos([]);
+    }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setCustomPhotos((prev) => [...prev, ...files]);
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setCustomPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleBackToStep2 = () => {
+    setCurrentStep(2);
+    setSelectedVariant(null);
+    setCustomNotes("");
+    setCustomPhotos([]);
+  };
+
+  const handleContinueFromStep3 = () => {
+    if (!selectedVariant) return;
+    
+    // If custom variant requires photos, check if photos are uploaded
+    if (requiresPhotos && customPhotos.length === 0) {
+      // Show error or prevent proceeding
+      return;
+    }
+    
     // TODO: Navigate to next step (date/time selection)
     // For now, just close and show a message
     onOpenChange(false);
@@ -362,7 +613,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
           <DialogDescription>
             {currentStep === 1 
               ? "Step 1: Who are we pampering today?"
-              : `Step 2: What does ${selectedPet?.name || "your pet"} need today?`
+              : currentStep === 2
+              ? `Step 2: What does ${selectedPet?.name ?? "your pet"} need today?`
+              : "Step 3: Choose the specific service style"
             }
           </DialogDescription>
         </DialogHeader>
@@ -592,7 +845,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             </Button>
           </div>
         </div>
-        ) : (
+        ) : currentStep === 2 ? (
         /* Step 2: Service Category Selection */
         <div className="space-y-6">
           {/* Matting Warning for Haircut */}
@@ -685,6 +938,186 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               <Button
                 onClick={handleContinueFromStep2}
                 disabled={!selectedServiceCategory}
+              >
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        ) : (
+        /* Step 3: Service Specification & Variants */
+        <div className="space-y-6">
+          {/* Live Price and Duration Display */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Estimated Duration</p>
+                  <p className="text-2xl font-bold flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    {calculatedDuration} mins
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground mb-1">Total Price</p>
+                  <p className="text-2xl font-bold flex items-center gap-2 justify-end">
+                    <DollarSign className="h-5 w-5" />
+                    ${calculatedPrice}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Service Variants */}
+          {availableVariants.length > 0 ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Choose Service Style</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {availableVariants.map((variant) => {
+                  const isSelected = selectedVariant === variant.id;
+                  const isCustom = variant.id === "custom";
+
+                  return (
+                    <Card
+                      key={variant.id}
+                      className={`cursor-pointer transition-all hover:border-primary/50 ${
+                        isSelected ? "ring-2 ring-primary border-primary" : ""
+                      }`}
+                      onClick={() => handleVariantSelect(variant.id)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-lg mb-1">{variant.name}</h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              {variant.description}
+                            </p>
+                            
+                            {/* Duration and Price Modifiers */}
+                            {(variant.durationModifier > 0 || variant.priceModifier > 0) && (
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                {variant.durationModifier > 0 && (
+                                  <span>+{variant.durationModifier} mins</span>
+                                )}
+                                {variant.priceModifier > 0 && (
+                                  <span>+${variant.priceModifier}</span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Custom Notes Field */}
+                            {isSelected && isCustom && (
+                              <div className="mt-4 space-y-2">
+                                <Label htmlFor="custom-notes">Describe your preferred style</Label>
+                                <Textarea
+                                  id="custom-notes"
+                                  placeholder="E.g., Short on body, longer on legs, round face..."
+                                  value={customNotes}
+                                  onChange={(e) => setCustomNotes(e.target.value)}
+                                  rows={3}
+                                />
+                              </div>
+                            )}
+
+                            {/* Photo Upload for Custom */}
+                            {isSelected && isCustom && requiresPhotos && (
+                              <div className="mt-4 space-y-2">
+                                <Label>Reference Photos (Required)</Label>
+                                <div className="space-y-2">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handlePhotoUpload}
+                                    className="hidden"
+                                    id="photo-upload"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() => document.getElementById("photo-upload")?.click()}
+                                  >
+                                    <ImageIcon className="h-4 w-4 mr-2" />
+                                    Upload Photos
+                                  </Button>
+                                  
+                                  {/* Display uploaded photos */}
+                                  {customPhotos.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                      {customPhotos.map((photo, index) => (
+                                        <div
+                                          key={index}
+                                          className="relative aspect-square rounded-lg overflow-hidden border"
+                                        >
+                                          <img
+                                            src={URL.createObjectURL(photo)}
+                                            alt={`Reference ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-1 right-1 h-6 w-6"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRemovePhoto(index);
+                                            }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {customPhotos.length === 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Please upload reference photos to help our groomers understand your desired style.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Selection Indicator */}
+                          {isSelected && (
+                            <div className="shrink-0">
+                              <CheckCircle2 className="h-6 w-6 text-primary" />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No variants available for this service.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep2}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleContinueFromStep3}
+                disabled={!selectedVariant || (requiresPhotos && customPhotos.length === 0)}
               >
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
