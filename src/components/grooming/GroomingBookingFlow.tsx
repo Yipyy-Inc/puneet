@@ -5,6 +5,7 @@ import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
+import { stylists, type Stylist } from "@/data/grooming";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,9 @@ import {
   DollarSign,
   AlertTriangle,
   Image as ImageIcon,
-  X
+  X,
+  User,
+  Star
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -375,11 +378,14 @@ const GROOMING_ADD_ONS: GroomingAddOn[] = [
 export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [selectedGroomerId, setSelectedGroomerId] = useState<string | null>(null);
+  const [selectedGroomerTier, setSelectedGroomerTier] = useState<string | null>(null);
+  const [sameGroomerGuarantee, setSameGroomerGuarantee] = useState(false);
   const [customNotes, setCustomNotes] = useState("");
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
@@ -785,7 +791,110 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setCurrentStep(3);
   };
 
+  // Get groomer selection mode from config
+  const groomerSelectionMode = config.bookingRules.groomerSelection.mode;
+
+  // Check if pet needs Fear-Free Certified groomer
+  const requiresFearFree = useMemo(() => {
+    if (!selectedPet) return false;
+    const specialNeeds = (selectedPet as any).specialNeeds || "";
+    return /anxious|aggressive|fearful|nervous|behavior/i.test(specialNeeds);
+  }, [selectedPet]);
+
+  // Get pet's booking history with groomers
+  const petGroomerHistory = useMemo(() => {
+    if (!selectedPetId || !customer) return [];
+    
+    const petBookings = bookings.filter(
+      (b) =>
+        b.clientId === customer.id &&
+        b.petId === selectedPetId &&
+        b.service.toLowerCase() === "grooming" &&
+        b.status === "completed" &&
+        b.groomingStyle // Has groomer info
+    );
+    
+    // Count bookings per groomer
+    const groomerCounts = new Map<string, number>();
+    petBookings.forEach((booking) => {
+      // In production, this would come from booking.stylistId
+      // For now, we'll use a mock approach
+      const groomerId = (booking as any).stylistId;
+      if (groomerId) {
+        groomerCounts.set(groomerId, (groomerCounts.get(groomerId) || 0) + 1);
+      }
+    });
+    
+    return Array.from(groomerCounts.entries()).map(([groomerId, count]) => ({
+      groomerId,
+      count,
+    }));
+  }, [selectedPetId, customer]);
+
+  // Get available groomers based on mode and pet needs
+  const availableGroomers = useMemo(() => {
+    if (groomerSelectionMode === "stealth" || groomerSelectionMode === "tier-only") {
+      return []; // No specific groomers shown
+    }
+    
+    // For "optional" and "full-choice" modes, show groomers
+    let groomers = stylists.filter((s) => s.status === "active");
+    
+    // Filter out non-Fear-Free groomers if pet requires it
+    if (requiresFearFree) {
+      groomers = groomers.filter((g) =>
+        g.certifications.some((c) => /fear.?free/i.test(c))
+      );
+    }
+    
+    return groomers;
+  }, [groomerSelectionMode, requiresFearFree]);
+
+  // Get groomer tiers from config
+  const groomerTiers = config.bookingRules.groomerSelection.tiers || [];
+
+  // Check if groomer selection step should be shown
+  const shouldShowGroomerSelection = useMemo(() => {
+    // Mode A (stealth): Skip entirely
+    if (groomerSelectionMode === "stealth") return false;
+    return true;
+  }, [groomerSelectionMode]);
+
   const handleContinueFromStep4 = () => {
+    // If groomer selection is not needed, skip to next step
+    if (!shouldShowGroomerSelection) {
+      // TODO: Navigate to next step (date/time selection)
+      onOpenChange(false);
+      return;
+    }
+    
+    // Navigate to Step 5 (Groomer Selection)
+    setCurrentStep(5);
+  };
+
+  const handleBackToStep4 = () => {
+    setCurrentStep(4);
+  };
+
+  const handleGroomerSelect = (groomerId: string) => {
+    setSelectedGroomerId(groomerId);
+    setSelectedGroomerTier(null); // Clear tier selection if groomer is selected
+  };
+
+  const handleTierSelect = (tierId: string) => {
+    setSelectedGroomerTier(tierId);
+    setSelectedGroomerId(null); // Clear groomer selection if tier is selected
+  };
+
+  const handleContinueFromStep5 = () => {
+    // Validate selection based on mode
+    if (groomerSelectionMode === "tier-only" && !selectedGroomerTier) {
+      // "No preference" is allowed, so this is optional
+    }
+    if (groomerSelectionMode === "full-choice" && !selectedGroomerId && !selectedGroomerTier) {
+      // "No preference" might be allowed, check config
+    }
+    
     // TODO: Navigate to next step (date/time selection)
     // For now, just close and show a message
     onOpenChange(false);
@@ -808,7 +917,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? `Step 2: What does ${selectedPet?.name ?? "your pet"} need today?`
               : currentStep === 3
               ? "Step 3: Choose the specific service style"
-              : `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
+              : currentStep === 4
+              ? `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
+              : "Step 5: Who would you like to work with?"
             }
           </DialogDescription>
         </DialogHeader>
@@ -1318,7 +1429,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             </div>
           </div>
         </div>
-        ) : (
+        ) : currentStep === 4 ? (
         /* Step 4: Add-On Selection */
         <div className="space-y-6">
           {/* Total Duration and Price Display */}
@@ -1478,6 +1589,254 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                 Cancel
               </Button>
               <Button onClick={handleContinueFromStep4}>
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        ) : (
+        /* Step 5: Groomer Preference */
+        <div className="space-y-6">
+          {/* Mode A: No Choice (Stealth) - Should be skipped, but show message if somehow reached */}
+          {groomerSelectionMode === "stealth" ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  Our team will assign the best available groomer for {selectedPet?.name || "your pet"}'s needs.
+                </p>
+              </CardContent>
+            </Card>
+          ) : groomerSelectionMode === "tier-only" ? (
+            /* Mode B: Tier-Based */
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select Your Stylist Preference</h3>
+              <div className="space-y-3">
+                {groomerTiers.map((tier) => {
+                  const isSelected = selectedGroomerTier === tier.id;
+                  // Calculate pricing based on tier
+                  let priceModifier = 0;
+                  if (tier.id === "senior") priceModifier = 20;
+                  if (tier.id === "junior") priceModifier = -Math.round(calculatedPrice * 0.1);
+                  
+                  return (
+                    <Card
+                      key={tier.id}
+                      className={`cursor-pointer transition-all hover:border-primary/50 ${
+                        isSelected ? "ring-2 ring-primary border-primary" : ""
+                      }`}
+                      onClick={() => handleTierSelect(tier.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{tier.name}</h4>
+                            {tier.description && (
+                              <p className="text-sm text-muted-foreground">{tier.description}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            {priceModifier !== 0 && (
+                              <p className={`text-sm font-semibold ${priceModifier > 0 ? "text-primary" : "text-green-600"}`}>
+                                {priceModifier > 0 ? `+$${priceModifier}` : `$${priceModifier}`}
+                              </p>
+                            )}
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary ml-2" />
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                <Card
+                  className={`cursor-pointer transition-all hover:border-primary/50 ${
+                    !selectedGroomerTier ? "ring-2 ring-primary border-primary" : ""
+                  }`}
+                  onClick={() => handleTierSelect("no-preference")}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold">No preference</h4>
+                        <p className="text-sm text-muted-foreground">First available</p>
+                      </div>
+                      {!selectedGroomerTier && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (groomerSelectionMode === "full-choice" || groomerSelectionMode === "optional") ? (
+            /* Mode C: Specific Groomer with Bios */
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select Your Stylist</h3>
+              
+              {/* Fear-Free Requirement Notice */}
+              {requiresFearFree && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-blue-900">
+                          {selectedPet?.name} requires a Fear-Free Certified groomer. Only qualified stylists are shown below.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                {availableGroomers.map((groomer) => {
+                  const isSelected = selectedGroomerId === groomer.id;
+                  const history = petGroomerHistory.find((h) => h.groomerId === groomer.id);
+                  const isFearFree = groomer.certifications.some((c) => /fear.?free/i.test(c));
+                  const isQualified = !requiresFearFree || isFearFree;
+                  
+                  return (
+                    <Card
+                      key={groomer.id}
+                      className={`cursor-pointer transition-all ${
+                        isSelected ? "ring-2 ring-primary border-primary" : ""
+                      } ${!isQualified ? "opacity-50 cursor-not-allowed" : "hover:border-primary/50"}`}
+                      onClick={() => isQualified && handleGroomerSelect(groomer.id)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          {/* Groomer Photo */}
+                          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-border">
+                            {groomer.photoUrl ? (
+                              <img
+                                src={groomer.photoUrl}
+                                alt={groomer.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Scissors className="h-8 w-8 text-muted-foreground" />
+                            )}
+                          </div>
+                          
+                          {/* Groomer Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-lg">{groomer.name}</h4>
+                              {history && (
+                                <Badge variant="default" className="text-xs">
+                                  Booked {history.count} {history.count === 1 ? "time" : "times"}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {/* Specializations */}
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {groomer.specializations.slice(0, 3).map((spec) => (
+                                <Badge key={spec} variant="outline" className="text-xs">
+                                  {spec}
+                                </Badge>
+                              ))}
+                              {groomer.certifications.some((c) => /fear.?free/i.test(c)) && (
+                                <Badge variant="default" className="text-xs bg-green-600">
+                                  Fear-Free Certified
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {/* Bio */}
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                              {groomer.bio}
+                            </p>
+                            
+                            {/* Rating and Experience */}
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                {groomer.rating}
+                              </span>
+                              <span>{groomer.yearsExperience} years experience</span>
+                            </div>
+                            
+                            {/* Not Qualified Warning */}
+                            {!isQualified && (
+                              <p className="text-xs text-destructive mt-2">
+                                Not qualified for {selectedPet?.name}'s care needs
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Selection Indicator */}
+                          {isSelected && (
+                            <div className="shrink-0">
+                              <CheckCircle2 className="h-6 w-6 text-primary" />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                
+                {/* No Preference Option */}
+                <Card
+                  className={`cursor-pointer transition-all hover:border-primary/50 ${
+                    !selectedGroomerId && !selectedGroomerTier ? "ring-2 ring-primary border-primary" : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedGroomerId(null);
+                    setSelectedGroomerTier("no-preference");
+                  }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <h4 className="font-semibold mb-1">No preference</h4>
+                        <p className="text-sm text-muted-foreground">First available stylist</p>
+                        {!selectedGroomerId && !selectedGroomerTier && (
+                          <CheckCircle2 className="h-6 w-6 text-primary mx-auto mt-2" />
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            /* Mode D: Same-Groomer Guarantee (Optional - for recurring bookings) */
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Groomer Preference</h3>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Keep the same groomer for all future appointments?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        We'll assign {selectedPet?.name || "your pet"} to the same groomer for consistency.
+                      </p>
+                    </div>
+                    <Checkbox
+                      checked={sameGroomerGuarantee}
+                      onCheckedChange={(checked) => setSameGroomerGuarantee(checked === true)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep4}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContinueFromStep5}>
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
