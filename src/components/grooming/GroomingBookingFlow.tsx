@@ -48,6 +48,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
+import { cn } from "@/lib/utils";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -416,7 +418,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
@@ -431,6 +433,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [mobileStayInVan, setMobileStayInVan] = useState(false);
   const [salonLocationId, setSalonLocationId] = useState<string | null>(null);
   const [dropOffPreference, setDropOffPreference] = useState<"wait" | "drop-off" | "curbside" | "">("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [mobileDateRange, setMobileDateRange] = useState<{ start: Date; end: Date } | null>(null);
   const [customNotes, setCustomNotes] = useState("");
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
@@ -1018,6 +1023,203 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setCurrentStep(5);
   };
 
+  // Time slot interface
+  interface TimeSlot {
+    time: string; // HH:mm format
+    status: "optimal" | "tight" | "off-peak" | "unavailable";
+    available: boolean;
+    reason?: string; // Why unavailable
+    driveTimeFromPrevious?: number; // For mobile: minutes from previous appointment
+    routePosition?: string; // For mobile: "You'll be our 2nd stop in [Neighborhood]"
+  }
+
+  // Generate time slots for salon
+  const generateSalonTimeSlots = useMemo(() => {
+    if (!selectedDate || serviceLocation !== "salon") return [];
+    
+    const slots: TimeSlot[] = [];
+    const startHour = 9; // 9 AM
+    const endHour = 17; // 5 PM
+    const slotDuration = totalDurationWithAddOns; // Total duration needed
+    
+    // Generate 30-minute interval slots
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        
+        // Check if slot fits (basic logic - in production, check groomer/station availability)
+        const slotEnd = hour * 60 + minute + slotDuration;
+        const endHourCheck = Math.floor(slotEnd / 60);
+        const endMinuteCheck = slotEnd % 60;
+        
+        if (endHourCheck < endHour || (endHourCheck === endHour && endMinuteCheck === 0)) {
+          // Determine slot status
+          let status: TimeSlot["status"] = "optimal";
+          if (hour === startHour || (hour === endHour - 1 && minute >= 30)) {
+            status = "off-peak"; // Early morning or late afternoon
+          }
+          // In production, check if groomer has back-to-back appointments
+          
+          slots.push({
+            time: timeString,
+            status,
+            available: true,
+          });
+        }
+      }
+    }
+    
+    return slots;
+  }, [selectedDate, serviceLocation, totalDurationWithAddOns]);
+
+  // Generate time slots for mobile (with routing algorithm)
+  const generateMobileTimeSlots = useMemo(() => {
+    if (!mobileDateRange || !mobileAddressValidation?.isValid || serviceLocation !== "mobile") {
+      return [];
+    }
+    
+    const slots: TimeSlot[] = [];
+    const zone = mobileAddressValidation.zone;
+    if (!zone) return [];
+    
+    // Mock route data - in production, this would come from van scheduling
+    const mockRoute = [
+      { time: "08:00", address: "123 Main St, Downtown", driveTime: 0 },
+      { time: "10:15", address: "456 Oak Ave, Downtown", driveTime: 15 },
+      { time: "13:00", address: "789 Pine St, Downtown", driveTime: 20 },
+    ];
+    
+    // Generate slots for each day in range that matches zone days
+    const startDate = new Date(mobileDateRange.start);
+    const endDate = new Date(mobileDateRange.end);
+    const currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      
+      // Check if this day is in the zone's service days
+      if (zone.daysOfWeek.includes(dayOfWeek)) {
+        // Generate time slots for this day
+        const daySlots: TimeSlot[] = [];
+        const slotDuration = totalDurationWithAddOns;
+        
+        // Check each potential slot against route
+        for (let hour = 8; hour < 17; hour++) {
+          for (let minute = 0; minute < 60; minute += 30) {
+            const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+            
+            // Find previous appointment in route
+            const previousAppt = mockRoute.find((apt) => {
+              const [aptHour, aptMin] = apt.time.split(":").map(Number);
+              const aptTime = aptHour * 60 + aptMin;
+              const slotTime = hour * 60 + minute;
+              return aptTime < slotTime;
+            });
+            
+            if (previousAppt) {
+              const [prevHour, prevMin] = previousAppt.time.split(":").map(Number);
+              const prevTime = prevHour * 60 + prevMin;
+              const slotTime = hour * 60 + minute;
+              const driveTime = previousAppt.driveTime || 15;
+              const bufferTime = 15; // Cleanup time
+              const prevEndTime = prevTime + 90 + bufferTime; // Assume 90 min appointment + buffer
+              
+              // Check if slot fits with drive time
+              if (slotTime >= prevEndTime + driveTime) {
+                const slotEndTime = slotTime + slotDuration;
+                // Check if slot doesn't exceed end of day
+                if (slotEndTime <= 17 * 60) {
+                  const routePosition = mockRoute.indexOf(previousAppt) + 2; // +1 for index, +1 for this being next
+                  const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
+                  daySlots.push({
+                    time: timeString,
+                    status: driveTime < 15 ? "optimal" : "tight",
+                    available: true,
+                    driveTimeFromPrevious: driveTime,
+                    routePosition: `You'll be our ${routePosition}${routePosition === 2 ? "nd" : routePosition === 3 ? "rd" : "th"} stop in ${zone.name} that ${weekday}`,
+                  });
+                }
+              }
+            } else {
+              // First appointment of the day - check if slot fits
+              const slotEndTime = (hour * 60 + minute) + slotDuration;
+              if (slotEndTime <= 17 * 60) {
+                const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
+                daySlots.push({
+                  time: timeString,
+                  status: hour < 10 ? "off-peak" : "optimal",
+                  available: true,
+                  routePosition: `You'll be our first stop in ${zone.name} that ${weekday}`,
+                });
+              }
+            }
+          }
+        }
+        
+        // Add date info to slots
+        daySlots.forEach((slot) => {
+          slots.push({
+            ...slot,
+            time: `${currentDate.toISOString().split("T")[0]} ${slot.time}`, // Include date
+          });
+        });
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return slots;
+  }, [mobileDateRange, mobileAddressValidation, serviceLocation, totalDurationWithAddOns]);
+
+  // Get available time slots based on service location
+  const availableTimeSlots = useMemo(() => {
+    if (serviceLocation === "salon") {
+      return generateSalonTimeSlots;
+    } else if (serviceLocation === "mobile") {
+      return generateMobileTimeSlots;
+    }
+    return [];
+  }, [serviceLocation, generateSalonTimeSlots, generateMobileTimeSlots]);
+
+  // Get minimum date based on lead time
+  const minBookingDate = useMemo(() => {
+    const now = new Date();
+    const minimumHours = config.bookingRules.leadTime.minimumHours;
+    const minDate = new Date(now.getTime() + minimumHours * 60 * 60 * 1000);
+    return minDate;
+  }, [config]);
+
+  // Get disabled dates (days with no availability)
+  const disabledDates = useMemo(() => {
+    const disabled: Date[] = [];
+    // In production, check actual availability
+    // For now, disable past dates and dates before minimum lead time
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      
+      // Disable if before minimum lead time
+      if (date < minBookingDate) {
+        disabled.push(date);
+      }
+      
+      // For mobile: disable days not in zone's service days
+      if (serviceLocation === "mobile" && mobileAddressValidation?.zone) {
+        const dayOfWeek = date.getDay();
+        if (!mobileAddressValidation.zone.daysOfWeek.includes(dayOfWeek)) {
+          disabled.push(date);
+        }
+      }
+    }
+    
+    return disabled;
+  }, [minBookingDate, serviceLocation, mobileAddressValidation]);
+
   const handleContinueFromStep6 = () => {
     // Validate based on service location
     if (serviceLocation === "mobile") {
@@ -1030,7 +1232,31 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       }
     }
     
-    // TODO: Navigate to next step (date/time selection)
+    // Navigate to Step 7 (Date & Time Selection)
+    setCurrentStep(7);
+  };
+
+  const handleBackToStep6 = () => {
+    setCurrentStep(6);
+  };
+
+  const handleContinueFromStep7 = () => {
+    if (serviceLocation === "salon") {
+      if (!selectedDate || !selectedTimeSlot) {
+        return; // Cannot proceed without date and time
+      }
+    } else if (serviceLocation === "mobile") {
+      if (!selectedTimeSlot) {
+        return; // Cannot proceed without time slot (date is included in slot for mobile)
+      }
+      // Extract date from slot time (format: "YYYY-MM-DD HH:mm")
+      const [datePart] = selectedTimeSlot.split(" ");
+      if (datePart) {
+        setSelectedDate(new Date(datePart));
+      }
+    }
+    
+    // TODO: Navigate to next step (review & confirmation)
     // For now, just close and show a message
     onOpenChange(false);
   };
@@ -1056,7 +1282,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
               : currentStep === 5
               ? "Step 5: Who would you like to work with?"
-              : "Step 6: Location & Logistics"
+              : currentStep === 6
+              ? "Step 6: Location & Logistics"
+              : "Step 7: When works for you?"
             }
           </DialogDescription>
         </DialogHeader>
@@ -2285,6 +2513,233 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                 disabled={
                   (serviceLocation === "mobile" && (!mobileAddress || !mobileAddressValidation?.isValid)) ||
                   (serviceLocation === "salon" && (!salonLocationId || !dropOffPreference))
+                }
+              >
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Step 7: Date & Time Selection */}
+        {currentStep === 7 && (
+        <div className="space-y-6">
+          {serviceLocation === "salon" ? (
+            <>
+              {/* Physical Salon Calendar */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Select Date</h4>
+                <p className="text-sm text-muted-foreground">
+                  Choose a date for your appointment. Available dates are shown in the calendar.
+                </p>
+                <DateSelectionCalendar
+                  mode="single"
+                  selectedDates={selectedDate ? [selectedDate] : []}
+                  onSelectionChange={(dates) => {
+                    if (dates.length > 0) {
+                      setSelectedDate(dates[0]);
+                      setSelectedTimeSlot(null); // Reset time when date changes
+                    } else {
+                      setSelectedDate(null);
+                    }
+                  }}
+                  minDate={minBookingDate}
+                  disabledDates={disabledDates}
+                  bookingRules={{
+                    minimumAdvanceBooking: config.bookingRules.leadTime.minimumHours,
+                    maximumAdvanceBooking: 14, // 2 weeks
+                  }}
+                />
+              </div>
+
+              {/* Time Slot Selection */}
+              {selectedDate && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Select Time</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Choose an available time slot. Total appointment duration: {totalDurationWithAddOns} minutes.
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {availableTimeSlots.map((slot) => (
+                      <Button
+                        key={slot.time}
+                        variant={selectedTimeSlot === slot.time ? "default" : "outline"}
+                        className={cn(
+                          "h-auto py-3 flex flex-col items-center gap-1",
+                          slot.status === "optimal" && "border-green-500 hover:border-green-600",
+                          slot.status === "tight" && "border-yellow-500 hover:border-yellow-600",
+                          slot.status === "off-peak" && "border-blue-500 hover:border-blue-600",
+                          !slot.available && "opacity-50 cursor-not-allowed"
+                        )}
+                        disabled={!slot.available}
+                        onClick={() => slot.available && setSelectedTimeSlot(slot.time)}
+                      >
+                        <span className="font-medium">{slot.time}</span>
+                        {slot.status === "optimal" && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                            Optimal
+                          </Badge>
+                        )}
+                        {slot.status === "tight" && (
+                          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
+                            Tight
+                          </Badge>
+                        )}
+                        {slot.status === "off-peak" && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                            Off-peak
+                          </Badge>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                  {availableTimeSlots.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No available time slots for this date. Please select another date.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          ) : serviceLocation === "mobile" ? (
+            <>
+              {/* Mobile Date Range Selection */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Select Preferred Date Range</h4>
+                <p className="text-sm text-muted-foreground">
+                  Choose your preferred dates. We'll find the best available slot based on our route optimization.
+                </p>
+                <DateSelectionCalendar
+                  mode="range"
+                  rangeStart={mobileDateRange?.start || null}
+                  rangeEnd={mobileDateRange?.end || null}
+                  onRangeChange={(start, end) => {
+                    if (start && end) {
+                      // Ensure dates are at start of day
+                      const startDate = new Date(start);
+                      startDate.setHours(0, 0, 0, 0);
+                      const endDate = new Date(end);
+                      endDate.setHours(23, 59, 59, 999);
+                      setMobileDateRange({ start: startDate, end: endDate });
+                      setSelectedDate(null);
+                      setSelectedTimeSlot(null);
+                    } else {
+                      setMobileDateRange(null);
+                    }
+                  }}
+                  minDate={minBookingDate}
+                  disabledDates={disabledDates}
+                  bookingRules={{
+                    minimumAdvanceBooking: config.bookingRules.leadTime.minimumHours,
+                    maximumAdvanceBooking: 14,
+                  }}
+                />
+              </div>
+
+              {/* Mobile Time Slot Results */}
+              {mobileDateRange && availableTimeSlots.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Available Time Slots</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Based on route optimization, here are the best available slots:
+                  </p>
+                  <div className="space-y-3">
+                    {availableTimeSlots.map((slot, index) => {
+                      // Extract date and time from slot.time (format: "YYYY-MM-DD HH:mm" for mobile)
+                      const [datePart, timePart] = slot.time.split(" ");
+                      const displayTime = timePart || slot.time;
+                      const displayDate = datePart ? new Date(datePart).toLocaleDateString("en-US", { 
+                        weekday: "short", 
+                        month: "short", 
+                        day: "numeric" 
+                      }) : null;
+                      
+                      return (
+                        <Card
+                          key={`${slot.time}-${index}`}
+                          className={cn(
+                            "cursor-pointer transition-all",
+                            selectedTimeSlot === slot.time ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                          )}
+                          onClick={() => slot.available && setSelectedTimeSlot(slot.time)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={cn(
+                                  "w-3 h-3 rounded-full flex-shrink-0",
+                                  slot.status === "optimal" && "bg-green-500",
+                                  slot.status === "tight" && "bg-yellow-500",
+                                  slot.status === "off-peak" && "bg-blue-500"
+                                )} />
+                                <div>
+                                  {displayDate && (
+                                    <p className="text-xs text-muted-foreground mb-1">{displayDate}</p>
+                                  )}
+                                  <p className="font-medium">{displayTime}</p>
+                                  {slot.routePosition && (
+                                    <p className="text-xs text-muted-foreground mt-1">{slot.routePosition}</p>
+                                  )}
+                                  {slot.driveTimeFromPrevious && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {slot.driveTimeFromPrevious} min drive from previous appointment
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {slot.status === "optimal" && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                    Optimal
+                                  </Badge>
+                                )}
+                                {slot.status === "tight" && (
+                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                                    Tight
+                                  </Badge>
+                                )}
+                                {slot.status === "off-peak" && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                                    Off-peak
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {mobileDateRange && availableTimeSlots.length === 0 && (
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No available slots found for the selected date range. Please try a different range.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : null}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep6}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleContinueFromStep7}
+                disabled={
+                  (serviceLocation === "salon" && (!selectedDate || !selectedTimeSlot)) ||
+                  (serviceLocation === "mobile" && !selectedTimeSlot)
                 }
               >
                 Continue
