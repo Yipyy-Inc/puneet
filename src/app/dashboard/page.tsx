@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { facilities } from "@/data/facilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,7 +46,11 @@ import {
   CreditCard,
   MessageSquare,
   Scissors,
+  User,
+  Shield,
 } from "lucide-react";
+import { useTransition } from "react";
+import { setUserRole } from "@/lib/role-utils";
 
 // Mock data for charts
 const revenueData = [
@@ -289,6 +293,17 @@ function ReservationsCard({
 }: {
   totalReservations: number;
 }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Format number only on client to avoid hydration issues
+  const formattedNumber = isMounted 
+    ? totalReservations.toLocaleString("en-US")
+    : totalReservations.toString();
+
   return (
     <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
       <CardContent className="p-5">
@@ -299,7 +314,7 @@ function ReservationsCard({
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">
-                {totalReservations.toLocaleString()}
+                {formattedNumber}
               </h3>
               <span className="inline-flex items-center text-xs font-medium text-success">
                 <TrendingUp className="h-3 w-3 mr-0.5" />
@@ -333,7 +348,9 @@ function ReservationsCard({
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-medium">
-                  {facility.reservations.toLocaleString()}
+                  {isMounted 
+                    ? facility.reservations.toLocaleString("en-US")
+                    : facility.reservations.toString()}
                 </span>
                 <span className="text-[10px] text-success">
                   {facility.trend}
@@ -439,6 +456,20 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "12m">(
     "12m",
   );
+  const [isPending, startTransition] = useTransition();
+
+  const switchToFacility = () => {
+    startTransition(() => {
+      setUserRole("facility_admin");
+      window.location.href = "/facility/dashboard";
+    });
+  };
+
+  const switchToCustomer = () => {
+    startTransition(() => {
+      window.location.href = "/customer/dashboard";
+    });
+  };
 
   // Calculate key metrics from facilities data
   const metrics = useMemo(() => {
@@ -555,6 +586,52 @@ export default function DashboardPage() {
         />
         <SystemHealthCard overallHealth={metrics.systemHealth} />
       </div>
+
+      {/* Portal Switcher - Quick Actions */}
+      <Card className="mb-8 border-0 shadow-card">
+        <CardHeader>
+          <CardTitle>Portal Switcher</CardTitle>
+          <CardDescription>
+            Switch between different portals to test the user experience
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={switchToFacility}
+              disabled={isPending}
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              Switch to Facility
+            </Button>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={switchToCustomer}
+              disabled={isPending}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Switch to Customer
+            </Button>
+            <Button
+              className="w-full justify-start"
+              variant="outline"
+              onClick={() => {
+                startTransition(() => {
+                  setUserRole("super_admin");
+                  window.location.href = "/dashboard";
+                });
+              }}
+              disabled={isPending}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Switch to Admin
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3 mb-8">

@@ -107,15 +107,30 @@ export function BookingModal({ booking }: BookingModalProps) {
   }
 
   if (booking.extraServices) {
-    booking.extraServices.forEach((service) => {
-      tasks.push({
-        id: `service-${service.serviceId}-${service.petId}`,
-        type: "service",
-        title: `Perform ${service.serviceId} service`,
-        time: null,
-        details: `Quantity: ${service.quantity}`,
-        icon: Scissors,
-      });
+    booking.extraServices.forEach((service, index) => {
+      // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
+      if (typeof service === "string") {
+        // For string type (grooming), use the string as service name
+        const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+        tasks.push({
+          id: `service-${service}-${petId}-${index}`,
+          type: "service",
+          title: `Perform ${service}`,
+          time: null,
+          details: "Extra service",
+          icon: Scissors,
+        });
+      } else {
+        // For ExtraService object type (daycare/boarding)
+        tasks.push({
+          id: `service-${service.serviceId}-${service.petId}`,
+          type: "service",
+          title: `Perform ${service.serviceId} service`,
+          time: null,
+          details: `Quantity: ${service.quantity}`,
+          icon: Scissors,
+        });
+      }
     });
   }
 

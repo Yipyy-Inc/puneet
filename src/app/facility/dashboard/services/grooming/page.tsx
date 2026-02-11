@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { GroomingBookingFlow } from "@/components/grooming/GroomingBookingFlow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,7 @@ const statusIcons: Record<GroomingStatus, React.ReactNode> = {
 
 export default function GroomingCalendarPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+  const [isGroomingBookingOpen, setIsGroomingBookingOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] =
     useState<GroomingAppointment | null>(null);
   const [selectedAppointment, setSelectedAppointment] =
@@ -252,10 +254,16 @@ export default function GroomingCalendarPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Grooming Calendar</CardTitle>
-          <Button onClick={() => handleAddNew()}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Appointment
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsGroomingBookingOpen(true)} variant="default">
+              <Plus className="mr-2 h-4 w-4" />
+              Book Grooming (Customer Flow)
+            </Button>
+            <Button onClick={() => handleAddNew()} variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              New Appointment
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <GenericCalendar
@@ -756,6 +764,18 @@ export default function GroomingCalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Grooming Booking Flow */}
+      <GroomingBookingFlow
+        open={isGroomingBookingOpen}
+        onOpenChange={(open) => {
+          setIsGroomingBookingOpen(open);
+          if (!open) {
+            // Refresh appointments when modal closes
+            // In production, this would refetch data
+          }
+        }}
+      />
     </div>
   );
 }

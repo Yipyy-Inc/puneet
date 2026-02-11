@@ -153,7 +153,7 @@ export interface NewBooking {
   feedingSchedule?: FeedingScheduleItem[];
   walkSchedule?: string;
   medications?: MedicationItem[];
-  extraServices?: ExtraService[];
+  extraServices?: (ExtraService | string)[];
 }
 
 export interface Booking extends NewBooking {
