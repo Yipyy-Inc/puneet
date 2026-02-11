@@ -15,7 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Dog, Plus, Calendar, AlertCircle, CheckCircle2, Upload, ArrowRight } from "lucide-react";
+import { 
+  Dog, 
+  Plus, 
+  Calendar, 
+  AlertCircle, 
+  CheckCircle2, 
+  Upload, 
+  ArrowRight,
+  Scissors,
+  Sparkles,
+  Droplets,
+  Clock,
+  DollarSign,
+  AlertTriangle
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -53,10 +67,95 @@ interface GroomingBookingFlowProps {
  * Phase 2, Step 1: Pet Identification
  * "Who are we pampering today?"
  */
+// Service category definitions with pricing and duration
+interface ServiceCategoryOption {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  basePrice: number;
+  estimatedDuration: number; // in minutes
+  sizePricing?: {
+    S?: number;
+    M?: number;
+    L?: number;
+    XL?: number;
+  };
+}
+
+const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
+  {
+    id: "bath-brush",
+    name: "Bath & Brush",
+    description: "No cutting - just a refreshing bath and brush out",
+    icon: Droplets,
+    basePrice: 45,
+    estimatedDuration: 45,
+    sizePricing: {
+      S: 40,
+      M: 45,
+      L: 55,
+      XL: 65,
+    },
+  },
+  {
+    id: "haircut",
+    name: "Haircut Services",
+    description: "Full groom with haircut and styling",
+    icon: Scissors,
+    basePrice: 65,
+    estimatedDuration: 120,
+    sizePricing: {
+      S: 55,
+      M: 65,
+      L: 85,
+      XL: 105,
+    },
+  },
+  {
+    id: "spa",
+    name: "Spa Treatments",
+    description: "Luxury spa experience with premium treatments",
+    icon: Sparkles,
+    basePrice: 95,
+    estimatedDuration: 180,
+    sizePricing: {
+      S: 85,
+      M: 95,
+      L: 120,
+      XL: 150,
+    },
+  },
+  {
+    id: "de-shed",
+    name: "De-shedding Packages",
+    description: "Specialized treatment to reduce shedding",
+    icon: Droplets,
+    basePrice: 55,
+    estimatedDuration: 90,
+    sizePricing: {
+      S: 45,
+      M: 55,
+      L: 70,
+      XL: 90,
+    },
+  },
+  {
+    id: "ala-carte",
+    name: "À La Carte",
+    description: "Individual services like nails only, face trim only",
+    icon: Scissors,
+    basePrice: 25,
+    estimatedDuration: 30,
+  },
+];
+
 export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [showAddPet, setShowAddPet] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -172,10 +271,80 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     handlePetSelect(petId);
   };
 
+  // Check if pet has matting flag from last visit
+  const hasMattingFlag = useMemo(() => {
+    if (!selectedPetId || !customer) return false;
+    
+    const lastGroomingBooking = bookings
+      .filter(
+        (b) =>
+          b.clientId === customer.id &&
+          b.petId === selectedPetId &&
+          b.service.toLowerCase() === "grooming" &&
+          b.status === "completed"
+      )
+      .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0];
+
+    if (!lastGroomingBooking) return false;
+
+    // Check notes for matting references
+    const notes = lastGroomingBooking.specialRequests || "";
+    const hasMattingInNotes = /matting|matted|mat/i.test(notes);
+
+    // Check if de-matting was an add-on
+    const hasDeMattingAddOn = lastGroomingBooking.groomingAddOns?.some(
+      (addon) => /de.?matting|matting/i.test(addon)
+    );
+
+    return hasMattingInNotes || hasDeMattingAddOn;
+  }, [selectedPetId, customer]);
+
+  // Get selected pet
+  const selectedPet = useMemo(() => {
+    return petsWithInfo.find((p) => p.id === selectedPetId);
+  }, [petsWithInfo, selectedPetId]);
+
+  // Get available service categories based on facility config
+  const availableServiceCategories = useMemo(() => {
+    return SERVICE_CATEGORIES.filter((category) => {
+      // Map our service categories to config categories
+      let configCategoryId = category.id;
+      if (category.id === "bath-brush") configCategoryId = "bath-only";
+      if (category.id === "spa") configCategoryId = "full-groom"; // Spa is like full groom
+      if (category.id === "ala-carte") configCategoryId = "nail-trim"; // À la carte includes nail trim
+      
+      const configCategory = config.bookingRules.serviceVisibility.categories.find(
+        (c) => c.id === configCategoryId
+      );
+      return configCategory?.enabled !== false;
+    });
+  }, [config]);
+
+  // Get price for selected service based on pet size
+  const getServicePrice = (category: ServiceCategoryOption, petSize: PetSize): number => {
+    if (category.sizePricing && category.sizePricing[petSize]) {
+      return category.sizePricing[petSize];
+    }
+    return category.basePrice;
+  };
+
   const handleContinue = () => {
     if (!selectedPetId) return;
+    setCurrentStep(2);
+  };
 
-    // TODO: Navigate to next step (service selection)
+  const handleServiceSelect = (categoryId: string) => {
+    setSelectedServiceCategory(categoryId);
+  };
+
+  const handleBackToStep1 = () => {
+    setCurrentStep(1);
+    setSelectedServiceCategory(null);
+  };
+
+  const handleContinueFromStep2 = () => {
+    if (!selectedServiceCategory) return;
+    // TODO: Navigate to next step (date/time selection)
     // For now, just close and show a message
     onOpenChange(false);
   };
@@ -191,10 +360,14 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         <DialogHeader>
           <DialogTitle className="text-2xl">Book a Grooming Appointment</DialogTitle>
           <DialogDescription>
-            Step 1: Who are we pampering today?
+            {currentStep === 1 
+              ? "Step 1: Who are we pampering today?"
+              : `Step 2: What does ${selectedPet?.name || "your pet"} need today?`
+            }
           </DialogDescription>
         </DialogHeader>
 
+        {currentStep === 1 ? (
         <div className="space-y-6">
           {/* Returning Client: Pet List */}
           {petsWithInfo.length > 0 ? (
@@ -419,6 +592,107 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             </Button>
           </div>
         </div>
+        ) : (
+        /* Step 2: Service Category Selection */
+        <div className="space-y-6">
+          {/* Matting Warning for Haircut */}
+          {selectedServiceCategory === "haircut" && hasMattingFlag && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-amber-900 mb-1">
+                      Additional De-matting Fees May Apply
+                    </h4>
+                    <p className="text-sm text-amber-800">
+                      {selectedPet?.name} had matting noted during their last visit. 
+                      Additional de-matting fees may apply depending on the severity. 
+                      Our staff will assess upon arrival.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Service Category Cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {availableServiceCategories.map((category) => {
+              const Icon = category.icon;
+              const isSelected = selectedServiceCategory === category.id;
+              const price = selectedPet 
+                ? getServicePrice(category, selectedPet.size)
+                : category.basePrice;
+
+              return (
+                <Card
+                  key={category.id}
+                  className={`cursor-pointer transition-all hover:border-primary/50 ${
+                    isSelected ? "ring-2 ring-primary border-primary" : ""
+                  }`}
+                  onClick={() => handleServiceSelect(category.id)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      {/* Icon */}
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-6 w-6 text-primary" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-lg mb-1">{category.name}</h4>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {category.description}
+                        </p>
+
+                        {/* Price and Duration */}
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>~{category.estimatedDuration} mins</span>
+                          </div>
+                          <div className="flex items-center gap-1 font-semibold text-primary">
+                            <DollarSign className="h-4 w-4" />
+                            <span>~${price}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Selection Indicator */}
+                      {isSelected && (
+                        <div className="shrink-0">
+                          <CheckCircle2 className="h-6 w-6 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep1}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleContinueFromStep2}
+                disabled={!selectedServiceCategory}
+              >
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
