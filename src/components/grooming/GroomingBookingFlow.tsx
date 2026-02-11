@@ -448,6 +448,18 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [showAddPet, setShowAddPet] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
+  // Edge case handling states
+  const [timeSlotConflict, setTimeSlotConflict] = useState<{
+    hasConflict: boolean;
+    message: string;
+    alternatives: Array<{ type: "reduce-addons" | "alternative-day"; message: string; action?: () => void }>;
+  } | null>(null);
+  const [mobileZoneConflict, setMobileZoneConflict] = useState<{
+    hasConflict: boolean;
+    message: string;
+    nextAvailableDate: Date | null;
+  } | null>(null);
+  
   // Step 8: Recurring & Packages
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState<4 | 6 | 8 | "custom">(4);
@@ -1154,9 +1166,62 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       // "No preference" might be allowed, check config
     }
     
+    // Save booking progress for abandoned booking recovery
+    saveBookingProgress();
+    
     // Navigate to Step 6 (Location & Logistics)
     setCurrentStep(6);
   };
+
+  // Save booking progress to localStorage for abandoned booking recovery
+  const saveBookingProgress = () => {
+    if (!selectedPetId) return;
+    
+    const progress = {
+      petId: selectedPetId,
+      serviceCategory: selectedServiceCategory,
+      variant: selectedVariant,
+      addOns: selectedAddOns,
+      groomerId: selectedGroomerId,
+      groomerName: selectedGroomerId ? stylists.find(s => s.id === selectedGroomerId)?.name : undefined,
+      groomerTier: selectedGroomerTier,
+      step: currentStep,
+      timestamp: new Date().toISOString(),
+    };
+    
+    localStorage.setItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`, JSON.stringify(progress));
+  };
+
+  // Load booking progress from localStorage
+  const loadBookingProgress = () => {
+    const stored = localStorage.getItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`);
+    if (!stored) return null;
+    
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  };
+
+  // Check if booking was abandoned (progress saved but not completed)
+  useEffect(() => {
+    if (open && currentStep === 1) {
+      const progress = loadBookingProgress();
+      if (progress && progress.step >= 5) {
+        const progressDate = new Date(progress.timestamp);
+        const hoursSinceProgress = (Date.now() - progressDate.getTime()) / (1000 * 60 * 60);
+        
+        // If progress is older than 2 hours, trigger abandoned booking recovery
+        if (hoursSinceProgress >= 2) {
+          // Schedule reminder email (in production, this would be handled by backend)
+          import("@/lib/grooming-post-booking").then(({ scheduleAbandonedBookingReminder }) => {
+            scheduleAbandonedBookingReminder(progress);
+          });
+        }
+      }
+    }
+  }, [open, currentStep]);
 
   const handleBackToStep5 = () => {
     setCurrentStep(5);
@@ -1387,19 +1452,180 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (!selectedDate || !selectedTimeSlot) {
         return; // Cannot proceed without date and time
       }
+      
+      // Check for time slot duration conflict
+      const conflict = checkTimeSlotConflict(selectedTimeSlot, totalDurationWithAddOns);
+      if (conflict.hasConflict) {
+        setTimeSlotConflict(conflict);
+        return; // Don't proceed, show conflict message
+      }
     } else if (serviceLocation === "mobile") {
       if (!selectedTimeSlot) {
         return; // Cannot proceed without time slot (date is included in slot for mobile)
       }
+      
       // Extract date from slot time (format: "YYYY-MM-DD HH:mm")
       const [datePart] = selectedTimeSlot.split(" ");
       if (datePart) {
-        setSelectedDate(new Date(datePart));
+        const slotDate = new Date(datePart);
+        setSelectedDate(slotDate);
+        
+        // Check for mobile zone conflict
+        const zoneConflict = checkMobileZoneConflict(slotDate);
+        if (zoneConflict.hasConflict) {
+          setMobileZoneConflict(zoneConflict);
+          return; // Don't proceed, show conflict message
+        }
       }
     }
     
+    // Clear any conflicts if validation passes
+    setTimeSlotConflict(null);
+    setMobileZoneConflict(null);
+    
     // Navigate to Step 8 (Recurring & Packages)
     setCurrentStep(8);
+  };
+
+  // Check if selected time slot can accommodate the total duration
+  const checkTimeSlotConflict = (timeSlot: string, requiredDuration: number) => {
+    // Parse time slot (format: "HH:mm")
+    const [hours, minutes] = timeSlot.split(":").map(Number);
+    const slotStart = hours * 60 + minutes;
+    const slotEnd = slotStart + requiredDuration;
+    
+    // Check if slot would exceed business hours (5 PM = 17:00 = 1020 minutes)
+    const businessEnd = 17 * 60; // 5 PM
+    
+    if (slotEnd > businessEnd) {
+      // Find alternative days with 2-hour slots available
+      const alternativeDays = findAlternativeDaysWithSlots(requiredDuration);
+      
+      // Find add-ons that could be removed to fit in 90-minute slot
+      const removableAddOns = findRemovableAddOns(requiredDuration, 90);
+      
+      return {
+        hasConflict: true,
+        message: `We can do this service in 90 minutes if you skip the ${removableAddOns.map(a => a.name).join(" and ")} add-on${removableAddOns.length > 1 ? "s" : ""}, or we have ${Math.floor(requiredDuration / 60)}-hour slots available ${alternativeDays.length > 0 ? alternativeDays[0].date : "Thursday"}.`,
+        alternatives: [
+          ...(removableAddOns.length > 0 ? [{
+            type: "reduce-addons" as const,
+            message: `Remove ${removableAddOns.map(a => a.name).join(" and ")} to fit in 90-minute slot`,
+            action: () => {
+              setSelectedAddOns(selectedAddOns.filter(id => !removableAddOns.some(a => a.id === id)));
+              setTimeSlotConflict(null);
+            },
+          }] : []),
+          ...(alternativeDays.length > 0 ? [{
+            type: "alternative-day" as const,
+            message: `Book on ${alternativeDays[0].date} instead`,
+            action: () => {
+              setSelectedDate(alternativeDays[0].dateObj);
+              setTimeSlotConflict(null);
+            },
+          }] : []),
+        ],
+      };
+    }
+    
+    return { hasConflict: false, message: "", alternatives: [] };
+  };
+
+  // Find alternative days with available slots for the required duration
+  const findAlternativeDaysWithSlots = (requiredDuration: number) => {
+    const alternatives: Array<{ date: string; dateObj: Date }> = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= 14; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() + i);
+      
+      // Check if this day has slots that can accommodate the duration
+      // In production, this would check actual availability
+      if (checkDate.getDay() !== 0 && checkDate.getDay() !== 6) { // Not Sunday or Saturday
+        const slotEnd = 17 * 60; // 5 PM
+        const latestStart = slotEnd - requiredDuration;
+        
+        if (latestStart >= 9 * 60) { // At least 9 AM start time
+          alternatives.push({
+            date: checkDate.toLocaleDateString("en-US", { weekday: "long" }),
+            dateObj: checkDate,
+          });
+        }
+      }
+      
+      if (alternatives.length >= 3) break; // Limit to 3 alternatives
+    }
+    
+    return alternatives;
+  };
+
+  // Find add-ons that can be removed to fit in a shorter slot
+  const findRemovableAddOns = (currentDuration: number, targetDuration: number) => {
+    const durationToRemove = currentDuration - targetDuration;
+    if (durationToRemove <= 0) return [];
+    
+    // Get add-ons sorted by duration (largest first)
+    const addOnsWithDuration = selectedAddOns
+      .map(id => {
+        const addOn = GROOMING_ADD_ONS.find(a => a.id === id);
+        return addOn ? { id, name: addOn.name, duration: addOn.durationMinutes } : null;
+      })
+      .filter((a): a is { id: string; name: string; duration: number } => a !== null)
+      .sort((a, b) => b.duration - a.duration);
+    
+    const removable: Array<{ id: string; name: string }> = [];
+    let totalRemoved = 0;
+    
+    for (const addOn of addOnsWithDuration) {
+      if (totalRemoved + addOn.duration <= durationToRemove) {
+        removable.push({ id: addOn.id, name: addOn.name });
+        totalRemoved += addOn.duration;
+      }
+    }
+    
+    return removable;
+  };
+
+  // Check if mobile zone is available on selected date
+  const checkMobileZoneConflict = (date: Date) => {
+    if (!mobileAddressValidation?.zone) {
+      return { hasConflict: false, message: "", nextAvailableDate: null };
+    }
+    
+    const dayOfWeek = date.getDay();
+    const zone = mobileAddressValidation.zone;
+    
+    // Check if this day is in the zone's service days
+    if (!zone.daysOfWeek.includes(dayOfWeek)) {
+      // Find next available date in this zone
+      const nextAvailable = findNextAvailableZoneDate(zone, date);
+      
+      return {
+        hasConflict: true,
+        message: `We don't service your area on ${date.toLocaleDateString("en-US", { weekday: "long" })}s. Next available in your zone is ${nextAvailable ? nextAvailable.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "next week"}.`,
+        nextAvailableDate: nextAvailable,
+      };
+    }
+    
+    return { hasConflict: false, message: "", nextAvailableDate: null };
+  };
+
+  // Find next available date for a zone
+  const findNextAvailableZoneDate = (zone: ServiceZone, fromDate: Date) => {
+    const checkDate = new Date(fromDate);
+    checkDate.setDate(checkDate.getDate() + 1);
+    
+    // Look up to 14 days ahead
+    for (let i = 0; i < 14; i++) {
+      const dayOfWeek = checkDate.getDay();
+      if (zone.daysOfWeek.includes(dayOfWeek)) {
+        return checkDate;
+      }
+      checkDate.setDate(checkDate.getDate() + 1);
+    }
+    
+    return null;
   };
 
   const handleBackToStep7 = () => {
@@ -3119,6 +3345,71 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         {/* Step 7: Date & Time Selection */}
         {currentStep === 7 && (
         <div className="space-y-6">
+          {/* Time Slot Conflict Alert (Salon) */}
+          {timeSlotConflict?.hasConflict && serviceLocation === "salon" && (
+            <Card className="border-yellow-500 bg-yellow-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div className="flex-1 space-y-3">
+                    <p className="text-sm font-medium text-yellow-900">
+                      {timeSlotConflict.message}
+                    </p>
+                    {timeSlotConflict.alternatives.length > 0 && (
+                      <div className="space-y-2">
+                        {timeSlotConflict.alternatives.map((alt, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            onClick={alt.action}
+                            className="w-full justify-start text-left"
+                          >
+                            {alt.message}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mobile Zone Conflict Alert */}
+          {mobileZoneConflict?.hasConflict && serviceLocation === "mobile" && (
+            <Card className="border-orange-500 bg-orange-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                  <div className="flex-1 space-y-3">
+                    <p className="text-sm font-medium text-orange-900">
+                      {mobileZoneConflict.message}
+                    </p>
+                    {mobileZoneConflict.nextAvailableDate && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDate(mobileZoneConflict.nextAvailableDate!);
+                          setMobileZoneConflict(null);
+                          // Regenerate slots for new date
+                          setMobileDateRange({
+                            start: mobileZoneConflict.nextAvailableDate!,
+                            end: new Date(mobileZoneConflict.nextAvailableDate!.getTime() + 7 * 24 * 60 * 60 * 1000),
+                          });
+                        }}
+                        className="w-full justify-start text-left"
+                      >
+                        Book on {mobileZoneConflict.nextAvailableDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {serviceLocation === "salon" ? (
             <>
               {/* Physical Salon Calendar */}

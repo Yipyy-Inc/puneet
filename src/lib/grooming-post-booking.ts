@@ -338,3 +338,50 @@ export async function handleMobileGroomerArrival(
 
   console.log("Mobile groomer arrival notification:", notification);
 }
+
+/**
+ * Schedule abandoned booking recovery email
+ * Triggered when customer leaves booking flow at Step 5 or later
+ * In production, this would be scheduled via a backend job/cron
+ */
+export async function scheduleAbandonedBookingReminder(
+  progress: {
+    petId: number;
+    serviceCategory?: string;
+    variant?: string;
+    addOns?: string[];
+    groomerId?: string;
+    groomerName?: string;
+    groomerTier?: string;
+    step: number;
+    timestamp: string;
+  }
+): Promise<void> {
+  // TODO: In production, this would be handled by a backend job scheduler
+  // For now, we'll just log it and simulate sending an email
+
+  const petName = "Remy"; // TODO: Get from petId
+  const groomerName = progress.groomerName || "Jessica";
+  const nextAvailableDate = new Date();
+  nextAvailableDate.setDate(nextAvailableDate.getDate() + 2); // Example: 2 days from now
+
+  const emailContent = {
+    to: "customer@example.com", // TODO: Get from customer data
+    subject: `Still interested in grooming ${petName}?`,
+    body: `
+Hi there!
+
+We noticed you started booking a grooming appointment for ${petName} but didn't complete it. 
+
+${progress.groomerName ? `${groomerName} has one slot left this ${nextAvailableDate.toLocaleDateString("en-US", { weekday: "long" })}.` : "We have availability this week."}
+
+Would you like to complete your booking? Click here to continue: [Booking Link]
+
+Best regards,
+The Grooming Team
+    `.trim(),
+  };
+
+  // TODO: Send email via email service
+  console.log("Abandoned booking reminder email:", emailContent);
+}
