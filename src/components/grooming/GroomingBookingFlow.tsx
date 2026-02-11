@@ -6,12 +6,16 @@ import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { stylists, type Stylist } from "@/data/grooming";
+import { locations } from "@/data/settings";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +40,11 @@ import {
   Image as ImageIcon,
   X,
   User,
-  Star
+  Star,
+  MapPin,
+  Truck,
+  Building2,
+  Navigation
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -375,10 +383,40 @@ const GROOMING_ADD_ONS: GroomingAddOn[] = [
   },
 ];
 
+// Mobile service zones (mock data - in production, this would come from facility config)
+interface ServiceZone {
+  id: string;
+  name: string;
+  daysOfWeek: number[]; // 0 = Sunday, 1 = Monday, etc.
+  neighborhoods: string[];
+}
+
+const MOBILE_SERVICE_ZONES: ServiceZone[] = [
+  {
+    id: "zone-a",
+    name: "Zone A - Downtown",
+    daysOfWeek: [1, 3], // Monday, Wednesday
+    neighborhoods: ["Downtown", "Financial District", "SOMA"],
+  },
+  {
+    id: "zone-b",
+    name: "Zone B - North",
+    daysOfWeek: [2, 4], // Tuesday, Thursday
+    neighborhoods: ["North Beach", "Russian Hill", "Nob Hill"],
+  },
+  {
+    id: "zone-c",
+    name: "Zone C - West",
+    daysOfWeek: [5, 6], // Friday, Saturday
+    neighborhoods: ["Sunset", "Richmond", "Presidio"],
+  },
+];
+
 export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const { selectedFacility } = useCustomerFacility();
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
@@ -386,6 +424,13 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [selectedGroomerId, setSelectedGroomerId] = useState<string | null>(null);
   const [selectedGroomerTier, setSelectedGroomerTier] = useState<string | null>(null);
   const [sameGroomerGuarantee, setSameGroomerGuarantee] = useState(false);
+  const [serviceLocation, setServiceLocation] = useState<"salon" | "mobile" | null>(null);
+  const [mobileAddress, setMobileAddress] = useState("");
+  const [mobileGateCode, setMobileGateCode] = useState("");
+  const [mobileParking, setMobileParking] = useState<"street" | "driveway" | "">("");
+  const [mobileStayInVan, setMobileStayInVan] = useState(false);
+  const [salonLocationId, setSalonLocationId] = useState<string | null>(null);
+  const [dropOffPreference, setDropOffPreference] = useState<"wait" | "drop-off" | "curbside" | "">("");
   const [customNotes, setCustomNotes] = useState("");
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
@@ -886,6 +931,76 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setSelectedGroomerId(null); // Clear groomer selection if tier is selected
   };
 
+  // Check if both salon and mobile are available
+  const salonAvailable = config.serviceTypes.salon;
+  const mobileAvailable = config.serviceTypes.mobile;
+
+  // Determine default service location
+  const defaultServiceLocation = useMemo(() => {
+    if (!salonAvailable && mobileAvailable) return "mobile";
+    if (salonAvailable && !mobileAvailable) return "salon";
+    return null; // Both available, user must choose
+  }, [salonAvailable, mobileAvailable]);
+
+  // Auto-set service location if only one option
+  useEffect(() => {
+    if (defaultServiceLocation && !serviceLocation) {
+      setServiceLocation(defaultServiceLocation);
+    }
+  }, [defaultServiceLocation, serviceLocation]);
+
+  // Validate mobile address and find service zone
+  const mobileAddressValidation = useMemo(() => {
+    if (!mobileAddress || serviceLocation !== "mobile") return null;
+    
+    // Simple validation - in production, use geocoding API
+    const addressLower = mobileAddress.toLowerCase();
+    let matchedZone: ServiceZone | null = null;
+    
+    for (const zone of MOBILE_SERVICE_ZONES) {
+      if (zone.neighborhoods.some((neighborhood) => addressLower.includes(neighborhood.toLowerCase()))) {
+        matchedZone = zone;
+        break;
+      }
+    }
+    
+    if (!matchedZone) {
+      // Try to extract neighborhood from address
+      const possibleNeighborhood = addressLower.split(",")[0]?.trim();
+      return {
+        isValid: false,
+        zone: null,
+        message: `We don't service this area yet. Join our waitlist for ${possibleNeighborhood || "this neighborhood"}`,
+      };
+    }
+    
+    return {
+      isValid: true,
+      zone: matchedZone,
+      message: null,
+    };
+  }, [mobileAddress, serviceLocation]);
+
+  // Get available salon locations
+  const availableSalonLocations = useMemo(() => {
+    return locations.filter((loc) => loc.isActive);
+  }, []);
+
+  // Get default salon location (first active or facility's main location)
+  const defaultSalonLocation = useMemo(() => {
+    if (availableSalonLocations.length > 0) {
+      return availableSalonLocations[0].id;
+    }
+    return null;
+  }, [availableSalonLocations]);
+
+  // Auto-set salon location if only one option
+  useEffect(() => {
+    if (serviceLocation === "salon" && defaultSalonLocation && !salonLocationId) {
+      setSalonLocationId(defaultSalonLocation);
+    }
+  }, [serviceLocation, defaultSalonLocation, salonLocationId]);
+
   const handleContinueFromStep5 = () => {
     // Validate selection based on mode
     if (groomerSelectionMode === "tier-only" && !selectedGroomerTier) {
@@ -893,6 +1008,26 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     }
     if (groomerSelectionMode === "full-choice" && !selectedGroomerId && !selectedGroomerTier) {
       // "No preference" might be allowed, check config
+    }
+    
+    // Navigate to Step 6 (Location & Logistics)
+    setCurrentStep(6);
+  };
+
+  const handleBackToStep5 = () => {
+    setCurrentStep(5);
+  };
+
+  const handleContinueFromStep6 = () => {
+    // Validate based on service location
+    if (serviceLocation === "mobile") {
+      if (!mobileAddress || !mobileAddressValidation?.isValid) {
+        return; // Cannot proceed without valid address
+      }
+    } else if (serviceLocation === "salon") {
+      if (!salonLocationId || !dropOffPreference) {
+        return; // Cannot proceed without location and drop-off preference
+      }
     }
     
     // TODO: Navigate to next step (date/time selection)
@@ -919,7 +1054,9 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? "Step 3: Choose the specific service style"
               : currentStep === 4
               ? `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
-              : "Step 5: Who would you like to work with?"
+              : currentStep === 5
+              ? "Step 5: Who would you like to work with?"
+              : "Step 6: Location & Logistics"
             }
           </DialogDescription>
         </DialogHeader>
@@ -1595,7 +1732,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             </div>
           </div>
         </div>
-        ) : (
+        ) : currentStep === 5 ? (
         /* Step 5: Groomer Preference */
         <div className="space-y-6">
           {/* Mode A: No Choice (Stealth) - Should be skipped, but show message if somehow reached */}
@@ -1837,6 +1974,319 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                 Cancel
               </Button>
               <Button onClick={handleContinueFromStep5}>
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        ) : (
+        /* Step 6: Location & Logistics */
+        <div className="space-y-6">
+          {/* Service Type Selection (if both available) */}
+          {salonAvailable && mobileAvailable && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Choose Service Location</h3>
+              <RadioGroup
+                value={serviceLocation || ""}
+                onValueChange={(value) => setServiceLocation(value as "salon" | "mobile")}
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card
+                    className={`cursor-pointer transition-all ${
+                      serviceLocation === "salon" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                    }`}
+                    onClick={() => setServiceLocation("salon")}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Building2 className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <RadioGroupItem value="salon" id="salon" />
+                            <Label htmlFor="salon" className="font-semibold text-lg cursor-pointer">
+                              Physical Salon
+                            </Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Visit our facility for your pet's grooming appointment
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={`cursor-pointer transition-all ${
+                      serviceLocation === "mobile" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                    }`}
+                    onClick={() => setServiceLocation("mobile")}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Truck className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <RadioGroupItem value="mobile" id="mobile" />
+                            <Label htmlFor="mobile" className="font-semibold text-lg cursor-pointer">
+                              Mobile Van
+                            </Label>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            We come to you! Grooming service at your location
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
+          {/* Mobile Service Form */}
+          {serviceLocation === "mobile" && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Service Address</h3>
+              
+              {/* Address Input */}
+              <div className="space-y-2">
+                <Label htmlFor="mobile-address">Service Address *</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="mobile-address"
+                    placeholder="Enter your address (e.g., 123 Main St, Downtown, San Francisco)"
+                    value={mobileAddress}
+                    onChange={(e) => setMobileAddress(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                {mobileAddress && mobileAddressValidation && (
+                  <div className="mt-2">
+                    {mobileAddressValidation.isValid ? (
+                      <div className="flex items-center gap-2 text-sm text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Service available in {mobileAddressValidation.zone?.name}</span>
+                      </div>
+                    ) : (
+                      <Card className="border-amber-200 bg-amber-50">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm text-amber-900">{mobileAddressValidation.message}</p>
+                              <Button variant="outline" size="sm" className="mt-2">
+                                Join Waitlist
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Location Details */}
+              {mobileAddressValidation?.isValid && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-semibold">Location Details</h4>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="gate-code">Gate Code (if applicable)</Label>
+                    <Input
+                      id="gate-code"
+                      placeholder="Enter gate code"
+                      value={mobileGateCode}
+                      onChange={(e) => setMobileGateCode(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Parking Instructions</Label>
+                    <RadioGroup
+                      value={mobileParking}
+                      onValueChange={(value) => setMobileParking(value as "street" | "driveway")}
+                    >
+                      <div className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="street" id="street" />
+                          <Label htmlFor="street" className="cursor-pointer">Park on street</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="driveway" id="driveway" />
+                          <Label htmlFor="driveway" className="cursor-pointer">Driveway available</Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {petFlags.isAnxious && (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="stay-in-van"
+                          checked={mobileStayInVan}
+                          onCheckedChange={(checked) => setMobileStayInVan(checked === true)}
+                        />
+                        <Label htmlFor="stay-in-van" className="cursor-pointer">
+                          Aggressive dog—remain in van
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-6">
+                        Our groomer will work with {selectedPet?.name} inside the mobile van for safety.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Salon Service Form */}
+          {serviceLocation === "salon" && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Salon Location</h3>
+              
+              {/* Multi-location Selection */}
+              {availableSalonLocations.length > 1 ? (
+                <div className="space-y-2">
+                  <Label htmlFor="salon-location">Select Location *</Label>
+                  <select
+                    id="salon-location"
+                    value={salonLocationId || ""}
+                    onChange={(e) => setSalonLocationId(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Select a location</option>
+                    {availableSalonLocations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name} - {location.address}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : availableSalonLocations.length === 1 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold mb-1">
+                          Checking in at {availableSalonLocations[0].name}?
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {availableSalonLocations[0].address}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-muted-foreground">
+                      {selectedFacility?.name || "Facility"} - {selectedFacility?.address || "Main location"}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Drop-off Preference */}
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="font-semibold">Drop-off Preference *</h4>
+                <RadioGroup
+                  value={dropOffPreference}
+                  onValueChange={(value) => setDropOffPreference(value as "wait" | "drop-off" | "curbside")}
+                >
+                  <div className="space-y-3">
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        dropOffPreference === "wait" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                      }`}
+                      onClick={() => setDropOffPreference("wait")}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="wait" id="wait" />
+                          <Label htmlFor="wait" className="cursor-pointer flex-1">
+                            <div>
+                              <p className="font-medium">I'll wait in lobby</p>
+                              <p className="text-xs text-muted-foreground">
+                                You'll receive a 15-minute early notification when ready
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        dropOffPreference === "drop-off" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                      }`}
+                      onClick={() => setDropOffPreference("drop-off")}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="drop-off" id="drop-off" />
+                          <Label htmlFor="drop-off" className="cursor-pointer flex-1">
+                            <div>
+                              <p className="font-medium">Drop off and return</p>
+                              <p className="text-xs text-muted-foreground">Standard drop-off process</p>
+                            </div>
+                          </Label>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        dropOffPreference === "curbside" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                      }`}
+                      onClick={() => setDropOffPreference("curbside")}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="curbside" id="curbside" />
+                          <Label htmlFor="curbside" className="cursor-pointer flex-1">
+                            <div>
+                              <p className="font-medium">Curbside pickup</p>
+                              <p className="text-xs text-muted-foreground">
+                                We'll bring your pet to your vehicle when ready
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep5}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleContinueFromStep6}
+                disabled={
+                  (serviceLocation === "mobile" && (!mobileAddress || !mobileAddressValidation?.isValid)) ||
+                  (serviceLocation === "salon" && (!salonLocationId || !dropOffPreference))
+                }
+              >
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
