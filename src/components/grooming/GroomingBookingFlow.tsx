@@ -44,7 +44,8 @@ import {
   MapPin,
   Truck,
   Building2,
-  Navigation
+  Navigation,
+  Loader2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -418,7 +419,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const router = useRouter();
   const { validation, isAvailable, config } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
@@ -440,6 +441,34 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
   const [showAddPet, setShowAddPet] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Step 8: Recurring & Packages
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<4 | 6 | 8 | "custom">(4);
+  const [customFrequency, setCustomFrequency] = useState<number>(4);
+  const [recurringEndAfter, setRecurringEndAfter] = useState<"occurrences" | "date" | "never">("never");
+  const [recurringOccurrences, setRecurringOccurrences] = useState<number>(6);
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(null);
+  const [keepSameGroomer, setKeepSameGroomer] = useState(true);
+  const [useExistingPackage, setUseExistingPackage] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [upsellPackage, setUpsellPackage] = useState(false);
+  const [selectedUpsellPackageId, setSelectedUpsellPackageId] = useState<string | null>(null);
+  const [upgradeToVIP, setUpgradeToVIP] = useState(false);
+  
+  // Step 9: Client Details & Pet Profile Updates
+  const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [petBehaviorUpdate, setPetBehaviorUpdate] = useState("");
+  const [petCoatPhoto, setPetCoatPhoto] = useState<File | null>(null);
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [phoneVerificationCode, setPhoneVerificationCode] = useState("");
+  const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Prevent hydration mismatch by only rendering date-dependent content on client
   useEffect(() => {
@@ -451,6 +480,13 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
     []
   );
+
+  // Check if this is a new client (no previous bookings)
+  const isNewClient = useMemo(() => {
+    if (!customer) return true;
+    const hasBookings = bookings.some((b) => b.clientId === customer.id);
+    return !hasBookings;
+  }, [customer]);
 
   // Get customer's pets with booking info
   const petsWithInfo = useMemo((): PetWithBookingInfo[] => {
@@ -788,6 +824,88 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     
     return total;
   }, [calculatedPrice, selectedAddOns]);
+
+  // Mock data for packages and memberships (in production, fetch from API)
+  const customerPackages = useMemo(() => {
+    // Mock: Customer has a 4-pack grooming package with 3 remaining credits
+    return [
+      {
+        id: "pkg-001",
+        name: "4-Pack Grooming Package",
+        creditsRemaining: 3,
+        creditsTotal: 4,
+        validUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
+      },
+    ];
+  }, []);
+
+  const availablePackages = useMemo(() => {
+    // Mock: Available packages for upsell
+    return [
+      {
+        id: "pkg-upsell-001",
+        name: "4-Pack Grooming Package",
+        description: "Save $40 on 4 grooming appointments",
+        packagePrice: 260, // $65 per appointment
+        totalValue: 300, // $75 per appointment x 4
+        savings: 40,
+        savingsPercentage: 13,
+        credits: 4,
+      },
+    ];
+  }, []);
+
+  const membershipPlan = useMemo(() => {
+    // Mock: VIP membership plan
+    return {
+      id: "vip-001",
+      name: "VIP Membership",
+      monthlyPrice: 29,
+      discountPercentage: 20,
+      perks: ["20% off all grooming", "Priority booking", "Free add-ons"],
+    };
+  }, []);
+
+  // Calculate final price with discounts
+  const finalPrice = useMemo(() => {
+    let price = totalPriceWithAddOns;
+    let discount = 0;
+    let discountReason = "";
+
+    // Apply recurring discount (10%)
+    if (recurringEnabled) {
+      discount = price * 0.1;
+      discountReason = "10% recurring discount";
+    }
+
+    // Apply membership discount (20%)
+    if (upgradeToVIP) {
+      const membershipDiscount = price * 0.2;
+      if (membershipDiscount > discount) {
+        discount = membershipDiscount;
+        discountReason = "20% VIP membership discount";
+      }
+    }
+
+    // If using existing package, price is 0 (covered by package)
+    if (useExistingPackage && selectedPackageId) {
+      return {
+        originalPrice: price,
+        discount: price,
+        finalPrice: 0,
+        discountReason: "Package credit",
+        savings: price,
+      };
+    }
+
+    return {
+      originalPrice: price,
+      discount,
+      finalPrice: price - discount,
+      discountReason,
+      savings: discount,
+    };
+  }, [totalPriceWithAddOns, recurringEnabled, upgradeToVIP, useExistingPackage, selectedPackageId]);
 
   // Check for duration conflicts
   const durationConflict = useMemo(() => {
@@ -1256,9 +1374,175 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       }
     }
     
-    // TODO: Navigate to next step (review & confirmation)
+    // Navigate to Step 8 (Recurring & Packages)
+    setCurrentStep(8);
+  };
+
+  const handleBackToStep7 = () => {
+    setCurrentStep(7);
+  };
+
+  const handleContinueFromStep8 = () => {
+    // Navigate to Step 9 (Client Details & Pet Profile Updates)
+    setCurrentStep(9);
+  };
+
+  const handleBackToStep8 = () => {
+    setCurrentStep(8);
+  };
+
+  // Validate email format
+  const validateEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // Validate phone format
+  const validatePhone = (phone: string): boolean => {
+    // Remove spaces, dashes, parentheses for validation
+    const cleaned = phone.replace(/[\s\-\(\)]/g, "");
+    return /^\d{10,15}$/.test(cleaned);
+  };
+
+  // Send SMS verification code
+  const handleSendVerificationCode = async () => {
+    if (!clientPhone || !validatePhone(clientPhone)) {
+      setFormErrors((prev) => ({
+        ...prev,
+        phone: "Please enter a valid phone number",
+      }));
+      return;
+    }
+
+    setIsSendingCode(true);
+    try {
+      // TODO: Replace with actual API call to send SMS code
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setPhoneVerificationSent(true);
+      setFormErrors((prev) => {
+        const { phone, ...rest } = prev;
+        return rest;
+      });
+      // Mock: In production, this would come from the API
+      // For demo purposes, we'll use a fixed code
+    } catch (error) {
+      setFormErrors((prev) => ({
+        ...prev,
+        phone: "Failed to send verification code. Please try again.",
+      }));
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // Verify SMS code
+  const handleVerifyCode = async () => {
+    if (!phoneVerificationCode || phoneVerificationCode.length !== 6) {
+      setFormErrors((prev) => ({
+        ...prev,
+        verificationCode: "Please enter the 6-digit code",
+      }));
+      return;
+    }
+
+    setIsVerifyingPhone(true);
+    try {
+      // TODO: Replace with actual API call to verify code
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Mock: Accept any 6-digit code for demo
+      if (phoneVerificationCode.length === 6) {
+        setPhoneVerified(true);
+        setFormErrors((prev) => {
+          const { verificationCode, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          verificationCode: "Invalid code. Please try again.",
+        }));
+      }
+    } catch (error) {
+      setFormErrors((prev) => ({
+        ...prev,
+        verificationCode: "Verification failed. Please try again.",
+      }));
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
+
+  // Validate Step 9 form
+  const validateStep9 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!clientName.trim()) {
+      errors.name = "Name is required";
+    }
+
+    if (!clientEmail.trim()) {
+      errors.email = "Email is required";
+    } else if (!validateEmail(clientEmail)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (!clientPhone.trim()) {
+      errors.phone = "Phone is required";
+    } else if (!validatePhone(clientPhone)) {
+      errors.phone = "Please enter a valid phone number";
+    }
+
+    // For new clients, phone must be verified
+    if (isNewClient && !phoneVerified) {
+      errors.phone = "Phone number must be verified";
+    }
+
+    if (specialInstructions.length > 500) {
+      errors.specialInstructions = "Special instructions must be 500 characters or less";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleContinueFromStep9 = () => {
+    if (!validateStep9()) {
+      return;
+    }
+
+    // TODO: Navigate to final step (review & confirmation)
     // For now, just close and show a message
     onOpenChange(false);
+  };
+
+  const handleCoatPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setFormErrors((prev) => ({
+          ...prev,
+          coatPhoto: "Please upload an image file",
+        }));
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setFormErrors((prev) => ({
+          ...prev,
+          coatPhoto: "Image must be less than 5MB",
+        }));
+        return;
+      }
+      setPetCoatPhoto(file);
+      setFormErrors((prev) => {
+        const { coatPhoto, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const handleRemoveCoatPhoto = () => {
+    setPetCoatPhoto(null);
   };
 
   // If grooming is not available, don't show the flow
@@ -1284,7 +1568,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               ? "Step 5: Who would you like to work with?"
               : currentStep === 6
               ? "Step 6: Location & Logistics"
-              : "Step 7: When works for you?"
+              : currentStep === 7
+              ? "Step 7: When works for you?"
+              : currentStep === 8
+              ? "Step 8: Make this hassle-free"
+              : "Step 9: Confirm your details"
             }
           </DialogDescription>
         </DialogHeader>
@@ -2743,6 +3031,649 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                 }
               >
                 Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Step 8: Recurring & Packages (Upsell Layer) */}
+        {currentStep === 8 && (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h4 className="font-semibold">Make this hassle-free</h4>
+            <p className="text-sm text-muted-foreground">
+              Set up recurring appointments, use package credits, or upgrade to save more.
+            </p>
+          </div>
+
+          {/* Recurring Setup */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Recurring Appointments</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="recurring-enabled"
+                    checked={recurringEnabled}
+                    onCheckedChange={(checked) => setRecurringEnabled(checked === true)}
+                  />
+                  <Label htmlFor="recurring-enabled" className="cursor-pointer">
+                    Enable recurring
+                  </Label>
+                </div>
+              </div>
+            </CardHeader>
+            {recurringEnabled && (
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Book this every:</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[4, 6, 8].map((weeks) => (
+                      <Button
+                        key={weeks}
+                        variant={recurringFrequency === weeks ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setRecurringFrequency(weeks as 4 | 6 | 8)}
+                      >
+                        {weeks} weeks
+                      </Button>
+                    ))}
+                    <Button
+                      variant={recurringFrequency === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRecurringFrequency("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+                  {recurringFrequency === "custom" && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={customFrequency}
+                        onChange={(e) => setCustomFrequency(Number(e.target.value))}
+                        className="w-24"
+                      />
+                      <Label>weeks</Label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End after:</Label>
+                  <RadioGroup
+                    value={recurringEndAfter}
+                    onValueChange={(value) => setRecurringEndAfter(value as "occurrences" | "date" | "never")}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="occurrences" id="end-occurrences" />
+                        <Label htmlFor="end-occurrences" className="cursor-pointer flex-1">
+                          <div className="flex items-center gap-2">
+                            <span>After</span>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={recurringOccurrences}
+                              onChange={(e) => setRecurringOccurrences(Number(e.target.value))}
+                              className="w-20"
+                              disabled={recurringEndAfter !== "occurrences"}
+                            />
+                            <span>occurrences</span>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="date" id="end-date" />
+                        <Label htmlFor="end-date" className="cursor-pointer flex-1">
+                          <div className="flex items-center gap-2">
+                            <span>Specific date:</span>
+                            <Input
+                              type="date"
+                              value={recurringEndDate ? recurringEndDate.toISOString().split("T")[0] : ""}
+                              onChange={(e) => setRecurringEndDate(e.target.value ? new Date(e.target.value) : null)}
+                              disabled={recurringEndAfter !== "date"}
+                            />
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="never" id="end-never" />
+                        <Label htmlFor="end-never" className="cursor-pointer">Never (ongoing)</Label>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2 border-t">
+                  <Checkbox
+                    id="keep-same-groomer"
+                    checked={keepSameGroomer}
+                    onCheckedChange={(checked) => setKeepSameGroomer(checked === true)}
+                  />
+                  <Label htmlFor="keep-same-groomer" className="cursor-pointer">
+                    Keep same groomer for all appointments
+                  </Label>
+                </div>
+
+                {recurringEnabled && (
+                  <div className="bg-green-50 border border-green-200 rounded-md p-3 mt-2">
+                    <p className="text-sm text-green-800">
+                      <strong>Save 10% with recurring</strong> — ${finalPrice.finalPrice.toFixed(2)} instead of ${finalPrice.originalPrice.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Package Redemption */}
+          {customerPackages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Use Package Credit</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {customerPackages.map((pkg) => (
+                  <div key={pkg.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+                    <div>
+                      <p className="font-medium">{pkg.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {pkg.creditsRemaining} of {pkg.creditsTotal} credits remaining
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Valid until {pkg.validUntil.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`use-package-${pkg.id}`}
+                        checked={useExistingPackage && selectedPackageId === pkg.id}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setUseExistingPackage(true);
+                            setSelectedPackageId(pkg.id);
+                            setUpgradeToVIP(false); // Can't use both
+                          } else {
+                            setUseExistingPackage(false);
+                            setSelectedPackageId(null);
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`use-package-${pkg.id}`} className="cursor-pointer">
+                        Use 1 credit
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Package Upsell */}
+          {!useExistingPackage && availablePackages.length > 0 && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Save More with a Package
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {availablePackages.map((pkg) => (
+                  <div key={pkg.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{pkg.name}</p>
+                        <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-primary">${pkg.packagePrice}</p>
+                        <p className="text-xs text-muted-foreground line-through">${pkg.totalValue}</p>
+                      </div>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-md p-2">
+                      <p className="text-sm text-green-800">
+                        <strong>Save ${pkg.savings} ({pkg.savingsPercentage}% off)</strong> — ${pkg.savings} off today's booking
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`upsell-package-${pkg.id}`}
+                        checked={upsellPackage && selectedUpsellPackageId === pkg.id}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setUpsellPackage(true);
+                            setSelectedUpsellPackageId(pkg.id);
+                            setUpgradeToVIP(false); // Can't use both
+                          } else {
+                            setUpsellPackage(false);
+                            setSelectedUpsellPackageId(null);
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`upsell-package-${pkg.id}`} className="cursor-pointer">
+                        Add {pkg.name} and save ${pkg.savings} today
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Membership Upsell */}
+          <Card className="border-primary/50 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Star className="h-4 w-4 text-primary" />
+                Upgrade to VIP Membership
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm">
+                  <strong>${membershipPlan.monthlyPrice}/month</strong> — Get {membershipPlan.discountPercentage}% off all grooming services
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  {membershipPlan.perks.map((perk, index) => (
+                    <li key={index}>{perk}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-md p-2">
+                <p className="text-sm text-green-800">
+                  <strong>Save {membershipPlan.discountPercentage}% on this booking</strong> — ${finalPrice.originalPrice * (membershipPlan.discountPercentage / 100)} off today
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="upgrade-vip"
+                  checked={upgradeToVIP}
+                  onCheckedChange={(checked) => {
+                    setUpgradeToVIP(checked === true);
+                    if (checked) {
+                      setUseExistingPackage(false); // Can't use both
+                      setSelectedPackageId(null);
+                      setUpsellPackage(false);
+                      setSelectedUpsellPackageId(null);
+                    }
+                  }}
+                />
+                <Label htmlFor="upgrade-vip" className="cursor-pointer">
+                  Upgrade to VIP for ${membershipPlan.monthlyPrice}/month and get {membershipPlan.discountPercentage}% off this booking
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Price Summary */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Subtotal</p>
+                  <p className="text-sm font-medium">${finalPrice.originalPrice.toFixed(2)}</p>
+                </div>
+                {finalPrice.discount > 0 && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <p className="text-sm">Discount ({finalPrice.discountReason})</p>
+                    <p className="text-sm font-medium">-${finalPrice.discount.toFixed(2)}</p>
+                  </div>
+                )}
+                {useExistingPackage && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <p className="text-sm">Package Credit</p>
+                    <p className="text-sm font-medium">-${finalPrice.originalPrice.toFixed(2)}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <p className="text-base font-semibold">Total</p>
+                  <p className="text-2xl font-bold flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    {useExistingPackage ? (
+                      <span className="text-green-600">$0.00</span>
+                    ) : (
+                      <span>${finalPrice.finalPrice.toFixed(2)}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep7}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContinueFromStep8}>
+                Continue to Review
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Step 9: Client Details & Pet Profile Updates */}
+        {currentStep === 9 && (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h4 className="font-semibold">Confirm your details</h4>
+            <p className="text-sm text-muted-foreground">
+              Please review and update your contact information and pet details.
+            </p>
+          </div>
+
+          {/* Client Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="client-name">
+                  Full Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="client-name"
+                  value={clientName}
+                  onChange={(e) => {
+                    setClientName(e.target.value);
+                    setFormErrors((prev) => {
+                      const { name, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+                  className={formErrors.name ? "border-destructive" : ""}
+                />
+                {formErrors.name && (
+                  <p className="text-sm text-destructive">{formErrors.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="client-email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="client-email"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => {
+                    setClientEmail(e.target.value);
+                    setFormErrors((prev) => {
+                      const { email, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+                  className={formErrors.email ? "border-destructive" : ""}
+                />
+                {formErrors.email && (
+                  <p className="text-sm text-destructive">{formErrors.email}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  We'll send booking confirmations to this email
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="client-phone">
+                  Phone Number <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="client-phone"
+                    type="tel"
+                    value={clientPhone}
+                    onChange={(e) => {
+                      setClientPhone(e.target.value);
+                      setFormErrors((prev) => {
+                        const { phone, ...rest } = prev;
+                        return rest;
+                      });
+                      // Reset verification if phone changes
+                      if (phoneVerified) {
+                        setPhoneVerified(false);
+                        setPhoneVerificationSent(false);
+                        setPhoneVerificationCode("");
+                      }
+                    }}
+                    className={formErrors.phone ? "border-destructive" : ""}
+                    placeholder="(555) 123-4567"
+                  />
+                  {!phoneVerified && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSendVerificationCode}
+                      disabled={!clientPhone || !validatePhone(clientPhone) || isSendingCode}
+                    >
+                      {isSendingCode ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Code"
+                      )}
+                    </Button>
+                  )}
+                  {phoneVerified && (
+                    <div className="flex items-center gap-2 px-3 bg-green-50 border border-green-200 rounded-md">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-700">Verified</span>
+                    </div>
+                  )}
+                </div>
+                {formErrors.phone && (
+                  <p className="text-sm text-destructive">{formErrors.phone}</p>
+                )}
+                {isNewClient && !phoneVerified && (
+                  <p className="text-xs text-muted-foreground">
+                    Phone verification required for new clients to prevent fake bookings
+                  </p>
+                )}
+
+                {/* Phone Verification Code Input */}
+                {phoneVerificationSent && !phoneVerified && (
+                  <div className="space-y-2 mt-2 p-3 bg-muted rounded-md">
+                    <Label htmlFor="verification-code">Enter verification code</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="verification-code"
+                        type="text"
+                        value={phoneVerificationCode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          setPhoneVerificationCode(value);
+                          setFormErrors((prev) => {
+                            const { verificationCode, ...rest } = prev;
+                            return rest;
+                          });
+                        }}
+                        placeholder="000000"
+                        maxLength={6}
+                        className={formErrors.verificationCode ? "border-destructive" : ""}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleVerifyCode}
+                        disabled={!phoneVerificationCode || phoneVerificationCode.length !== 6 || isVerifyingPhone}
+                      >
+                        {isVerifyingPhone ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          "Verify"
+                        )}
+                      </Button>
+                    </div>
+                    {formErrors.verificationCode && (
+                      <p className="text-sm text-destructive">{formErrors.verificationCode}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Enter the 6-digit code sent to {clientPhone}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pet Behavior Update */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Pet Behavior Update - {selectedPet?.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pet-behavior">
+                  Any changes since last visit?
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Please let us know about any new allergies, injuries, or aggression triggers
+                </p>
+                <Textarea
+                  id="pet-behavior"
+                  value={petBehaviorUpdate}
+                  onChange={(e) => setPetBehaviorUpdate(e.target.value)}
+                  placeholder="e.g., New allergy to lavender, recent leg injury, gets anxious around loud noises..."
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pet Coat Photo Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Current Coat Condition Photo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="coat-photo">
+                  Upload current photo of {selectedPet?.name}'s coat condition
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-primary">Helps us prepare!</strong> This helps our groomers understand the current condition of your pet's coat.
+                </p>
+                {!petCoatPhoto ? (
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      id="coat-photo"
+                      accept="image/*"
+                      onChange={handleCoatPhotoUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="coat-photo"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Click to upload or drag and drop
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        PNG, JPG up to 5MB
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                      <img
+                        src={URL.createObjectURL(petCoatPhoto)}
+                        alt="Pet coat condition"
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={handleRemoveCoatPhoto}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {petCoatPhoto.name} ({(petCoatPhoto.size / 1024).toFixed(1)} KB)
+                    </p>
+                  </div>
+                )}
+                {formErrors.coatPhoto && (
+                  <p className="text-sm text-destructive">{formErrors.coatPhoto}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Special Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Special Instructions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="special-instructions">
+                  Additional notes or special requests
+                </Label>
+                <Textarea
+                  id="special-instructions"
+                  value={specialInstructions}
+                  onChange={(e) => {
+                    setSpecialInstructions(e.target.value);
+                    setFormErrors((prev) => {
+                      const { specialInstructions, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+                  placeholder="Any additional information you'd like our groomers to know..."
+                  rows={4}
+                  maxLength={500}
+                  className={formErrors.specialInstructions ? "border-destructive" : ""}
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {formErrors.specialInstructions && (
+                      <span className="text-destructive">{formErrors.specialInstructions}</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {specialInstructions.length}/500 characters
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={handleBackToStep8}>
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContinueFromStep9}>
+                Continue to Review
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
