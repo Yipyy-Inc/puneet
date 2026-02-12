@@ -37,6 +37,8 @@ import {
 import { type TrainingSeries, getDayName, calculateSessionDates } from "@/lib/training-series";
 import { defaultTrainingCourseTypes } from "@/lib/training-config";
 import { validatePrerequisites } from "@/lib/training-prerequisites";
+import { checkCourseProgression } from "@/lib/training-progression";
+import { type TrainingCertificate } from "@/lib/training-enrollment";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -90,6 +92,7 @@ export default function CustomerTrainingPage() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+  const [certificates] = useState<TrainingCertificate[]>([]); // Mock - would come from API
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -100,10 +103,46 @@ export default function CustomerTrainingPage() {
     setIsMounted(true);
   }, []);
 
-  // Filter series based on search and status
+  // Check course progression for all pets (only show unlocked courses)
+  const progressionByPet = useMemo(() => {
+    if (!customer) return {};
+    const progression: Record<number, ReturnType<typeof checkCourseProgression>> = {};
+    
+    customer.pets.forEach((pet) => {
+      if (pet.type === "Dog") {
+        progression[pet.id] = checkCourseProgression(
+          pet.id,
+          defaultTrainingCourseTypes,
+          certificates
+        );
+      }
+    });
+    
+    return progression;
+  }, [customer, certificates]);
+
+  // Filter series based on search, status, and progression (only show unlocked courses)
   const availableSeries = useMemo(() => {
     return series.filter((s) => {
       if (s.status !== "open") return false;
+      
+      // Check if course is unlocked for at least one pet
+      const courseType = defaultTrainingCourseTypes.find((ct) => ct.id === s.courseTypeId);
+      if (!courseType) return false;
+      
+      // If no prerequisites, always show
+      if (courseType.prerequisites.length === 0) {
+        // Show it
+      } else {
+        // Check if unlocked for at least one pet
+        const isUnlocked = Object.values(progressionByPet).some((progression) => {
+          const courseProg = progression.find((p) => p.courseTypeId === s.courseTypeId);
+          return courseProg?.isUnlocked ?? false;
+        });
+        
+        if (!isUnlocked) return false;
+      }
+      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -114,7 +153,7 @@ export default function CustomerTrainingPage() {
       }
       return true;
     });
-  }, [series, searchQuery]);
+  }, [series, searchQuery, progressionByPet]);
 
   // Calculate spots left for each series
   const getSpotsLeft = (seriesItem: TrainingSeries): number => {

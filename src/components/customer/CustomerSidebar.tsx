@@ -71,6 +71,11 @@ export function CustomerSidebar() {
             icon: GraduationCap,
           },
           {
+            title: "Makeup Sessions",
+            url: "/customer/training/makeup",
+            icon: GraduationCap,
+          },
+          {
             title: "Report Cards",
             url: "/customer/report-cards",
             icon: FileText,
