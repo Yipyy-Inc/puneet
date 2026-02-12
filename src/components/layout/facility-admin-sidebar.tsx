@@ -24,6 +24,7 @@ import {
   Camera,
   Lightbulb,
   FileText,
+  GraduationCap,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -92,6 +93,12 @@ export function FacilitySidebar() {
             title: "Grooming",
             url: "/facility/dashboard/services/grooming",
             icon: Scissors,
+            disabled: false,
+          },
+          {
+            title: "Training",
+            url: "/facility/dashboard/services/training",
+            icon: GraduationCap,
             disabled: false,
           },
           {

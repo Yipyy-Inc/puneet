@@ -736,7 +736,7 @@ export const trainingConfig: ModuleConfig = {
     },
   },
   status: {
-    disabled: true,
-    reason: "not implemented yet",
+    disabled: false,
+    reason: undefined,
   },
 };
