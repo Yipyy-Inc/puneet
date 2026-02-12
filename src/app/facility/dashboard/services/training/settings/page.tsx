@@ -10,13 +10,16 @@ import Link from "next/link";
 import { useSettings } from "@/hooks/use-settings";
 
 export default function TrainingSettingsPage() {
-  const { settings, updateModuleStatus } = useSettings();
-  const training = settings?.modules?.find((m) => m.id === "training");
+  const { training, updateTraining } = useSettings();
 
   const handleToggleModule = (enabled: boolean) => {
-    if (training) {
-      updateModuleStatus("training", enabled);
-    }
+    updateTraining({
+      ...training,
+      status: {
+        disabled: !enabled,
+        reason: enabled ? undefined : "Disabled by facility",
+      },
+    });
   };
 
   return (
