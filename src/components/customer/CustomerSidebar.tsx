@@ -12,6 +12,7 @@ import {
   CreditCard,
   Settings,
   Camera,
+  GraduationCap,
 } from "lucide-react";
 import {
   GenericSidebar,
@@ -63,6 +64,16 @@ export function CustomerSidebar() {
             title: "Bookings",
             url: "/customer/bookings",
             icon: Calendar,
+          },
+          {
+            title: "Training",
+            url: "/customer/training",
+            icon: GraduationCap,
+          },
+          {
+            title: "Makeup Sessions",
+            url: "/customer/training/makeup",
+            icon: GraduationCap,
           },
           {
             title: "Report Cards",
