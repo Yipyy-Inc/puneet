@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Calendar, BookOpen, Users } from "lucide-react";
+import { GraduationCap, Calendar, BookOpen, Users, CalendarDays } from "lucide-react";
 import Link from "next/link";
 
 export default function TrainingPage() {
@@ -19,6 +19,25 @@ export default function TrainingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              Training Series
+            </CardTitle>
+            <CardDescription>
+              Create and manage scheduled training class series
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/facility/dashboard/services/training/series">
+                Manage Series
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
               Course Catalog
             </CardTitle>
@@ -31,23 +50,6 @@ export default function TrainingPage() {
               <Link href="/facility/dashboard/services/training/courses">
                 Manage Courses
               </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Class Schedule
-            </CardTitle>
-            <CardDescription>
-              View and manage upcoming classes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Coming Soon
             </Button>
           </CardContent>
         </Card>

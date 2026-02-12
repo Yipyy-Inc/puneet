@@ -9,6 +9,7 @@ import {
   BookOpen,
   Users,
   Settings,
+  CalendarDays,
 } from "lucide-react";
 
 const tabs = [
@@ -16,6 +17,11 @@ const tabs = [
     name: "Calendar",
     href: "/facility/dashboard/services/training",
     icon: Calendar,
+  },
+  {
+    name: "Series",
+    href: "/facility/dashboard/services/training/series",
+    icon: CalendarDays,
   },
   {
     name: "Course Catalog",
