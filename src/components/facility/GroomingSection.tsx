@@ -182,12 +182,44 @@ export function GroomingSection() {
   ) => {
     const previousStatus = appointment.status;
 
+    // Check if check-in is required before starting groom
+    // TODO: Get from grooming settings - requireCheckInBeforeGroom
+    const requireCheckInBeforeGroom = true; // Default: true
+    if (
+      newStatus === "in-progress" &&
+      requireCheckInBeforeGroom &&
+      appointment.status !== "checked-in" &&
+      !appointment.checkInTime
+    ) {
+      toast.error("Check-in required", {
+        description: "Appointment must be checked in before groom can start.",
+      });
+      return;
+    }
+
     // Update the status
     setAppointmentsData((prev) =>
       prev.map((apt) =>
         apt.id === appointment.id ? { ...apt, status: newStatus } : apt,
       ),
     );
+
+    // Send SMS when status changes to "ready-for-pickup"
+    // TODO: Get from grooming settings - autoReadyForPickupSMS
+    const autoReadyForPickupSMS = true; // Default: true
+    if (
+      newStatus === "ready-for-pickup" &&
+      previousStatus !== "ready-for-pickup" &&
+      autoReadyForPickupSMS
+    ) {
+      // In production, send SMS via API
+      console.log(
+        `Sending SMS to ${appointment.ownerPhone}: ${appointment.petName} is ready for pickup!`,
+      );
+      toast.success("SMS sent", {
+        description: `Customer notified that ${appointment.petName} is ready for pickup.`,
+      });
+    }
 
     // If status changed to completed, automatically deduct products
     if (newStatus === "completed" && previousStatus !== "completed") {

@@ -68,8 +68,18 @@ export function checkStylistConflicts(
   endTime: string,
   appointments: GroomingAppointment[],
   excludeAppointmentId?: string, // For editing existing appointments
+  allowParallel?: boolean, // If true, allow overlapping appointments
 ): StylistConflict {
   const conflicts: ConflictDetail[] = [];
+
+  // If parallel grooming is allowed, skip overlap checks
+  if (allowParallel) {
+    return {
+      hasConflict: false,
+      conflicts: [],
+      reason: null,
+    };
+  }
 
   // Filter appointments for this stylist on this date
   const stylistAppointments = appointments.filter(
@@ -81,8 +91,14 @@ export function checkStylistConflicts(
       apt.id !== excludeAppointmentId,
   );
 
-  // Check for time overlaps
+  // Check for time overlaps (only for active appointments)
   for (const apt of stylistAppointments) {
+    // Only check conflicts for active appointments (checked-in, in-progress, ready-for-pickup)
+    const activeStatuses = ["checked-in", "in-progress", "ready-for-pickup"];
+    if (!activeStatuses.includes(apt.status)) {
+      continue;
+    }
+
     if (
       timeRangesOverlap(startTime, endTime, apt.startTime, apt.endTime)
     ) {
@@ -115,6 +131,7 @@ export function checkStylistDailyCapacity(
   appointments: GroomingAppointment[],
   maxDailyAppointments: number,
   excludeAppointmentId?: string,
+  globalMaxPerDay?: number, // Optional global setting override
 ): { hasCapacity: boolean; currentCount: number; remaining: number } {
   const dayAppointments = appointments.filter(
     (apt) =>
@@ -125,11 +142,16 @@ export function checkStylistDailyCapacity(
       apt.id !== excludeAppointmentId,
   );
 
+  // Use global max if provided and it's lower than stylist's capacity
+  const effectiveMax = globalMaxPerDay && globalMaxPerDay > 0
+    ? Math.min(maxDailyAppointments, globalMaxPerDay)
+    : maxDailyAppointments;
+
   const currentCount = dayAppointments.length;
-  const remaining = Math.max(0, maxDailyAppointments - currentCount);
+  const remaining = Math.max(0, effectiveMax - currentCount);
 
   return {
-    hasCapacity: currentCount < maxDailyAppointments,
+    hasCapacity: currentCount < effectiveMax,
     currentCount,
     remaining,
   };
@@ -219,6 +241,7 @@ export function checkStylistAvailability(
   }
 
   // Check for time conflicts
+  // TODO: Pass allowParallelGrooming from grooming settings
   const conflicts = checkStylistConflicts(
     stylist.id,
     date,
@@ -226,15 +249,18 @@ export function checkStylistAvailability(
     endTime,
     appointments,
     excludeAppointmentId,
+    undefined, // allowParallel - would come from settings
   );
 
   // Check daily capacity
+  // TODO: Pass globalMaxPerDay from grooming settings (maxDogsPerStylistPerDay)
   const capacityCheck = checkStylistDailyCapacity(
     stylist.id,
     date,
     appointments,
     capacity.maxDailyAppointments,
     excludeAppointmentId,
+    undefined, // globalMaxPerDay - would come from settings
   );
 
   // Check if stylist can handle this pet
