@@ -86,6 +86,28 @@ export interface GroomingIntake {
   completedAt?: string; // ISO timestamp
 }
 
+export type PriceAdjustmentReason =
+  | "matting-fee"
+  | "de-shedding-upgrade"
+  | "extra-brushing-time"
+  | "behavioral-handling"
+  | "extra-time-required"
+  | "product-upgrade"
+  | "special-treatment"
+  | "other";
+
+export interface PriceAdjustment {
+  id: string;
+  amount: number;
+  reason: PriceAdjustmentReason;
+  customReason?: string; // For "other" reason
+  description: string;
+  addedBy: string; // Groomer name
+  addedAt: string; // ISO timestamp
+  customerNotified: boolean;
+  notifiedAt?: string; // ISO timestamp
+}
+
 export interface GroomingAppointment {
   id: string;
   date: string;
@@ -107,7 +129,9 @@ export interface GroomingAppointment {
   packageId: string;
   packageName: string;
   addOns: string[];
-  totalPrice: number;
+  basePrice: number; // Original price before adjustments
+  priceAdjustments: PriceAdjustment[]; // Dynamic price adjustments
+  totalPrice: number; // basePrice + sum of adjustments
   status: GroomingStatus;
   checkInTime: string | null;
   checkOutTime: string | null;
@@ -708,6 +732,19 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Teeth Brushing", "De-matting (per 15 min)"],
+    basePrice: 85,
+    priceAdjustments: [
+      {
+        id: "adj-001",
+        amount: 25,
+        reason: "matting-fee",
+        description: "Severe matting on back and legs required extra 30 minutes",
+        addedBy: "Jessica Martinez",
+        addedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        customerNotified: true,
+        notifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+    ],
     totalPrice: 110,
     status: "in-progress",
     checkInTime: new Date().toISOString(),
@@ -740,6 +777,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["Photo Session"],
+    basePrice: 100,
+    priceAdjustments: [],
     totalPrice: 100,
     status: "scheduled",
     checkInTime: null,
@@ -771,6 +810,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Anal Gland Expression"],
+    basePrice: 47,
+    priceAdjustments: [],
     totalPrice: 47,
     status: "scheduled",
     checkInTime: null,
@@ -802,6 +843,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Blueberry Facial", "Bandana/Bow"],
+    basePrice: 102,
+    priceAdjustments: [],
     totalPrice: 102,
     status: "scheduled",
     checkInTime: null,
@@ -834,6 +877,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-006",
     packageName: "De-Shedding Treatment",
     addOns: [],
+    basePrice: 70,
+    priceAdjustments: [],
     totalPrice: 70,
     status: "scheduled",
     checkInTime: null,
@@ -865,6 +910,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-005",
     packageName: "Puppy's First Groom",
     addOns: ["Photo Session"],
+    basePrice: 50,
+    priceAdjustments: [],
     totalPrice: 50,
     status: "scheduled",
     checkInTime: null,
@@ -895,6 +942,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Flea & Tick Treatment", "Nail Grinding"],
+    basePrice: 108,
+    priceAdjustments: [],
     totalPrice: 108,
     status: "scheduled",
     checkInTime: null,
@@ -926,6 +975,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["De-matting (per 15 min)", "De-matting (per 15 min)"],
+    basePrice: 115,
+    priceAdjustments: [],
     totalPrice: 115,
     status: "scheduled",
     checkInTime: null,
@@ -957,6 +1008,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-004",
     packageName: "Quick Tidy Up",
     addOns: [],
+    basePrice: 30,
+    priceAdjustments: [],
     totalPrice: 30,
     status: "scheduled",
     checkInTime: null,
@@ -988,6 +1041,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["Photo Session"],
+    basePrice: 100,
+    priceAdjustments: [],
     totalPrice: 100,
     status: "completed",
     checkInTime: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
@@ -1019,6 +1074,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Nail Grinding"],
+    basePrice: 43,
+    priceAdjustments: [],
     totalPrice: 43,
     status: "completed",
     checkInTime: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
@@ -1049,6 +1106,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: [],
+    basePrice: 55,
+    priceAdjustments: [],
     totalPrice: 55,
     status: "no-show",
     checkInTime: null,
@@ -1079,6 +1138,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-006",
     packageName: "De-Shedding Treatment",
     addOns: ["Paw Balm Treatment"],
+    basePrice: 98,
+    priceAdjustments: [],
     totalPrice: 98,
     status: "scheduled",
     checkInTime: null,
@@ -1110,6 +1171,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Teeth Brushing", "Cologne Spritz"],
+    basePrice: 45,
+    priceAdjustments: [],
     totalPrice: 45,
     status: "scheduled",
     checkInTime: null,
@@ -1141,6 +1204,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Nail Grinding"],
+    basePrice: 113,
+    priceAdjustments: [],
     totalPrice: 113,
     status: "scheduled",
     checkInTime: null,

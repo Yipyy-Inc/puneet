@@ -31,9 +31,11 @@ import {
   GroomingStatus,
   stylists,
   type GroomingIntake,
+  type PriceAdjustment,
 } from "@/data/grooming";
 import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
+import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
@@ -1025,9 +1027,25 @@ export function GroomingSection() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Total Price</p>
+                  <p className="text-muted-foreground">Base Price</p>
                   <p className="font-medium">
-                    ${selectedAppointment.totalPrice}
+                    ${(selectedAppointment.basePrice || selectedAppointment.totalPrice).toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Price</p>
+                  <p className="font-medium text-lg">
+                    ${selectedAppointment.totalPrice.toFixed(2)}
+                    {(selectedAppointment.priceAdjustments?.length || 0) > 0 && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        (+
+                        {selectedAppointment.priceAdjustments?.reduce(
+                          (sum, adj) => sum + adj.amount,
+                          0,
+                        ).toFixed(2)}
+                        )
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -1075,6 +1093,90 @@ export function GroomingSection() {
                   </div>
                 )}
               </div>
+
+              {/* Price Adjustments - Show for checked-in, in-progress, or ready-for-pickup */}
+              {(selectedAppointment.status === "checked-in" ||
+                selectedAppointment.status === "in-progress" ||
+                selectedAppointment.status === "ready-for-pickup") && (
+                <div className="pt-4 border-t">
+                  <PriceAdjustmentForm
+                    appointmentId={selectedAppointment.id}
+                    petName={selectedAppointment.petName}
+                    basePrice={selectedAppointment.basePrice || selectedAppointment.totalPrice}
+                    currentTotal={selectedAppointment.totalPrice}
+                    adjustments={selectedAppointment.priceAdjustments || []}
+                    onAddAdjustment={(adjustment) => {
+                      const newAdjustment: PriceAdjustment = {
+                        ...adjustment,
+                        id: `adj-${Date.now()}`,
+                        addedAt: new Date().toISOString(),
+                        notifiedAt: adjustment.customerNotified
+                          ? new Date().toISOString()
+                          : undefined,
+                      };
+
+                      const adjustments = [
+                        ...(selectedAppointment.priceAdjustments || []),
+                        newAdjustment,
+                      ];
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                                basePrice:
+                                  apt.basePrice || apt.totalPrice - totalAdjustments,
+                              }
+                            : apt,
+                        ),
+                      );
+
+                      if (adjustment.customerNotified) {
+                        // In production, send notification
+                        console.log(
+                          `Sending notification to ${selectedAppointment.ownerEmail} about $${adjustment.amount} charge`,
+                        );
+                      }
+                    }}
+                    onRemoveAdjustment={(adjustmentId) => {
+                      const adjustments = (selectedAppointment.priceAdjustments || []).filter(
+                        (adj) => adj.id !== adjustmentId,
+                      );
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                              }
+                            : apt,
+                        ),
+                      );
+                      toast.success("Price adjustment removed");
+                    }}
+                    readOnly={false}
+                  />
+                </div>
+              )}
 
               {/* Intake Form - Show for checked-in, in-progress, or completed appointments */}
               {(selectedAppointment.status === "checked-in" ||

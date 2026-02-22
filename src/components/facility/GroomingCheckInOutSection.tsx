@@ -34,9 +34,11 @@ import {
   GroomingAppointment,
   GroomingStatus,
   type GroomingIntake,
+  type PriceAdjustment,
 } from "@/data/grooming";
 import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
+import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
 
 interface UnifiedGroomingAppointment {
   id: string;
@@ -877,6 +879,110 @@ export function GroomingCheckInOutSection() {
                   />
                 </div>
               )}
+
+              {/* Price Adjustments - Show for checked-in or in-progress appointments */}
+              {(checkInOutMode === "check-in" || checkInOutMode === "view") &&
+                (selectedAppointment.status === "checked-in" ||
+                  selectedAppointment.status === "in-progress" ||
+                  selectedAppointment.status === "ready-for-pickup") && (
+                  <div className="pt-4 border-t">
+                    <PriceAdjustmentForm
+                      appointmentId={selectedAppointment.id}
+                      petName={selectedAppointment.petName}
+                      basePrice={
+                        appointmentsData.find((a) => a.id === selectedAppointment.id)
+                          ?.basePrice || selectedAppointment.totalPrice
+                      }
+                      currentTotal={selectedAppointment.totalPrice}
+                      adjustments={
+                        appointmentsData.find((a) => a.id === selectedAppointment.id)
+                          ?.priceAdjustments || []
+                      }
+                      onAddAdjustment={(adjustment) => {
+                        const appointment = appointmentsData.find(
+                          (a) => a.id === selectedAppointment.id,
+                        );
+                        if (!appointment) return;
+
+                        const newAdjustment: PriceAdjustment = {
+                          ...adjustment,
+                          id: `adj-${Date.now()}`,
+                          addedAt: new Date().toISOString(),
+                          notifiedAt: adjustment.customerNotified
+                            ? new Date().toISOString()
+                            : undefined,
+                        };
+
+                        const adjustments = [
+                          ...(appointment.priceAdjustments || []),
+                          newAdjustment,
+                        ];
+                        const totalAdjustments = adjustments.reduce(
+                          (sum, adj) => sum + adj.amount,
+                          0,
+                        );
+                        const newTotal =
+                          (appointment.basePrice || appointment.totalPrice) +
+                          totalAdjustments;
+
+                        setAppointmentsData((prev) =>
+                          prev.map((apt) =>
+                            apt.id === selectedAppointment.id
+                              ? {
+                                  ...apt,
+                                  priceAdjustments: adjustments,
+                                  totalPrice: newTotal,
+                                  basePrice:
+                                    apt.basePrice || apt.totalPrice - totalAdjustments,
+                                }
+                              : apt,
+                          ),
+                        );
+
+                        if (adjustment.customerNotified) {
+                          console.log(
+                            `Sending notification to ${appointment.ownerEmail} about $${adjustment.amount} charge`,
+                          );
+                        }
+                      }}
+                      onRemoveAdjustment={(adjustmentId) => {
+                        const appointment = appointmentsData.find(
+                          (a) => a.id === selectedAppointment.id,
+                        );
+                        if (!appointment) return;
+
+                        const adjustments = (appointment.priceAdjustments || []).filter(
+                          (adj) => adj.id !== adjustmentId,
+                        );
+                        const totalAdjustments = adjustments.reduce(
+                          (sum, adj) => sum + adj.amount,
+                          0,
+                        );
+                        const newTotal =
+                          (appointment.basePrice || appointment.totalPrice) +
+                          totalAdjustments;
+
+                        setAppointmentsData((prev) =>
+                          prev.map((apt) =>
+                            apt.id === selectedAppointment.id
+                              ? {
+                                  ...apt,
+                                  priceAdjustments: adjustments,
+                                  totalPrice: newTotal,
+                                }
+                              : apt,
+                          ),
+                        );
+                        toast.success("Price adjustment removed");
+                      }}
+                      readOnly={
+                        selectedAppointment.status === "completed" ||
+                        selectedAppointment.status === "cancelled" ||
+                        selectedAppointment.status === "no-show"
+                      }
+                    />
+                  </div>
+                )}
 
               {/* Intake Form - Show for checked-in or in-progress appointments */}
               {(checkInOutMode === "check-in" || checkInOutMode === "view") &&
