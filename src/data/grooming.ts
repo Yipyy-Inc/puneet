@@ -2,7 +2,9 @@
 
 export type GroomingStatus =
   | "scheduled"
+  | "checked-in"
   | "in-progress"
+  | "ready-for-pickup"
   | "completed"
   | "cancelled"
   | "no-show";
@@ -82,6 +84,8 @@ export interface GroomingAppointment {
   addOns: string[];
   totalPrice: number;
   status: GroomingStatus;
+  checkInTime: string | null;
+  checkOutTime: string | null;
   notes: string;
   specialInstructions: string;
   allergies: string[];
@@ -653,6 +657,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Teeth Brushing", "De-matting (per 15 min)"],
     totalPrice: 110,
     status: "in-progress",
+    checkInTime: new Date().toISOString(),
+    checkOutTime: null,
     notes: "Regular client, prefers short cut for summer",
     specialInstructions: "Use hypoallergenic shampoo",
     allergies: ["Lavender scent"],
@@ -683,6 +689,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Photo Session"],
     totalPrice: 100,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "First spa day - take extra photos!",
     specialInstructions: "",
     allergies: [],
@@ -712,6 +720,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Anal Gland Expression"],
     totalPrice: 47,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Sensitive ears - be gentle",
     allergies: [],
@@ -741,6 +751,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Blueberry Facial", "Bandana/Bow"],
     totalPrice: 102,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Show cut - Continental style",
     specialInstructions: "Owner will bring show supplies",
     allergies: [],
@@ -771,6 +783,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: [],
     totalPrice: 70,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Seasonal shed - needs extra deshedding",
     specialInstructions: "",
     allergies: [],
@@ -800,6 +814,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Photo Session"],
     totalPrice: 50,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "4 month old puppy - first groom ever!",
     specialInstructions: "Take it slow, lots of breaks",
     allergies: [],
@@ -828,6 +844,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Flea & Tick Treatment", "Nail Grinding"],
     totalPrice: 108,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Muzzle recommended for nail work",
     allergies: [],
@@ -857,6 +875,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["De-matting (per 15 min)", "De-matting (per 15 min)"],
     totalPrice: 115,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Has some matting near ears",
     specialInstructions: "Owner wants to keep length if possible",
     allergies: [],
@@ -886,6 +906,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: [],
     totalPrice: 30,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Quick bath and nails only",
     specialInstructions: "",
     allergies: [],
@@ -915,6 +937,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Photo Session"],
     totalPrice: 100,
     status: "completed",
+    checkInTime: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    checkOutTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     notes: "Great session, Daisy loved the facial!",
     specialInstructions: "",
     allergies: [],
@@ -944,6 +968,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Nail Grinding"],
     totalPrice: 43,
     status: "completed",
+    checkInTime: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    checkOutTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     notes: "",
     specialInstructions: "",
     allergies: [],
@@ -972,6 +998,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: [],
     totalPrice: 55,
     status: "no-show",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Client did not show up, no call",
     specialInstructions: "",
     allergies: [],
@@ -1000,6 +1028,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Paw Balm Treatment"],
     totalPrice: 98,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Giant breed, needs extra time",
     specialInstructions: "May need two groomers for handling",
     allergies: [],
@@ -1029,6 +1059,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Teeth Brushing", "Cologne Spritz"],
     totalPrice: 45,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Heart murmur - keep calm",
     allergies: [],
@@ -1058,6 +1090,8 @@ export const groomingAppointments: GroomingAppointment[] = [
     addOns: ["Nail Grinding"],
     totalPrice: 113,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Very gentle giant",
     specialInstructions: "",
     allergies: [],

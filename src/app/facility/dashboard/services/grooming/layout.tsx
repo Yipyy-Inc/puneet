@@ -10,6 +10,8 @@ import {
   Package,
   BoxesIcon,
   Settings,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 
 const tabs = [
@@ -17,6 +19,16 @@ const tabs = [
     name: "Calendar",
     href: "/facility/dashboard/services/grooming",
     icon: Calendar,
+  },
+  {
+    name: "Check-In",
+    href: "/facility/dashboard/services/grooming/check-in",
+    icon: LogIn,
+  },
+  {
+    name: "Check-Out",
+    href: "/facility/dashboard/services/grooming/check-out",
+    icon: LogOut,
   },
   {
     name: "Stylists",
