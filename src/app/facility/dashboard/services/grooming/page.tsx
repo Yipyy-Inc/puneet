@@ -35,8 +35,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  LogIn,
+  Package,
 } from "lucide-react";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
+import { toast } from "sonner";
 import {
   groomingAppointments,
   groomingPackages,
@@ -58,6 +61,16 @@ const statusColors: Record<
   GroomingStatus,
   { bg: string; text: string; border: string }
 > = {
+  "checked-in": {
+    bg: "bg-blue-50 dark:bg-blue-950/20",
+    text: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-200 dark:border-blue-800",
+  },
+  "ready-for-pickup": {
+    bg: "bg-green-50 dark:bg-green-950/20",
+    text: "text-green-700 dark:text-green-300",
+    border: "border-green-200 dark:border-green-800",
+  },
   scheduled: {
     bg: "bg-blue-100",
     text: "text-blue-700",
@@ -87,7 +100,9 @@ const statusColors: Record<
 
 const statusIcons: Record<GroomingStatus, React.ReactNode> = {
   scheduled: <Clock className="h-3 w-3" />,
+  "checked-in": <LogIn className="h-3 w-3" />,
   "in-progress": <Scissors className="h-3 w-3" />,
+  "ready-for-pickup": <Package className="h-3 w-3" />,
   completed: <CheckCircle2 className="h-3 w-3" />,
   cancelled: <XCircle className="h-3 w-3" />,
   "no-show": <AlertCircle className="h-3 w-3" />,
@@ -865,64 +880,70 @@ export default function GroomingCalendarPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {getSelectedPackage() && (
-                  <div className="rounded-lg bg-muted p-3 space-y-2">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {getSelectedPackage()?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {getSelectedPackage()?.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs flex-wrap">
-                      <Badge variant="outline">
-                        Duration: {getSelectedPackage()?.duration} min
-                      </Badge>
-                      {formData.startTime && (
-                        <Badge variant="outline" className="bg-blue-50">
-                          End: {(() => {
-                            const [hours, minutes] = formData.startTime.split(":").map(Number);
-                            const startMinutes = hours * 60 + minutes;
-                            const endMinutes = startMinutes + (getSelectedPackage()?.duration || 0);
-                            const endHours = Math.floor(endMinutes / 60);
-                            const endMins = endMinutes % 60;
-                            return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
-                          })()}
-                        </Badge>
-                      )}
-                      {getSelectedPackage()?.requiresEvaluation && (
-                        <Badge className="bg-orange-100 text-orange-700">
-                          Evaluation Required
-                        </Badge>
-                      )}
-                      {getSelectedPackage()?.assignedStylistIds &&
-                        getSelectedPackage()?.assignedStylistIds.length > 0 && (
-                          <Badge variant="secondary">
-                            {getSelectedPackage()?.assignedStylistIds.length} stylist(s)
-                          </Badge>
-                        )}
-                    </div>
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground">Includes:</p>
-                      <ul className="text-xs mt-1 space-y-0.5">
-                        {getSelectedPackage()?.includes.map((item, idx) => (
-                          <li key={idx}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <p className="text-sm font-semibold mt-2">
-                      Price: ${calculatePrice()}
-                    </p>
-                    {getSelectedPackage()?.requiresEvaluation && (
-                      <div className="mt-2 p-2 rounded bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
-                        <p className="text-xs text-orange-800 dark:text-orange-200">
-                          ⚠️ This package requires a valid pet evaluation before booking.
+                {(() => {
+                  const selectedPackage = getSelectedPackage();
+                  if (!selectedPackage) return null;
+                  
+                  const assignedStylistIds = selectedPackage.assignedStylistIds;
+                  
+                  return (
+                    <div className="rounded-lg bg-muted p-3 space-y-2">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {selectedPackage.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selectedPackage.description}
                         </p>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <Badge variant="outline">
+                          Duration: {selectedPackage.duration} min
+                        </Badge>
+                        {formData.startTime && (
+                          <Badge variant="outline" className="bg-blue-50">
+                            End: {(() => {
+                              const [hours, minutes] = formData.startTime.split(":").map(Number);
+                              const startMinutes = hours * 60 + minutes;
+                              const endMinutes = startMinutes + selectedPackage.duration;
+                              const endHours = Math.floor(endMinutes / 60);
+                              const endMins = endMinutes % 60;
+                              return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                            })()}
+                          </Badge>
+                        )}
+                        {selectedPackage.requiresEvaluation && (
+                          <Badge className="bg-orange-100 text-orange-700">
+                            Evaluation Required
+                          </Badge>
+                        )}
+                        {assignedStylistIds && assignedStylistIds.length > 0 && (
+                          <Badge variant="secondary">
+                            {assignedStylistIds.length} stylist(s)
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-muted-foreground">Includes:</p>
+                        <ul className="text-xs mt-1 space-y-0.5">
+                          {selectedPackage.includes.map((item, idx) => (
+                            <li key={idx}>• {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <p className="text-sm font-semibold mt-2">
+                        Price: ${calculatePrice()}
+                      </p>
+                      {selectedPackage.requiresEvaluation && (
+                        <div className="mt-2 p-2 rounded bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
+                          <p className="text-xs text-orange-800 dark:text-orange-200">
+                            ⚠️ This package requires a valid pet evaluation before booking.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

@@ -230,7 +230,7 @@ export function checkStylistAvailability(
         reason: "Stylist capacity configuration missing",
         conflicts: [
           {
-            type: "configuration",
+            type: "capacity",
             message: "Stylist capacity configuration is missing",
           },
         ],

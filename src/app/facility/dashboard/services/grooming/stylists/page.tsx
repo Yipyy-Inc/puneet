@@ -50,8 +50,6 @@ import {
 import { stylists, stylistAvailability, type Stylist, groomingAppointments } from "@/data/grooming";
 import { toast } from "sonner";
 import { calculateStylistPerformance } from "@/lib/stylist-performance";
-import { useMemo } from "react";
-import { DollarSign, TrendingDown, Timer } from "lucide-react";
 
 type StylistWithRecord = Stylist & Record<string, unknown>;
 

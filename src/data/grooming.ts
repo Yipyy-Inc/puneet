@@ -368,6 +368,15 @@ export const stylists: Stylist[] = [
     rating: 4.95,
     totalAppointments: 2100,
     hireDate: "2017-01-10",
+    capacity: {
+      maxDailyAppointments: 10,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium", "large"],
+      skillLevel: "master",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-005",
@@ -388,6 +397,15 @@ export const stylists: Stylist[] = [
     rating: 4.5,
     totalAppointments: 450,
     hireDate: "2022-04-20",
+    capacity: {
+      maxDailyAppointments: 12,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium"],
+      skillLevel: "junior",
+      canHandleMatted: false,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
 ];
 

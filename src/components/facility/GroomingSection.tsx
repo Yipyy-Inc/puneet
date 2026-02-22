@@ -553,7 +553,7 @@ export function GroomingSection() {
             Arrived
           </Button>
         );
-      case "pending":
+      case "scheduled":
         const available = isGroomerAvailable(appointment.stylistId);
         return (
           <Button
@@ -970,7 +970,7 @@ export function GroomingSection() {
                     Mark Arrived
                   </Button>
                 )}
-                {selectedAppointment?.status === "pending" && (
+                {selectedAppointment?.status === "checked-in" && (
                   <Button
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={handleDetailsCheckIn}
@@ -1247,10 +1247,7 @@ export function GroomingSection() {
               )}
 
               {/* Intake Form - Show for checked-in, in-progress, or completed appointments */}
-              {(selectedAppointment.status === "checked-in" ||
-                selectedAppointment.status === "in-progress" ||
-                selectedAppointment.status === "ready-for-pickup" ||
-                selectedAppointment.status === "completed") && (
+              {selectedAppointment && (
                 <div className="pt-4 border-t">
                   <GroomingIntakeForm
                     appointmentId={selectedAppointment.id}

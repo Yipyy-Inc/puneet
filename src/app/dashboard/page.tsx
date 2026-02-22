@@ -729,8 +729,8 @@ export default function DashboardPage() {
                       boxShadow:
                         "0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 8px 32px -4px rgba(0, 0, 0, 0.1)",
                     }}
-                    formatter={(value: number) => [
-                      `$${value.toLocaleString()}`,
+                    formatter={(value: number | undefined) => [
+                      `$${(value || 0).toLocaleString()}`,
                     ]}
                   />
                   <Legend

@@ -298,8 +298,8 @@ export function CustomerAcquisitionMetrics() {
                       borderRadius: "12px",
                       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                     }}
-                    formatter={(value: number) => [
-                      value.toLocaleString(),
+                    formatter={(value: number | undefined) => [
+                      (value || 0).toLocaleString(),
                       "Customers",
                     ]}
                   />
@@ -349,7 +349,7 @@ export function CustomerAcquisitionMetrics() {
                     borderRadius: "12px",
                     boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                   }}
-                  formatter={(value: number) => [`$${value}`, ""]}
+                  formatter={(value: number | undefined) => [`$${value || 0}`, ""]}
                 />
                 <Legend />
                 <Bar

@@ -9,6 +9,7 @@ import type {
   GroomingAppointment,
   GroomingPackage,
   GroomingProduct,
+  ProductUsage,
   ProductUsageLog,
 } from "@/data/grooming";
 import { groomingPackages, groomingProducts } from "@/data/grooming";

@@ -124,6 +124,13 @@ export default function GroomingPackagesPage() {
       isPopular: false,
       assignedStylistIds: [],
       requiresEvaluation: false,
+      productUsage: [],
+    });
+    setNewProductUsage({
+      productId: "",
+      quantity: 0,
+      unit: "",
+      isOptional: false,
     });
     setIsAddEditModalOpen(true);
   };
@@ -141,8 +148,51 @@ export default function GroomingPackagesPage() {
       isPopular: pkg.isPopular || false,
       assignedStylistIds: pkg.assignedStylistIds || [],
       requiresEvaluation: pkg.requiresEvaluation || false,
+      productUsage: pkg.productUsage || [],
+    });
+    setNewProductUsage({
+      productId: "",
+      quantity: 0,
+      unit: "",
+      isOptional: false,
     });
     setIsAddEditModalOpen(true);
+  };
+
+  const handleAddProductUsage = () => {
+    if (!newProductUsage.productId || newProductUsage.quantity <= 0) {
+      return;
+    }
+
+    const product = activeProducts.find((p) => p.id === newProductUsage.productId);
+    if (!product) return;
+
+    const usage: ProductUsage = {
+      productId: product.id,
+      productName: product.name,
+      quantity: newProductUsage.quantity,
+      unit: newProductUsage.unit || product.unit,
+      isOptional: newProductUsage.isOptional,
+    };
+
+    setFormData({
+      ...formData,
+      productUsage: [...formData.productUsage, usage],
+    });
+
+    setNewProductUsage({
+      productId: "",
+      quantity: 0,
+      unit: "",
+      isOptional: false,
+    });
+  };
+
+  const handleRemoveProductUsage = (index: number) => {
+    setFormData({
+      ...formData,
+      productUsage: formData.productUsage.filter((_, i) => i !== index),
+    });
   };
 
   const handleSave = () => {
@@ -864,6 +914,7 @@ export default function GroomingPackagesPage() {
                 <p className="text-xs text-muted-foreground">
                   Products will be automatically deducted from inventory when an appointment using this package is completed.
                 </p>
+              )}
             </div>
 
             <Separator />

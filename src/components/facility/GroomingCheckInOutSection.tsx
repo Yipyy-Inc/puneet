@@ -257,26 +257,36 @@ export function GroomingCheckInOutSection() {
 
       // Automatically deduct products from inventory
       import("@/lib/grooming-inventory-deduction").then(({ deductProductsForAppointment }) => {
-        const deductionResult = deductProductsForAppointment(
-          selectedAppointment,
-          selectedAppointment.stylistName,
-        );
+        import("@/data/grooming").then(({ groomingAppointments }) => {
+          const originalAppointment = groomingAppointments.find(
+            (apt) => apt.id === selectedAppointment.id
+          );
+          
+          if (!originalAppointment) {
+            console.warn("Could not find original appointment for product deduction");
+            return;
+          }
+          
+          const deductionResult = deductProductsForAppointment(
+            originalAppointment,
+            selectedAppointment.stylistName,
+          );
 
-        if (deductionResult.success && deductionResult.deductions.length > 0) {
-          const productsDeducted = deductionResult.deductions
-            .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
-            .join(", ");
+          if (deductionResult.success && deductionResult.deductions.length > 0) {
+            const productsDeducted = deductionResult.deductions
+              .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
+              .join(", ");
 
-          // Check for low stock alerts
-          const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
-          if (lowStockProducts.length > 0) {
-            toast.warning("Products deducted - Low stock alert", {
-              description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
-              duration: 8000,
-            });
-          } else {
-            toast.success("Products deducted from inventory", {
-              description: productsDeducted,
+            // Check for low stock alerts
+            const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
+            if (lowStockProducts.length > 0) {
+              toast.warning("Products deducted - Low stock alert", {
+                description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+                duration: 8000,
+              });
+            } else {
+              toast.success("Products deducted from inventory", {
+                description: productsDeducted,
               duration: 5000,
             });
           }
@@ -287,6 +297,7 @@ export function GroomingCheckInOutSection() {
             duration: 8000,
           });
         }
+        });
       });
 
       toast.success(`${selectedAppointment.petName} - Checked Out`, {
@@ -915,10 +926,7 @@ export function GroomingCheckInOutSection() {
               )}
 
               {/* Price Adjustments - Show for checked-in or in-progress appointments */}
-              {(checkInOutMode === "check-in" || checkInOutMode === "view") &&
-                (selectedAppointment.status === "checked-in" ||
-                  selectedAppointment.status === "in-progress" ||
-                  selectedAppointment.status === "ready-for-pickup") && (
+              {(checkInOutMode === "check-in" || checkInOutMode === "view") && (
                   <div className="pt-4 border-t">
                     <PriceAdjustmentForm
                       appointmentId={selectedAppointment.id}
@@ -1019,9 +1027,7 @@ export function GroomingCheckInOutSection() {
                 )}
 
               {/* Intake Form - Show for checked-in or in-progress appointments */}
-              {(checkInOutMode === "check-in" || checkInOutMode === "view") &&
-                (selectedAppointment.status === "checked-in" ||
-                  selectedAppointment.status === "in-progress") && (
+              {(checkInOutMode === "check-in" || checkInOutMode === "view") && (
                   <div className="pt-4 border-t">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">Intake Form</h3>
