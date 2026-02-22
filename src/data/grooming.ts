@@ -144,6 +144,14 @@ export interface GroomingAppointment {
   onlineBooking: boolean;
 }
 
+export interface ProductUsage {
+  productId: string;
+  productName: string;
+  quantity: number; // Amount used per service (e.g., 10ml, 0.1 bottles)
+  unit: string; // Unit of measurement (e.g., "ml", "bottle", "oz")
+  isOptional?: boolean; // If true, product may not always be used
+}
+
 export interface GroomingPackage {
   id: string;
   name: string;
@@ -163,6 +171,7 @@ export interface GroomingPackage {
   createdAt: string;
   assignedStylistIds?: string[]; // Optional: restrict package to specific stylists
   requiresEvaluation?: boolean; // If true, pet must have valid evaluation before booking
+  productUsage?: ProductUsage[]; // Products used for this package and their quantities
 }
 
 export interface GroomingAddOn {
@@ -584,6 +593,22 @@ export const groomingPackages: GroomingPackage[] = [
     createdAt: "2023-01-15",
     assignedStylistIds: [], // Available to all stylists
     requiresEvaluation: false,
+    productUsage: [
+      {
+        productId: "prod-001",
+        productName: "Oatmeal Soothing Shampoo",
+        quantity: 0.1, // 10% of a bottle (16oz = ~473ml, so ~47ml)
+        unit: "bottle",
+        isOptional: false,
+      },
+      {
+        productId: "prod-005",
+        productName: "Conditioning Rinse",
+        quantity: 0.08,
+        unit: "bottle",
+        isOptional: false,
+      },
+    ],
   },
   {
     id: "groom-pkg-002",

@@ -255,6 +255,40 @@ export function GroomingCheckInOutSection() {
         }),
       );
 
+      // Automatically deduct products from inventory
+      import("@/lib/grooming-inventory-deduction").then(({ deductProductsForAppointment }) => {
+        const deductionResult = deductProductsForAppointment(
+          selectedAppointment,
+          selectedAppointment.stylistName,
+        );
+
+        if (deductionResult.success && deductionResult.deductions.length > 0) {
+          const productsDeducted = deductionResult.deductions
+            .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
+            .join(", ");
+
+          // Check for low stock alerts
+          const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
+          if (lowStockProducts.length > 0) {
+            toast.warning("Products deducted - Low stock alert", {
+              description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+              duration: 8000,
+            });
+          } else {
+            toast.success("Products deducted from inventory", {
+              description: productsDeducted,
+              duration: 5000,
+            });
+          }
+        } else if (deductionResult.errors.length > 0) {
+          const errorMessages = deductionResult.errors.map((e) => e.reason).join(", ");
+          toast.error("Inventory deduction failed", {
+            description: errorMessages,
+            duration: 8000,
+          });
+        }
+      });
+
       toast.success(`${selectedAppointment.petName} - Checked Out`, {
         description: "Grooming appointment completed",
         action: {

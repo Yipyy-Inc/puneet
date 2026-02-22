@@ -18,6 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Edit,
   Trash2,
@@ -27,6 +34,7 @@ import {
   Clock,
   TrendingUp,
   Star,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +46,8 @@ import {
   groomingPackages,
   type GroomingPackage,
   getActiveStylists,
+  groomingProducts,
+  type ProductUsage,
 } from "@/data/grooming";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
@@ -70,9 +80,18 @@ export default function GroomingPackagesPage() {
     isPopular: false,
     assignedStylistIds: [] as string[],
     requiresEvaluation: false,
+    productUsage: [] as ProductUsage[],
+  });
+
+  const [newProductUsage, setNewProductUsage] = useState({
+    productId: "",
+    quantity: 0,
+    unit: "",
+    isOptional: false,
   });
 
   const activeStylists = getActiveStylists();
+  const activeProducts = groomingProducts.filter((p) => p.isActive);
 
   // Stats
   const activePackages = groomingPackages.filter((p) => p.isActive).length;
@@ -690,6 +709,161 @@ export default function GroomingPackagesPage() {
                   </p>
                 </div>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Product Usage Configuration */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Product Usage (Auto-deducted on completion)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Configure products used for this package
+                </p>
+              </div>
+
+              {/* Existing Product Usage */}
+              {formData.productUsage.length > 0 && (
+                <div className="space-y-2 border rounded-lg p-3">
+                  {formData.productUsage.map((usage, index) => {
+                    const product = activeProducts.find((p) => p.id === usage.productId);
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded bg-muted"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              {usage.productName}
+                            </span>
+                            {usage.isOptional && (
+                              <Badge variant="outline" className="text-xs">
+                                Optional
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {usage.quantity} {usage.unit} per service
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveProductUsage(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add New Product Usage */}
+              <div className="space-y-2 p-3 border-2 border-dashed rounded-lg">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="product-select" className="text-xs">
+                      Product
+                    </Label>
+                    <Select
+                      value={newProductUsage.productId}
+                      onValueChange={(value) => {
+                        const product = activeProducts.find((p) => p.id === value);
+                        setNewProductUsage({
+                          ...newProductUsage,
+                          productId: value,
+                          unit: product?.unit || "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger id="product-select" className="h-8">
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeProducts.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} ({product.brand}) - Stock: {product.currentStock} {product.unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="quantity" className="text-xs">
+                      Quantity per service
+                    </Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newProductUsage.quantity || ""}
+                      onChange={(e) =>
+                        setNewProductUsage({
+                          ...newProductUsage,
+                          quantity: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="h-8"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="unit" className="text-xs">
+                      Unit
+                    </Label>
+                    <Input
+                      id="unit"
+                      value={newProductUsage.unit}
+                      onChange={(e) =>
+                        setNewProductUsage({
+                          ...newProductUsage,
+                          unit: e.target.value,
+                        })
+                      }
+                      placeholder="ml, oz, bottle, etc."
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isOptional"
+                        checked={newProductUsage.isOptional}
+                        onCheckedChange={(checked) =>
+                          setNewProductUsage({
+                            ...newProductUsage,
+                            isOptional: checked as boolean,
+                          })
+                        }
+                      />
+                      <Label htmlFor="isOptional" className="text-xs">
+                        Optional
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleAddProductUsage}
+                  disabled={!newProductUsage.productId || newProductUsage.quantity <= 0}
+                  className="w-full"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Product
+                </Button>
+              </div>
+
+              {formData.productUsage.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Products will be automatically deducted from inventory when an appointment using this package is completed.
+                </p>
             </div>
 
             <Separator />
