@@ -30,8 +30,10 @@ import {
   GroomingAppointment,
   GroomingStatus,
   stylists,
+  type GroomingIntake,
 } from "@/data/grooming";
 import { clients } from "@/data/clients";
+import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
@@ -1073,6 +1075,35 @@ export function GroomingSection() {
                   </div>
                 )}
               </div>
+
+              {/* Intake Form - Show for checked-in, in-progress, or completed appointments */}
+              {(selectedAppointment.status === "checked-in" ||
+                selectedAppointment.status === "in-progress" ||
+                selectedAppointment.status === "ready-for-pickup" ||
+                selectedAppointment.status === "completed") && (
+                <div className="pt-4 border-t">
+                  <GroomingIntakeForm
+                    appointmentId={selectedAppointment.id}
+                    petName={selectedAppointment.petName}
+                    initialData={selectedAppointment.intake}
+                    onSave={(intake: GroomingIntake) => {
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? { ...apt, intake }
+                            : apt,
+                        ),
+                      );
+                      toast.success("Intake form saved");
+                    }}
+                    readOnly={
+                      selectedAppointment.status === "completed" ||
+                      selectedAppointment.status === "cancelled" ||
+                      selectedAppointment.status === "no-show"
+                    }
+                  />
+                </div>
+              )}
             </div>
           )}
         </Modal>

@@ -61,6 +61,18 @@ export interface StylistTimeOff {
   status: "pending" | "approved" | "denied";
 }
 
+export interface GroomingIntake {
+  coatCondition: "normal" | "matted" | "severely-matted";
+  behaviorNotes: string;
+  allergies: string[];
+  specialInstructions: string;
+  beforePhotos: string[]; // URLs
+  mattingFeeWarning: boolean;
+  mattingFeeAmount?: number;
+  completedBy?: string; // Groomer name
+  completedAt?: string; // ISO timestamp
+}
+
 export interface GroomingAppointment {
   id: string;
   date: string;
@@ -89,6 +101,7 @@ export interface GroomingAppointment {
   notes: string;
   specialInstructions: string;
   allergies: string[];
+  intake?: GroomingIntake; // Intake form data
   lastGroomDate?: string;
   createdAt: string;
   onlineBooking: boolean;

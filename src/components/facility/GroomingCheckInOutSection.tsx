@@ -33,8 +33,10 @@ import {
   groomingAppointments,
   GroomingAppointment,
   GroomingStatus,
+  type GroomingIntake,
 } from "@/data/grooming";
 import { clients } from "@/data/clients";
+import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 
 interface UnifiedGroomingAppointment {
   id: string;
@@ -100,6 +102,7 @@ export function GroomingCheckInOutSection() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<UnifiedGroomingAppointment | null>(null);
   const [handlerName, setHandlerName] = useState("");
+  const [showIntakeForm, setShowIntakeForm] = useState(false);
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -874,6 +877,52 @@ export function GroomingCheckInOutSection() {
                   />
                 </div>
               )}
+
+              {/* Intake Form - Show for checked-in or in-progress appointments */}
+              {(checkInOutMode === "check-in" || checkInOutMode === "view") &&
+                (selectedAppointment.status === "checked-in" ||
+                  selectedAppointment.status === "in-progress") && (
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Intake Form</h3>
+                      {checkInOutMode === "check-in" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowIntakeForm(!showIntakeForm)}
+                        >
+                          {showIntakeForm ? "Hide" : "Show"} Intake Form
+                        </Button>
+                      )}
+                    </div>
+                    {(showIntakeForm || checkInOutMode === "view") && (
+                      <GroomingIntakeForm
+                        appointmentId={selectedAppointment.id}
+                        petName={selectedAppointment.petName}
+                        initialData={
+                          appointmentsData.find((a) => a.id === selectedAppointment.id)
+                            ?.intake
+                        }
+                        onSave={(intake: GroomingIntake) => {
+                          // Update appointment data with intake
+                          setAppointmentsData((prev) =>
+                            prev.map((apt) =>
+                              apt.id === selectedAppointment.id
+                                ? { ...apt, intake }
+                                : apt,
+                            ),
+                          );
+                          toast.success("Intake form saved");
+                        }}
+                        readOnly={
+                          selectedAppointment.status === "completed" ||
+                          selectedAppointment.status === "cancelled" ||
+                          selectedAppointment.status === "no-show"
+                        }
+                      />
+                    )}
+                  </div>
+                )}
             </div>
           )}
           <DialogFooter>
@@ -883,6 +932,7 @@ export function GroomingCheckInOutSection() {
                 setCheckInOutMode(null);
                 setSelectedAppointment(null);
                 setHandlerName("");
+                setShowIntakeForm(false);
               }}
             >
               Cancel
