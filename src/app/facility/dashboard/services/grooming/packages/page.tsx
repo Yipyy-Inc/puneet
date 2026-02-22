@@ -34,7 +34,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { groomingPackages, type GroomingPackage } from "@/data/grooming";
+import {
+  groomingPackages,
+  type GroomingPackage,
+  getActiveStylists,
+} from "@/data/grooming";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { AlertCircle, Users, FileCheck } from "lucide-react";
 
 type PackageWithRecord = GroomingPackage & Record<string, unknown>;
 
@@ -61,7 +68,11 @@ export default function GroomingPackagesPage() {
     includes: "",
     isActive: true,
     isPopular: false,
+    assignedStylistIds: [] as string[],
+    requiresEvaluation: false,
   });
+
+  const activeStylists = getActiveStylists();
 
   // Stats
   const activePackages = groomingPackages.filter((p) => p.isActive).length;
@@ -92,6 +103,8 @@ export default function GroomingPackagesPage() {
       includes: "",
       isActive: true,
       isPopular: false,
+      assignedStylistIds: [],
+      requiresEvaluation: false,
     });
     setIsAddEditModalOpen(true);
   };
@@ -107,6 +120,8 @@ export default function GroomingPackagesPage() {
       includes: pkg.includes.join("\n"),
       isActive: pkg.isActive,
       isPopular: pkg.isPopular || false,
+      assignedStylistIds: pkg.assignedStylistIds || [],
+      requiresEvaluation: pkg.requiresEvaluation || false,
     });
     setIsAddEditModalOpen(true);
   };
@@ -186,7 +201,42 @@ export default function GroomingPackagesPage() {
       label: "Duration",
       icon: Clock,
       defaultVisible: true,
-      render: (pkg) => `${pkg.duration} min`,
+      render: (pkg) => (
+        <div className="flex items-center gap-2">
+          <span>{pkg.duration} min</span>
+          <Badge variant="outline" className="text-xs">
+            Auto-scheduled
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: "stylists",
+      label: "Assigned Stylists",
+      icon: Users,
+      defaultVisible: false,
+      render: (pkg) => {
+        if (!pkg.assignedStylistIds || pkg.assignedStylistIds.length === 0) {
+          return <Badge variant="outline">All Stylists</Badge>;
+        }
+        return (
+          <Badge variant="secondary">
+            {pkg.assignedStylistIds.length} stylist(s)
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "evaluation",
+      label: "Evaluation",
+      icon: FileCheck,
+      defaultVisible: false,
+      render: (pkg) =>
+        pkg.requiresEvaluation ? (
+          <Badge className="bg-orange-100 text-orange-700">Required</Badge>
+        ) : (
+          <Badge variant="outline">Not Required</Badge>
+        ),
     },
     {
       key: "purchaseCount",
@@ -415,7 +465,12 @@ export default function GroomingPackagesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Label htmlFor="duration" className="flex items-center gap-2">
+                  Duration (minutes)
+                  <Badge variant="outline" className="text-xs">
+                    Auto-scheduled
+                  </Badge>
+                </Label>
                 <Input
                   id="duration"
                   type="number"
@@ -427,6 +482,10 @@ export default function GroomingPackagesPage() {
                     })
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  This duration is automatically used when scheduling appointments.
+                  End time is calculated as start time + duration.
+                </p>
               </div>
             </div>
             <div className="space-y-2">
@@ -533,6 +592,109 @@ export default function GroomingPackagesPage() {
                 rows={5}
               />
             </div>
+
+            <Separator />
+
+            {/* Stylist Assignment */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Assign to Specific Stylists (Optional)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Leave empty for all stylists
+                </p>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                {activeStylists.map((stylist) => (
+                  <div
+                    key={stylist.id}
+                    className="flex items-center space-x-2"
+                  >
+                    <Checkbox
+                      id={`stylist-${stylist.id}`}
+                      checked={formData.assignedStylistIds.includes(stylist.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData({
+                            ...formData,
+                            assignedStylistIds: [
+                              ...formData.assignedStylistIds,
+                              stylist.id,
+                            ],
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            assignedStylistIds: formData.assignedStylistIds.filter(
+                              (id) => id !== stylist.id,
+                            ),
+                          });
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`stylist-${stylist.id}`}
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{stylist.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {stylist.capacity?.skillLevel || "intermediate"}
+                        </Badge>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {formData.assignedStylistIds.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {formData.assignedStylistIds.length} stylist(s) selected. Only
+                  these stylists can be assigned to appointments using this
+                  package.
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Evaluation Requirement */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="requiresEvaluation" className="flex items-center gap-2">
+                    <FileCheck className="h-4 w-4" />
+                    Requires Evaluation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    If enabled, pets must have a valid evaluation before booking
+                    this package
+                  </p>
+                </div>
+                <Switch
+                  id="requiresEvaluation"
+                  checked={formData.requiresEvaluation}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, requiresEvaluation: checked })
+                  }
+                />
+              </div>
+              {formData.requiresEvaluation && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
+                  <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5" />
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    Pets without a valid evaluation will not be able to book
+                    this package. Ensure evaluation requirements are clearly
+                    communicated to customers.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Status Toggles */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Switch

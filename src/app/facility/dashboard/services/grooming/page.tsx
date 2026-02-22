@@ -605,12 +605,13 @@ export default function GroomingCalendarPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="startTime">Time</Label>
-                <Select
-                  value={formData.startTime}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, startTime: value })
-                  }
-                >
+                  <Select
+                    value={formData.startTime}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, startTime: value });
+                      // End time will be recalculated automatically when package is selected
+                    }}
+                  >
                   <SelectTrigger>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -653,7 +654,7 @@ export default function GroomingCalendarPage() {
                     </div>
                   ) : (
                     availableStylists.map((stylist) => {
-                      const skillLevel = stylist.capacity.skillLevel;
+                      const skillLevel = stylist.capacity?.skillLevel || "intermediate";
                       const skillBadge = {
                         master: "⭐ Master",
                         senior: "👑 Senior",
@@ -661,17 +662,18 @@ export default function GroomingCalendarPage() {
                         junior: "🌱 Junior",
                       }[skillLevel] || "";
 
+                      const preferredPetSizes = stylist.capacity?.preferredPetSizes || [];
+                      const isPreferred = preferredPetSizes.includes(formData.petSize);
+
                       return (
                         <SelectItem key={stylist.id} value={stylist.id}>
                           <div className="flex items-center justify-between w-full">
                             <span>
                               {stylist.name} {skillBadge && `(${skillBadge})`}
                             </span>
-                            {availableStylists.length > 0 && (
+                            {isPreferred && (
                               <span className="text-xs text-muted-foreground ml-2">
-                                {stylist.capacity.preferredPetSizes.includes(formData.petSize)
-                                  ? "✓ Preferred"
-                                  : ""}
+                                ✓ Preferred
                               </span>
                             )}
                           </div>
@@ -800,33 +802,107 @@ export default function GroomingCalendarPage() {
                   <Label htmlFor="packageId">Grooming Package</Label>
                   <Select
                     value={formData.packageId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, packageId: value })
-                    }
+                    onValueChange={(value) => {
+                      const selectedPkg = groomingPackages.find((p) => p.id === value);
+                      let updatedFormData = { ...formData, packageId: value };
+                      
+                      // Automatically calculate end time based on package duration
+                      if (selectedPkg && formData.startTime) {
+                        const [hours, minutes] = formData.startTime.split(":").map(Number);
+                        const startMinutes = hours * 60 + minutes;
+                        const endMinutes = startMinutes + selectedPkg.duration;
+                        const endHours = Math.floor(endMinutes / 60);
+                        const endMins = endMinutes % 60;
+                        const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                        // Note: endTime is calculated but not stored in formData since it's derived
+                        // The endTime will be calculated on save using the package duration
+                      }
+                      
+                      setFormData(updatedFormData);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a package" />
                     </SelectTrigger>
                     <SelectContent>
                       {groomingPackages
-                        .filter((pkg) => pkg.isActive)
+                        .filter((pkg) => {
+                          // Filter by active status
+                          if (!pkg.isActive) return false;
+                          
+                          // Filter by assigned stylists if package has restrictions
+                          if (pkg.assignedStylistIds && pkg.assignedStylistIds.length > 0) {
+                            // If a stylist is already selected, check if package is available for that stylist
+                            if (formData.stylistId) {
+                              return pkg.assignedStylistIds.includes(formData.stylistId);
+                            }
+                            // If no stylist selected yet, show all packages (will be filtered when stylist is selected)
+                            return true;
+                          }
+                          
+                          return true;
+                        })
                         .map((pkg) => (
                           <SelectItem key={pkg.id} value={pkg.id}>
-                            {pkg.name} - ${pkg.sizePricing[formData.petSize]} (
-                            {pkg.duration} min)
+                            <div className="flex items-center gap-2">
+                              <span>
+                                {pkg.name} - ${pkg.sizePricing[formData.petSize]} (
+                                {pkg.duration} min)
+                              </span>
+                              {pkg.requiresEvaluation && (
+                                <Badge variant="outline" className="text-xs">
+                                  Eval Required
+                                </Badge>
+                              )}
+                              {pkg.assignedStylistIds && pkg.assignedStylistIds.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {pkg.assignedStylistIds.length} stylist(s)
+                                </Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
                 </div>
                 {getSelectedPackage() && (
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-sm font-medium">
-                      {getSelectedPackage()?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {getSelectedPackage()?.description}
-                    </p>
+                  <div className="rounded-lg bg-muted p-3 space-y-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {getSelectedPackage()?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {getSelectedPackage()?.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
+                      <Badge variant="outline">
+                        Duration: {getSelectedPackage()?.duration} min
+                      </Badge>
+                      {formData.startTime && (
+                        <Badge variant="outline" className="bg-blue-50">
+                          End: {(() => {
+                            const [hours, minutes] = formData.startTime.split(":").map(Number);
+                            const startMinutes = hours * 60 + minutes;
+                            const endMinutes = startMinutes + (getSelectedPackage()?.duration || 0);
+                            const endHours = Math.floor(endMinutes / 60);
+                            const endMins = endMinutes % 60;
+                            return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                          })()}
+                        </Badge>
+                      )}
+                      {getSelectedPackage()?.requiresEvaluation && (
+                        <Badge className="bg-orange-100 text-orange-700">
+                          Evaluation Required
+                        </Badge>
+                      )}
+                      {getSelectedPackage()?.assignedStylistIds &&
+                        getSelectedPackage()?.assignedStylistIds.length > 0 && (
+                          <Badge variant="secondary">
+                            {getSelectedPackage()?.assignedStylistIds.length} stylist(s)
+                          </Badge>
+                        )}
+                    </div>
                     <div className="mt-2">
                       <p className="text-xs text-muted-foreground">Includes:</p>
                       <ul className="text-xs mt-1 space-y-0.5">
@@ -838,6 +914,13 @@ export default function GroomingCalendarPage() {
                     <p className="text-sm font-semibold mt-2">
                       Price: ${calculatePrice()}
                     </p>
+                    {getSelectedPackage()?.requiresEvaluation && (
+                      <div className="mt-2 p-2 rounded bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
+                        <p className="text-xs text-orange-800 dark:text-orange-200">
+                          ⚠️ This package requires a valid pet evaluation before booking.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

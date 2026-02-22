@@ -149,7 +149,7 @@ export interface GroomingPackage {
   name: string;
   description: string;
   basePrice: number;
-  duration: number; // in minutes
+  duration: number; // in minutes - automatically used in scheduling
   sizePricing: {
     small: number;
     medium: number;
@@ -161,6 +161,8 @@ export interface GroomingPackage {
   isPopular?: boolean;
   purchaseCount: number;
   createdAt: string;
+  assignedStylistIds?: string[]; // Optional: restrict package to specific stylists
+  requiresEvaluation?: boolean; // If true, pet must have valid evaluation before booking
 }
 
 export interface GroomingAddOn {
@@ -580,6 +582,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 342,
     createdAt: "2023-01-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-002",
@@ -606,6 +610,8 @@ export const groomingPackages: GroomingPackage[] = [
     isPopular: true,
     purchaseCount: 528,
     createdAt: "2023-01-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-003",
@@ -633,6 +639,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 189,
     createdAt: "2023-01-15",
+    assignedStylistIds: ["stylist-001", "stylist-004"], // Only senior/master stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-004",
@@ -650,6 +658,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 256,
     createdAt: "2023-03-01",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-005",
@@ -674,19 +684,21 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 134,
     createdAt: "2023-06-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: true, // Puppies may need evaluation
   },
   {
     id: "groom-pkg-006",
     name: "De-Shedding Treatment",
     description:
-      "Specialized treatment to reduce shedding and maintain coat health",
+      "Specialized treatment to reduce shedding for double-coated breeds",
     basePrice: 55,
     duration: 90,
     sizePricing: {
       small: 45,
       medium: 55,
       large: 70,
-      giant: 90,
+      giant: 85,
     },
     includes: [
       "De-shedding shampoo & conditioner",
@@ -699,6 +711,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 167,
     createdAt: "2023-04-20",
+    assignedStylistIds: ["stylist-003"], // Specialized for large breeds
+    requiresEvaluation: false,
   },
 ];
 

@@ -147,6 +147,11 @@ export function canStylistHandlePet(
 ): boolean {
   const { capacity } = stylist;
 
+  // Safety check: if capacity is missing, allow the appointment (fallback)
+  if (!capacity) {
+    return true;
+  }
+
   // Check if stylist prefers/handles this pet size
   if (
     capacity.preferredPetSizes.length > 0 &&
@@ -192,6 +197,26 @@ export function checkStylistAvailability(
   isAggressive?: boolean,
 ): StylistAvailabilityCheck {
   const { capacity } = stylist;
+
+  // Safety check: if capacity is missing, return unavailable
+  if (!capacity) {
+    return {
+      isAvailable: false,
+      canHandlePet: false,
+      conflicts: {
+        hasConflict: true,
+        reason: "Stylist capacity configuration missing",
+        conflicts: [
+          {
+            type: "configuration",
+            message: "Stylist capacity configuration is missing",
+          },
+        ],
+      },
+      dailyAppointmentCount: 0,
+      remainingCapacity: 0,
+    };
+  }
 
   // Check for time conflicts
   const conflicts = checkStylistConflicts(
