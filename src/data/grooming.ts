@@ -25,6 +25,18 @@ export type ProductCategory =
   | "health"
   | "cleaning";
 
+export type StylistSkillLevel = "junior" | "intermediate" | "senior" | "master";
+
+export interface StylistCapacity {
+  maxDailyAppointments: number; // Maximum appointments per day
+  maxConcurrentAppointments: number; // Maximum simultaneous appointments (usually 1)
+  preferredPetSizes: PetSize[]; // Pet sizes this stylist prefers/handles best
+  skillLevel: StylistSkillLevel; // Experience/skill level
+  canHandleMatted: boolean; // Can handle matted coats
+  canHandleAnxious: boolean; // Can handle anxious pets
+  canHandleAggressive: boolean; // Can handle aggressive pets
+}
+
 export interface Stylist {
   id: string;
   name: string;
@@ -39,6 +51,7 @@ export interface Stylist {
   rating: number;
   totalAppointments: number;
   hireDate: string;
+  capacity: StylistCapacity; // Capacity and skill configuration
 }
 
 export interface StylistAvailability {
@@ -229,6 +242,15 @@ export const stylists: Stylist[] = [
     rating: 4.9,
     totalAppointments: 1250,
     hireDate: "2019-03-15",
+    capacity: {
+      maxDailyAppointments: 8,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium", "large"],
+      skillLevel: "senior",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-002",
@@ -252,6 +274,15 @@ export const stylists: Stylist[] = [
     rating: 4.8,
     totalAppointments: 890,
     hireDate: "2021-06-01",
+    capacity: {
+      maxDailyAppointments: 6,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium"],
+      skillLevel: "intermediate",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-003",
@@ -275,6 +306,15 @@ export const stylists: Stylist[] = [
     rating: 4.7,
     totalAppointments: 720,
     hireDate: "2020-09-15",
+    capacity: {
+      maxDailyAppointments: 7,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["medium", "large", "giant"],
+      skillLevel: "senior",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: true,
+    },
   },
   {
     id: "stylist-004",

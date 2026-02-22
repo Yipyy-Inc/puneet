@@ -47,6 +47,10 @@ import {
   type PetSize,
   type CoatType,
 } from "@/data/grooming";
+import {
+  filterAvailableStylists,
+  checkStylistAvailability,
+} from "@/lib/stylist-validation";
 
 type AppointmentCalendarItem = GroomingAppointment & CalendarItem;
 
@@ -118,6 +122,43 @@ export default function GroomingCalendarPage() {
   const stats = getGroomingStats();
   const activeStylists = getActiveStylists();
 
+  // Get available stylists for the selected date/time and pet
+  const availableStylists = useMemo(() => {
+    if (!formData.date || !formData.startTime || !formData.packageId || !formData.petSize) {
+      return activeStylists;
+    }
+
+    const selectedPackage = groomingPackages.find((p) => p.id === formData.packageId);
+    if (!selectedPackage) return activeStylists;
+
+    // Calculate end time
+    const [hours, minutes] = formData.startTime.split(":").map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + selectedPackage.duration;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+    const filtered = filterAvailableStylists(
+      activeStylists,
+      formData.date,
+      formData.startTime,
+      endTime,
+      formData.petSize,
+      groomingAppointments,
+      editingAppointment?.id,
+    );
+
+    return filtered.map((item) => item.stylist);
+  }, [
+    formData.date,
+    formData.startTime,
+    formData.packageId,
+    formData.petSize,
+    activeStylists,
+    editingAppointment?.id,
+  ]);
+
   // Convert appointments to calendar items
   const calendarItems: AppointmentCalendarItem[] = useMemo(() => {
     return groomingAppointments.map((apt) => ({
@@ -178,7 +219,54 @@ export default function GroomingCalendarPage() {
   };
 
   const handleSave = () => {
+    // Validate required fields
+    if (!formData.stylistId) {
+      toast.error("Please select a stylist");
+      return;
+    }
+
+    // Validate stylist assignment
+    const stylist = activeStylists.find((s) => s.id === formData.stylistId);
+    if (stylist) {
+      const selectedPackage = groomingPackages.find((p) => p.id === formData.packageId);
+      if (!selectedPackage) {
+        toast.error("Please select a package");
+        return;
+      }
+
+      // Calculate end time
+      const [hours, minutes] = formData.startTime.split(":").map(Number);
+      const startMinutes = hours * 60 + minutes;
+      const endMinutes = startMinutes + selectedPackage.duration;
+      const endHours = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+      const availability = checkStylistAvailability(
+        stylist,
+        formData.date,
+        formData.startTime,
+        endTime,
+        formData.petSize,
+        groomingAppointments,
+        editingAppointment?.id,
+      );
+
+      if (!availability.isAvailable) {
+        const conflictMessages = availability.conflicts.conflicts
+          .map((c) => c.message)
+          .join(", ");
+        toast.error("Stylist not available", {
+          description: conflictMessages || availability.conflicts.reason || "Conflict detected",
+        });
+        return;
+      }
+    }
+
     // In a real app, this would save to the backend
+    toast.success(
+      editingAppointment ? "Appointment updated" : "Appointment created",
+    );
     setIsAddEditModalOpen(false);
   };
 
@@ -559,12 +647,43 @@ export default function GroomingCalendarPage() {
                   <SelectValue placeholder="Select a stylist" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeStylists.map((stylist) => (
-                    <SelectItem key={stylist.id} value={stylist.id}>
-                      {stylist.name} -{" "}
-                      {stylist.specializations.slice(0, 2).join(", ")}
-                    </SelectItem>
-                  ))}
+                  {availableStylists.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No available stylists for this date/time and pet size
+                    </div>
+                  ) : (
+                    availableStylists.map((stylist) => {
+                      const skillLevel = stylist.capacity.skillLevel;
+                      const skillBadge = {
+                        master: "⭐ Master",
+                        senior: "👑 Senior",
+                        intermediate: "✓ Intermediate",
+                        junior: "🌱 Junior",
+                      }[skillLevel] || "";
+
+                      return (
+                        <SelectItem key={stylist.id} value={stylist.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {stylist.name} {skillBadge && `(${skillBadge})`}
+                            </span>
+                            {availableStylists.length > 0 && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                {stylist.capacity.preferredPetSizes.includes(formData.petSize)
+                                  ? "✓ Preferred"
+                                  : ""}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })
+                  )}
+                  {activeStylists.length > availableStylists.length && (
+                    <div className="p-2 text-xs text-muted-foreground border-t">
+                      {activeStylists.length - availableStylists.length} stylist(s) unavailable
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
