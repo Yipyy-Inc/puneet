@@ -36,6 +36,7 @@ import {
 import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
+import { sendPickupNotifications } from "@/lib/grooming-pickup-notifications";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
@@ -198,28 +199,46 @@ export function GroomingSection() {
     }
 
     // Update the status
+    const updatedAppointment = {
+      ...appointment,
+      status: newStatus,
+    };
+
     setAppointmentsData((prev) =>
       prev.map((apt) =>
-        apt.id === appointment.id ? { ...apt, status: newStatus } : apt,
+        apt.id === appointment.id ? updatedAppointment : apt,
       ),
     );
 
-    // Send SMS when status changes to "ready-for-pickup"
-    // TODO: Get from grooming settings - autoReadyForPickupSMS
-    const autoReadyForPickupSMS = true; // Default: true
+    // Send notifications when status changes to "ready-for-pickup"
     if (
       newStatus === "ready-for-pickup" &&
-      previousStatus !== "ready-for-pickup" &&
-      autoReadyForPickupSMS
+      previousStatus !== "ready-for-pickup"
     ) {
-      // In production, send SMS via API
-      console.log(
-        `Sending SMS to ${appointment.ownerPhone}: ${appointment.petName} is ready for pickup!`,
-      );
-      toast.success("SMS sent", {
-        description: `Customer notified that ${appointment.petName} is ready for pickup.`,
-      });
+      // TODO: Get from grooming settings
+      const settings = {
+        autoReadyForPickupSMS: true, // Default: true
+        autoReadyForPickupEmail: true, // Default: true
+      };
+
+      sendPickupNotifications(updatedAppointment, settings)
+        .then((results) => {
+          const notificationMessages: string[] = [];
+          if (results.smsSent) notificationMessages.push("SMS sent");
+          if (results.emailSent) notificationMessages.push("Email sent");
+          
+          if (notificationMessages.length > 0) {
+            toast.success("Customer notified", {
+              description: `${notificationMessages.join(" and ")}: ${appointment.petName} is ready for pickup.`,
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to send pickup notifications:", error);
+        });
     }
+
+    // If status changed to completed, automatically deduct products
 
     // If status changed to completed, automatically deduct products
     if (newStatus === "completed" && previousStatus !== "completed") {

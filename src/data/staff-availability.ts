@@ -669,21 +669,42 @@ export const staffAvailability: StaffAvailability[] = [
   },
 ];
 
+// Time-off Request Types (customizable by facility)
+export interface TimeOffReason {
+  id: string;
+  name: string;
+  isDefault: boolean; // Default reasons cannot be deleted
+  isActive: boolean;
+  requiresApproval: boolean;
+  facility: string;
+}
+
+// Default time off reasons
+export const defaultTimeOffReasons: Omit<TimeOffReason, "facility">[] = [
+  { id: "vacation", name: "Vacation", isDefault: true, isActive: true, requiresApproval: true },
+  { id: "personal", name: "Personal day", isDefault: true, isActive: true, requiresApproval: true },
+  { id: "sick_planned", name: "Sick day (planned)", isDefault: true, isActive: true, requiresApproval: true },
+  { id: "sick_last_minute", name: "Sick day (same-day / last-minute)", isDefault: true, isActive: true, requiresApproval: true },
+];
+
 // Time-off Requests
 export interface TimeOffRequest {
   id: number;
   staffId: number;
   staffName: string;
-  type: "vacation" | "sick" | "personal" | "bereavement" | "other";
+  type: string; // Now supports custom types from TimeOffReason
+  customTypeName?: string; // For custom reasons
   startDate: string;
   endDate: string;
-  reason: string;
-  status: "pending" | "approved" | "denied";
+  reason: string; // Additional details/notes
+  status: "pending" | "approved" | "denied" | "changes_requested";
   requestedAt: string;
   reviewedBy?: number;
   reviewedByName?: string;
   reviewedAt?: string;
   reviewNotes?: string;
+  requestedChanges?: string; // Manager's requested changes
+  coverageAlertTriggered?: boolean; // Whether coverage alert was triggered
   facility: string;
 }
 

@@ -72,6 +72,7 @@ export default function GroomingSettingsPage() {
     requireCheckInBeforeGroom: true, // Require check-in before groom can start
     requireDepositPerPackage: false, // Allow deposit requirement to be set per package (overrides global)
     autoReadyForPickupSMS: true, // Automatically send SMS when status changes to "ready-for-pickup"
+    autoReadyForPickupEmail: true, // Automatically send Email when status changes to "ready-for-pickup"
 
     // Notifications
     sendBookingConfirmation: true,
@@ -769,6 +770,29 @@ export default function GroomingSettingsPage() {
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
                 <p className="text-sm text-green-800 dark:text-green-200">
                   Customers will automatically receive an SMS when their pet's grooming is complete and ready for pickup.
+                </p>
+              </div>
+            )}
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Auto "Ready for Pickup" Email</Label>
+                <p className="text-sm text-muted-foreground">
+                  Automatically send Email notification when appointment status changes to "ready-for-pickup"
+                </p>
+              </div>
+              <Switch
+                checked={settings.autoReadyForPickupEmail}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, autoReadyForPickupEmail: checked })
+                }
+                disabled={!isEditing}
+              />
+            </div>
+            {settings.autoReadyForPickupEmail && (
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Customers will automatically receive an Email when their pet's grooming is complete and ready for pickup.
                 </p>
               </div>
             )}

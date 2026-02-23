@@ -39,6 +39,30 @@ export default function SchedulingSettings() {
     maxHoursPerWeek: 40,
     maxConsecutiveDays: 6,
 
+    // Coverage Rules
+    // Daycare
+    daycareStaffPerDogs: 10, // 1 staff per X dogs
+    daycareMinStaff: 1, // Minimum staff required for daycare
+    
+    // Boarding
+    boardingMinStaffPerShift: 1, // Minimum attendants per shift block
+    boardingMorningMinStaff: 1, // Morning shift minimum
+    boardingAfternoonMinStaff: 1, // Afternoon shift minimum
+    boardingEveningMinStaff: 1, // Evening shift minimum
+    
+    // Front Desk
+    frontDeskCoverageWindows: [
+      { start: "08:00", end: "10:00", minStaff: 1 },
+      { start: "16:00", end: "18:00", minStaff: 1 },
+    ], // Coverage windows for front desk
+    
+    // Grooming
+    showGroomingSchedule: true, // Show grooming schedule in main view
+    
+    // Coverage Thresholds (for heatmap)
+    understaffedThreshold: 0.7, // Below 70% of required staff = understaffed
+    overstaffedThreshold: 1.3, // Above 130% of required staff = overstaffed
+
     // Overtime Settings
     enableOvertimeTracking: true,
     overtimeThresholdDaily: 8,
@@ -862,6 +886,263 @@ export default function SchedulingSettings() {
                 }
                 disabled={!isEditing}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Coverage Rules */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Coverage Rules</CardTitle>
+            <CardDescription>
+              Define minimum staffing requirements by role and workload
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Daycare Coverage */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm">Daycare Coverage</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Staff per Dogs Ratio</Label>
+                  <p className="text-xs text-muted-foreground">
+                    1 staff member per X dogs
+                  </p>
+                  <Input
+                    type="number"
+                    value={settings.daycareStaffPerDogs}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        daycareStaffPerDogs: parseInt(e.target.value) || 10,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Minimum Staff Required</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Always have at least this many staff for daycare
+                  </p>
+                  <Input
+                    type="number"
+                    value={settings.daycareMinStaff}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        daycareMinStaff: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Boarding Coverage */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm">Boarding Coverage</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Morning Shift Minimum</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Minimum staff for morning shift (e.g., 06:00-14:00)
+                  </p>
+                  <Input
+                    type="number"
+                    value={settings.boardingMorningMinStaff}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        boardingMorningMinStaff: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Afternoon Shift Minimum</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Minimum staff for afternoon shift (e.g., 14:00-22:00)
+                  </p>
+                  <Input
+                    type="number"
+                    value={settings.boardingAfternoonMinStaff}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        boardingAfternoonMinStaff: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Evening Shift Minimum</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Minimum staff for evening shift (e.g., 22:00-06:00)
+                  </p>
+                  <Input
+                    type="number"
+                    value={settings.boardingEveningMinStaff}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        boardingEveningMinStaff: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Front Desk Coverage */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm">Front Desk Coverage Windows</h4>
+              <p className="text-xs text-muted-foreground">
+                Define time windows when front desk must be staffed
+              </p>
+              <div className="space-y-2">
+                {settings.frontDeskCoverageWindows.map((window, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={window.start}
+                      onChange={(e) => {
+                        const newWindows = [...settings.frontDeskCoverageWindows];
+                        newWindows[index].start = e.target.value;
+                        setSettings({ ...settings, frontDeskCoverageWindows: newWindows });
+                      }}
+                      disabled={!isEditing}
+                      className="w-32"
+                    />
+                    <span className="text-sm">to</span>
+                    <Input
+                      type="time"
+                      value={window.end}
+                      onChange={(e) => {
+                        const newWindows = [...settings.frontDeskCoverageWindows];
+                        newWindows[index].end = e.target.value;
+                        setSettings({ ...settings, frontDeskCoverageWindows: newWindows });
+                      }}
+                      disabled={!isEditing}
+                      className="w-32"
+                    />
+                    <span className="text-sm">Min staff:</span>
+                    <Input
+                      type="number"
+                      value={window.minStaff}
+                      onChange={(e) => {
+                        const newWindows = [...settings.frontDeskCoverageWindows];
+                        newWindows[index].minStaff = parseInt(e.target.value) || 1;
+                        setSettings({ ...settings, frontDeskCoverageWindows: newWindows });
+                      }}
+                      disabled={!isEditing}
+                      className="w-20"
+                    />
+                    {isEditing && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newWindows = settings.frontDeskCoverageWindows.filter((_, i) => i !== index);
+                          setSettings({ ...settings, frontDeskCoverageWindows: newWindows });
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newWindows = [
+                        ...settings.frontDeskCoverageWindows,
+                        { start: "09:00", end: "17:00", minStaff: 1 },
+                      ];
+                      setSettings({ ...settings, frontDeskCoverageWindows: newWindows });
+                    }}
+                  >
+                    Add Coverage Window
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Grooming */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Grooming Schedule</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display grooming appointments in the main schedule view
+                </p>
+              </div>
+              <Switch
+                checked={settings.showGroomingSchedule}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, showGroomingSchedule: checked })
+                }
+                disabled={!isEditing}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Coverage Thresholds */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm">Coverage Heatmap Thresholds</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Understaffed Threshold</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Below this percentage of required staff = understaffed (0.0-1.0)
+                  </p>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={settings.understaffedThreshold}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        understaffedThreshold: parseFloat(e.target.value) || 0.7,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Overstaffed Threshold</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Above this percentage of required staff = overstaffed (1.0+)
+                  </p>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    value={settings.overstaffedThreshold}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        overstaffedThreshold: parseFloat(e.target.value) || 1.3,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

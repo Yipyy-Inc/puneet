@@ -1,4 +1,18 @@
-export const schedules = [
+export interface Schedule {
+  id: number;
+  staffId: number;
+  staffName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  role: string; // boarding/daycare/grooming/front desk/Admin/Manager
+  facility: string;
+  status: "scheduled" | "confirmed" | "completed" | "absent" | "sick";
+  location?: string; // Optional: daycare floor, boarding wing, grooming room
+  notes?: string; // Internal notes
+}
+
+export const schedules: Schedule[] = [
   // Current Week (Nov 15-21, 2025)
   // Admin User (ID: 1) - Standard admin hours
   {
@@ -67,7 +81,9 @@ export const schedules = [
     endTime: "16:00",
     role: "Manager",
     facility: "Paws & Play Daycare",
-    status: "scheduled",
+    status: "confirmed",
+    location: "Daycare Floor",
+    notes: "Opening shift - check all areas",
   },
   {
     id: 7,
@@ -122,9 +138,11 @@ export const schedules = [
     date: "2025-11-15",
     startTime: "10:00",
     endTime: "18:00",
-    role: "Staff",
+    role: "Daycare",
     facility: "Paws & Play Daycare",
     status: "scheduled",
+    location: "Daycare Floor",
+    notes: "Covering afternoon playtime and pickup",
   },
   {
     id: 12,

@@ -606,15 +606,30 @@ export function GroomingCheckInOutSection() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
+                        onClick={async () => {
                           // Move to ready-for-pickup
+                          const updatedAppointment = {
+                            ...apt,
+                            status: "ready-for-pickup" as const,
+                          };
+                          
                           setAppointmentsData((prev) =>
                             prev.map((a) =>
-                              a.id === apt.id
-                                ? { ...a, status: "ready-for-pickup" as const }
-                                : a,
+                              a.id === apt.id ? updatedAppointment : a,
                             ),
                           );
+
+                          // Send pickup notifications
+                          const { sendPickupNotifications } = await import("@/lib/grooming-pickup-notifications");
+                          const settings = {
+                            autoReadyForPickupSMS: true, // TODO: Get from settings
+                            autoReadyForPickupEmail: true, // TODO: Get from settings
+                          };
+
+                          sendPickupNotifications(updatedAppointment, settings).catch((error) => {
+                            console.error("Failed to send pickup notifications:", error);
+                          });
+
                           toast.success(`${apt.petName} - Ready for pickup`);
                         }}
                       >
