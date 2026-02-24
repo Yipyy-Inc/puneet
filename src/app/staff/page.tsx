@@ -198,7 +198,8 @@ export default function StaffSchedulePage() {
     return shiftSwapRequests.filter(
       (r) =>
         r.status === "pending" &&
-        (r.swapType === "anyone" || r.targetStaffId === staffId) &&
+        // Open to anyone (no targetStaffId) OR specifically targeted at me
+        (!r.targetStaffId || r.targetStaffId === staffId) &&
         r.requestingStaffId !== staffId
     );
   }, [userId]);
@@ -503,7 +504,12 @@ export default function StaffSchedulePage() {
                     {request.requestingStaffName} wants to swap
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {request.requestingShiftDate} - {request.requestingShiftTime} ({request.requestingShiftRole})
+                    {request.requestingShiftDate} - {request.requestingShiftTime}
+                    {(() => {
+                      // Find the shift to get the role (search in all schedules, not just mySchedules)
+                      const shift = schedules.find(s => s.id === request.requestingShiftId);
+                      return shift ? ` (${shift.role})` : '';
+                    })()}
                   </p>
                   {request.reason && (
                     <p className="text-sm text-muted-foreground mt-1">Reason: {request.reason}</p>
@@ -1207,7 +1213,10 @@ export default function StaffSchedulePage() {
                 <div className="text-sm space-y-1">
                   <p><strong>Date:</strong> {formatDate(selectedSwapRequest.requestingShiftDate)}</p>
                   <p><strong>Time:</strong> {selectedSwapRequest.requestingShiftTime}</p>
-                  <p><strong>Role:</strong> {selectedSwapRequest.requestingShiftRole}</p>
+                  {(() => {
+                    const shift = schedules.find(s => s.id === selectedSwapRequest.requestingShiftId);
+                    return shift ? <p><strong>Role:</strong> {shift.role}</p> : null;
+                  })()}
                 </div>
               </div>
               {selectedSwapRequest.reason && (
