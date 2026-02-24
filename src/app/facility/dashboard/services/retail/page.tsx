@@ -150,6 +150,11 @@ export default function POSPage() {
     discountType: "fixed" as "fixed" | "percent",
   });
 
+  // Tips state
+  const [tipAmount, setTipAmount] = useState<number>(0);
+  const [tipPercentage, setTipPercentage] = useState<number | null>(null);
+  const [tipCustomAmount, setTipCustomAmount] = useState<string>("");
+
   const [paymentForm, setPaymentForm] = useState({
     method: "cash" as PaymentMethod,
     splitPayments: false,
@@ -211,7 +216,58 @@ export default function POSPage() {
   
   const discountTotal = lineItemDiscountTotal + cartDiscountAmount;
   const taxTotal = 0; // Can be calculated if needed
-  const grandTotal = subtotal - discountTotal + taxTotal;
+  
+  // Determine service type for tips configuration
+  const detectedServiceType = useMemo(() => {
+    // Check if booking is selected
+    if (selectedBookingId) {
+      const booking = bookings.find((b) => b.id === selectedBookingId);
+      if (booking?.service) {
+        const service = booking.service.toLowerCase();
+        if (service.includes("grooming")) return "grooming";
+        if (service.includes("training")) return "training";
+        if (service.includes("daycare")) return "daycare";
+        if (service.includes("boarding")) return "boarding";
+      }
+    }
+    
+    // Check cart items for service indicators (could be extended)
+    // For now, default to "retail" if no service detected
+    return "retail";
+  }, [selectedBookingId]);
+
+  // Get tips configuration based on service type
+  // Default configuration (in a real app, this would come from settings/API)
+  const defaultTipsConfig = {
+    enabled: true,
+    percentages: [15, 18, 20, 25],
+  };
+  
+  // Service-specific tips configuration
+  const serviceTipsConfig: Record<string, { enabled: boolean; percentages: number[] }> = {
+    grooming: { enabled: true, percentages: [15, 18, 20, 25] },
+    training: { enabled: false, percentages: [15, 18, 20] },
+    daycare: { enabled: true, percentages: [10, 15, 20] },
+    boarding: { enabled: true, percentages: [10, 15, 20] },
+    retail: { enabled: false, percentages: [15, 18, 20, 25] },
+    other: { enabled: true, percentages: [15, 18, 20, 25] },
+  };
+  
+  const tipsConfig = serviceTipsConfig[detectedServiceType] || defaultTipsConfig;
+
+  // Calculate tip amount
+  const calculatedTipAmount = useMemo(() => {
+    if (tipPercentage !== null) {
+      return (subtotal - discountTotal) * (tipPercentage / 100);
+    }
+    if (tipCustomAmount) {
+      const custom = parseFloat(tipCustomAmount);
+      return isNaN(custom) ? 0 : custom;
+    }
+    return tipAmount;
+  }, [tipPercentage, tipCustomAmount, tipAmount, subtotal, discountTotal]);
+
+  const grandTotal = subtotal - discountTotal + taxTotal + calculatedTipAmount;
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -468,6 +524,8 @@ export default function POSPage() {
       promoCodeUsed: appliedPromoCode?.code || undefined,
       accountDiscountApplied: accountDiscount?.id || undefined,
       taxTotal,
+      tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+      tipPercentage: tipPercentage || undefined,
       total: grandTotal,
       paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
       payments: paymentForm.splitPayments
@@ -502,6 +560,10 @@ export default function POSPage() {
     setCustomerEmail("");
     setSelectedPetId(null);
     setSelectedBookingId(null);
+    // Clear tips
+    setTipAmount(0);
+    setTipPercentage(null);
+    setTipCustomAmount("");
 
     setIsPaymentModalOpen(false);
     setIsReceiptModalOpen(true);
@@ -1094,6 +1156,71 @@ export default function POSPage() {
                   <span>${taxTotal.toFixed(2)}</span>
                 </div>
               )}
+              
+              {/* Tips Section - Only show if tips are enabled for this service type */}
+              {tipsConfig.enabled && (subtotal - discountTotal) > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium">Tip</Label>
+                      {calculatedTipAmount > 0 && (
+                        <span className="text-sm font-medium">${calculatedTipAmount.toFixed(2)}</span>
+                      )}
+                    </div>
+                    
+                    {/* Tip Percentage Buttons */}
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {tipsConfig.percentages.map((percent) => (
+                        <Button
+                          key={percent}
+                          variant={tipPercentage === percent ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setTipPercentage(percent);
+                            setTipCustomAmount("");
+                            setTipAmount(0);
+                          }}
+                        >
+                          {percent}%
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    {/* Custom Tip Amount */}
+                    <div className="flex gap-1.5">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Custom $"
+                        value={tipCustomAmount}
+                        onChange={(e) => {
+                          setTipCustomAmount(e.target.value);
+                          setTipPercentage(null);
+                          setTipAmount(0);
+                        }}
+                        className="h-8 text-xs"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => {
+                          setTipPercentage(null);
+                          setTipCustomAmount("");
+                          setTipAmount(0);
+                        }}
+                        disabled={calculatedTipAmount === 0}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+              
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>

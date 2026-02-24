@@ -184,6 +184,8 @@ export interface Transaction {
   promoCodeUsed?: string; // Promo code if used
   accountDiscountApplied?: string; // Account discount ID if applied
   taxTotal: number;
+  tipAmount?: number; // Optional tip amount
+  tipPercentage?: number; // Tip percentage if applied
   total: number;
   paymentMethod: PaymentMethod;
   payments: {

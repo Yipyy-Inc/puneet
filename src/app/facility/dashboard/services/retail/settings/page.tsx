@@ -40,6 +40,15 @@ export default function RetailSettingsPage() {
     defaultTaxRate: 8.25,
     enableTips: false,
     tipPercentages: [15, 18, 20, 25],
+    // Tips configuration by service type
+    tipsByServiceType: {
+      grooming: { enabled: true, percentages: [15, 18, 20, 25] },
+      training: { enabled: false, percentages: [15, 18, 20] },
+      daycare: { enabled: true, percentages: [10, 15, 20] },
+      boarding: { enabled: true, percentages: [10, 15, 20] },
+      retail: { enabled: false, percentages: [15, 18, 20, 25] },
+      other: { enabled: true, percentages: [15, 18, 20, 25] },
+    },
     roundToNearestCent: true,
     printReceipts: true,
     emailReceipts: true,
@@ -257,6 +266,88 @@ export default function RetailSettingsPage() {
                 disabled={!isEditing}
               />
             </div>
+            {settings.enableTips && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Tips by Service Type</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Configure tip options for different service types
+                  </p>
+                  
+                  {Object.entries(settings.tipsByServiceType).map(([serviceType, config]) => (
+                    <div key={serviceType} className="p-3 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="capitalize">{serviceType}</Label>
+                        <Switch
+                          checked={config.enabled}
+                          onCheckedChange={(checked) =>
+                            setSettings({
+                              ...settings,
+                              tipsByServiceType: {
+                                ...settings.tipsByServiceType,
+                                [serviceType]: { ...config, enabled: checked },
+                              },
+                            })
+                          }
+                          disabled={!isEditing}
+                        />
+                      </div>
+                      {config.enabled && (
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">
+                            Tip Percentages
+                          </Label>
+                          <div className="flex gap-2 flex-wrap">
+                            {config.percentages.map((percent, index) => (
+                              <Input
+                                key={index}
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={percent}
+                                onChange={(e) => {
+                                  const newPercentages = [...config.percentages];
+                                  newPercentages[index] = parseInt(e.target.value) || 0;
+                                  setSettings({
+                                    ...settings,
+                                    tipsByServiceType: {
+                                      ...settings.tipsByServiceType,
+                                      [serviceType]: { ...config, percentages: newPercentages },
+                                    },
+                                  });
+                                }}
+                                disabled={!isEditing}
+                                className="w-16 h-8 text-xs"
+                              />
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                const newPercentages = [...config.percentages, 0];
+                                setSettings({
+                                  ...settings,
+                                  tipsByServiceType: {
+                                    ...settings.tipsByServiceType,
+                                    [serviceType]: { ...config, percentages: newPercentages },
+                                  },
+                                });
+                              }}
+                              disabled={!isEditing}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
