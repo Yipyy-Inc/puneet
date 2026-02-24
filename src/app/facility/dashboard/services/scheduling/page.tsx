@@ -584,6 +584,12 @@ export default function FacilitySchedulingPage() {
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [copyTargetDate, setCopyTargetDate] = useState("");
 
+  // Publish schedule modal
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishWeekStart, setPublishWeekStart] = useState("");
+  const [publishNotes, setPublishNotes] = useState("");
+  const [publishedSchedules, setPublishedSchedules] = useState<Set<string>>(new Set());
+
   // Same-Day Sick / Call-Out modal
   const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
   const [selectedShiftForSickCall, setSelectedShiftForSickCall] = useState<
@@ -1589,32 +1595,79 @@ export default function FacilitySchedulingPage() {
     setCopyTargetDate("");
   };
 
+  // Publish schedule
+  const handlePublishSchedule = () => {
+    if (!publishWeekStart) {
+      toast.error("Please select a week to publish");
+      return;
+    }
+    
+    // In production, this would publish the schedule and notify staff
+    const weekKey = publishWeekStart;
+    setPublishedSchedules((prev) => new Set([...prev, weekKey]));
+    toast.success("Schedule published successfully", {
+      description: `Staff have been notified about the schedule for week starting ${publishWeekStart}`,
+    });
+    setIsPublishModalOpen(false);
+    setPublishWeekStart("");
+    setPublishNotes("");
+  };
+
+  // Check if a week is published
+  const isWeekPublished = (weekStart: string) => {
+    return publishedSchedules.has(weekStart);
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <div className="flex items-center justify-end gap-2">
-        <Button onClick={() => handleAddNew()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Shift
-        </Button>
-        <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Week
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => exportSchedulesToCSV(facilitySchedules)}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          CSV
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => exportSchedulesToICS(facilitySchedules, facility.name)}
-        >
-          <FileDown className="mr-2 h-4 w-4" />
-          ICS
-        </Button>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Schedule Management</h1>
+          <Badge variant="outline" className="ml-2">
+            {facility.name}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => handleAddNew()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Shift
+          </Button>
+          <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)}>
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Week
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => {
+              // Calculate current week start
+              const today = new Date();
+              const day = today.getDay();
+              const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+              const weekStart = new Date(today.setDate(diff));
+              setPublishWeekStart(weekStart.toISOString().split("T")[0]);
+              setIsPublishModalOpen(true);
+            }}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Publish Schedule
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportSchedulesToCSV(facilitySchedules)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportSchedulesToICS(facilitySchedules, facility.name)}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            ICS
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1732,8 +1785,15 @@ export default function FacilitySchedulingPage() {
                   variant={viewMode === "calendar" ? "default" : "outline"}
                   onClick={() => setViewMode("calendar")}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  Calendar View
+                  <User className="mr-2 h-4 w-4" />
+                  View by Employee
+                </Button>
+                <Button
+                  variant={viewMode === "role" ? "default" : "outline"}
+                  onClick={() => setViewMode("role")}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  View by Role/Department
                 </Button>
                 <Button
                   variant={viewMode === "list" ? "default" : "outline"}
@@ -1742,14 +1802,17 @@ export default function FacilitySchedulingPage() {
                   <Clock className="mr-2 h-4 w-4" />
                   List View
                 </Button>
-                <Button
-                  variant={viewMode === "role" ? "default" : "outline"}
-                  onClick={() => setViewMode("role")}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  Role View
-                </Button>
               </div>
+              {/* Coverage Overlay Toggle */}
+              {viewMode === "calendar" && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Coverage Overlay:</Label>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Map className="h-3 w-3" />
+                    {calendarView === "day" ? "Enabled" : "Available in Day View"}
+                  </Badge>
+                </div>
+              )}
 
               {viewMode === "calendar" && (
                 <div className="flex items-center gap-2">
@@ -3083,6 +3146,91 @@ export default function FacilitySchedulingPage() {
                 <Button onClick={handleCopyWeek}>
                   <Copy className="mr-2 h-4 w-4" />
                   Copy Shifts
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Publish Schedule Modal */}
+          <Dialog
+            open={isPublishModalOpen}
+            onOpenChange={setIsPublishModalOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  Publish Schedule
+                </DialogTitle>
+                <DialogDescription>
+                  Publish the schedule for staff to view. Staff will be notified of the published schedule.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="publishWeekStart">
+                    Week Start Date (Monday) *
+                  </Label>
+                  <Input
+                    id="publishWeekStart"
+                    type="date"
+                    value={publishWeekStart}
+                    onChange={(e) => setPublishWeekStart(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Select the Monday of the week you want to publish.
+                  </p>
+                  {publishWeekStart && isWeekPublished(publishWeekStart) && (
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      This week has already been published.
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="publishNotes">
+                    Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id="publishNotes"
+                    value={publishNotes}
+                    onChange={(e) => setPublishNotes(e.target.value)}
+                    placeholder="Add any notes or announcements for staff..."
+                    rows={3}
+                  />
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900 font-medium mb-1">
+                    What happens when you publish:
+                  </p>
+                  <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                    <li>All staff members will be notified</li>
+                    <li>Schedule will be visible in their staff portal</li>
+                    <li>Staff will need to acknowledge the schedule update</li>
+                  </ul>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsPublishModalOpen(false);
+                    setPublishWeekStart("");
+                    setPublishNotes("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePublishSchedule}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={!publishWeekStart}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Publish Schedule
                 </Button>
               </DialogFooter>
             </DialogContent>
