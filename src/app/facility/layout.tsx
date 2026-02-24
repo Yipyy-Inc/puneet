@@ -9,6 +9,7 @@ import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigPro
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
+import { CallingButton } from "@/components/layout/CallingButton";
 
 export default async function FacilityLayout({
   children,
@@ -37,6 +38,8 @@ export default async function FacilityLayout({
               />
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
+                  {/* Calling Button - Static on top bar */}
+                  <CallingButton />
                   <TopBarIconsNext />
                   <BookingRequestsTopbarDropdown />
                 </div>
