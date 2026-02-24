@@ -13,6 +13,7 @@ import {
   EyeOff,
   Upload,
   X,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,7 @@ import {
   getRetailStats,
   type Product,
   type ProductVariant,
+  type VariantType,
 } from "@/data/retail";
 
 type ProductWithRecord = Product & Record<string, unknown>;
@@ -88,6 +90,24 @@ export default function ProductsPage() {
   });
 
   const [newTag, setNewTag] = useState("");
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [variantForm, setVariantForm] = useState({
+    name: "",
+    sku: "",
+    barcode: "",
+    price: 0,
+    costPrice: 0,
+    stock: 0,
+    minStock: 0,
+    maxStock: 100,
+    variantType: "size" as VariantType,
+    variantValue: "",
+    customVariantType: "",
+    imageUrl: "",
+    imageUrls: [] as string[],
+  });
 
   const stats = getRetailStats();
 
@@ -113,6 +133,7 @@ export default function ProductsPage() {
       tags: [],
       imageUrl: "",
     });
+    setVariants([]);
     setIsAddEditModalOpen(true);
   };
 
@@ -138,7 +159,85 @@ export default function ProductsPage() {
       tags: [...product.tags],
       imageUrl: product.imageUrl || "",
     });
+    setVariants(product.hasVariants ? product.variants : []);
     setIsAddEditModalOpen(true);
+  };
+
+  const handleAddVariant = () => {
+    setEditingVariant(null);
+    setVariantForm({
+      name: "",
+      sku: "",
+      barcode: "",
+      price: 0,
+      costPrice: 0,
+      stock: 0,
+      minStock: 0,
+      maxStock: 100,
+      variantType: "size",
+      variantValue: "",
+      customVariantType: "",
+      imageUrl: "",
+      imageUrls: [],
+    });
+    setIsVariantModalOpen(true);
+  };
+
+  const handleEditVariant = (variant: ProductVariant) => {
+    setEditingVariant(variant);
+    setVariantForm({
+      name: variant.name,
+      sku: variant.sku,
+      barcode: variant.barcode,
+      price: variant.price,
+      costPrice: variant.costPrice,
+      stock: variant.stock,
+      minStock: variant.minStock,
+      maxStock: variant.maxStock,
+      variantType: variant.variantType,
+      variantValue: variant.variantValue,
+      customVariantType: variant.customVariantType || "",
+      imageUrl: variant.imageUrl || "",
+      imageUrls: variant.imageUrls || [],
+    });
+    setIsVariantModalOpen(true);
+  };
+
+  const handleSaveVariant = () => {
+    if (editingVariant) {
+      // Update existing variant
+      setVariants(
+        variants.map((v) =>
+          v.id === editingVariant.id
+            ? {
+                ...v,
+                ...variantForm,
+                customVariantType:
+                  variantForm.variantType === "custom"
+                    ? variantForm.customVariantType
+                    : undefined,
+              }
+            : v
+        )
+      );
+    } else {
+      // Add new variant
+      const newVariant: ProductVariant = {
+        id: `var-${Date.now()}`,
+        ...variantForm,
+        customVariantType:
+          variantForm.variantType === "custom"
+            ? variantForm.customVariantType
+            : undefined,
+      };
+      setVariants([...variants, newVariant]);
+    }
+    setIsVariantModalOpen(false);
+    setEditingVariant(null);
+  };
+
+  const handleDeleteVariant = (variantId: string) => {
+    setVariants(variants.filter((v) => v.id !== variantId));
   };
 
   const handleSave = () => {
@@ -870,16 +969,89 @@ export default function ProductsPage() {
               )}
             </div>
 
+            {/* Variants Section */}
+            {formData.hasVariants && (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-medium">Product Variants</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddVariant}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Variant
+                  </Button>
+                </div>
+                
+                {variants.length > 0 ? (
+                  <div className="space-y-2">
+                    {variants.map((variant) => (
+                      <div
+                        key={variant.id}
+                        className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{variant.name}</p>
+                            <Badge variant="outline" className="text-xs">
+                              {variant.variantType === "custom"
+                                ? variant.customVariantType
+                                : variant.variantType}: {variant.variantValue}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <span>SKU: {variant.sku}</span>
+                            <span>Barcode: {variant.barcode}</span>
+                            <span>Stock: {variant.stock}</span>
+                            <span>Price: ${variant.price.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditVariant(variant)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleDeleteVariant(variant.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No variants added yet. Click "Add Variant" to create one.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="flex items-center gap-2">
                 <Switch
                   id="hasVariants"
                   checked={formData.hasVariants}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, hasVariants: checked })
-                  }
+                  onCheckedChange={(checked) => {
+                    setFormData({ ...formData, hasVariants: checked });
+                    if (!checked) {
+                      setVariants([]);
+                    }
+                  }}
                 />
-                <Label htmlFor="hasVariants">Has Variants</Label>
+                <Label htmlFor="hasVariants">Does this product come in variations?</Label>
               </div>
 
               <div className="flex items-center gap-2">
@@ -915,6 +1087,283 @@ export default function ProductsPage() {
             </Button>
             <Button onClick={handleSave}>
               {editingProduct ? "Save Changes" : "Create Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Variant Modal */}
+      <Dialog open={isVariantModalOpen} onOpenChange={setIsVariantModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingVariant ? "Edit Variant" : "Add New Variant"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingVariant
+                ? "Update the variant details below."
+                : "Fill in the details to create a new product variant."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="variantName">Variant Name</Label>
+                <Input
+                  id="variantName"
+                  value={variantForm.name}
+                  onChange={(e) =>
+                    setVariantForm({ ...variantForm, name: e.target.value })
+                  }
+                  placeholder="e.g., Large Red"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="variantType">Variant Type</Label>
+                <Select
+                  value={variantForm.variantType}
+                  onValueChange={(value: VariantType) =>
+                    setVariantForm({ ...variantForm, variantType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="size">Size</SelectItem>
+                    <SelectItem value="color">Color</SelectItem>
+                    <SelectItem value="flavor">Flavor</SelectItem>
+                    <SelectItem value="weight">Weight</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {variantForm.variantType === "custom" && (
+              <div className="grid gap-2">
+                <Label htmlFor="customVariantType">Custom Variant Type Name</Label>
+                <Input
+                  id="customVariantType"
+                  value={variantForm.customVariantType}
+                  onChange={(e) =>
+                    setVariantForm({ ...variantForm, customVariantType: e.target.value })
+                  }
+                  placeholder="e.g., Material, Pattern, Style"
+                />
+              </div>
+            )}
+
+            <div className="grid gap-2">
+              <Label htmlFor="variantValue">Variant Value</Label>
+              <Input
+                id="variantValue"
+                value={variantForm.variantValue}
+                onChange={(e) =>
+                  setVariantForm({ ...variantForm, variantValue: e.target.value })
+                }
+                placeholder="e.g., Large, Red, 500g"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="variantSku">SKU</Label>
+                <Input
+                  id="variantSku"
+                  value={variantForm.sku}
+                  onChange={(e) =>
+                    setVariantForm({ ...variantForm, sku: e.target.value })
+                  }
+                  placeholder="e.g., PDF-001-L-RED"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="variantBarcode">Barcode</Label>
+                <Input
+                  id="variantBarcode"
+                  value={variantForm.barcode}
+                  onChange={(e) =>
+                    setVariantForm({ ...variantForm, barcode: e.target.value })
+                  }
+                  placeholder="e.g., 123456789012"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="variantPrice">Selling Price ($)</Label>
+                <Input
+                  id="variantPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={variantForm.price}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      price: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="variantCostPrice">Cost Price ($)</Label>
+                <Input
+                  id="variantCostPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={variantForm.costPrice}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      costPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="variantStock">Stock</Label>
+                <Input
+                  id="variantStock"
+                  type="number"
+                  min="0"
+                  value={variantForm.stock}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      stock: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="variantMinStock">Min Stock</Label>
+                <Input
+                  id="variantMinStock"
+                  type="number"
+                  min="0"
+                  value={variantForm.minStock}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      minStock: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="variantMaxStock">Max Stock</Label>
+                <Input
+                  id="variantMaxStock"
+                  type="number"
+                  min="0"
+                  value={variantForm.maxStock}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      maxStock: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Variant Image</Label>
+              <div className="flex gap-4 items-start">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() =>
+                        document.getElementById("variantImageUpload")?.click()
+                      }
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload Image
+                    </Button>
+                    <input
+                      id="variantImageUpload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setVariantForm({
+                              ...variantForm,
+                              imageUrl: reader.result as string,
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Upload an image specific to this variant
+                  </p>
+                </div>
+                {variantForm.imageUrl && (
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-lg border overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={variantForm.imageUrl}
+                        alt="Variant preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={() =>
+                        setVariantForm({ ...variantForm, imageUrl: "" })
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsVariantModalOpen(false);
+                setEditingVariant(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveVariant}
+              disabled={
+                !variantForm.name ||
+                !variantForm.sku ||
+                !variantForm.barcode ||
+                !variantForm.variantValue ||
+                (variantForm.variantType === "custom" && !variantForm.customVariantType)
+              }
+            >
+              {editingVariant ? "Save Changes" : "Add Variant"}
             </Button>
           </DialogFooter>
         </DialogContent>

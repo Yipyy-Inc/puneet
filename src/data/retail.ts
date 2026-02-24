@@ -1,7 +1,7 @@
 // Retail / POS module mock data
 
 export type ProductStatus = "active" | "inactive" | "discontinued";
-export type VariantType = "size" | "color" | "flavor" | "weight";
+export type VariantType = "size" | "color" | "flavor" | "weight" | "design" | "custom";
 export type OrderStatus =
   | "pending"
   | "ordered"
@@ -26,15 +26,18 @@ export type MovementType =
 export interface ProductVariant {
   id: string;
   name: string;
-  sku: string;
-  barcode: string;
-  price: number;
-  costPrice: number;
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  variantType: VariantType;
-  variantValue: string;
+  sku: string; // Unique SKU for this variant
+  barcode: string; // Unique barcode for this variant
+  price: number; // Selling price
+  costPrice: number; // Cost price
+  stock: number; // Current stock count
+  minStock: number; // Minimum stock threshold
+  maxStock: number; // Maximum stock threshold
+  variantType: VariantType; // Type of variation (size, color, etc.)
+  variantValue: string; // The actual value (e.g., "Large", "Red", "500g")
+  customVariantType?: string; // Custom variant type name if variantType is "custom"
+  imageUrl?: string; // Image URL for this specific variant
+  imageUrls?: string[]; // Multiple images for this variant
 }
 
 export interface Product {
