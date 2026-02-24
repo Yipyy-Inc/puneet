@@ -397,27 +397,46 @@ export default function StaffSchedulePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="p-3 sm:p-4 space-y-4">
+      {/* Minimal Header - Mobile First */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My Schedule</h1>
-          <p className="text-muted-foreground mt-1">
-            Welcome back, {staffMember.name}
+          <h1 className="text-xl sm:text-2xl font-bold">My Schedule</h1>
+          <p className="text-sm text-muted-foreground">
+            {staffMember.name}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setIsTimeOffModalOpen(true)} variant="outline" size="sm">
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Request Time Off
+        {/* Mobile: Single menu button, Desktop: Essential actions only */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setIsTimeOffModalOpen(true)} 
+            variant="outline" 
+            size="sm"
+            className="hidden sm:flex"
+          >
+            <CalendarDays className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Time Off</span>
           </Button>
-          <Button onClick={() => setIsSwapModalOpen(true)} variant="outline" size="sm">
-            <ArrowRightLeft className="mr-2 h-4 w-4" />
-            Request Swap
+          <Button 
+            onClick={() => setIsSwapModalOpen(true)} 
+            variant="outline" 
+            size="sm"
+            className="hidden sm:flex"
+          >
+            <ArrowRightLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Swap</span>
           </Button>
-          <Button onClick={() => setIsMessageModalOpen(true)} variant="outline" size="sm">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Message Manager
+          {/* Mobile menu button */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="sm:hidden"
+            onClick={() => {
+              // Simple dropdown would go here - for now just show time off
+              setIsTimeOffModalOpen(true);
+            }}
+          >
+            <CalendarDays className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -505,39 +524,32 @@ export default function StaffSchedulePage() {
         </Card>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{mySchedules.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Upcoming Shifts</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">
-              {mySchedules.filter((s) => s.status === "scheduled" || s.status === "confirmed").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Confirmed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">
-              {myTimeOffRequests.filter((r) => r.status === "pending").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Pending Requests</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">
-              {mySwapRequests.filter((r) => r.status === "pending").length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Pending Swaps</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Minimal Stats - Only show if there are pending items */}
+      {(myTimeOffRequests.filter((r) => r.status === "pending").length > 0 || 
+        mySwapRequests.filter((r) => r.status === "pending").length > 0) && (
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          {myTimeOffRequests.filter((r) => r.status === "pending").length > 0 && (
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="pt-3 pb-3">
+                <div className="text-lg font-bold">
+                  {myTimeOffRequests.filter((r) => r.status === "pending").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Pending Requests</p>
+              </CardContent>
+            </Card>
+          )}
+          {mySwapRequests.filter((r) => r.status === "pending").length > 0 && (
+            <Card className="border-orange-200 bg-orange-50/50">
+              <CardContent className="pt-3 pb-3">
+                <div className="text-lg font-bold">
+                  {mySwapRequests.filter((r) => r.status === "pending").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Pending Swaps</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* View Tabs */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "week" | "list" | "day")}>

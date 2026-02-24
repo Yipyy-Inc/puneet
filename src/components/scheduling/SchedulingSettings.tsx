@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -21,9 +21,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Save, RotateCcw, Users, ClipboardList, AlertTriangle } from "lucide-react";
 
 export default function SchedulingSettings() {
+  // Check if user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const checkAdmin = () => {
+      if (typeof document === "undefined") return;
+      const cookies = document.cookie.split("; ");
+      const roleCookie = cookies.find((cookie) => cookie.startsWith("user_role="));
+      if (roleCookie) {
+        const role = roleCookie.split("=")[1];
+        setIsAdmin(role === "super_admin" || role === "facility_admin");
+      }
+    };
+    checkAdmin();
+  }, []);
+
   const [settings, setSettings] = useState({
     // General Settings
     enabled: true,
@@ -132,11 +149,18 @@ export default function SchedulingSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            Scheduling Settings
+            {isAdmin ? "System Configuration" : "Scheduling Settings"}
           </h2>
           <p className="text-muted-foreground">
-            Configure staff scheduling preferences and policies
+            {isAdmin 
+              ? "System-level scheduling configuration and controls"
+              : "Configure staff scheduling preferences and policies"}
           </p>
+          {isAdmin && (
+            <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-800">
+              Admin Configuration Panel
+            </Badge>
+          )}
         </div>
         <div className="flex gap-2">
           {isEditing ? (
@@ -1191,6 +1215,148 @@ export default function SchedulingSettings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin-Only Settings */}
+        {isAdmin && (
+          <>
+            {/* Roles & Departments Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Roles & Departments (Admin Only)
+                </CardTitle>
+                <CardDescription>
+                  Configure roles, departments, and staff permissions
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    <strong>Admin Configuration:</strong> Define roles, departments, and assign permissions to staff members.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Available Roles</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Boarding, Daycare, Grooming, Front Desk, Training, Admin, Manager
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Staff Permissions</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Configure who can be employee vs manager vs admin
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Employee can view own schedule</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Manager can edit schedules</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Admin can override locked schedules</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Conflict Detection Rules */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Conflict Detection Rules (Admin Only)
+                </CardTitle>
+                <CardDescription>
+                  Configure rules for detecting scheduling conflicts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Enable Conflict Detection</Label>
+                  <Switch
+                    defaultChecked
+                    disabled={!isEditing}
+                  />
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>Conflict Types to Detect</Label>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Double-booked staff</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Overlapping shifts</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Scheduling during approved time off</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Role mismatch</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Max hours per day exceeded</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 border rounded">
+                      <span className="text-sm">Min rest between shifts violated</span>
+                      <Switch defaultChecked disabled={!isEditing} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Task Templates */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Task Templates (Admin Only)
+                </CardTitle>
+                <CardDescription>
+                  Create reusable task templates for opening/closing/med rounds
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Task Template Categories</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="p-2 border rounded">
+                      <p className="text-sm font-medium">Opening Tasks</p>
+                      <p className="text-xs text-muted-foreground">Morning setup, feeding rounds</p>
+                    </div>
+                    <div className="p-2 border rounded">
+                      <p className="text-sm font-medium">Closing Tasks</p>
+                      <p className="text-xs text-muted-foreground">Evening cleanup, final checks</p>
+                    </div>
+                    <div className="p-2 border rounded">
+                      <p className="text-sm font-medium">Medication Rounds</p>
+                      <p className="text-xs text-muted-foreground">Scheduled medication administration</p>
+                    </div>
+                    <div className="p-2 border rounded">
+                      <p className="text-sm font-medium">Cleaning Tasks</p>
+                      <p className="text-xs text-muted-foreground">Sanitization, deep cleaning</p>
+                    </div>
+                  </div>
+                </div>
+                <Button variant="outline" disabled={!isEditing}>
+                  Manage Task Templates
+                </Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
