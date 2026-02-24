@@ -53,13 +53,21 @@ import {
   getProductByBarcode,
   getRetailStats,
   addRetailTransaction,
+  getPromoCodeByCode,
+  getAccountDiscount,
+  applyPromoCode,
   type Product,
   type ProductVariant,
   type CartItem,
   type PaymentMethod,
+  type CartDiscount,
+  type PromoCode,
+  type AccountDiscount,
 } from "@/data/retail";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
+import { useFacilityRole } from "@/hooks/use-facility-role";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -67,6 +75,11 @@ interface CartItemWithId extends CartItem {
 
 export default function POSPage() {
   const searchParams = useSearchParams();
+  const { role: facilityRole } = useFacilityRole();
+  const currentUserId = getCurrentUserId();
+  const canApplyDiscount = hasPermission(facilityRole, "apply_discount", currentUserId || undefined);
+  const isManager = facilityRole === "manager" || facilityRole === "owner";
+  
   const [cart, setCart] = useState<CartItemWithId[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +87,10 @@ export default function POSPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [isCartDiscountModalOpen, setIsCartDiscountModalOpen] = useState(false);
+  const [isPromoCodeModalOpen, setIsPromoCodeModalOpen] = useState(false);
+  const [isCompItemModalOpen, setIsCompItemModalOpen] = useState(false);
+  const [isEditPriceModalOpen, setIsEditPriceModalOpen] = useState(false);
   const [selectedCartItem, setSelectedCartItem] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
@@ -82,6 +99,12 @@ export default function POSPage() {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
+  
+  // Discount states
+  const [cartDiscount, setCartDiscount] = useState<CartDiscount | null>(null);
+  const [promoCode, setPromoCode] = useState<string>("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState<PromoCode | null>(null);
+  const [accountDiscount, setAccountDiscount] = useState<AccountDiscount | null>(null);
 
   // Pre-select client when navigating from client file (e.g. ?clientId=15)
   useEffect(() => {
@@ -96,9 +119,35 @@ export default function POSPage() {
     }
   }, [searchParams]);
 
+  // Check for account discount when client is selected
+  useEffect(() => {
+    if (selectedClientId && selectedClientId !== "__walk_in__") {
+      const accDiscount = getAccountDiscount(selectedClientId);
+      setAccountDiscount(accDiscount);
+    } else {
+      setAccountDiscount(null);
+    }
+  }, [selectedClientId]);
+
   const [discountForm, setDiscountForm] = useState({
     type: "fixed" as "fixed" | "percent",
     value: 0,
+  });
+  
+  const [cartDiscountForm, setCartDiscountForm] = useState({
+    type: "percent" as "percent" | "fixed",
+    value: 0,
+    reason: "",
+  });
+  
+  const [compItemForm, setCompItemForm] = useState({
+    reason: "",
+  });
+  
+  const [editPriceForm, setEditPriceForm] = useState({
+    unitPrice: 0,
+    discount: 0,
+    discountType: "fixed" as "fixed" | "percent",
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -112,8 +161,55 @@ export default function POSPage() {
 
   const stats = getRetailStats();
 
-  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const discountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
+  // Calculate subtotal (before any discounts)
+  const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  
+  // Calculate line item discounts
+  const lineItemDiscountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
+  
+  // Calculate cart-wide discount
+  let cartDiscountAmount = 0;
+  if (cartDiscount) {
+    if (cartDiscount.type === "percent") {
+      cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (cartDiscount.value / 100);
+    } else if (cartDiscount.type === "fixed") {
+      cartDiscountAmount = Math.min(cartDiscount.value, subtotal - lineItemDiscountTotal);
+    } else if (cartDiscount.type === "promo_code" && appliedPromoCode) {
+      if (appliedPromoCode.discountType === "percent") {
+        const maxDiscount = appliedPromoCode.maxDiscount || Infinity;
+        cartDiscountAmount = Math.min(
+          (subtotal - lineItemDiscountTotal) * (appliedPromoCode.discountValue / 100),
+          maxDiscount
+        );
+      } else {
+        cartDiscountAmount = Math.min(
+          appliedPromoCode.discountValue,
+          subtotal - lineItemDiscountTotal
+        );
+      }
+    } else if (cartDiscount.type === "account_discount" && accountDiscount) {
+      if (accountDiscount.applicableTo === "products" || accountDiscount.applicableTo === "all" || accountDiscount.applicableTo === "both") {
+        if (accountDiscount.discountType === "percent") {
+          cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (accountDiscount.discountValue / 100);
+        } else {
+          cartDiscountAmount = Math.min(accountDiscount.discountValue, subtotal - lineItemDiscountTotal);
+        }
+      }
+    }
+  }
+  
+  // Apply account discount automatically if available and no other cart discount
+  if (!cartDiscount && accountDiscount && selectedClientId && selectedClientId !== "__walk_in__") {
+    if (accountDiscount.applicableTo === "products" || accountDiscount.applicableTo === "all" || accountDiscount.applicableTo === "both") {
+      if (accountDiscount.discountType === "percent") {
+        cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (accountDiscount.discountValue / 100);
+      } else {
+        cartDiscountAmount = Math.min(accountDiscount.discountValue, subtotal - lineItemDiscountTotal);
+      }
+    }
+  }
+  
+  const discountTotal = lineItemDiscountTotal + cartDiscountAmount;
   const taxTotal = 0; // Can be calculated if needed
   const grandTotal = subtotal - discountTotal + taxTotal;
 
@@ -197,7 +293,7 @@ export default function POSPage() {
   };
 
   const applyDiscount = () => {
-    if (!selectedCartItem) return;
+    if (!selectedCartItem || !canApplyDiscount) return;
 
     setCart(
       cart.map((item) => {
@@ -220,6 +316,119 @@ export default function POSPage() {
     setIsDiscountModalOpen(false);
     setSelectedCartItem(null);
     setDiscountForm({ type: "fixed", value: 0 });
+  };
+
+  const applyCartDiscount = () => {
+    if (!canApplyDiscount) return;
+
+    setCartDiscount({
+      type: cartDiscountForm.type,
+      value: cartDiscountForm.value,
+      appliedBy: currentUserId || undefined,
+      reason: cartDiscountForm.reason || undefined,
+    });
+    setIsCartDiscountModalOpen(false);
+    setCartDiscountForm({ type: "percent", value: 0, reason: "" });
+  };
+
+  const handleApplyPromoCode = () => {
+    if (!promoCode.trim()) return;
+
+    const promo = getPromoCodeByCode(promoCode.trim());
+    if (!promo) {
+      alert("Invalid or expired promo code");
+      return;
+    }
+
+    // Check minimum purchase
+    if (promo.minPurchase && subtotal < promo.minPurchase) {
+      alert(`Minimum purchase of $${promo.minPurchase} required for this promo code`);
+      return;
+    }
+
+    setAppliedPromoCode(promo);
+    setCartDiscount({
+      type: "promo_code",
+      value: promo.discountValue,
+      promoCode: promo.code,
+      appliedBy: currentUserId || undefined,
+    });
+    setIsPromoCodeModalOpen(false);
+    setPromoCode("");
+  };
+
+  const removeCartDiscount = () => {
+    setCartDiscount(null);
+    setAppliedPromoCode(null);
+  };
+
+  const applyCompItem = () => {
+    if (!selectedCartItem || !isManager) return;
+
+    setCart(
+      cart.map((item) => {
+        if (item.id === selectedCartItem) {
+          return {
+            ...item,
+            isComp: true,
+            compReason: compItemForm.reason,
+            discount: item.unitPrice * item.quantity,
+            discountType: "fixed",
+            total: 0,
+          };
+        }
+        return item;
+      }),
+    );
+
+    setIsCompItemModalOpen(false);
+    setSelectedCartItem(null);
+    setCompItemForm({ reason: "" });
+  };
+
+  const openEditPriceModal = (itemId: string) => {
+    if (!canApplyDiscount) return;
+    
+    const item = cart.find((i) => i.id === itemId);
+    if (!item) return;
+
+    setSelectedCartItem(itemId);
+    setEditPriceForm({
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      discountType: item.discountType,
+    });
+    setIsEditPriceModalOpen(true);
+  };
+
+  const applyPriceEdit = () => {
+    if (!selectedCartItem || !canApplyDiscount) return;
+
+    setCart(
+      cart.map((item) => {
+        if (item.id === selectedCartItem) {
+          const newSubtotal = editPriceForm.unitPrice * item.quantity;
+          const discountAmount =
+            editPriceForm.discountType === "percent"
+              ? (newSubtotal * editPriceForm.discount) / 100
+              : editPriceForm.discount;
+          const newTotal = newSubtotal - discountAmount;
+
+          return {
+            ...item,
+            unitPrice: editPriceForm.unitPrice,
+            discount: discountAmount,
+            discountType: editPriceForm.discountType,
+            total: newTotal,
+          };
+        }
+        return item;
+      }),
+    );
+
+    setIsEditPriceModalOpen(false);
+    setSelectedCartItem(null);
+    setEditPriceForm({ unitPrice: 0, discount: 0, discountType: "fixed" });
   };
 
   const handlePayment = () => {
@@ -255,6 +464,9 @@ export default function POSPage() {
       items: cart.map(({ id, ...item }) => item),
       subtotal,
       discountTotal,
+      cartDiscount: cartDiscount || undefined,
+      promoCodeUsed: appliedPromoCode?.code || undefined,
+      accountDiscountApplied: accountDiscount?.id || undefined,
       taxTotal,
       total: grandTotal,
       paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
@@ -268,10 +480,28 @@ export default function POSPage() {
       petName: petName,
       bookingId: selectedBookingId || undefined,
       bookingService: booking?.service,
-      cashierId: "staff-001",
+      cashierId: currentUserId || "staff-001",
       cashierName: "Staff",
       notes: "",
     });
+    
+    // Apply promo code usage count (increment usage in data)
+    if (appliedPromoCode) {
+      const promo = getPromoCodeByCode(appliedPromoCode.code);
+      if (promo) {
+        applyPromoCode(appliedPromoCode.code);
+      }
+    }
+    
+    // Clear cart and discounts
+    setCart([]);
+    setCartDiscount(null);
+    setAppliedPromoCode(null);
+    setSelectedClientId("");
+    setCustomerName("");
+    setCustomerEmail("");
+    setSelectedPetId(null);
+    setSelectedBookingId(null);
 
     setIsPaymentModalOpen(false);
     setIsReceiptModalOpen(true);
@@ -735,8 +965,7 @@ export default function POSPage() {
                 <p className="text-sm">Scan a barcode to add items</p>
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full">
+              <ScrollArea className="flex-1 min-h-[200px] max-h-[400px]">
                 <div className="space-y-2 pr-2">
                   {cart.map((item) => (
                     <div
@@ -791,22 +1020,51 @@ export default function POSPage() {
                           ${item.total.toFixed(2)}
                         </p>
                         <div className="flex gap-1 mt-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            onClick={() => {
-                              setSelectedCartItem(item.id);
-                              setIsDiscountModalOpen(true);
-                            }}
-                          >
-                            <Percent className="h-3 w-3" />
-                          </Button>
+                          {canApplyDiscount && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
+                                onClick={() => {
+                                  setSelectedCartItem(item.id);
+                                  setIsDiscountModalOpen(true);
+                                }}
+                                title="Apply Discount"
+                              >
+                                <Percent className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-blue-600"
+                                onClick={() => openEditPriceModal(item.id)}
+                                title="Edit Price / Discount"
+                              >
+                                <DollarSign className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                          {isManager && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-green-600"
+                              onClick={() => {
+                                setSelectedCartItem(item.id);
+                                setIsCompItemModalOpen(true);
+                              }}
+                              title="Comp / Free Item"
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-5 w-5 text-destructive"
                             onClick={() => removeFromCart(item.id)}
+                            title="Remove Item"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -816,7 +1074,6 @@ export default function POSPage() {
                   ))}
                 </div>
               </ScrollArea>
-              </div>
             )}
 
             {/* Cart Summary - Always visible at bottom */}
@@ -1128,10 +1385,319 @@ export default function POSPage() {
             >
               Cancel
             </Button>
-            <Button onClick={applyDiscount}>Apply Discount</Button>
+            <Button onClick={applyDiscount} disabled={!canApplyDiscount}>
+              Apply Discount
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cart Discount Modal */}
+      <Dialog open={isCartDiscountModalOpen} onOpenChange={setIsCartDiscountModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Apply Cart Discount</DialogTitle>
+            <DialogDescription>
+              Apply a discount to the entire cart
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Discount Type</Label>
+              <Select
+                value={cartDiscountForm.type}
+                onValueChange={(value: "percent" | "fixed") =>
+                  setCartDiscountForm({ ...cartDiscountForm, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Percentage (%)</SelectItem>
+                  <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>
+                {cartDiscountForm.type === "fixed"
+                  ? "Amount ($)"
+                  : "Percentage (%)"}
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                max={cartDiscountForm.type === "percent" ? 100 : undefined}
+                value={cartDiscountForm.value}
+                onChange={(e) =>
+                  setCartDiscountForm({
+                    ...cartDiscountForm,
+                    value: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+
+            {isManager && (
+              <div className="grid gap-2">
+                <Label>Reason (Optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Manager override, Customer complaint"
+                  value={cartDiscountForm.reason}
+                  onChange={(e) =>
+                    setCartDiscountForm({
+                      ...cartDiscountForm,
+                      reason: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCartDiscountModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={applyCartDiscount} disabled={!canApplyDiscount}>
+              Apply Discount
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Promo Code Modal */}
+      <Dialog open={isPromoCodeModalOpen} onOpenChange={setIsPromoCodeModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Apply Promo Code</DialogTitle>
+            <DialogDescription>
+              Enter a promo code to apply a discount
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Promo Code</Label>
+              <Input
+                type="text"
+                placeholder="Enter promo code"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleApplyPromoCode();
+                  }
+                }}
+              />
+            </div>
+
+            {appliedPromoCode && (
+              <div className="rounded-lg bg-green-50 p-3 border border-green-200">
+                <p className="text-sm font-medium text-green-900">
+                  Promo Code Applied: {appliedPromoCode.code}
+                </p>
+                <p className="text-xs text-green-700 mt-1">
+                  {appliedPromoCode.description}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPromoCodeModalOpen(false);
+                setPromoCode("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleApplyPromoCode} disabled={!promoCode.trim()}>
+              Apply Code
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Comp Item Modal (Manager Only) */}
+      {isManager && (
+        <Dialog open={isCompItemModalOpen} onOpenChange={setIsCompItemModalOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Comp / Free Item</DialogTitle>
+              <DialogDescription>
+                Mark this item as complimentary (free)
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label>Reason (Required)</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Customer complaint, Employee benefit"
+                  value={compItemForm.reason}
+                  onChange={(e) =>
+                    setCompItemForm({ reason: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsCompItemModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={applyCompItem}
+                disabled={!compItemForm.reason.trim()}
+              >
+                Comp Item
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Price / Discount Modal */}
+      {canApplyDiscount && (
+        <Dialog open={isEditPriceModalOpen} onOpenChange={setIsEditPriceModalOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit Price & Discount</DialogTitle>
+              <DialogDescription>
+                Update the unit price and discount for this item
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label>Unit Price ($)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editPriceForm.unitPrice}
+                  onChange={(e) =>
+                    setEditPriceForm({
+                      ...editPriceForm,
+                      unitPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Discount Type</Label>
+                <Select
+                  value={editPriceForm.discountType}
+                  onValueChange={(value: "fixed" | "percent") =>
+                    setEditPriceForm({ ...editPriceForm, discountType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                    <SelectItem value="percent">Percentage (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>
+                  {editPriceForm.discountType === "fixed"
+                    ? "Discount Amount ($)"
+                    : "Discount Percentage (%)"}
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={editPriceForm.discountType === "percent" ? 100 : undefined}
+                  step={editPriceForm.discountType === "percent" ? "1" : "0.01"}
+                  value={editPriceForm.discount}
+                  onChange={(e) =>
+                    setEditPriceForm({
+                      ...editPriceForm,
+                      discount: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+
+              {editPriceForm.unitPrice > 0 && (
+                <div className="rounded-lg bg-muted p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>
+                      ${(editPriceForm.unitPrice * (cart.find((i) => i.id === selectedCartItem)?.quantity || 1)).toFixed(2)}
+                    </span>
+                  </div>
+                  {editPriceForm.discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount:</span>
+                      <span>
+                        -$
+                        {editPriceForm.discountType === "percent"
+                          ? (
+                              (editPriceForm.unitPrice *
+                                (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) *
+                                editPriceForm.discount) /
+                              100
+                            ).toFixed(2)
+                          : editPriceForm.discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-medium pt-1 border-t">
+                    <span>Total:</span>
+                    <span>
+                      $
+                      {(
+                        editPriceForm.unitPrice *
+                          (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) -
+                        (editPriceForm.discountType === "percent"
+                          ? (editPriceForm.unitPrice *
+                              (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) *
+                              editPriceForm.discount) /
+                            100
+                          : editPriceForm.discount)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditPriceModalOpen(false);
+                  setSelectedCartItem(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={applyPriceEdit}>Update Price</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Booking Selection Modal (for Add to Booking) */}
       <Dialog open={isBookingSelectModalOpen} onOpenChange={setIsBookingSelectModalOpen}>

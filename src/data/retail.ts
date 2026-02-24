@@ -9,7 +9,7 @@ export type OrderStatus =
   | "received"
   | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
-export type PaymentMethod = "cash" | "credit" | "debit" | "split";
+export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay";
 export type MovementType =
   | "sale"
   | "purchase"
@@ -118,6 +118,53 @@ export interface CartItem {
   discount: number;
   discountType: "fixed" | "percent";
   total: number;
+  isComp?: boolean; // Employee comp / free item
+  compReason?: string; // Reason for comp (manager only)
+}
+
+export type CartDiscountType = "percent" | "fixed" | "promo_code" | "account_discount" | "employee_discount";
+
+export interface CartDiscount {
+  type: CartDiscountType;
+  value: number; // Percentage or fixed amount
+  promoCode?: string; // If type is "promo_code"
+  appliedBy?: string; // User ID who applied the discount
+  reason?: string; // Reason for discount (for manager comps)
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  minPurchase?: number; // Minimum purchase amount required
+  maxDiscount?: number; // Maximum discount amount (for percentage)
+  validFrom: string;
+  validTo: string;
+  usageLimit?: number; // Total number of times it can be used
+  usageCount: number; // Current usage count
+  isActive: boolean;
+  applicableTo?: string[]; // Product IDs or categories (empty = all products)
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AccountDiscount {
+  id: string;
+  customerId: string;
+  customerName: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  applicableTo?: "all" | "products" | "services" | "both";
+  productCategories?: string[]; // If applicableTo includes products
+  validFrom: string;
+  validTo?: string; // Optional expiration
+  isActive: boolean;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Transaction {
@@ -127,6 +174,9 @@ export interface Transaction {
   items: CartItem[];
   subtotal: number;
   discountTotal: number;
+  cartDiscount?: CartDiscount; // Cart-wide discount applied
+  promoCodeUsed?: string; // Promo code if used
+  accountDiscountApplied?: string; // Account discount ID if applied
   taxTotal: number;
   total: number;
   paymentMethod: PaymentMethod;
@@ -1593,4 +1643,102 @@ export function addRetailTransaction(
   } as Transaction;
   transactions.push(newTxn);
   return newTxn;
+}
+
+// Mock data for promo codes
+export const promoCodes: PromoCode[] = [
+  {
+    id: "promo-001",
+    code: "WELCOME10",
+    description: "10% off for new customers",
+    discountType: "percent",
+    discountValue: 10,
+    minPurchase: 50,
+    maxDiscount: 20,
+    validFrom: "2024-01-01",
+    validTo: "2024-12-31",
+    usageLimit: 1000,
+    usageCount: 45,
+    isActive: true,
+    createdBy: "admin",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "promo-002",
+    code: "SAVE20",
+    description: "$20 off orders over $100",
+    discountType: "fixed",
+    discountValue: 20,
+    minPurchase: 100,
+    validFrom: "2024-03-01",
+    validTo: "2024-03-31",
+    usageLimit: 500,
+    usageCount: 12,
+    isActive: true,
+    createdBy: "admin",
+    createdAt: "2024-03-01",
+  },
+];
+
+// Mock data for account discounts
+export const accountDiscounts: AccountDiscount[] = [
+  {
+    id: "acc-disc-001",
+    customerId: "15",
+    customerName: "Alice Johnson",
+    discountType: "percent",
+    discountValue: 15,
+    applicableTo: "products",
+    validFrom: "2024-01-01",
+    isActive: true,
+    notes: "Employee discount - 15% off all products",
+    createdBy: "admin",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+];
+
+// Helper functions for discounts
+export function getPromoCodeByCode(code: string): PromoCode | null {
+  const promo = promoCodes.find(
+    (p) => p.code.toUpperCase() === code.toUpperCase() && p.isActive
+  );
+  if (!promo) return null;
+  
+  // Check if still valid
+  const now = new Date();
+  const validFrom = new Date(promo.validFrom);
+  const validTo = new Date(promo.validTo);
+  
+  if (now < validFrom || now > validTo) return null;
+  if (promo.usageLimit && promo.usageCount >= promo.usageLimit) return null;
+  
+  return promo;
+}
+
+export function getAccountDiscount(customerId: string): AccountDiscount | null {
+  const discount = accountDiscounts.find(
+    (d) => d.customerId === String(customerId) && d.isActive
+  );
+  if (!discount) return null;
+  
+  // Check if still valid
+  const now = new Date();
+  const validFrom = new Date(discount.validFrom);
+  if (now < validFrom) return null;
+  
+  if (discount.validTo) {
+    const validTo = new Date(discount.validTo);
+    if (now > validTo) return null;
+  }
+  
+  return discount;
+}
+
+export function applyPromoCode(code: string): PromoCode | null {
+  const promo = getPromoCodeByCode(code);
+  if (promo) {
+    promo.usageCount++;
+  }
+  return promo;
 }
