@@ -8,18 +8,12 @@ import {
   Mail,
   MessageSquare,
   Bell,
-  Settings,
   Plus,
-  Zap,
   Users,
   Clock,
-  CheckCircle2,
   Search,
   Paperclip,
-  Image as ImageIcon,
-  FileText,
   Filter,
-  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,13 +21,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   messages,
-  automationRules,
   petUpdates,
   internalMessages,
 } from "@/data/communications-hub";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ComposeMessageModal } from "@/components/communications/ComposeMessageModal";
-import { AutomationRuleModal } from "@/components/communications/AutomationRuleModal";
 import { PetUpdateModal } from "@/components/communications/PetUpdateModal";
 import { AppointmentRemindersTab } from "@/components/additional-features/AppointmentRemindersTab";
 import type { Message } from "@/data/communications-hub";
@@ -50,11 +42,7 @@ interface Conversation {
 
 export default function MessagingPage() {
   const [showComposeModal, setShowComposeModal] = useState(false);
-  const [showAutomationModal, setShowAutomationModal] = useState(false);
   const [showPetUpdateModal, setShowPetUpdateModal] = useState(false);
-  const [selectedAutomationRule, setSelectedAutomationRule] = useState<
-    (typeof automationRules)[0] | null
-  >(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "email" | "sms" | "in-app">("all");
@@ -193,10 +181,6 @@ export default function MessagingPage() {
                 {conversations.reduce((sum, c) => sum + c.unreadCount, 0)}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="automations">
-            <Zap className="h-4 w-4 mr-2" />
-            Automations
           </TabsTrigger>
           <TabsTrigger value="pet-updates">
             <Bell className="h-4 w-4 mr-2" />
@@ -448,151 +432,6 @@ export default function MessagingPage() {
           </div>
         </TabsContent>
 
-        {/* Automations Tab */}
-        <TabsContent value="automations" className="space-y-6">
-          {/* ... existing automations content ... */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-2">Automations</h2>
-            <p className="text-muted-foreground">
-              Triggers, rules, reminders, and auto messages to keep customers informed
-            </p>
-          </div>
-
-          {/* Automation Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Automations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {automationRules.filter((r) => r.enabled).length}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  of {automationRules.length} total
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Sent
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {automationRules.reduce(
-                    (sum, r) => sum + r.stats.totalSent,
-                    0,
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">All time</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Email Automations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {
-                    automationRules.filter((r) => r.messageType === "email" || r.messageType === "both")
-                      .length
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Active rules
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  SMS Automations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {
-                    automationRules.filter((r) => r.messageType === "sms" || r.messageType === "both")
-                      .length
-                  }
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Active rules
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Automation Rules */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Automation Rules</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Automated messages triggered by events
-                  </p>
-                </div>
-                <Button onClick={() => setShowAutomationModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Rule
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {automationRules.map((rule) => (
-                  <div
-                    key={rule.id}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold">{rule.name}</span>
-                          <Badge variant={rule.enabled ? "default" : "secondary"}>
-                            {rule.enabled ? "Active" : "Inactive"}
-                          </Badge>
-                          <Badge variant="outline" className="capitalize">
-                            {rule.messageType}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Trigger: {rule.trigger.replace(/_/g, " ")}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Total sent: {rule.stats.totalSent} • Last triggered:{" "}
-                          {rule.stats.lastTriggered
-                            ? formatTimestamp(rule.stats.lastTriggered)
-                            : "Never"}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAutomationRule(rule);
-                          setShowAutomationModal(true);
-                        }}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Pet Updates Tab */}
         <TabsContent value="pet-updates" className="space-y-4">
@@ -735,18 +574,6 @@ export default function MessagingPage() {
       <Dialog open={showComposeModal} onOpenChange={setShowComposeModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <ComposeMessageModal onClose={() => setShowComposeModal(false)} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAutomationModal} onOpenChange={setShowAutomationModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
-          <AutomationRuleModal
-            rule={selectedAutomationRule ?? undefined}
-            onClose={() => {
-              setShowAutomationModal(false);
-              setSelectedAutomationRule(null);
-            }}
-          />
         </DialogContent>
       </Dialog>
 
