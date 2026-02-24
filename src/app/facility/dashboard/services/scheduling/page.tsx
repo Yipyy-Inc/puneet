@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { users } from "@/data/users";
 import { schedules, type Schedule } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
@@ -539,9 +539,38 @@ const timeSlots = [
 ];
 
 export default function FacilitySchedulingPage() {
-  // Static facility ID for now (would come from user token in production)
-  const facilityId = 11;
-  const facility = facilities.find((f) => f.id === facilityId);
+  // Get user role to determine if admin
+  const [userRole, setUserRole] = useState<"super_admin" | "facility_admin" | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    // Check if user is admin (super_admin or facility_admin)
+    const checkAdmin = () => {
+      if (typeof document === "undefined") return;
+      const cookies = document.cookie.split("; ");
+      const roleCookie = cookies.find((cookie) => cookie.startsWith("user_role="));
+      if (roleCookie) {
+        const role = roleCookie.split("=")[1] as "super_admin" | "facility_admin";
+        if (role === "super_admin" || role === "facility_admin") {
+          setUserRole(role);
+          setIsAdmin(true);
+        }
+      }
+    };
+    checkAdmin();
+  }, []);
+
+  // For admins: allow facility selection, for managers: use their assigned facility
+  const [selectedFacilityId, setSelectedFacilityId] = useState<number>(11);
+  
+  useEffect(() => {
+    if (!isAdmin) {
+      // For non-admins, use their assigned facility (would come from user token in production)
+      setSelectedFacilityId(11);
+    }
+  }, [isAdmin]);
+
+  const facility = facilities.find((f) => f.id === selectedFacilityId);
 
   const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
@@ -583,6 +612,17 @@ export default function FacilitySchedulingPage() {
   // Copy week modal
   const [isCopyWeekModalOpen, setIsCopyWeekModalOpen] = useState(false);
   const [copyTargetDate, setCopyTargetDate] = useState("");
+
+  // Publish schedule modal
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishWeekStart, setPublishWeekStart] = useState("");
+  const [publishNotes, setPublishNotes] = useState("");
+  const [publishedSchedules, setPublishedSchedules] = useState<Set<string>>(new Set());
+
+  // Bulk edit modal
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [selectedShiftsForBulkEdit, setSelectedShiftsForBulkEdit] = useState<number[]>([]);
+  const [bulkEditAction, setBulkEditAction] = useState<"assign" | "status" | "role" | "delete" | null>(null);
 
   // Same-Day Sick / Call-Out modal
   const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
@@ -1341,17 +1381,18 @@ export default function FacilitySchedulingPage() {
     return <div>Facility not found</div>;
   }
 
-  // Use example schedule data for testing (no filter), fallback to imported data with filter
-  const facilitySchedules =
-    exampleSchedules.length > 0
-      ? exampleSchedules
-      : schedules.filter((schedule) => schedule.facility === facility.name);
+  // For admins: show all schedules/staff, for managers: filter by facility
+  const facilitySchedules = isAdmin
+    ? (exampleSchedules.length > 0 ? exampleSchedules : schedules)
+    : (exampleSchedules.length > 0
+        ? exampleSchedules.filter((s) => s.facility === facility?.name)
+        : schedules.filter((schedule) => schedule.facility === facility?.name));
 
-  // Use example staff data for testing
-  const facilityStaff =
-    exampleStaff.length > 0
-      ? exampleStaff
-      : users.filter((user) => user.facility === facility.name);
+  const facilityStaff = isAdmin
+    ? (exampleStaff.length > 0 ? exampleStaff : users)
+    : (exampleStaff.length > 0
+        ? exampleStaff.filter((u) => u.facility === facility?.name)
+        : users.filter((user) => user.facility === facility?.name));
 
   const handleAddNew = (date?: string) => {
     setEditingSchedule(null);
@@ -1589,35 +1630,179 @@ export default function FacilitySchedulingPage() {
     setCopyTargetDate("");
   };
 
+  // Publish schedule
+  const handlePublishSchedule = () => {
+    if (!publishWeekStart) {
+      toast.error("Please select a week to publish");
+      return;
+    }
+    
+    // In production, this would publish the schedule and notify staff
+    const weekKey = publishWeekStart;
+    setPublishedSchedules((prev) => new Set([...prev, weekKey]));
+    toast.success("Schedule published successfully", {
+      description: `Staff have been notified about the schedule for week starting ${publishWeekStart}`,
+    });
+    setIsPublishModalOpen(false);
+    setPublishWeekStart("");
+    setPublishNotes("");
+  };
+
+  // Check if a week is published
+  const isWeekPublished = (weekStart: string) => {
+    return publishedSchedules.has(weekStart);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Action Bar */}
-      <div className="flex items-center justify-end gap-2">
-        <Button onClick={() => handleAddNew()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Shift
-        </Button>
-        <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Week
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => exportSchedulesToCSV(facilitySchedules)}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          CSV
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => exportSchedulesToICS(facilitySchedules, facility.name)}
-        >
-          <FileDown className="mr-2 h-4 w-4" />
-          ICS
-        </Button>
+      {/* Action Bar - Role-Based */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">
+            {isAdmin ? "Schedule Administration" : "Schedule Planning"}
+          </h1>
+          {isAdmin ? (
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedFacilityId.toString()}
+                onValueChange={(value) => setSelectedFacilityId(parseInt(value))}
+              >
+                <SelectTrigger className="w-[250px] border-primary">
+                  <SelectValue placeholder="Select Facility" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilities.map((f) => (
+                    <SelectItem key={f.id} value={f.id.toString()}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                Admin Mode
+              </Badge>
+            </div>
+          ) : (
+            <Badge variant="outline" className="ml-2">
+              {facility?.name || "No Facility"}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Planning Actions - Manager Focus */}
+          <Button onClick={() => handleAddNew()} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Shift
+          </Button>
+          <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)} size="sm">
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Week
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => {
+              const today = new Date();
+              const day = today.getDay();
+              const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+              const weekStart = new Date(today.setDate(diff));
+              setPublishWeekStart(weekStart.toISOString().split("T")[0]);
+              setIsPublishModalOpen(true);
+            }}
+            className="bg-green-600 hover:bg-green-700"
+            size="sm"
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Publish
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportSchedulesToCSV(facilitySchedules)}
+            size="sm"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">CSV</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportSchedulesToICS(facilitySchedules, facility?.name || "")}
+            size="sm"
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">ICS</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs */}
+      {/* Coverage-First Quick Actions Bar (Manager) */}
+      {!isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Coverage Needs - Prominent */}
+          {getSickCallInsNeedingCoverage().length > 0 && (
+            <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors"
+              onClick={() => {
+                const coverageTab = document.querySelector('[value="coverage"]') as HTMLElement;
+                coverageTab?.click();
+              }}
+            >
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-900">Coverage Needed</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">
+                      {getSickCallInsNeedingCoverage().length}
+                    </p>
+                  </div>
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* Pending Approvals - Quick Access */}
+          {(getPendingSwapRequests().length > 0 || timeOffRequests.filter(r => r.status === "pending").length > 0) && (
+            <Card className="border-orange-200 bg-orange-50/50 cursor-pointer hover:bg-orange-100/50 transition-colors"
+              onClick={() => {
+                const requestsTab = document.querySelector('[value="requests"]') as HTMLElement;
+                requestsTab?.click();
+              }}
+            >
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-orange-900">Pending Approvals</p>
+                    <p className="text-2xl font-bold text-orange-600 mt-1">
+                      {getPendingSwapRequests().length + timeOffRequests.filter(r => r.status === "pending").length}
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* Conflicts - Quick Access */}
+          {detectAllConflicts().filter(c => c.severity === "critical").length > 0 && (
+            <Card className="border-yellow-200 bg-yellow-50/50 cursor-pointer hover:bg-yellow-100/50 transition-colors"
+              onClick={() => {
+                const coverageTab = document.querySelector('[value="coverage"]') as HTMLElement;
+                coverageTab?.click();
+              }}
+            >
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900">Critical Conflicts</p>
+                    <p className="text-2xl font-bold text-yellow-600 mt-1">
+                      {detectAllConflicts().filter(c => c.severity === "critical").length}
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-yellow-600" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Tabs - Reordered for Manager: Coverage First */}
       <Tabs defaultValue="schedule" className="space-y-6">
         <TabsList className="inline-flex h-auto gap-1 rounded-lg bg-muted p-1">
           <TabsTrigger
@@ -1626,18 +1811,6 @@ export default function FacilitySchedulingPage() {
           >
             <Calendar className="h-4 w-4" />
             Schedule
-          </TabsTrigger>
-          <TabsTrigger
-            value="requests"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-          >
-            <FileText className="h-4 w-4" />
-            Requests
-            {(getSickCallInsNeedingCoverage().length > 0 || getPendingSwapRequests().length > 0) && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                {getSickCallInsNeedingCoverage().length + getPendingSwapRequests().length}
-              </Badge>
-            )}
           </TabsTrigger>
           <TabsTrigger
             value="coverage"
@@ -1652,19 +1825,33 @@ export default function FacilitySchedulingPage() {
             )}
           </TabsTrigger>
           <TabsTrigger
+            value="requests"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+          >
+            <FileText className="h-4 w-4" />
+            Requests
+            {(getSickCallInsNeedingCoverage().length > 0 || getPendingSwapRequests().length > 0) && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                {getSickCallInsNeedingCoverage().length + getPendingSwapRequests().length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
             value="templates"
             className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
           >
             <CalendarDays className="h-4 w-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger
+              value="settings"
+              className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="schedule" className="space-y-6">
@@ -1724,32 +1911,65 @@ export default function FacilitySchedulingPage() {
             </Card>
           </div>
 
-          {/* View Toggle */}
+          {/* Planning Tools Bar - Fast Editing Focus */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant={viewMode === "calendar" ? "default" : "outline"}
                   onClick={() => setViewMode("calendar")}
+                  size="sm"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  Calendar View
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  onClick={() => setViewMode("list")}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  List View
+                  <User className="mr-2 h-4 w-4" />
+                  By Employee
                 </Button>
                 <Button
                   variant={viewMode === "role" ? "default" : "outline"}
                   onClick={() => setViewMode("role")}
+                  size="sm"
                 >
                   <Users className="mr-2 h-4 w-4" />
-                  Role View
+                  By Role
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  onClick={() => setViewMode("list")}
+                  size="sm"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  List
+                </Button>
+                {/* Bulk Edit Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Open bulk edit modal
+                    toast.info("Bulk edit feature coming soon");
+                  }}
+                >
+                  <Users2 className="mr-2 h-4 w-4" />
+                  Bulk Edit
                 </Button>
               </div>
+              {/* Coverage Overlay Toggle - Prominent */}
+              {viewMode === "calendar" && (
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={calendarView === "day" ? "default" : "outline"} 
+                    className="flex items-center gap-1 cursor-pointer"
+                    onClick={() => {
+                      if (calendarView !== "day") {
+                        setCalendarView("day");
+                        toast.info("Switch to Day view to see coverage overlay");
+                      }
+                    }}
+                  >
+                    <Map className="h-3 w-3" />
+                    {calendarView === "day" ? "Coverage On" : "Coverage (Day View)"}
+                  </Badge>
+                </div>
+              )}
 
               {viewMode === "calendar" && (
                 <div className="flex items-center gap-2">
@@ -3087,6 +3307,207 @@ export default function FacilitySchedulingPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Publish Schedule Modal */}
+          <Dialog
+            open={isPublishModalOpen}
+            onOpenChange={setIsPublishModalOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  Publish Schedule
+                </DialogTitle>
+                <DialogDescription>
+                  Publish the schedule for staff to view. Staff will be notified of the published schedule.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="publishWeekStart">
+                    Week Start Date (Monday) *
+                  </Label>
+                  <Input
+                    id="publishWeekStart"
+                    type="date"
+                    value={publishWeekStart}
+                    onChange={(e) => setPublishWeekStart(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Select the Monday of the week you want to publish.
+                  </p>
+                  {publishWeekStart && isWeekPublished(publishWeekStart) && (
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      This week has already been published.
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="publishNotes">
+                    Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id="publishNotes"
+                    value={publishNotes}
+                    onChange={(e) => setPublishNotes(e.target.value)}
+                    placeholder="Add any notes or announcements for staff..."
+                    rows={3}
+                  />
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900 font-medium mb-1">
+                    What happens when you publish:
+                  </p>
+                  <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                    <li>All staff members will be notified</li>
+                    <li>Schedule will be visible in their staff portal</li>
+                    <li>Staff will need to acknowledge the schedule update</li>
+                  </ul>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsPublishModalOpen(false);
+                    setPublishWeekStart("");
+                    setPublishNotes("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePublishSchedule}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={!publishWeekStart}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Publish Schedule
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk Edit Modal - Manager Only */}
+          {!isAdmin && (
+            <Dialog
+              open={isBulkEditModalOpen}
+              onOpenChange={setIsBulkEditModalOpen}
+            >
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Users2 className="h-5 w-5" />
+                    Bulk Edit Shifts
+                  </DialogTitle>
+                  <DialogDescription>
+                    Select multiple shifts and apply changes to all of them at once.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Select Shifts</Label>
+                    <div className="border rounded-lg p-3 max-h-[300px] overflow-y-auto">
+                      <div className="space-y-2">
+                        {facilitySchedules
+                          .filter((s) => s.status === "scheduled" || s.status === "confirmed")
+                          .slice(0, 20)
+                          .map((shift) => (
+                            <div
+                              key={shift.id}
+                              className="flex items-center gap-2 p-2 border rounded hover:bg-accent/50"
+                            >
+                              <Checkbox
+                                checked={selectedShiftsForBulkEdit.includes(shift.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedShiftsForBulkEdit([...selectedShiftsForBulkEdit, shift.id]);
+                                  } else {
+                                    setSelectedShiftsForBulkEdit(selectedShiftsForBulkEdit.filter(id => id !== shift.id));
+                                  }
+                                }}
+                              />
+                              <div className="flex-1 text-sm">
+                                <span className="font-medium">{shift.staffName}</span>
+                                <span className="text-muted-foreground ml-2">
+                                  {shift.date} - {shift.startTime} to {shift.endTime} ({shift.role})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedShiftsForBulkEdit.length} shift(s) selected
+                    </p>
+                  </div>
+
+                  {selectedShiftsForBulkEdit.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Bulk Action</Label>
+                      <Select
+                        value={bulkEditAction || ""}
+                        onValueChange={(value) => setBulkEditAction(value as typeof bulkEditAction)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select action..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="assign">Reassign Staff</SelectItem>
+                          <SelectItem value="status">Change Status</SelectItem>
+                          <SelectItem value="role">Change Role</SelectItem>
+                          <SelectItem value="delete">Delete Shifts</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {bulkEditAction && selectedShiftsForBulkEdit.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-900">
+                        <strong>Note:</strong> This will apply the action to {selectedShiftsForBulkEdit.length} selected shift(s).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsBulkEditModalOpen(false);
+                      setSelectedShiftsForBulkEdit([]);
+                      setBulkEditAction(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (selectedShiftsForBulkEdit.length === 0 || !bulkEditAction) {
+                        toast.error("Please select shifts and an action");
+                        return;
+                      }
+                      // TODO: Implement bulk edit logic
+                      toast.success(`Bulk ${bulkEditAction} applied to ${selectedShiftsForBulkEdit.length} shift(s)`);
+                      setIsBulkEditModalOpen(false);
+                      setSelectedShiftsForBulkEdit([]);
+                      setBulkEditAction(null);
+                    }}
+                    disabled={selectedShiftsForBulkEdit.length === 0 || !bulkEditAction}
+                  >
+                    Apply to {selectedShiftsForBulkEdit.length} Shift(s)
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </TabsContent>
 
         {/* Requests Tab - Time Off + Shift Swap */}
@@ -3772,9 +4193,12 @@ export default function FacilitySchedulingPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
-          <SchedulingSettings />
-        </TabsContent>
+        {/* Settings Tab - Only visible for Admin */}
+        {isAdmin && (
+          <TabsContent value="settings" className="space-y-6">
+            <SchedulingSettings />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Same-Day Sick / Call-Out Modal */}

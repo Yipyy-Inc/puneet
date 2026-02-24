@@ -97,9 +97,9 @@ export default function StaffLoginPage() {
               Quick Login (Demo)
             </p>
             <div className="space-y-2">
-              {staffMembers.map((staff) => (
+              {staffMembers.map((staff, index) => (
                 <Button
-                  key={staff.id}
+                  key={`staff-${staff.id}-${staff.email}-${index}`}
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => handleQuickLogin(staff.id.toString())}
