@@ -55,10 +55,12 @@ export default function MessagingPage() {
       if (!msg.clientId) return; // Skip messages without clientId
 
       if (!conversationMap.has(msg.clientId)) {
-        // Get client name from the first message
+        // Get client name from the message 'from' field
         const clientName = msg.from.includes("@")
-          ? msg.from.split("@")[0].replace(/\./g, " ")
-          : msg.clientName || `Client ${msg.clientId}`;
+          ? msg.from.split("@")[0].replace(/\./g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+          : msg.from.includes("+")
+            ? msg.from // Phone number
+            : msg.from.replace(/Client Portal - /, "") || `Client ${msg.clientId}`;
 
         conversationMap.set(msg.clientId, {
           clientId: msg.clientId,
