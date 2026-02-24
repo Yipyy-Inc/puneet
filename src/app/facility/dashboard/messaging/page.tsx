@@ -52,7 +52,7 @@ export default function MessagingPage() {
             <MessageSquare className="h-3 w-3 mr-1 inline" />
           )}
           {row.original.type === "in-app" && (
-            <Bell className="h-3 w-3 mr-1 inline" />
+            <MessageSquare className="h-3 w-3 mr-1 inline" />
           )}
           {row.original.type}
         </Badge>
@@ -256,7 +256,7 @@ export default function MessagingPage() {
   // Filter messages by type
   const emailMessages = messages.filter((m) => m.type === "email");
   const smsMessages = messages.filter((m) => m.type === "sms");
-  const inAppMessages = messages.filter((m) => m.type === "in-app");
+  const chatMessages = messages.filter((m) => m.type === "in-app");
 
   return (
     <div className="p-6 space-y-6">
@@ -265,17 +265,17 @@ export default function MessagingPage() {
         <div>
           <h1 className="text-3xl font-bold">Messaging</h1>
           <p className="text-muted-foreground mt-1">
-            Email, SMS, automations, and internal communications
+            All customer communication (chat, SMS, email)
           </p>
         </div>
       </div>
 
       {/* Messaging Tabs */}
-      <Tabs defaultValue="inbox" className="space-y-4">
+      <Tabs defaultValue="chat" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="inbox">
-            <Mail className="h-4 w-4 mr-2" />
-            Inbox
+          <TabsTrigger value="chat">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Chat
           </TabsTrigger>
           <TabsTrigger value="email">
             <Mail className="h-4 w-4 mr-2" />
@@ -284,6 +284,10 @@ export default function MessagingPage() {
           <TabsTrigger value="sms">
             <MessageSquare className="h-4 w-4 mr-2" />
             SMS
+          </TabsTrigger>
+          <TabsTrigger value="inbox">
+            <Mail className="h-4 w-4 mr-2" />
+            Inbox
           </TabsTrigger>
           <TabsTrigger value="automations">
             <Zap className="h-4 w-4 mr-2" />
@@ -303,6 +307,40 @@ export default function MessagingPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Chat Tab */}
+        <TabsContent value="chat" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Customer Chat</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Real-time chat conversations with customers
+                  </p>
+                </div>
+                <Button onClick={() => setShowComposeModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Chat
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {chatMessages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No chat messages yet
+                </div>
+              ) : (
+                <DataTable
+                  columns={messageColumns}
+                  data={chatMessages}
+                  searchColumn="body"
+                  searchPlaceholder="Search chat messages..."
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Unified Inbox Tab */}
         <TabsContent value="inbox" className="space-y-4">
           <Card>
@@ -311,7 +349,7 @@ export default function MessagingPage() {
                 <div>
                   <CardTitle>Unified Inbox</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    All messages from email, SMS, and in-app in one place
+                    All messages from chat, email, and SMS in one place
                   </p>
                 </div>
                 <Button onClick={() => setShowComposeModal(true)}>
@@ -388,7 +426,15 @@ export default function MessagingPage() {
         </TabsContent>
 
         {/* Automations Tab */}
-        <TabsContent value="automations" className="space-y-4">
+        <TabsContent value="automations" className="space-y-6">
+          {/* Header with Description */}
+          <div>
+            <h2 className="text-2xl font-semibold mb-2">Automations</h2>
+            <p className="text-muted-foreground">
+              Triggers, rules, reminders, and auto messages to keep customers informed
+            </p>
+          </div>
+
           {/* Automation Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -433,7 +479,7 @@ export default function MessagingPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {
-                    automationRules.filter((r) => r.messageType === "email")
+                    automationRules.filter((r) => r.messageType === "email" || r.messageType === "both")
                       .length
                   }
                 </div>
@@ -452,7 +498,7 @@ export default function MessagingPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {
-                    automationRules.filter((r) => r.messageType === "sms")
+                    automationRules.filter((r) => r.messageType === "sms" || r.messageType === "both")
                       .length
                   }
                 </div>
@@ -463,30 +509,102 @@ export default function MessagingPage() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Automation Rules</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Automated messages triggered by events
-                  </p>
+          {/* Automation Rules by Category */}
+          <div className="space-y-6">
+            {/* Triggers Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5" />
+                      Triggers & Rules
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Automated messages triggered by events (bookings, payments, check-ins)
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowAutomationModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Rule
+                  </Button>
                 </div>
-                <Button onClick={() => setShowAutomationModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Rule
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={automationColumns}
-                data={automationRules}
-                searchColumn="name"
-                searchPlaceholder="Search automations..."
-              />
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={automationColumns}
+                  data={automationRules.filter(
+                    (r) =>
+                      r.trigger === "booking_created" ||
+                      r.trigger === "check_in" ||
+                      r.trigger === "check_out" ||
+                      r.trigger === "payment_received" ||
+                      r.trigger === "vaccination_expiry"
+                  )}
+                  searchColumn="name"
+                  searchPlaceholder="Search triggers..."
+                />
+              </CardContent>
+            </Card>
+
+            {/* Reminders Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Reminders
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Scheduled reminders sent before appointments and important dates
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAutomationModal(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Reminder
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={automationColumns}
+                  data={automationRules.filter(
+                    (r) =>
+                      r.trigger === "24h_before" ||
+                      r.trigger === "appointment_reminder"
+                  )}
+                  searchColumn="name"
+                  searchPlaceholder="Search reminders..."
+                />
+              </CardContent>
+            </Card>
+
+            {/* All Automations (Complete View) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>All Automation Rules</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Complete list of all automated messages, triggers, rules, and reminders
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={automationColumns}
+                  data={automationRules}
+                  searchColumn="name"
+                  searchPlaceholder="Search all automations..."
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Pet Updates Tab */}
@@ -524,43 +642,90 @@ export default function MessagingPage() {
 
         {/* Internal Communications Tab */}
         <TabsContent value="internal" className="space-y-4">
+          <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/30 p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Internal Team Communication</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Staff-to-staff messaging separate from customer communication. 
+                  This feature can be moved to a dedicated Staff/Operations section if preferred.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Internal Team Communications</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Team messages with @mentions
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Internal Team Communications
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Team messages with @mentions, channels, and read receipts
+                  </p>
+                </div>
+                <Button onClick={() => setShowComposeModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Message
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {internalMessages.map((msg) => (
-                  <div key={msg.id} className="p-4 border rounded-lg">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold">{msg.from}</span>
-                          <Badge variant="outline" className="capitalize">
-                            {msg.channel}
-                          </Badge>
+              {internalMessages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No internal messages yet
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {internalMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-semibold">{msg.from}</span>
+                            <Badge
+                              variant={
+                                msg.channel === "urgent"
+                                  ? "destructive"
+                                  : msg.channel === "shifts"
+                                    ? "default"
+                                    : "outline"
+                              }
+                              className="capitalize"
+                            >
+                              {msg.channel}
+                            </Badge>
+                            {msg.hasRead.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {msg.hasRead.length} read
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm">{msg.message}</p>
                         </div>
-                        <p className="text-sm">{msg.message}</p>
+                        <div className="text-xs text-muted-foreground ml-4">
+                          {new Date(msg.timestamp).toLocaleString()}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(msg.timestamp).toLocaleString()}
-                      </div>
+                      {msg.mentions.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {msg.mentions.map((mention, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              @{mention}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {msg.mentions.length > 0 && (
-                      <div className="mt-2 flex gap-2">
-                        {msg.mentions.map((mention, idx) => (
-                          <Badge key={idx} variant="secondary">
-                            @{mention}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
