@@ -24,6 +24,7 @@ import {
   PawPrint,
   Check,
   Phone,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,7 +105,10 @@ export default function POSPage() {
     method: "cash" as PaymentMethod,
     splitPayments: false,
     payments: [{ method: "cash" as PaymentMethod, amount: 0 }],
+    chargeType: "pay_now" as "pay_now" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay",
+    selectedBookingId: null as number | null,
   });
+  const [isBookingSelectModalOpen, setIsBookingSelectModalOpen] = useState(false);
 
   const stats = getRetailStats();
 
@@ -364,6 +368,50 @@ export default function POSPage() {
     });
   }, [selectedClientId, selectedPetId]);
 
+  // Get active stays (currently checked in) for charge to active stay option
+  const activeStays = useMemo(() => {
+    if (!selectedClientId || selectedClientId === "__walk_in__") return [];
+    const clientIdNum = parseInt(selectedClientId);
+    const today = new Date().toISOString().split("T")[0];
+    
+    // Get bookings that are checked in
+    const checkedInBookings = bookings.filter((booking) => {
+      if (booking.clientId !== clientIdNum) return false;
+      if (selectedPetId && booking.petId !== selectedPetId) return false;
+      // Check if booking is active today and checked in
+      const startDate = booking.startDate.split("T")[0];
+      const endDate = booking.endDate.split("T")[0];
+      return (
+        booking.status === "checked-in" &&
+        startDate <= today &&
+        endDate >= today
+      );
+    });
+
+    // Also check daycare and boarding check-ins
+    // Note: This would need to import from daycare/boarding data files
+    // For now, we'll use bookings with checked-in status
+    
+    return checkedInBookings.sort((a, b) => {
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+  }, [selectedClientId, selectedPetId]);
+
+  // Get all bookable bookings (for "Add to Booking" option)
+  const bookableBookings = useMemo(() => {
+    if (!selectedClientId || selectedClientId === "__walk_in__") return [];
+    const clientIdNum = parseInt(selectedClientId);
+    
+    return bookings.filter((booking) => {
+      if (booking.clientId !== clientIdNum) return false;
+      if (selectedPetId && booking.petId !== selectedPetId) return false;
+      // Show confirmed, pending, and checked-in bookings (can add items to these)
+      return booking.status === "confirmed" || booking.status === "checked-in" || booking.status === "pending";
+    }).sort((a, b) => {
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+  }, [selectedClientId, selectedPetId]);
+
   const filteredProducts = products.filter(
     (p) =>
       p.status === "active" &&
@@ -501,7 +549,7 @@ export default function POSPage() {
 
       {/* Right Side - Cart */}
       <div className="space-y-4">
-        <Card className="h-[calc(100vh-16rem)]">
+        <Card className="max-h-[calc(100vh-12rem)] flex flex-col">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -520,9 +568,9 @@ export default function POSPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col h-[calc(100%-8rem)]">
+          <CardContent className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             {/* Customer / Pet / Booking Link - Links sale to client file, pet, and/or booking */}
-            <div className="space-y-3 mb-3 p-3 border rounded-lg bg-muted/30">
+            <div className="space-y-3 mb-3 p-3 border rounded-lg bg-muted/30 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5">
                   <LinkIcon className="h-3.5 w-3.5" />
@@ -619,14 +667,14 @@ export default function POSPage() {
                   {/* Quick Add Pet/Booking */}
                   {!selectedPetId && clientPets.length > 0 && (
                     <Select
-                      value={selectedPetId?.toString() || ""}
-                      onValueChange={(value) => setSelectedPetId(value ? parseInt(value) : null)}
+                      value={selectedPetId?.toString() || "__none__"}
+                      onValueChange={(value) => setSelectedPetId(value && value !== "__none__" ? parseInt(value) : null)}
                     >
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Link to pet (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No pet</SelectItem>
+                        <SelectItem value="__none__">No pet</SelectItem>
                         {clientPets.map((pet) => (
                           <SelectItem key={pet.id} value={pet.id.toString()}>
                             {pet.name} ({pet.type})
@@ -638,14 +686,14 @@ export default function POSPage() {
 
                   {!selectedBookingId && clientBookings.length > 0 && (
                     <Select
-                      value={selectedBookingId?.toString() || ""}
-                      onValueChange={(value) => setSelectedBookingId(value ? parseInt(value) : null)}
+                      value={selectedBookingId?.toString() || "__none__"}
+                      onValueChange={(value) => setSelectedBookingId(value && value !== "__none__" ? parseInt(value) : null)}
                     >
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Apply to booking/stay (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No booking</SelectItem>
+                        <SelectItem value="__none__">No booking</SelectItem>
                         {clientBookings.map((booking) => (
                           <SelectItem key={booking.id} value={booking.id.toString()}>
                             {booking.service} • {booking.startDate}
@@ -677,17 +725,18 @@ export default function POSPage() {
               )}
             </div>
 
-            <Separator className="mb-3" />
+            <Separator className="mb-3 flex-shrink-0" />
 
-            {/* Cart Items */}
-            <ScrollArea className="flex-1">
-              {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <ShoppingCart className="h-12 w-12 mb-2" />
-                  <p>Cart is empty</p>
-                  <p className="text-sm">Scan a barcode to add items</p>
-                </div>
-              ) : (
+            {/* Cart Items - Scrollable area */}
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mb-2" />
+                <p>Cart is empty</p>
+                <p className="text-sm">Scan a barcode to add items</p>
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="h-full">
                 <div className="space-y-2 pr-2">
                   {cart.map((item) => (
                     <div
@@ -766,11 +815,12 @@ export default function POSPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </ScrollArea>
+              </ScrollArea>
+              </div>
+            )}
 
-            {/* Cart Summary */}
-            <div className="pt-3 border-t mt-3 space-y-2">
+            {/* Cart Summary - Always visible at bottom */}
+            <div className="pt-3 border-t mt-3 space-y-2 flex-shrink-0">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
@@ -793,58 +843,143 @@ export default function POSPage() {
                 <span>${grandTotal.toFixed(2)}</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={cart.length === 0}
-                  onClick={() => {
-                    setPaymentForm({
-                      ...paymentForm,
-                      method: "cash",
-                      splitPayments: false,
-                    });
-                    setIsPaymentModalOpen(true);
-                  }}
-                >
-                  <Banknote className="h-4 w-4" />
-                  Cash
-                </Button>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={cart.length === 0}
-                  onClick={() => {
-                    setPaymentForm({
-                      ...paymentForm,
-                      method: "credit",
-                      splitPayments: false,
-                    });
-                    setIsPaymentModalOpen(true);
-                  }}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Card
-                </Button>
+              <div className="space-y-2 pt-2">
+                {/* Pay Now Options */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Pay Now</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      disabled={cart.length === 0}
+                      onClick={() => {
+                        setPaymentForm({
+                          ...paymentForm,
+                          method: "cash",
+                          splitPayments: false,
+                          chargeType: "pay_now",
+                        });
+                        setIsPaymentModalOpen(true);
+                      }}
+                    >
+                      <Banknote className="h-4 w-4" />
+                      Cash
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      disabled={cart.length === 0}
+                      onClick={() => {
+                        setPaymentForm({
+                          ...paymentForm,
+                          method: "credit",
+                          splitPayments: false,
+                          chargeType: "pay_now",
+                        });
+                        setIsPaymentModalOpen(true);
+                      }}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Card
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    disabled={cart.length === 0}
+                    onClick={() => {
+                      setPaymentForm({
+                        ...paymentForm,
+                        splitPayments: true,
+                        chargeType: "pay_now",
+                        payments: [
+                          { method: "credit", amount: grandTotal / 2 },
+                          { method: "cash", amount: grandTotal / 2 },
+                        ],
+                      });
+                      setIsPaymentModalOpen(true);
+                    }}
+                  >
+                    <SplitSquareHorizontal className="h-4 w-4" />
+                    Split Payment
+                  </Button>
+                </div>
+
+                {/* Charge Options - Only show if customer is selected */}
+                {selectedClientId && selectedClientId !== "__walk_in__" && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground">Charge Options</Label>
+                      
+                      {/* Add to Booking */}
+                      {bookableBookings.length > 0 && (
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2 justify-start"
+                          disabled={cart.length === 0}
+                          onClick={() => {
+                            setPaymentForm({
+                              ...paymentForm,
+                              chargeType: "add_to_booking",
+                              selectedBookingId: null,
+                            });
+                            setIsBookingSelectModalOpen(true);
+                          }}
+                        >
+                          <Calendar className="h-4 w-4" />
+                          Add to Booking / Reservation
+                          {bookableBookings.length > 0 && (
+                            <Badge variant="secondary" className="ml-auto">
+                              {bookableBookings.length} available
+                            </Badge>
+                          )}
+                        </Button>
+                      )}
+
+                      {/* Charge to Active Stay */}
+                      {activeStays.length > 0 && (
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2 justify-start"
+                          disabled={cart.length === 0}
+                          onClick={() => {
+                            setPaymentForm({
+                              ...paymentForm,
+                              chargeType: "charge_to_active_stay",
+                              selectedBookingId: activeStays[0]?.id || null,
+                            });
+                            setIsPaymentModalOpen(true);
+                          }}
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          Charge to Active Stay
+                          <Badge variant="secondary" className="ml-auto">
+                            {activeStays.length} active
+                          </Badge>
+                        </Button>
+                      )}
+
+                      {/* Charge to Account */}
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 justify-start"
+                        disabled={cart.length === 0}
+                        onClick={() => {
+                          setPaymentForm({
+                            ...paymentForm,
+                            chargeType: "charge_to_account",
+                          });
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Charge to Account / Card on File
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
-              <Button
-                className="w-full gap-2"
-                disabled={cart.length === 0}
-                onClick={() => {
-                  setPaymentForm({
-                    ...paymentForm,
-                    splitPayments: true,
-                    payments: [
-                      { method: "credit", amount: grandTotal / 2 },
-                      { method: "cash", amount: grandTotal / 2 },
-                    ],
-                  });
-                  setIsPaymentModalOpen(true);
-                }}
-              >
-                <SplitSquareHorizontal className="h-4 w-4" />
-                Split Payment
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -998,18 +1133,198 @@ export default function POSPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Booking Selection Modal (for Add to Booking) */}
+      <Dialog open={isBookingSelectModalOpen} onOpenChange={setIsBookingSelectModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Booking to Add Items</DialogTitle>
+            <DialogDescription>
+              Choose which booking/reservation to add these retail items to
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-[400px]">
+            {bookableBookings.length > 0 ? (
+              <div className="space-y-2">
+                {bookableBookings.map((booking) => {
+                  const pet = clientPets.find((p) => p.id === booking.petId);
+                  return (
+                    <div
+                      key={booking.id}
+                      className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setPaymentForm({
+                          ...paymentForm,
+                          selectedBookingId: booking.id,
+                        });
+                        setIsBookingSelectModalOpen(false);
+                        setIsPaymentModalOpen(true);
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="capitalize">
+                              {booking.service}
+                            </Badge>
+                            <Badge
+                              variant={
+                                booking.status === "checked-in"
+                                  ? "default"
+                                  : booking.status === "confirmed"
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                            >
+                              {booking.status}
+                            </Badge>
+                          </div>
+                          <p className="font-medium mt-2">
+                            {pet?.name || "Pet"} • {booking.serviceType}
+                          </p>
+                          <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {booking.startDate}
+                              {booking.endDate !== booking.startDate && ` - ${booking.endDate}`}
+                            </div>
+                            {booking.checkInTime && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Check-in: {booking.checkInTime}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              Current total: ${booking.totalCost.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentForm({
+                              ...paymentForm,
+                              selectedBookingId: booking.id,
+                            });
+                            setIsBookingSelectModalOpen(false);
+                            setIsPaymentModalOpen(true);
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <p>No bookings available</p>
+                <p className="text-sm mt-1">
+                  Customer must have a confirmed or active booking
+                </p>
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBookingSelectModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Payment Modal */}
       <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Process Payment</DialogTitle>
+            <DialogTitle>
+              {paymentForm.chargeType === "add_to_booking"
+                ? "Add to Booking Invoice"
+                : paymentForm.chargeType === "charge_to_active_stay"
+                  ? "Charge to Active Stay"
+                  : paymentForm.chargeType === "charge_to_account"
+                    ? "Charge to Account"
+                    : "Process Payment"}
+            </DialogTitle>
             <DialogDescription>
-              Total amount: ${grandTotal.toFixed(2)}
+              {paymentForm.chargeType === "add_to_booking" && paymentForm.selectedBookingId ? (
+                <>
+                  Items will be added to booking #{paymentForm.selectedBookingId}
+                  <br />
+                  Total: ${grandTotal.toFixed(2)}
+                </>
+              ) : paymentForm.chargeType === "charge_to_active_stay" ? (
+                <>
+                  Items will be charged to the active stay
+                  <br />
+                  Total: ${grandTotal.toFixed(2)}
+                </>
+              ) : paymentForm.chargeType === "charge_to_account" ? (
+                <>
+                  Items will be charged to customer account / card on file
+                  <br />
+                  Total: ${grandTotal.toFixed(2)}
+                </>
+              ) : (
+                `Total amount: ${grandTotal.toFixed(2)}`
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {paymentForm.splitPayments ? (
+            {/* Show booking info if adding to booking */}
+            {paymentForm.chargeType === "add_to_booking" && paymentForm.selectedBookingId && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Adding to Booking</p>
+                {(() => {
+                  const booking = bookings.find((b) => b.id === paymentForm.selectedBookingId);
+                  const pet = booking ? clientPets.find((p) => p.id === booking.petId) : null;
+                  return booking ? (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {booking.service} • {pet?.name} • {booking.startDate}
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
+            {/* Show active stay info if charging to active stay */}
+            {paymentForm.chargeType === "charge_to_active_stay" && paymentForm.selectedBookingId && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Charging to Active Stay</p>
+                {(() => {
+                  const stay = activeStays.find((s) => s.id === paymentForm.selectedBookingId);
+                  const pet = stay ? clientPets.find((p) => p.id === stay.petId) : null;
+                  return stay ? (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {stay.service} • {pet?.name} • Checked in
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
+            {/* Show account info if charging to account */}
+            {paymentForm.chargeType === "charge_to_account" && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Charging to Account</p>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {customerName} • Card on file will be charged
+                </div>
+              </div>
+            )}
+
+            {/* Payment method selection - only show for "pay_now" */}
+            {paymentForm.chargeType === "pay_now" && paymentForm.splitPayments ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Split Payment</Label>
@@ -1144,11 +1459,27 @@ export default function POSPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsPaymentModalOpen(false)}
+              onClick={() => {
+                setIsPaymentModalOpen(false);
+                if (paymentForm.chargeType === "add_to_booking") {
+                  setPaymentForm({
+                    ...paymentForm,
+                    selectedBookingId: null,
+                  });
+                }
+              }}
             >
               Cancel
             </Button>
-            <Button onClick={handlePayment}>Complete Payment</Button>
+            <Button onClick={handlePayment}>
+              {paymentForm.chargeType === "add_to_booking"
+                ? "Add to Booking"
+                : paymentForm.chargeType === "charge_to_active_stay"
+                  ? "Charge to Stay"
+                  : paymentForm.chargeType === "charge_to_account"
+                    ? "Charge to Account"
+                    : "Complete Payment"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

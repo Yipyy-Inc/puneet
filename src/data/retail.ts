@@ -142,6 +142,8 @@ export interface Transaction {
   petName?: string; // Pet name for display
   bookingId?: number; // Link to booking/stay
   bookingService?: string; // Service type (daycare, boarding, grooming, etc.)
+  chargedToBookingId?: number; // If paymentMethod is "add_to_booking" or "charge_to_active_stay", this is the booking ID items were added to
+  chargedToAccount?: boolean; // If paymentMethod is "charge_to_account", indicates items charged to account
   cashierId: string;
   cashierName: string;
   receiptSent: boolean;
