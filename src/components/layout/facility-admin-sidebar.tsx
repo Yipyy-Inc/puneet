@@ -68,17 +68,55 @@ export function FacilitySidebar() {
       {
         items: [
           {
+            title: "Pets",
+            url: "/facility/dashboard/clients",
+            icon: PawPrint,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Grooming",
+            url: "/facility/dashboard/services/grooming",
+            icon: Scissors,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            title: "Scheduling",
+            url: "/facility/dashboard/services/scheduling",
+            icon: Clock,
+            disabled: false,
+          },
+        ],
+      },
+      {
+        items: [
+          {
             title: "Calling",
             url: "/facility/dashboard/calling",
             icon: Phone,
             disabled: false,
           },
+        ],
+      },
+      {
+        items: [
           {
             title: "Messaging",
             url: "/facility/dashboard/messaging",
             icon: MessageSquare,
             disabled: false,
           },
+        ],
+      },
+      {
+        items: [
           {
             title: "Automations",
             url: "/facility/dashboard/automations",
@@ -103,12 +141,6 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Grooming",
-            url: "/facility/dashboard/services/grooming",
-            icon: Scissors,
-            disabled: false,
-          },
-          {
             title: "Training",
             url: "/facility/dashboard/services/training",
             icon: GraduationCap,
@@ -118,12 +150,6 @@ export function FacilitySidebar() {
             title: "Retail / POS",
             url: "/facility/dashboard/services/retail",
             icon: ShoppingCart,
-            disabled: false,
-          },
-          {
-            title: "Scheduling",
-            url: "/facility/dashboard/services/scheduling",
-            icon: Clock,
             disabled: false,
           },
         ],
