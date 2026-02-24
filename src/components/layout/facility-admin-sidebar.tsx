@@ -11,6 +11,7 @@ import {
   Package,
   Clock,
   MessageSquare,
+  Phone,
   DollarSign,
   BarChart3,
   Megaphone,
@@ -66,11 +67,16 @@ export function FacilitySidebar() {
       {
         items: [
           {
-            title: "Communications",
-            url: "/facility/dashboard/communications",
+            title: "Calling",
+            url: "/facility/dashboard/calling",
+            icon: Phone,
+            disabled: false,
+          },
+          {
+            title: "Messaging",
+            url: "/facility/dashboard/messaging",
             icon: MessageSquare,
             disabled: false,
-            count: 5,
           },
         ],
       },
