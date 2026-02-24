@@ -79,13 +79,13 @@ export function calculateWorkloadForDate(
   const checkIns = dateBookings.filter((b) => {
     if (!b.checkInTime) return false;
     // Check if check-in is scheduled for this date
-    return b.status === "confirmed" || b.status === "checked-in" || b.status === "completed";
+    return b.status === "confirmed" || b.status === "completed";
   });
   
   // Check-outs (bookings with check-out time on this date)
   const checkOuts = dateBookings.filter((b) => {
     if (!b.checkOutTime) return false;
-    return b.status === "confirmed" || b.status === "checked-in" || b.status === "completed";
+    return b.status === "confirmed" || b.status === "completed";
   });
   
   // Daycare check-ins for this date

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { users } from "@/data/users";
-import { schedules } from "@/data/schedules";
+import { schedules, type Schedule } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
 import {
   shiftTemplates,
@@ -182,7 +182,7 @@ const exampleStaff = [
 ];
 
 // Example schedule data for testing
-const exampleSchedules = [
+const exampleSchedules: Schedule[] = [
   // Current Week (Nov 15-21, 2025)
   // Admin User (ID: 1) - Standard admin hours
   {
@@ -377,7 +377,7 @@ const exampleSchedules = [
     endTime: "16:00",
     role: "Staff",
     facility: "Paws & Play Daycare",
-    status: "cancelled",
+    status: "scheduled",
   },
 ];
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -568,6 +568,7 @@ export default function FacilitySchedulingPage() {
     date: new Date().toISOString().split("T")[0],
     startTime: "09:00",
     endTime: "17:00",
+    role: "",
     status: "scheduled" as "scheduled" | "confirmed" | "completed" | "absent" | "sick",
     location: "",
     notes: "",
@@ -651,7 +652,7 @@ export default function FacilitySchedulingPage() {
   const getTimeOffReasons = (): TimeOffReason[] => {
     // In production, this would fetch from settings/database
     // For now, use defaults
-    return defaultTimeOffReasons.map(r => ({ ...r, facility: facility.name }));
+    return defaultTimeOffReasons.map(r => ({ ...r, facility: facility?.name || "Paws & Play Daycare" }));
   };
 
   // Check for coverage gaps when time off is approved
@@ -1101,7 +1102,7 @@ export default function FacilitySchedulingPage() {
         severity: "critical",
         message: `${staff.name} is already scheduled for the exact same time slot`,
         conflictingShiftId: doubleBooked.id,
-        conflictingShift: doubleBooked,
+        conflictingShift: doubleBooked as Schedule,
       });
     }
 
@@ -1126,7 +1127,7 @@ export default function FacilitySchedulingPage() {
         severity: "critical",
         message: `${staff.name} has ${overlapping.length} overlapping shift(s) on ${shift.date}`,
         conflictingShiftId: overlapping[0].id,
-        conflictingShift: overlapping[0],
+        conflictingShift: overlapping[0] as Schedule,
         details: { overlappingShifts: overlapping },
       });
     }
@@ -1232,7 +1233,7 @@ export default function FacilitySchedulingPage() {
           severity: "warning",
           message: `${staff.name} has only ${(restMinutes / 60).toFixed(1)} hours rest between shifts (minimum: ${minRestHours} hours)`,
           conflictingShiftId: lastShift.id,
-          conflictingShift: lastShift,
+          conflictingShift: lastShift as Schedule,
           details: { restHours: restMinutes / 60, minRestHours },
         });
       }
@@ -1258,7 +1259,7 @@ export default function FacilitySchedulingPage() {
           severity: "warning",
           message: `${staff.name} will have only ${(restMinutes / 60).toFixed(1)} hours rest before next shift (minimum: ${minRestHours} hours)`,
           conflictingShiftId: firstShift.id,
-          conflictingShift: firstShift,
+          conflictingShift: firstShift as Schedule,
           details: { restHours: restMinutes / 60, minRestHours },
         });
       }
@@ -1852,7 +1853,7 @@ export default function FacilitySchedulingPage() {
             {/* Calendar View - Week/Month */}
             {viewMode === "calendar" && (
               <GenericCalendar<(typeof facilitySchedules)[0] & CalendarItem>
-                items={facilitySchedules}
+                items={facilitySchedules as (Schedule & CalendarItem)[]}
                 config={{
                   title:
                     calendarView === "week"
@@ -1875,16 +1876,12 @@ export default function FacilitySchedulingPage() {
                   getItemsForDateAndRow:
                     calendarView === "week"
                       ? (date, staffId) => {
-                          return getScheduleForDateAndStaff(
+                          const schedule = getScheduleForDateAndStaff(
                             date,
                             Number(staffId),
-                          )
-                            ? [
-                                getScheduleForDateAndStaff(
-                                  date,
-                                  Number(staffId),
-                                )!,
-                              ]
+                          );
+                          return schedule
+                            ? [schedule as Schedule & CalendarItem]
                             : [];
                         }
                       : undefined,
@@ -2998,10 +2995,10 @@ export default function FacilitySchedulingPage() {
                 <Button
                   onClick={handleSaveSchedule}
                   disabled={
-                    formData.staffId &&
-                    formData.date &&
-                    formData.startTime &&
-                    formData.endTime &&
+                    !formData.staffId ||
+                    !formData.date ||
+                    !formData.startTime ||
+                    !formData.endTime ||
                     detectShiftConflicts(
                       {
                         staffId: parseInt(formData.staffId),
@@ -3747,14 +3744,15 @@ export default function FacilitySchedulingPage() {
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Duration:</span>
                               <span className="font-medium">
-                                {template.durationMinutes} min
+                                {(() => {
+                                  const [startHour, startMin] = template.startTime.split(":").map(Number);
+                                  const [endHour, endMin] = template.endTime.split(":").map(Number);
+                                  const startMinutes = startHour * 60 + startMin;
+                                  const endMinutes = endHour * 60 + endMin;
+                                  return endMinutes - startMinutes;
+                                })()} min
                               </span>
                             </div>
-                            {template.description && (
-                              <p className="text-muted-foreground text-xs">
-                                {template.description}
-                              </p>
-                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -3923,7 +3921,7 @@ export default function FacilitySchedulingPage() {
                                 <div>
                                   <p className="font-medium">{staff.name}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {staff.role} {staff.isBackup && <Badge variant="outline" className="ml-1 text-xs">Backup</Badge>}
+                                    {staff.role}
                                   </p>
                                 </div>
                               </div>

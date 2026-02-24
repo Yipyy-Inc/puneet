@@ -608,8 +608,15 @@ export function GroomingCheckInOutSection() {
                         variant="outline"
                         onClick={async () => {
                           // Move to ready-for-pickup
-                          const updatedAppointment = {
-                            ...apt,
+                          // Find the full appointment in appointmentsData
+                          const fullAppointment = appointmentsData.find((a) => a.id === apt.id);
+                          if (!fullAppointment) {
+                            toast.error("Appointment not found");
+                            return;
+                          }
+                          
+                          const updatedAppointment: GroomingAppointment = {
+                            ...fullAppointment,
                             status: "ready-for-pickup" as const,
                           };
                           

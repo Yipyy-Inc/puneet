@@ -569,6 +569,6 @@ export const schedules: Schedule[] = [
     endTime: "14:00",
     role: "Staff",
     facility: "Paws & Play Daycare",
-    status: "cancelled",
+    status: "scheduled",
   },
 ];

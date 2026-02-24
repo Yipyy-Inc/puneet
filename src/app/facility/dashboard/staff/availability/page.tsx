@@ -57,13 +57,14 @@ const exampleStaff = [
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   approved: "bg-green-100 text-green-800",
   denied: "bg-red-100 text-red-800",
+  changes_requested: "bg-orange-100 text-orange-800",
 };
 
-const typeColors = {
+const typeColors: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-800",
   sick: "bg-orange-100 text-orange-800",
   personal: "bg-purple-100 text-purple-800",
@@ -182,7 +183,7 @@ export default function StaffAvailabilityPage() {
       label: "Type",
       defaultVisible: true,
       render: (request) => (
-        <Badge className={typeColors[request.type]} variant="secondary">
+        <Badge className={typeColors[request.type] || typeColors.other} variant="secondary">
           {request.type}
         </Badge>
       ),
@@ -213,7 +214,7 @@ export default function StaffAvailabilityPage() {
       label: "Status",
       defaultVisible: true,
       render: (request) => (
-        <Badge className={statusColors[request.status]} variant="secondary">
+        <Badge className={statusColors[request.status] || statusColors.pending} variant="secondary">
           {request.status}
         </Badge>
       ),
@@ -654,7 +655,7 @@ export default function StaffAvailabilityPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type:</span>
                   <Badge
-                    className={typeColors[reviewingRequest.type]}
+                    className={typeColors[reviewingRequest.type] || typeColors.other}
                     variant="secondary"
                   >
                     {reviewingRequest.type}

@@ -139,6 +139,7 @@ export interface GroomingAppointment {
   specialInstructions: string;
   allergies: string[];
   intake?: GroomingIntake; // Intake form data
+  afterPhotos?: GroomingPhoto[]; // After photos from groomer
   lastGroomDate?: string;
   createdAt: string;
   onlineBooking: boolean;
