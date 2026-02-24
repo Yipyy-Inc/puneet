@@ -14,6 +14,13 @@ import {
   XCircle,
   Mail,
   MapPin,
+  Receipt,
+  RotateCcw,
+  ArrowLeft,
+  User,
+  CreditCard,
+  Gift,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,25 +57,71 @@ import {
   products,
   getActiveSuppliers,
   getPendingOrders,
+  getTransactionById,
+  createReturn,
+  createStoreCredit,
+  createGiftCard,
+  getStoreCreditBalance,
+  customPaymentMethods,
+  returns,
   type PurchaseOrder,
   type Supplier,
   type PurchaseOrderItem,
+  type Transaction,
+  type Return,
+  type ReturnItem,
+  type RefundMethod,
+  type ReturnReason,
+  type CustomPaymentMethod,
+  type CartItem,
+  getAllTransactions,
 } from "@/data/retail";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
 
 export default function OrdersPage() {
-  const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers">(
+  const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers" | "transactions">(
     "orders",
   );
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  
+  // Return form state
+  const [returnForm, setReturnForm] = useState<{
+    items: Array<{
+      transactionItemId: string;
+      productId: string;
+      productName: string;
+      variantId?: string;
+      variantName?: string;
+      sku: string;
+      quantity: number;
+      originalQuantity: number;
+      unitPrice: number;
+      discount: number;
+      discountType: "fixed" | "percent";
+      total: number;
+      reason: ReturnReason;
+      reasonNotes?: string;
+      restocked: boolean;
+    }>;
+    refundMethod: RefundMethod;
+    customRefundMethodName?: string;
+    storeCreditAmount?: number;
+    giftCardNumber?: string;
+    notes?: string;
+  }>({
+    items: [],
+    refundMethod: "original_payment",
+  });
 
   const [orderForm, setOrderForm] = useState({
     supplierId: "",
@@ -93,6 +146,7 @@ export default function OrdersPage() {
 
   const activeSuppliers = getActiveSuppliers();
   const pendingOrders = getPendingOrders();
+  const allTransactions = getAllTransactions();
 
   const handleCreateOrder = () => {
     setOrderForm({
@@ -143,6 +197,92 @@ export default function OrdersPage() {
   const handleViewOrder = (order: PurchaseOrder) => {
     setSelectedOrder(order);
     setIsViewOrderModalOpen(true);
+  };
+
+  const handleViewTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    // Could open a view modal here
+  };
+
+  const handleInitiateReturn = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setReturnForm({
+      items: [],
+      refundMethod: "original_payment",
+    });
+    setIsReturnModalOpen(true);
+  };
+
+  const handleProcessReturn = () => {
+    if (!selectedTransaction || returnForm.items.length === 0) return;
+
+    const refundTotal = returnForm.items.reduce((sum, item) => {
+      const subtotal = item.unitPrice * item.quantity;
+      const discountAmount = item.discountType === "percent"
+        ? (subtotal * item.discount) / 100
+        : item.discount;
+      return sum + subtotal - discountAmount;
+    }, 0);
+
+    // Create return
+    const newReturn = createReturn({
+      transactionId: selectedTransaction.id,
+      transactionNumber: selectedTransaction.transactionNumber,
+      items: returnForm.items.map(item => ({
+        ...item,
+        reasonNotes: item.reasonNotes,
+      })),
+      subtotal: refundTotal,
+      refundTotal,
+      refundMethod: returnForm.refundMethod,
+      customRefundMethodName: returnForm.customRefundMethodName,
+      storeCreditAmount: returnForm.refundMethod === "store_credit" ? refundTotal : undefined,
+      giftCardNumber: returnForm.refundMethod === "gift_card" ? returnForm.giftCardNumber : undefined,
+      status: "completed",
+      customerId: selectedTransaction.customerId,
+      customerName: selectedTransaction.customerName,
+      customerEmail: selectedTransaction.customerEmail,
+      processedBy: "current-user-id", // TODO: Get from auth
+      processedByName: "Current User", // TODO: Get from auth
+      notes: returnForm.notes,
+      completedAt: new Date().toISOString().slice(0, 19),
+    });
+
+    // Create store credit if applicable
+    if (returnForm.refundMethod === "store_credit" && selectedTransaction.customerId) {
+      createStoreCredit({
+        customerId: selectedTransaction.customerId,
+        customerName: selectedTransaction.customerName || "Customer",
+        amount: refundTotal,
+        balance: refundTotal,
+        issuedFrom: newReturn.id,
+        notes: `Issued from return ${newReturn.returnNumber}`,
+      });
+    }
+
+    // Create gift card if applicable
+    if (returnForm.refundMethod === "gift_card") {
+      createGiftCard({
+        amount: refundTotal,
+        balance: refundTotal,
+        issuedFrom: newReturn.id,
+        customerId: selectedTransaction.customerId,
+        customerName: selectedTransaction.customerName,
+        isActive: true,
+        notes: `Issued from return ${newReturn.returnNumber}`,
+      });
+    }
+
+    // TODO: Restock items to inventory
+    // This would update product/variant stock levels
+
+    // Close modal and reset
+    setIsReturnModalOpen(false);
+    setSelectedTransaction(null);
+    setReturnForm({ items: [], refundMethod: "original_payment" });
+
+    // Show success message
+    alert(`Return processed successfully: ${newReturn.returnNumber}`);
   };
 
   const handleSaveOrder = () => {
@@ -347,6 +487,99 @@ export default function OrdersPage() {
     },
   ];
 
+  const transactionColumns: ColumnDef<Transaction>[] = [
+    {
+      key: "transactionNumber",
+      label: "Transaction #",
+      defaultVisible: true,
+      render: (item) => (
+        <span className="font-mono font-medium">{item.transactionNumber}</span>
+      ),
+    },
+    {
+      key: "customerName",
+      label: "Customer",
+      icon: User,
+      defaultVisible: true,
+      render: (item) => item.customerName || "Walk-in",
+    },
+    {
+      key: "items",
+      label: "Items",
+      defaultVisible: true,
+      render: (item) => {
+        const items = item.items as CartItem[];
+        return <span>{items.length} items</span>;
+      },
+    },
+    {
+      key: "total",
+      label: "Total",
+      icon: DollarSign,
+      defaultVisible: true,
+      render: (item) => `$${(item.total as number).toFixed(2)}`,
+    },
+    {
+      key: "paymentMethod",
+      label: "Payment",
+      icon: CreditCard,
+      defaultVisible: true,
+      render: (item) => {
+        const method = item.paymentMethod as string;
+        return method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      },
+    },
+    {
+      key: "createdAt",
+      label: "Date",
+      icon: Calendar,
+      defaultVisible: true,
+      render: (item) => new Date(item.createdAt as string).toLocaleDateString(),
+    },
+    {
+      key: "status",
+      label: "Status",
+      defaultVisible: true,
+      render: (item) => {
+        const status = item.status as string;
+        const hasReturns = (item.returns as Return[] | undefined)?.length > 0;
+        return (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={
+                status === "completed"
+                  ? "default"
+                  : status === "refunded"
+                  ? "secondary"
+                  : "destructive"
+              }
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Badge>
+            {hasReturns && (
+              <Badge variant="outline" className="text-xs">
+                Has Returns
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const transactionFilters: FilterDef[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All Statuses" },
+        { value: "completed", label: "Completed" },
+        { value: "refunded", label: "Refunded" },
+        { value: "voided", label: "Voided" },
+      ],
+    },
+  ];
+
   // Calculate stats
   const totalOrderValue = purchaseOrders.reduce((sum, o) => sum + o.total, 0);
   const receivedOrders = purchaseOrders.filter(
@@ -411,7 +644,7 @@ export default function OrdersPage() {
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          setSelectedTab(value as "orders" | "suppliers")
+          setSelectedTab(value as "orders" | "suppliers" | "transactions")
         }
       >
         <div className="flex items-center justify-between">
@@ -420,20 +653,26 @@ export default function OrdersPage() {
               <Package className="h-4 w-4" />
               Purchase Orders
             </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Transactions
+            </TabsTrigger>
             <TabsTrigger value="suppliers" className="gap-2">
               <Building2 className="h-4 w-4" />
               Suppliers
             </TabsTrigger>
           </TabsList>
 
-          <Button
-            onClick={
-              selectedTab === "orders" ? handleCreateOrder : handleAddSupplier
-            }
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {selectedTab === "orders" ? "New Order" : "Add Supplier"}
-          </Button>
+          {selectedTab !== "transactions" && (
+            <Button
+              onClick={
+                selectedTab === "orders" ? handleCreateOrder : handleAddSupplier
+              }
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {selectedTab === "orders" ? "New Order" : "Add Supplier"}
+            </Button>
+          )}
         </div>
 
         {/* Orders Tab */}
@@ -464,6 +703,41 @@ export default function OrdersPage() {
                   {(item.status === "pending" || item.status === "ordered") && (
                     <DropdownMenuItem className="text-destructive">
                       Cancel Order
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          />
+        </TabsContent>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions" className="mt-4">
+          <DataTable
+            data={allTransactions as Transaction[]}
+            columns={transactionColumns}
+            filters={transactionFilters}
+            searchKey="transactionNumber"
+            searchPlaceholder="Search by transaction number, customer..."
+            actions={(item) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleViewTransaction(item as Transaction)}
+                  >
+                    View Details
+                  </DropdownMenuItem>
+                  {(item as Transaction).status === "completed" && (
+                    <DropdownMenuItem
+                      onClick={() => handleInitiateReturn(item as Transaction)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Return / Refund
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -939,6 +1213,377 @@ export default function OrdersPage() {
             {selectedOrder?.status === "shipped" && (
               <Button>Mark as Received</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Return / Refund Modal */}
+      <Dialog open={isReturnModalOpen} onOpenChange={setIsReturnModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Return / Refund</DialogTitle>
+            <DialogDescription>
+              Process a return and refund for transaction {selectedTransaction?.transactionNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTransaction && (
+            <div className="space-y-6 py-4">
+              {/* Transaction Info */}
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Transaction</p>
+                    <p className="font-medium font-mono">{selectedTransaction.transactionNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="font-medium">
+                      {new Date(selectedTransaction.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {selectedTransaction.customerName && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Customer</p>
+                      <p className="font-medium">{selectedTransaction.customerName}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Original Total</p>
+                    <p className="font-medium">${selectedTransaction.total.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Select Items to Return */}
+              <div>
+                <Label className="text-base font-medium mb-3 block">
+                  Select Items to Return
+                </Label>
+                <div className="space-y-2 border rounded-lg p-4">
+                  {selectedTransaction.items.map((item, index) => {
+                    const returnItem = returnForm.items.find(
+                      (ri) => ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                    );
+                    const isSelected = !!returnItem;
+                    const maxQuantity = item.quantity;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg border ${
+                          isSelected ? "bg-blue-50 border-blue-200" : "bg-background"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const newReturnItem = {
+                                      transactionItemId: `${selectedTransaction.id}-${index}`,
+                                      productId: item.productId,
+                                      productName: item.productName,
+                                      variantId: item.variantId,
+                                      variantName: item.variantName,
+                                      sku: item.sku,
+                                      quantity: 1,
+                                      originalQuantity: item.quantity,
+                                      unitPrice: item.unitPrice,
+                                      discount: item.discount,
+                                      discountType: item.discountType,
+                                      total: item.total,
+                                      reason: "customer_request" as ReturnReason,
+                                      restocked: true,
+                                    };
+                                    setReturnForm({
+                                      ...returnForm,
+                                      items: [...returnForm.items, newReturnItem],
+                                    });
+                                  } else {
+                                    setReturnForm({
+                                      ...returnForm,
+                                      items: returnForm.items.filter(
+                                        (ri) => ri.transactionItemId !== `${selectedTransaction.id}-${index}`
+                                      ),
+                                    });
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <div className="flex-1">
+                                <p className="font-medium">{item.productName}</p>
+                                {item.variantName && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {item.variantName}
+                                  </p>
+                                )}
+                                <p className="text-sm text-muted-foreground">
+                                  ${item.unitPrice.toFixed(2)} each × {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {isSelected && returnItem && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, quantity: Math.max(1, ri.quantity - 1) }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                                disabled={returnItem.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm">
+                                {returnItem.quantity}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, quantity: Math.min(maxQuantity, ri.quantity + 1) }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                                disabled={returnItem.quantity >= maxQuantity}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Select
+                                value={returnItem.reason}
+                                onValueChange={(value: ReturnReason) => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, reason: value }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                              >
+                                <SelectTrigger className="w-40 h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="defective">Defective</SelectItem>
+                                  <SelectItem value="wrong_item">Wrong Item</SelectItem>
+                                  <SelectItem value="not_as_described">Not as Described</SelectItem>
+                                  <SelectItem value="customer_request">Customer Request</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Return Summary */}
+              {returnForm.items.length > 0 && (
+                <div className="p-4 rounded-lg bg-muted space-y-2">
+                  <h4 className="font-medium">Return Summary</h4>
+                  <div className="space-y-1">
+                    {returnForm.items.map((item, index) => {
+                      const subtotal = item.unitPrice * item.quantity;
+                      const discountAmount = item.discountType === "percent"
+                        ? (subtotal * item.discount) / 100
+                        : item.discount;
+                      const total = subtotal - discountAmount;
+                      return (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span>
+                            {item.productName} × {item.quantity}
+                          </span>
+                          <span>${total.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-between font-bold pt-2 border-t">
+                      <span>Refund Total</span>
+                      <span>
+                        $
+                        {returnForm.items
+                          .reduce((sum, item) => {
+                            const subtotal = item.unitPrice * item.quantity;
+                            const discountAmount = item.discountType === "percent"
+                              ? (subtotal * item.discount) / 100
+                              : item.discount;
+                            return sum + subtotal - discountAmount;
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund Method */}
+              {returnForm.items.length > 0 && (
+                <div>
+                  <Label className="text-base font-medium mb-3 block">
+                    Refund Method
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={returnForm.refundMethod === "original_payment" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "original_payment" })}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Original Payment</p>
+                        <p className="text-xs text-muted-foreground">
+                          Refund to original payment method
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "store_credit" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "store_credit" })}
+                    >
+                      <Wallet className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Store Credit</p>
+                        <p className="text-xs text-muted-foreground">
+                          Issue store credit to customer
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "gift_card" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "gift_card" })}
+                    >
+                      <Gift className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Gift Card</p>
+                        <p className="text-xs text-muted-foreground">
+                          Issue gift card
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
+                    >
+                      <Banknote className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Cash</p>
+                        <p className="text-xs text-muted-foreground">
+                          Cash refund
+                        </p>
+                      </div>
+                    </Button>
+                    {customPaymentMethods
+                      .filter((m) => m.isActive && m.canBeUsedForRefunds)
+                      .map((method) => (
+                        <Button
+                          key={method.id}
+                          variant={returnForm.refundMethod === "custom" && returnForm.customRefundMethodName === method.name ? "default" : "outline"}
+                          className="h-auto p-4 flex flex-col items-start gap-2"
+                          onClick={() => setReturnForm({ ...returnForm, refundMethod: "custom", customRefundMethodName: method.name })}
+                        >
+                          <CreditCard className="h-5 w-5" />
+                          <div className="text-left">
+                            <p className="font-medium">{method.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {method.description || "Custom payment method"}
+                            </p>
+                          </div>
+                        </Button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Fields based on Refund Method */}
+              {returnForm.items.length > 0 && returnForm.refundMethod === "store_credit" && (
+                <div className="grid gap-2">
+                  <Label>Store Credit Amount</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={returnForm.storeCreditAmount || ""}
+                    onChange={(e) =>
+                      setReturnForm({
+                        ...returnForm,
+                        storeCreditAmount: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="Enter amount"
+                  />
+                </div>
+              )}
+
+              {returnForm.items.length > 0 && returnForm.refundMethod === "gift_card" && (
+                <div className="grid gap-2">
+                  <Label>Gift Card Number (optional - will be generated if empty)</Label>
+                  <Input
+                    type="text"
+                    value={returnForm.giftCardNumber || ""}
+                    onChange={(e) =>
+                      setReturnForm({
+                        ...returnForm,
+                        giftCardNumber: e.target.value,
+                      })
+                    }
+                    placeholder="Leave empty to generate new card"
+                  />
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="grid gap-2">
+                <Label>Notes (Optional)</Label>
+                <Textarea
+                  value={returnForm.notes || ""}
+                  onChange={(e) =>
+                    setReturnForm({ ...returnForm, notes: e.target.value })
+                  }
+                  placeholder="Additional notes about this return..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReturnModalOpen(false);
+                setSelectedTransaction(null);
+                setReturnForm({ items: [], refundMethod: "original_payment" });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessReturn}
+              disabled={returnForm.items.length === 0}
+            >
+              Process Return
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

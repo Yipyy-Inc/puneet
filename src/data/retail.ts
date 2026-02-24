@@ -9,7 +9,13 @@ export type OrderStatus =
   | "received"
   | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
-export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay";
+export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay" | "store_credit" | "gift_card" | "custom";
+export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
+export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
+export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
+export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
+export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
+export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
 export type MovementType =
   | "sale"
   | "purchase"
@@ -183,6 +189,7 @@ export interface Transaction {
   payments: {
     method: PaymentMethod;
     amount: number;
+    customMethodName?: string; // If method is "custom"
   }[];
   status: TransactionStatus;
   customerId?: string;
@@ -200,6 +207,87 @@ export interface Transaction {
   receiptEmail?: string;
   notes: string;
   createdAt: string;
+  returns?: Return[]; // Associated returns
+}
+
+export interface ReturnItem {
+  transactionItemId: string; // Reference to original transaction item
+  productId: string;
+  productName: string;
+  variantId?: string;
+  variantName?: string;
+  sku: string;
+  quantity: number; // Quantity being returned
+  originalQuantity: number; // Original quantity purchased
+  unitPrice: number;
+  discount: number;
+  total: number;
+  reason: ReturnReason;
+  reasonNotes?: string;
+  restocked: boolean; // Whether item was returned to inventory
+}
+
+export interface Return {
+  id: string;
+  returnNumber: string;
+  transactionId: string;
+  transactionNumber: string;
+  items: ReturnItem[];
+  subtotal: number; // Total of returned items
+  refundTotal: number; // Amount to refund
+  refundMethod: RefundMethod;
+  customRefundMethodName?: string; // If refundMethod is "custom"
+  storeCreditAmount?: number; // If refundMethod is "store_credit"
+  giftCardNumber?: string; // If refundMethod is "gift_card"
+  status: ReturnStatus;
+  customerId?: string;
+  customerName?: string;
+  customerEmail?: string;
+  processedBy: string; // User ID who processed the return
+  processedByName: string;
+  notes?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface StoreCredit {
+  id: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  balance: number; // Remaining balance
+  issuedFrom?: string; // Return ID if issued from a return
+  expiresAt?: string; // Optional expiration date
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GiftCard {
+  id: string;
+  cardNumber: string;
+  pin?: string;
+  amount: number;
+  balance: number; // Remaining balance
+  issuedFrom?: string; // Return ID if issued from a return
+  customerId?: string; // If linked to a customer
+  customerName?: string;
+  expiresAt?: string; // Optional expiration date
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomPaymentMethod {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  canBeUsedForRefunds: boolean;
+  icon?: string; // Icon identifier
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InventoryMovement {
@@ -1741,4 +1829,124 @@ export function applyPromoCode(code: string): PromoCode | null {
     promo.usageCount++;
   }
   return promo;
+}
+
+// Mock data for returns
+export const returns: Return[] = [];
+
+// Mock data for store credits
+export const storeCredits: StoreCredit[] = [];
+
+// Mock data for gift cards
+export const giftCards: GiftCard[] = [];
+
+// Mock data for custom payment methods
+export const customPaymentMethods: CustomPaymentMethod[] = [
+  {
+    id: "custom-001",
+    name: "Check",
+    description: "Personal or business check",
+    isActive: true,
+    canBeUsedForRefunds: true,
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+  {
+    id: "custom-002",
+    name: "Venmo",
+    description: "Venmo payment",
+    isActive: true,
+    canBeUsedForRefunds: false,
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+];
+
+// Helper functions for returns
+export function getTransactionById(transactionId: string): Transaction | null {
+  return transactions.find((t) => t.id === transactionId) || null;
+}
+
+export function getAllTransactions(): Transaction[] {
+  return transactions.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export function createReturn(
+  returnData: Omit<Return, "id" | "returnNumber" | "createdAt">
+): Return {
+  const id = `ret-${Date.now()}`;
+  const today = getDateString(0);
+  const count = returns.filter((r) => r.createdAt.startsWith(today)).length + 1;
+  const returnNumber = `RET-${today.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
+  
+  const newReturn: Return = {
+    ...returnData,
+    id,
+    returnNumber,
+    createdAt: new Date().toISOString().slice(0, 19),
+  };
+  
+  returns.push(newReturn);
+  
+  // Update transaction to include return
+  const transaction = getTransactionById(returnData.transactionId);
+  if (transaction) {
+    if (!transaction.returns) {
+      transaction.returns = [];
+    }
+    transaction.returns.push(newReturn);
+  }
+  
+  return newReturn;
+}
+
+export function createStoreCredit(
+  creditData: Omit<StoreCredit, "id" | "createdAt" | "updatedAt">
+): StoreCredit {
+  const id = `sc-${Date.now()}`;
+  const now = new Date().toISOString().slice(0, 19);
+  
+  const newCredit: StoreCredit = {
+    ...creditData,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  storeCredits.push(newCredit);
+  return newCredit;
+}
+
+export function createGiftCard(
+  cardData: Omit<GiftCard, "id" | "cardNumber" | "createdAt" | "updatedAt">
+): GiftCard {
+  const id = `gc-${Date.now()}`;
+  const cardNumber = `GC-${Date.now().toString().slice(-10)}`;
+  const now = new Date().toISOString().slice(0, 19);
+  
+  const newCard: GiftCard = {
+    ...cardData,
+    id,
+    cardNumber,
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  giftCards.push(newCard);
+  return newCard;
+}
+
+export function getStoreCreditBalance(customerId: string): number {
+  return storeCredits
+    .filter((sc) => sc.customerId === customerId && sc.balance > 0)
+    .reduce((sum, sc) => sum + sc.balance, 0);
+}
+
+export function getGiftCardBalance(cardNumber: string): number {
+  const card = giftCards.find(
+    (gc) => gc.cardNumber === cardNumber && gc.isActive
+  );
+  return card?.balance || 0;
 }
