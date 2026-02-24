@@ -485,88 +485,124 @@ export default function MessagingPage() {
           <AppointmentRemindersTab />
         </TabsContent>
 
-        {/* Internal Communications Tab */}
+        {/* Internal Communications Tab - CLEARLY SEPARATED */}
         <TabsContent value="internal" className="space-y-4">
-          <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/30 p-4 mb-4">
+          {/* Warning Banner - Clear Separation */}
+          <div className="rounded-lg border-2 border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 p-4">
             <div className="flex items-start gap-3">
-              <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Internal Team Communication</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Staff-to-staff messaging separate from customer communication. 
-                  This feature can be moved to a dedicated Staff/Operations section if preferred.
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-semibold text-orange-900 dark:text-orange-100">
+                    Internal Team Communication Only
+                  </p>
+                  <Badge variant="outline" className="border-orange-500 text-orange-700 dark:text-orange-300">
+                    Staff Only
+                  </Badge>
+                </div>
+                <p className="text-xs text-orange-800 dark:text-orange-200">
+                  This section is completely separate from customer messaging. 
+                  No customer data is visible or accessible here. 
+                  Staff-to-staff communication only.
                 </p>
               </div>
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
+          <Card className="border-2 border-muted">
+            <CardHeader className="border-b bg-muted/30">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
                     Internal Team Communications
+                    <Badge variant="secondary" className="ml-2">
+                      Internal
+                    </Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Team messages with @mentions, channels, and read receipts
+                    Team messages with @mentions, channels, and read receipts. 
+                    <span className="font-medium text-foreground"> No customer data.</span>
                   </p>
                 </div>
                 <Button onClick={() => setShowComposeModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  New Message
+                  New Internal Message
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {internalMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold">{msg.from}</span>
-                          <Badge
-                            variant={
-                              msg.channel === "urgent"
-                                ? "destructive"
-                                : msg.channel === "shifts"
-                                  ? "default"
-                                  : "outline"
-                            }
-                            className="capitalize"
-                          >
-                            {msg.channel}
-                          </Badge>
-                          {msg.hasRead.length > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              {msg.hasRead.length} read
+            <CardContent className="pt-6">
+              {internalMessages.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No internal messages</p>
+                  <p className="text-sm mt-2">
+                    Start a conversation with your team
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {internalMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className="p-4 border-2 border-muted rounded-lg hover:bg-muted/50 transition-colors bg-background"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-semibold">{msg.from}</span>
+                            <Badge
+                              variant={
+                                msg.channel === "urgent"
+                                  ? "destructive"
+                                  : msg.channel === "shifts"
+                                    ? "default"
+                                    : "outline"
+                              }
+                              className="capitalize"
+                            >
+                              {msg.channel}
                             </Badge>
-                          )}
+                            <Badge variant="secondary" className="text-xs">
+                              Internal
+                            </Badge>
+                            {msg.hasRead.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {msg.hasRead.length} read
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm">{msg.message}</p>
                         </div>
-                        <p className="text-sm">{msg.message}</p>
+                        <div className="text-xs text-muted-foreground ml-4 shrink-0">
+                          {formatTimestamp(msg.timestamp)}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground ml-4">
-                        {formatTimestamp(msg.timestamp)}
-                      </div>
+                      {msg.mentions.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {msg.mentions.map((mention, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              @{mention}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {msg.mentions.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {msg.mentions.map((mention, idx) => (
-                          <Badge key={idx} variant="secondary">
-                            @{mention}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {/* Optional: Note about moving to separate section */}
+          <div className="rounded-lg border border-muted bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground text-center">
+              💡 <span className="font-medium">Note:</span> This internal messaging feature can be moved to a 
+              dedicated Staff/Operations section if preferred for better separation.
+            </p>
+          </div>
         </TabsContent>
       </Tabs>
 
