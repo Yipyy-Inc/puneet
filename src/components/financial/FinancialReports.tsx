@@ -170,8 +170,8 @@ export function FinancialReports() {
                     tickFormatter={(value) => `$${value / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [
-                      `$${value.toLocaleString()}`,
+                    formatter={(value: number | undefined) => [
+                      `$${(value || 0).toLocaleString()}`,
                       "",
                     ]}
                   />
@@ -292,8 +292,8 @@ export function FinancialReports() {
                     tickFormatter={(value) => `$${value / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [
-                      `$${value.toLocaleString()}`,
+                    formatter={(value: number | undefined) => [
+                      `$${(value || 0).toLocaleString()}`,
                       "Revenue",
                     ]}
                   />

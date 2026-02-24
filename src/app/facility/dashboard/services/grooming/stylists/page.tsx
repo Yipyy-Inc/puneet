@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,9 @@ import {
   Award,
   Users,
   Scissors,
+  DollarSign,
+  TrendingDown,
+  Timer,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -44,8 +47,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { stylists, stylistAvailability, type Stylist } from "@/data/grooming";
+import { stylists, stylistAvailability, type Stylist, groomingAppointments } from "@/data/grooming";
 import { toast } from "sonner";
+import { calculateStylistPerformance } from "@/lib/stylist-performance";
 
 type StylistWithRecord = Stylist & Record<string, unknown>;
 
@@ -105,6 +109,16 @@ export default function StylistsPage() {
     6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
   });
 
+  // Calculate performance metrics for all stylists
+  const stylistMetrics = useMemo(() => {
+    const metricsMap = new Map<string, ReturnType<typeof calculateStylistPerformance>>();
+    stylists.forEach((stylist) => {
+      const metrics = calculateStylistPerformance(stylist.id, groomingAppointments);
+      metricsMap.set(stylist.id, metrics);
+    });
+    return metricsMap;
+  }, []);
+
   // Stats
   const activeStylists = stylists.filter((s) => s.status === "active").length;
   const totalAppointments = stylists.reduce(
@@ -115,6 +129,18 @@ export default function StylistsPage() {
     stylists.reduce((sum, s) => sum + s.rating, 0) / stylists.length;
   const avgExperience =
     stylists.reduce((sum, s) => sum + s.yearsExperience, 0) / stylists.length;
+  
+  // Performance stats
+  const totalRevenue = Array.from(stylistMetrics.values()).reduce(
+    (sum, m) => sum + m.totalRevenue,
+    0,
+  );
+  const avgCancellationRate = stylists.length > 0
+    ? Array.from(stylistMetrics.values()).reduce(
+        (sum, m) => sum + m.cancellationRate,
+        0,
+      ) / stylists.length
+    : 0;
 
   const handleAddNew = () => {
     setEditingStylist(null);
@@ -275,10 +301,74 @@ export default function StylistsPage() {
     },
     {
       key: "totalAppointments",
-      label: "Appointments",
+      label: "Total Appointments",
       icon: Calendar,
       defaultVisible: true,
       render: (stylist) => stylist.totalAppointments.toLocaleString(),
+    },
+    {
+      key: "todayAppointments",
+      label: "Today's Appointments",
+      icon: Calendar,
+      defaultVisible: true,
+      render: (stylist) => {
+        const metrics = stylistMetrics.get(stylist.id);
+        return (
+          <div className="flex items-center gap-2">
+            <Badge variant={metrics?.todayAppointments ? "default" : "outline"}>
+              {metrics?.todayAppointments || 0}
+            </Badge>
+          </div>
+        );
+      },
+    },
+    {
+      key: "revenue",
+      label: "Revenue",
+      icon: DollarSign,
+      defaultVisible: true,
+      render: (stylist) => {
+        const metrics = stylistMetrics.get(stylist.id);
+        return (
+          <div className="font-medium">
+            ${metrics?.totalRevenue.toFixed(2) || "0.00"}
+          </div>
+        );
+      },
+    },
+    {
+      key: "averageGroomTime",
+      label: "Avg. Groom Time",
+      icon: Timer,
+      defaultVisible: true,
+      render: (stylist) => {
+        const metrics = stylistMetrics.get(stylist.id);
+        return metrics?.averageGroomTime
+          ? `${metrics.averageGroomTime} min`
+          : "N/A";
+      },
+    },
+    {
+      key: "cancellationRate",
+      label: "Cancellation Rate",
+      icon: TrendingDown,
+      defaultVisible: true,
+      render: (stylist) => {
+        const metrics = stylistMetrics.get(stylist.id);
+        const rate = metrics?.cancellationRate || 0;
+        return (
+          <div className="flex items-center gap-2">
+            <span className={rate > 15 ? "text-red-600 font-medium" : rate > 10 ? "text-orange-600" : "text-green-600"}>
+              {rate}%
+            </span>
+            {metrics && (
+              <span className="text-xs text-muted-foreground">
+                ({metrics.cancelledCount}/{metrics.totalAppointments})
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -361,7 +451,7 @@ export default function StylistsPage() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -415,6 +505,34 @@ export default function StylistsPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {avgExperience.toFixed(1)} years
+            </div>
+            <p className="text-xs text-muted-foreground">Team average</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${totalRevenue.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">From completed appointments</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Avg. Cancellation Rate
+            </CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {avgCancellationRate.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground">Team average</p>
           </CardContent>

@@ -23,20 +23,26 @@ import {
   Hourglass,
   Calendar,
   User,
+  LogIn,
 } from "lucide-react";
 import {
   groomingAppointments,
   GroomingAppointment,
   GroomingStatus,
   stylists,
+  type GroomingIntake,
+  type PriceAdjustment,
 } from "@/data/grooming";
 import { clients } from "@/data/clients";
+import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
+import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
+import { sendPickupNotifications } from "@/lib/grooming-pickup-notifications";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
   "status"
 > {
-  status: GroomingStatus | "pending";
+  status: GroomingStatus;
   price: number;
 }
 
@@ -68,17 +74,18 @@ export function GroomingSection() {
 
   // Filter visibility states
   const [showScheduled, setShowScheduled] = useState(true);
-  const [showPending, setShowPending] = useState(true);
+  const [showCheckedIn, setShowCheckedIn] = useState(true);
   const [showInProgress, setShowInProgress] = useState(true);
+  const [showReadyForPickup, setShowReadyForPickup] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
 
-  // Local state for appointments data with pending status support
+  // Local state for appointments data
   const [appointmentsData, setAppointmentsData] = useState<
     GroomingAppointmentWithPending[]
   >(
     groomingAppointments.map((apt) => ({
       ...apt,
-      status: apt.status as GroomingStatus | "pending",
+      status: apt.status as GroomingStatus,
       price: apt.totalPrice,
     })),
   );
@@ -93,9 +100,9 @@ export function GroomingSection() {
       statusMap[stylist.id] = { busy: false };
     });
 
-    // Mark groomers with in-progress appointments as busy
+    // Mark groomers with checked-in or in-progress appointments as busy
     appointmentsData.forEach((apt) => {
-      if (apt.status === "in-progress") {
+      if (apt.status === "checked-in" || apt.status === "in-progress") {
         statusMap[apt.stylistId] = { busy: true, currentPet: apt.petName };
       }
     });
@@ -121,16 +128,18 @@ export function GroomingSection() {
   const filteredAppointments = useMemo(() => {
     return todayAppointments.filter((apt) => {
       if (apt.status === "scheduled" && !showScheduled) return false;
-      if (apt.status === "pending" && !showPending) return false;
+      if (apt.status === "checked-in" && !showCheckedIn) return false;
       if (apt.status === "in-progress" && !showInProgress) return false;
+      if (apt.status === "ready-for-pickup" && !showReadyForPickup) return false;
       if (apt.status === "completed" && !showCompleted) return false;
       return true;
     });
   }, [
     todayAppointments,
     showScheduled,
-    showPending,
+    showCheckedIn,
     showInProgress,
+    showReadyForPickup,
     showCompleted,
   ]);
 
@@ -153,10 +162,13 @@ export function GroomingSection() {
     () => ({
       scheduled: todayAppointments.filter((apt) => apt.status === "scheduled")
         .length,
-      pending: todayAppointments.filter((apt) => apt.status === "pending")
+      checkedIn: todayAppointments.filter((apt) => apt.status === "checked-in")
         .length,
       inProgress: todayAppointments.filter(
         (apt) => apt.status === "in-progress",
+      ).length,
+      readyForPickup: todayAppointments.filter(
+        (apt) => apt.status === "ready-for-pickup",
       ).length,
       completed: todayAppointments.filter((apt) => apt.status === "completed")
         .length,
@@ -171,12 +183,98 @@ export function GroomingSection() {
   ) => {
     const previousStatus = appointment.status;
 
+    // Check if check-in is required before starting groom
+    // TODO: Get from grooming settings - requireCheckInBeforeGroom
+    const requireCheckInBeforeGroom = true; // Default: true
+    if (
+      newStatus === "in-progress" &&
+      requireCheckInBeforeGroom &&
+      appointment.status !== "checked-in" &&
+      !appointment.checkInTime
+    ) {
+      toast.error("Check-in required", {
+        description: "Appointment must be checked in before groom can start.",
+      });
+      return;
+    }
+
     // Update the status
+    const updatedAppointment = {
+      ...appointment,
+      status: newStatus,
+    };
+
     setAppointmentsData((prev) =>
       prev.map((apt) =>
-        apt.id === appointment.id ? { ...apt, status: newStatus } : apt,
+        apt.id === appointment.id ? updatedAppointment : apt,
       ),
     );
+
+    // Send notifications when status changes to "ready-for-pickup"
+    if (
+      newStatus === "ready-for-pickup" &&
+      previousStatus !== "ready-for-pickup"
+    ) {
+      // TODO: Get from grooming settings
+      const settings = {
+        autoReadyForPickupSMS: true, // Default: true
+        autoReadyForPickupEmail: true, // Default: true
+      };
+
+      sendPickupNotifications(updatedAppointment, settings)
+        .then((results) => {
+          const notificationMessages: string[] = [];
+          if (results.smsSent) notificationMessages.push("SMS sent");
+          if (results.emailSent) notificationMessages.push("Email sent");
+          
+          if (notificationMessages.length > 0) {
+            toast.success("Customer notified", {
+              description: `${notificationMessages.join(" and ")}: ${appointment.petName} is ready for pickup.`,
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to send pickup notifications:", error);
+        });
+    }
+
+    // If status changed to completed, automatically deduct products
+
+    // If status changed to completed, automatically deduct products
+    if (newStatus === "completed" && previousStatus !== "completed") {
+      import("@/lib/grooming-inventory-deduction").then(({ deductProductsForAppointment }) => {
+        const deductionResult = deductProductsForAppointment(
+          appointment,
+          appointment.stylistName,
+        );
+
+        if (deductionResult.success && deductionResult.deductions.length > 0) {
+          const productsDeducted = deductionResult.deductions
+            .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
+            .join(", ");
+
+          // Check for low stock alerts
+          const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
+          if (lowStockProducts.length > 0) {
+            toast.warning("Products deducted - Low stock alert", {
+              description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+              duration: 8000,
+            });
+          } else {
+            toast.success("Products deducted from inventory", {
+              description: productsDeducted,
+              duration: 5000,
+            });
+          }
+        } else if (deductionResult.errors.length > 0) {
+          const errorMessages = deductionResult.errors.map((e) => e.reason).join(", ");
+          toast.error("Inventory deduction failed", {
+            description: errorMessages,
+            duration: 8000,
+          });
+        }
+      });
+    }
 
     // Clear any existing undo timeout
     if (undoTimeoutRef.current) {
@@ -237,17 +335,17 @@ export function GroomingSection() {
     setSelectedAppointment(null);
   };
 
-  const revertToPending = (appointment: GroomingAppointmentWithPending) => {
+  const revertToCheckedIn = (appointment: GroomingAppointmentWithPending) => {
     const previousStatus = appointment.status;
     setAppointmentsData((prev) =>
       prev.map((apt) =>
         apt.id === appointment.id
-          ? { ...apt, status: "pending" as const }
+          ? { ...apt, status: "checked-in" as const }
           : apt,
       ),
     );
 
-    toast.success(`${appointment.petName} - Reverted to Pending`, {
+    toast.success(`${appointment.petName} - Reverted to Checked In`, {
       description: "Status has been reset",
       action: {
         label: "Undo",
@@ -322,8 +420,16 @@ export function GroomingSection() {
   const confirmCheckIn = () => {
     if (!selectedAppointment) return;
     if (selectedAppointment.status === "scheduled") {
-      executeAction(selectedAppointment, "pending", "Checked in");
-    } else if (selectedAppointment.status === "pending") {
+      const now = new Date().toISOString();
+      setAppointmentsData((prev) =>
+        prev.map((apt) =>
+          apt.id === selectedAppointment.id
+            ? { ...apt, status: "checked-in" as const, checkInTime: now }
+            : apt,
+        ),
+      );
+      toast.success(`${selectedAppointment.petName} - Checked In`);
+    } else if (selectedAppointment.status === "checked-in") {
       executeAction(selectedAppointment, "in-progress", "Grooming started");
     }
     setIsDetailsModalOpen(false);
@@ -333,8 +439,16 @@ export function GroomingSection() {
   const handleDetailsCheckIn = () => {
     if (!selectedAppointment) return;
     if (selectedAppointment.status === "scheduled") {
-      executeAction(selectedAppointment, "pending", "Checked in");
-    } else if (selectedAppointment.status === "pending") {
+      const now = new Date().toISOString();
+      setAppointmentsData((prev) =>
+        prev.map((apt) =>
+          apt.id === selectedAppointment.id
+            ? { ...apt, status: "checked-in" as const, checkInTime: now }
+            : apt,
+        ),
+      );
+      toast.success(`${selectedAppointment.petName} - Checked In`);
+    } else if (selectedAppointment.status === "checked-in") {
       executeAction(selectedAppointment, "in-progress", "Grooming started");
     }
     setIsDetailsModalOpen(false);
@@ -349,7 +463,7 @@ export function GroomingSection() {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
-  const getStatusBadge = (status: GroomingStatus | "pending") => {
+  const getStatusBadge = (status: GroomingStatus) => {
     switch (status) {
       case "scheduled":
         return (
@@ -358,18 +472,25 @@ export function GroomingSection() {
             Scheduled
           </Badge>
         );
-      case "pending":
+      case "checked-in":
         return (
-          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-            <Hourglass className="h-3 w-3 mr-1" />
-            Pending
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <LogIn className="h-3 w-3 mr-1" />
+            Checked In
           </Badge>
         );
       case "in-progress":
         return (
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
             <PlayCircle className="h-3 w-3 mr-1" />
             In Progress
+          </Badge>
+        );
+      case "ready-for-pickup":
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Ready for Pickup
           </Badge>
         );
       case "completed":
@@ -379,12 +500,24 @@ export function GroomingSection() {
             Completed
           </Badge>
         );
+      case "cancelled":
+        return (
+          <Badge variant="destructive">
+            Cancelled
+          </Badge>
+        );
+      case "no-show":
+        return (
+          <Badge variant="destructive">
+            No Show
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const getCardStyles = (status: GroomingStatus | "pending") => {
+  const getCardStyles = (status: GroomingStatus) => {
     switch (status) {
       case "scheduled":
         return {
@@ -392,17 +525,23 @@ export function GroomingSection() {
           iconBg: "bg-orange-100 dark:bg-orange-900",
           icon: "text-orange-600",
         };
-      case "pending":
+      case "checked-in":
+        return {
+          bg: "bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-950/30",
+          iconBg: "bg-blue-100 dark:bg-blue-900",
+          icon: "text-blue-600",
+        };
+      case "in-progress":
         return {
           bg: "bg-yellow-50/50 dark:bg-yellow-950/20 hover:bg-yellow-100/50 dark:hover:bg-yellow-950/30",
           iconBg: "bg-yellow-100 dark:bg-yellow-900",
           icon: "text-yellow-600",
         };
-      case "in-progress":
+      case "ready-for-pickup":
         return {
-          bg: "bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-950/30",
-          iconBg: "bg-blue-100 dark:bg-blue-900",
-          icon: "text-blue-600",
+          bg: "bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-950/30",
+          iconBg: "bg-green-100 dark:bg-green-900",
+          icon: "text-green-600",
         };
       case "completed":
         return {
@@ -433,7 +572,7 @@ export function GroomingSection() {
             Arrived
           </Button>
         );
-      case "pending":
+      case "scheduled":
         const available = isGroomerAvailable(appointment.stylistId);
         return (
           <Button
@@ -487,14 +626,14 @@ export function GroomingSection() {
               </Button>
               <Button
                 size="sm"
-                variant={showPending ? "default" : "ghost"}
-                onClick={() => setShowPending(!showPending)}
+                variant={showCheckedIn ? "default" : "ghost"}
+                onClick={() => setShowCheckedIn(!showCheckedIn)}
                 className="h-7 px-3 gap-1"
               >
-                <Hourglass className="h-3 w-3" />
-                Pending
+                <LogIn className="h-3 w-3" />
+                Checked In
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  {counts.pending}
+                  {counts.checkedIn}
                 </Badge>
               </Button>
               <Button
@@ -507,6 +646,18 @@ export function GroomingSection() {
                 In Progress
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.inProgress}
+                </Badge>
+              </Button>
+              <Button
+                size="sm"
+                variant={showReadyForPickup ? "default" : "ghost"}
+                onClick={() => setShowReadyForPickup(!showReadyForPickup)}
+                className="h-7 px-3 gap-1"
+              >
+                <CheckCircle className="h-3 w-3" />
+                Ready
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {counts.readyForPickup}
                 </Badge>
               </Button>
               <Button
@@ -770,11 +921,20 @@ export function GroomingSection() {
                 <Link href="/facility/dashboard/bookings">
                   <Button variant="outline">Booking Details</Button>
                 </Link>
-                {selectedAppointment?.status === "pending" && (
+                {selectedAppointment?.status === "checked-in" && (
                   <Button
                     variant="outline"
                     className="text-orange-600 border-orange-600 hover:bg-orange-50"
-                    onClick={() => revertToScheduled(selectedAppointment)}
+                    onClick={() => {
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? { ...apt, status: "scheduled" as const, checkInTime: null }
+                            : apt,
+                        ),
+                      );
+                      toast.success(`${selectedAppointment.petName} - Reverted to Scheduled`);
+                    }}
                   >
                     Revert to Scheduled
                   </Button>
@@ -791,9 +951,9 @@ export function GroomingSection() {
                     <Button
                       variant="outline"
                       className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
-                      onClick={() => revertToPending(selectedAppointment)}
+                      onClick={() => revertToCheckedIn(selectedAppointment)}
                     >
-                      Revert to Pending
+                      Revert to Checked In
                     </Button>
                   </>
                 )}
@@ -829,7 +989,7 @@ export function GroomingSection() {
                     Mark Arrived
                   </Button>
                 )}
-                {selectedAppointment?.status === "pending" && (
+                {selectedAppointment?.status === "checked-in" && (
                   <Button
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={handleDetailsCheckIn}
@@ -954,9 +1114,25 @@ export function GroomingSection() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Total Price</p>
+                  <p className="text-muted-foreground">Base Price</p>
                   <p className="font-medium">
-                    ${selectedAppointment.totalPrice}
+                    ${(selectedAppointment.basePrice || selectedAppointment.totalPrice).toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total Price</p>
+                  <p className="font-medium text-lg">
+                    ${selectedAppointment.totalPrice.toFixed(2)}
+                    {(selectedAppointment.priceAdjustments?.length || 0) > 0 && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        (+
+                        {selectedAppointment.priceAdjustments?.reduce(
+                          (sum, adj) => sum + adj.amount,
+                          0,
+                        ).toFixed(2)}
+                        )
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -1004,6 +1180,116 @@ export function GroomingSection() {
                   </div>
                 )}
               </div>
+
+              {/* Price Adjustments - Show for checked-in, in-progress, or ready-for-pickup */}
+              {(selectedAppointment.status === "checked-in" ||
+                selectedAppointment.status === "in-progress" ||
+                selectedAppointment.status === "ready-for-pickup") && (
+                <div className="pt-4 border-t">
+                  <PriceAdjustmentForm
+                    appointmentId={selectedAppointment.id}
+                    petName={selectedAppointment.petName}
+                    basePrice={selectedAppointment.basePrice || selectedAppointment.totalPrice}
+                    currentTotal={selectedAppointment.totalPrice}
+                    adjustments={selectedAppointment.priceAdjustments || []}
+                    onAddAdjustment={(adjustment) => {
+                      const newAdjustment: PriceAdjustment = {
+                        ...adjustment,
+                        id: `adj-${Date.now()}`,
+                        addedAt: new Date().toISOString(),
+                        notifiedAt: adjustment.customerNotified
+                          ? new Date().toISOString()
+                          : undefined,
+                      };
+
+                      const adjustments = [
+                        ...(selectedAppointment.priceAdjustments || []),
+                        newAdjustment,
+                      ];
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                                basePrice:
+                                  apt.basePrice || apt.totalPrice - totalAdjustments,
+                              }
+                            : apt,
+                        ),
+                      );
+
+                      if (adjustment.customerNotified) {
+                        // In production, send notification
+                        console.log(
+                          `Sending notification to ${selectedAppointment.ownerEmail} about $${adjustment.amount} charge`,
+                        );
+                      }
+                    }}
+                    onRemoveAdjustment={(adjustmentId) => {
+                      const adjustments = (selectedAppointment.priceAdjustments || []).filter(
+                        (adj) => adj.id !== adjustmentId,
+                      );
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                              }
+                            : apt,
+                        ),
+                      );
+                      toast.success("Price adjustment removed");
+                    }}
+                    readOnly={false}
+                  />
+                </div>
+              )}
+
+              {/* Intake Form - Show for checked-in, in-progress, or completed appointments */}
+              {selectedAppointment && (
+                <div className="pt-4 border-t">
+                  <GroomingIntakeForm
+                    appointmentId={selectedAppointment.id}
+                    petName={selectedAppointment.petName}
+                    initialData={selectedAppointment.intake}
+                    onSave={(intake: GroomingIntake) => {
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? { ...apt, intake }
+                            : apt,
+                        ),
+                      );
+                      toast.success("Intake form saved");
+                    }}
+                    readOnly={
+                      selectedAppointment.status === "completed" ||
+                      selectedAppointment.status === "cancelled" ||
+                      selectedAppointment.status === "no-show"
+                    }
+                  />
+                </div>
+              )}
             </div>
           )}
         </Modal>

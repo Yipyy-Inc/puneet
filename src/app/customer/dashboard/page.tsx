@@ -4,10 +4,10 @@ import { useMemo, useState, useEffect, useTransition } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dog, Calendar, MessageSquare, FileText, CreditCard, Camera, Shield } from "lucide-react";
+import { Dog, Calendar, MessageSquare, FileText, CreditCard, Camera, Shield, Scissors } from "lucide-react";
 import Link from "next/link";
 import { petCams } from "@/data/additional-features";
-import { setUserRole } from "@/lib/role-utils";
+import { setUserRole, setFacilityRole } from "@/lib/role-utils";
 
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
@@ -23,6 +23,12 @@ export default function CustomerDashboardPage() {
     startTransition(() => {
       setUserRole("super_admin");
       window.location.href = "/dashboard";
+    });
+  };
+
+  const switchToGroomer = () => {
+    startTransition(() => {
+      window.location.href = "/groomer/auth/login";
     });
   };
 
@@ -149,6 +155,15 @@ export default function CustomerDashboardPage() {
                   </Link>
                 </Button>
               )}
+              <Button 
+                className="w-full justify-start" 
+                variant="outline" 
+                onClick={switchToGroomer}
+                disabled={isPending}
+              >
+                <Scissors className="mr-2 h-4 w-4" />
+                Switch to Groomer
+              </Button>
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 

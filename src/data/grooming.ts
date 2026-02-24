@@ -2,7 +2,9 @@
 
 export type GroomingStatus =
   | "scheduled"
+  | "checked-in"
   | "in-progress"
+  | "ready-for-pickup"
   | "completed"
   | "cancelled"
   | "no-show";
@@ -23,6 +25,18 @@ export type ProductCategory =
   | "health"
   | "cleaning";
 
+export type StylistSkillLevel = "junior" | "intermediate" | "senior" | "master";
+
+export interface StylistCapacity {
+  maxDailyAppointments: number; // Maximum appointments per day
+  maxConcurrentAppointments: number; // Maximum simultaneous appointments (usually 1)
+  preferredPetSizes: PetSize[]; // Pet sizes this stylist prefers/handles best
+  skillLevel: StylistSkillLevel; // Experience/skill level
+  canHandleMatted: boolean; // Can handle matted coats
+  canHandleAnxious: boolean; // Can handle anxious pets
+  canHandleAggressive: boolean; // Can handle aggressive pets
+}
+
 export interface Stylist {
   id: string;
   name: string;
@@ -37,6 +51,7 @@ export interface Stylist {
   rating: number;
   totalAppointments: number;
   hireDate: string;
+  capacity: StylistCapacity; // Capacity and skill configuration
 }
 
 export interface StylistAvailability {
@@ -57,6 +72,40 @@ export interface StylistTimeOff {
   endDate: string;
   reason: string;
   status: "pending" | "approved" | "denied";
+}
+
+export interface GroomingIntake {
+  coatCondition: "normal" | "matted" | "severely-matted";
+  behaviorNotes: string;
+  allergies: string[];
+  specialInstructions: string;
+  beforePhotos: string[]; // URLs
+  mattingFeeWarning: boolean;
+  mattingFeeAmount?: number;
+  completedBy?: string; // Groomer name
+  completedAt?: string; // ISO timestamp
+}
+
+export type PriceAdjustmentReason =
+  | "matting-fee"
+  | "de-shedding-upgrade"
+  | "extra-brushing-time"
+  | "behavioral-handling"
+  | "extra-time-required"
+  | "product-upgrade"
+  | "special-treatment"
+  | "other";
+
+export interface PriceAdjustment {
+  id: string;
+  amount: number;
+  reason: PriceAdjustmentReason;
+  customReason?: string; // For "other" reason
+  description: string;
+  addedBy: string; // Groomer name
+  addedAt: string; // ISO timestamp
+  customerNotified: boolean;
+  notifiedAt?: string; // ISO timestamp
 }
 
 export interface GroomingAppointment {
@@ -80,14 +129,28 @@ export interface GroomingAppointment {
   packageId: string;
   packageName: string;
   addOns: string[];
-  totalPrice: number;
+  basePrice: number; // Original price before adjustments
+  priceAdjustments: PriceAdjustment[]; // Dynamic price adjustments
+  totalPrice: number; // basePrice + sum of adjustments
   status: GroomingStatus;
+  checkInTime: string | null;
+  checkOutTime: string | null;
   notes: string;
   specialInstructions: string;
   allergies: string[];
+  intake?: GroomingIntake; // Intake form data
+  afterPhotos?: GroomingPhoto[]; // After photos from groomer
   lastGroomDate?: string;
   createdAt: string;
   onlineBooking: boolean;
+}
+
+export interface ProductUsage {
+  productId: string;
+  productName: string;
+  quantity: number; // Amount used per service (e.g., 10ml, 0.1 bottles)
+  unit: string; // Unit of measurement (e.g., "ml", "bottle", "oz")
+  isOptional?: boolean; // If true, product may not always be used
 }
 
 export interface GroomingPackage {
@@ -95,7 +158,7 @@ export interface GroomingPackage {
   name: string;
   description: string;
   basePrice: number;
-  duration: number; // in minutes
+  duration: number; // in minutes - automatically used in scheduling
   sizePricing: {
     small: number;
     medium: number;
@@ -107,6 +170,9 @@ export interface GroomingPackage {
   isPopular?: boolean;
   purchaseCount: number;
   createdAt: string;
+  assignedStylistIds?: string[]; // Optional: restrict package to specific stylists
+  requiresEvaluation?: boolean; // If true, pet must have valid evaluation before booking
+  productUsage?: ProductUsage[]; // Products used for this package and their quantities
 }
 
 export interface GroomingAddOn {
@@ -212,6 +278,15 @@ export const stylists: Stylist[] = [
     rating: 4.9,
     totalAppointments: 1250,
     hireDate: "2019-03-15",
+    capacity: {
+      maxDailyAppointments: 8,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium", "large"],
+      skillLevel: "senior",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-002",
@@ -235,6 +310,15 @@ export const stylists: Stylist[] = [
     rating: 4.8,
     totalAppointments: 890,
     hireDate: "2021-06-01",
+    capacity: {
+      maxDailyAppointments: 6,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium"],
+      skillLevel: "intermediate",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-003",
@@ -258,6 +342,15 @@ export const stylists: Stylist[] = [
     rating: 4.7,
     totalAppointments: 720,
     hireDate: "2020-09-15",
+    capacity: {
+      maxDailyAppointments: 7,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["medium", "large", "giant"],
+      skillLevel: "senior",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: true,
+    },
   },
   {
     id: "stylist-004",
@@ -276,6 +369,15 @@ export const stylists: Stylist[] = [
     rating: 4.95,
     totalAppointments: 2100,
     hireDate: "2017-01-10",
+    capacity: {
+      maxDailyAppointments: 10,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium", "large"],
+      skillLevel: "master",
+      canHandleMatted: true,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
   {
     id: "stylist-005",
@@ -296,6 +398,15 @@ export const stylists: Stylist[] = [
     rating: 4.5,
     totalAppointments: 450,
     hireDate: "2022-04-20",
+    capacity: {
+      maxDailyAppointments: 12,
+      maxConcurrentAppointments: 1,
+      preferredPetSizes: ["small", "medium"],
+      skillLevel: "junior",
+      canHandleMatted: false,
+      canHandleAnxious: true,
+      canHandleAggressive: false,
+    },
   },
 ];
 
@@ -499,6 +610,24 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 342,
     createdAt: "2023-01-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
+    productUsage: [
+      {
+        productId: "prod-001",
+        productName: "Oatmeal Soothing Shampoo",
+        quantity: 0.1, // 10% of a bottle (16oz = ~473ml, so ~47ml)
+        unit: "bottle",
+        isOptional: false,
+      },
+      {
+        productId: "prod-005",
+        productName: "Conditioning Rinse",
+        quantity: 0.08,
+        unit: "bottle",
+        isOptional: false,
+      },
+    ],
   },
   {
     id: "groom-pkg-002",
@@ -525,6 +654,8 @@ export const groomingPackages: GroomingPackage[] = [
     isPopular: true,
     purchaseCount: 528,
     createdAt: "2023-01-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-003",
@@ -552,6 +683,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 189,
     createdAt: "2023-01-15",
+    assignedStylistIds: ["stylist-001", "stylist-004"], // Only senior/master stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-004",
@@ -569,6 +702,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 256,
     createdAt: "2023-03-01",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: false,
   },
   {
     id: "groom-pkg-005",
@@ -593,19 +728,21 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 134,
     createdAt: "2023-06-15",
+    assignedStylistIds: [], // Available to all stylists
+    requiresEvaluation: true, // Puppies may need evaluation
   },
   {
     id: "groom-pkg-006",
     name: "De-Shedding Treatment",
     description:
-      "Specialized treatment to reduce shedding and maintain coat health",
+      "Specialized treatment to reduce shedding for double-coated breeds",
     basePrice: 55,
     duration: 90,
     sizePricing: {
       small: 45,
       medium: 55,
       large: 70,
-      giant: 90,
+      giant: 85,
     },
     includes: [
       "De-shedding shampoo & conditioner",
@@ -618,6 +755,8 @@ export const groomingPackages: GroomingPackage[] = [
     isActive: true,
     purchaseCount: 167,
     createdAt: "2023-04-20",
+    assignedStylistIds: ["stylist-003"], // Specialized for large breeds
+    requiresEvaluation: false,
   },
 ];
 
@@ -651,8 +790,23 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Teeth Brushing", "De-matting (per 15 min)"],
+    basePrice: 85,
+    priceAdjustments: [
+      {
+        id: "adj-001",
+        amount: 25,
+        reason: "matting-fee",
+        description: "Severe matting on back and legs required extra 30 minutes",
+        addedBy: "Jessica Martinez",
+        addedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        customerNotified: true,
+        notifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+    ],
     totalPrice: 110,
     status: "in-progress",
+    checkInTime: new Date().toISOString(),
+    checkOutTime: null,
     notes: "Regular client, prefers short cut for summer",
     specialInstructions: "Use hypoallergenic shampoo",
     allergies: ["Lavender scent"],
@@ -681,8 +835,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["Photo Session"],
+    basePrice: 100,
+    priceAdjustments: [],
     totalPrice: 100,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "First spa day - take extra photos!",
     specialInstructions: "",
     allergies: [],
@@ -710,8 +868,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Anal Gland Expression"],
+    basePrice: 47,
+    priceAdjustments: [],
     totalPrice: 47,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Sensitive ears - be gentle",
     allergies: [],
@@ -739,8 +901,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Blueberry Facial", "Bandana/Bow"],
+    basePrice: 102,
+    priceAdjustments: [],
     totalPrice: 102,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Show cut - Continental style",
     specialInstructions: "Owner will bring show supplies",
     allergies: [],
@@ -769,8 +935,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-006",
     packageName: "De-Shedding Treatment",
     addOns: [],
+    basePrice: 70,
+    priceAdjustments: [],
     totalPrice: 70,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Seasonal shed - needs extra deshedding",
     specialInstructions: "",
     allergies: [],
@@ -798,8 +968,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-005",
     packageName: "Puppy's First Groom",
     addOns: ["Photo Session"],
+    basePrice: 50,
+    priceAdjustments: [],
     totalPrice: 50,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "4 month old puppy - first groom ever!",
     specialInstructions: "Take it slow, lots of breaks",
     allergies: [],
@@ -826,8 +1000,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Flea & Tick Treatment", "Nail Grinding"],
+    basePrice: 108,
+    priceAdjustments: [],
     totalPrice: 108,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Muzzle recommended for nail work",
     allergies: [],
@@ -855,8 +1033,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["De-matting (per 15 min)", "De-matting (per 15 min)"],
+    basePrice: 115,
+    priceAdjustments: [],
     totalPrice: 115,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Has some matting near ears",
     specialInstructions: "Owner wants to keep length if possible",
     allergies: [],
@@ -884,8 +1066,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-004",
     packageName: "Quick Tidy Up",
     addOns: [],
+    basePrice: 30,
+    priceAdjustments: [],
     totalPrice: 30,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Quick bath and nails only",
     specialInstructions: "",
     allergies: [],
@@ -913,8 +1099,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-003",
     packageName: "Spa Day Deluxe",
     addOns: ["Photo Session"],
+    basePrice: 100,
+    priceAdjustments: [],
     totalPrice: 100,
     status: "completed",
+    checkInTime: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    checkOutTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     notes: "Great session, Daisy loved the facial!",
     specialInstructions: "",
     allergies: [],
@@ -942,8 +1132,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Nail Grinding"],
+    basePrice: 43,
+    priceAdjustments: [],
     totalPrice: 43,
     status: "completed",
+    checkInTime: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    checkOutTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     notes: "",
     specialInstructions: "",
     allergies: [],
@@ -970,8 +1164,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: [],
+    basePrice: 55,
+    priceAdjustments: [],
     totalPrice: 55,
     status: "no-show",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Client did not show up, no call",
     specialInstructions: "",
     allergies: [],
@@ -998,8 +1196,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-006",
     packageName: "De-Shedding Treatment",
     addOns: ["Paw Balm Treatment"],
+    basePrice: 98,
+    priceAdjustments: [],
     totalPrice: 98,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Giant breed, needs extra time",
     specialInstructions: "May need two groomers for handling",
     allergies: [],
@@ -1027,8 +1229,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-001",
     packageName: "Basic Bath",
     addOns: ["Teeth Brushing", "Cologne Spritz"],
+    basePrice: 45,
+    priceAdjustments: [],
     totalPrice: 45,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "",
     specialInstructions: "Heart murmur - keep calm",
     allergies: [],
@@ -1056,8 +1262,12 @@ export const groomingAppointments: GroomingAppointment[] = [
     packageId: "groom-pkg-002",
     packageName: "Full Groom",
     addOns: ["Nail Grinding"],
+    basePrice: 113,
+    priceAdjustments: [],
     totalPrice: 113,
     status: "scheduled",
+    checkInTime: null,
+    checkOutTime: null,
     notes: "Very gentle giant",
     specialInstructions: "",
     allergies: [],

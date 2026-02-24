@@ -35,8 +35,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  LogIn,
+  Package,
 } from "lucide-react";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
+import { toast } from "sonner";
 import {
   groomingAppointments,
   groomingPackages,
@@ -47,6 +50,10 @@ import {
   type PetSize,
   type CoatType,
 } from "@/data/grooming";
+import {
+  filterAvailableStylists,
+  checkStylistAvailability,
+} from "@/lib/stylist-validation";
 
 type AppointmentCalendarItem = GroomingAppointment & CalendarItem;
 
@@ -54,6 +61,16 @@ const statusColors: Record<
   GroomingStatus,
   { bg: string; text: string; border: string }
 > = {
+  "checked-in": {
+    bg: "bg-blue-50 dark:bg-blue-950/20",
+    text: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-200 dark:border-blue-800",
+  },
+  "ready-for-pickup": {
+    bg: "bg-green-50 dark:bg-green-950/20",
+    text: "text-green-700 dark:text-green-300",
+    border: "border-green-200 dark:border-green-800",
+  },
   scheduled: {
     bg: "bg-blue-100",
     text: "text-blue-700",
@@ -83,7 +100,9 @@ const statusColors: Record<
 
 const statusIcons: Record<GroomingStatus, React.ReactNode> = {
   scheduled: <Clock className="h-3 w-3" />,
+  "checked-in": <LogIn className="h-3 w-3" />,
   "in-progress": <Scissors className="h-3 w-3" />,
+  "ready-for-pickup": <Package className="h-3 w-3" />,
   completed: <CheckCircle2 className="h-3 w-3" />,
   cancelled: <XCircle className="h-3 w-3" />,
   "no-show": <AlertCircle className="h-3 w-3" />,
@@ -117,6 +136,43 @@ export default function GroomingCalendarPage() {
 
   const stats = getGroomingStats();
   const activeStylists = getActiveStylists();
+
+  // Get available stylists for the selected date/time and pet
+  const availableStylists = useMemo(() => {
+    if (!formData.date || !formData.startTime || !formData.packageId || !formData.petSize) {
+      return activeStylists;
+    }
+
+    const selectedPackage = groomingPackages.find((p) => p.id === formData.packageId);
+    if (!selectedPackage) return activeStylists;
+
+    // Calculate end time
+    const [hours, minutes] = formData.startTime.split(":").map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + selectedPackage.duration;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+    const filtered = filterAvailableStylists(
+      activeStylists,
+      formData.date,
+      formData.startTime,
+      endTime,
+      formData.petSize,
+      groomingAppointments,
+      editingAppointment?.id,
+    );
+
+    return filtered.map((item) => item.stylist);
+  }, [
+    formData.date,
+    formData.startTime,
+    formData.packageId,
+    formData.petSize,
+    activeStylists,
+    editingAppointment?.id,
+  ]);
 
   // Convert appointments to calendar items
   const calendarItems: AppointmentCalendarItem[] = useMemo(() => {
@@ -178,7 +234,54 @@ export default function GroomingCalendarPage() {
   };
 
   const handleSave = () => {
+    // Validate required fields
+    if (!formData.stylistId) {
+      toast.error("Please select a stylist");
+      return;
+    }
+
+    // Validate stylist assignment
+    const stylist = activeStylists.find((s) => s.id === formData.stylistId);
+    if (stylist) {
+      const selectedPackage = groomingPackages.find((p) => p.id === formData.packageId);
+      if (!selectedPackage) {
+        toast.error("Please select a package");
+        return;
+      }
+
+      // Calculate end time
+      const [hours, minutes] = formData.startTime.split(":").map(Number);
+      const startMinutes = hours * 60 + minutes;
+      const endMinutes = startMinutes + selectedPackage.duration;
+      const endHours = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+      const availability = checkStylistAvailability(
+        stylist,
+        formData.date,
+        formData.startTime,
+        endTime,
+        formData.petSize,
+        groomingAppointments,
+        editingAppointment?.id,
+      );
+
+      if (!availability.isAvailable) {
+        const conflictMessages = availability.conflicts.conflicts
+          .map((c) => c.message)
+          .join(", ");
+        toast.error("Stylist not available", {
+          description: conflictMessages || availability.conflicts.reason || "Conflict detected",
+        });
+        return;
+      }
+    }
+
     // In a real app, this would save to the backend
+    toast.success(
+      editingAppointment ? "Appointment updated" : "Appointment created",
+    );
     setIsAddEditModalOpen(false);
   };
 
@@ -517,12 +620,13 @@ export default function GroomingCalendarPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="startTime">Time</Label>
-                <Select
-                  value={formData.startTime}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, startTime: value })
-                  }
-                >
+                  <Select
+                    value={formData.startTime}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, startTime: value });
+                      // End time will be recalculated automatically when package is selected
+                    }}
+                  >
                   <SelectTrigger>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -559,12 +663,44 @@ export default function GroomingCalendarPage() {
                   <SelectValue placeholder="Select a stylist" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeStylists.map((stylist) => (
-                    <SelectItem key={stylist.id} value={stylist.id}>
-                      {stylist.name} -{" "}
-                      {stylist.specializations.slice(0, 2).join(", ")}
-                    </SelectItem>
-                  ))}
+                  {availableStylists.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No available stylists for this date/time and pet size
+                    </div>
+                  ) : (
+                    availableStylists.map((stylist) => {
+                      const skillLevel = stylist.capacity?.skillLevel || "intermediate";
+                      const skillBadge = {
+                        master: "⭐ Master",
+                        senior: "👑 Senior",
+                        intermediate: "✓ Intermediate",
+                        junior: "🌱 Junior",
+                      }[skillLevel] || "";
+
+                      const preferredPetSizes = stylist.capacity?.preferredPetSizes || [];
+                      const isPreferred = preferredPetSizes.includes(formData.petSize);
+
+                      return (
+                        <SelectItem key={stylist.id} value={stylist.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {stylist.name} {skillBadge && `(${skillBadge})`}
+                            </span>
+                            {isPreferred && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ✓ Preferred
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })
+                  )}
+                  {activeStylists.length > availableStylists.length && (
+                    <div className="p-2 text-xs text-muted-foreground border-t">
+                      {activeStylists.length - availableStylists.length} stylist(s) unavailable
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -681,46 +817,133 @@ export default function GroomingCalendarPage() {
                   <Label htmlFor="packageId">Grooming Package</Label>
                   <Select
                     value={formData.packageId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, packageId: value })
-                    }
+                    onValueChange={(value) => {
+                      const selectedPkg = groomingPackages.find((p) => p.id === value);
+                      let updatedFormData = { ...formData, packageId: value };
+                      
+                      // Automatically calculate end time based on package duration
+                      if (selectedPkg && formData.startTime) {
+                        const [hours, minutes] = formData.startTime.split(":").map(Number);
+                        const startMinutes = hours * 60 + minutes;
+                        const endMinutes = startMinutes + selectedPkg.duration;
+                        const endHours = Math.floor(endMinutes / 60);
+                        const endMins = endMinutes % 60;
+                        const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                        // Note: endTime is calculated but not stored in formData since it's derived
+                        // The endTime will be calculated on save using the package duration
+                      }
+                      
+                      setFormData(updatedFormData);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a package" />
                     </SelectTrigger>
                     <SelectContent>
                       {groomingPackages
-                        .filter((pkg) => pkg.isActive)
+                        .filter((pkg) => {
+                          // Filter by active status
+                          if (!pkg.isActive) return false;
+                          
+                          // Filter by assigned stylists if package has restrictions
+                          if (pkg.assignedStylistIds && pkg.assignedStylistIds.length > 0) {
+                            // If a stylist is already selected, check if package is available for that stylist
+                            if (formData.stylistId) {
+                              return pkg.assignedStylistIds.includes(formData.stylistId);
+                            }
+                            // If no stylist selected yet, show all packages (will be filtered when stylist is selected)
+                            return true;
+                          }
+                          
+                          return true;
+                        })
                         .map((pkg) => (
                           <SelectItem key={pkg.id} value={pkg.id}>
-                            {pkg.name} - ${pkg.sizePricing[formData.petSize]} (
-                            {pkg.duration} min)
+                            <div className="flex items-center gap-2">
+                              <span>
+                                {pkg.name} - ${pkg.sizePricing[formData.petSize]} (
+                                {pkg.duration} min)
+                              </span>
+                              {pkg.requiresEvaluation && (
+                                <Badge variant="outline" className="text-xs">
+                                  Eval Required
+                                </Badge>
+                              )}
+                              {pkg.assignedStylistIds && pkg.assignedStylistIds.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {pkg.assignedStylistIds.length} stylist(s)
+                                </Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {getSelectedPackage() && (
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-sm font-medium">
-                      {getSelectedPackage()?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {getSelectedPackage()?.description}
-                    </p>
-                    <div className="mt-2">
-                      <p className="text-xs text-muted-foreground">Includes:</p>
-                      <ul className="text-xs mt-1 space-y-0.5">
-                        {getSelectedPackage()?.includes.map((item, idx) => (
-                          <li key={idx}>• {item}</li>
-                        ))}
-                      </ul>
+                {(() => {
+                  const selectedPackage = getSelectedPackage();
+                  if (!selectedPackage) return null;
+                  
+                  const assignedStylistIds = selectedPackage.assignedStylistIds;
+                  
+                  return (
+                    <div className="rounded-lg bg-muted p-3 space-y-2">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {selectedPackage.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selectedPackage.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <Badge variant="outline">
+                          Duration: {selectedPackage.duration} min
+                        </Badge>
+                        {formData.startTime && (
+                          <Badge variant="outline" className="bg-blue-50">
+                            End: {(() => {
+                              const [hours, minutes] = formData.startTime.split(":").map(Number);
+                              const startMinutes = hours * 60 + minutes;
+                              const endMinutes = startMinutes + selectedPackage.duration;
+                              const endHours = Math.floor(endMinutes / 60);
+                              const endMins = endMinutes % 60;
+                              return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                            })()}
+                          </Badge>
+                        )}
+                        {selectedPackage.requiresEvaluation && (
+                          <Badge className="bg-orange-100 text-orange-700">
+                            Evaluation Required
+                          </Badge>
+                        )}
+                        {assignedStylistIds && assignedStylistIds.length > 0 && (
+                          <Badge variant="secondary">
+                            {assignedStylistIds.length} stylist(s)
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-muted-foreground">Includes:</p>
+                        <ul className="text-xs mt-1 space-y-0.5">
+                          {selectedPackage.includes.map((item, idx) => (
+                            <li key={idx}>• {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <p className="text-sm font-semibold mt-2">
+                        Price: ${calculatePrice()}
+                      </p>
+                      {selectedPackage.requiresEvaluation && (
+                        <div className="mt-2 p-2 rounded bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
+                          <p className="text-xs text-orange-800 dark:text-orange-200">
+                            ⚠️ This package requires a valid pet evaluation before booking.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold mt-2">
-                      Price: ${calculatePrice()}
-                    </p>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 
