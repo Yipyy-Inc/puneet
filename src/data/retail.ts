@@ -138,6 +138,10 @@ export interface Transaction {
   customerId?: string;
   customerName?: string;
   customerEmail?: string;
+  petId?: number; // Link to specific pet
+  petName?: string; // Pet name for display
+  bookingId?: number; // Link to booking/stay
+  bookingService?: string; // Service type (daycare, boarding, grooming, etc.)
   cashierId: string;
   cashierName: string;
   receiptSent: boolean;

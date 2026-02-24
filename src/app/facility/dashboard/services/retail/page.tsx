@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ShoppingCart,
@@ -19,6 +19,11 @@ import {
   X,
   User,
   SplitSquareHorizontal,
+  Link as LinkIcon,
+  Calendar,
+  PawPrint,
+  Check,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +58,7 @@ import {
   type PaymentMethod,
 } from "@/data/retail";
 import { clients } from "@/data/clients";
+import { bookings } from "@/data/bookings";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -71,6 +77,10 @@ export default function POSPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkSearchQuery, setLinkSearchQuery] = useState("");
 
   // Pre-select client when navigating from client file (e.g. ?clientId=15)
   useEffect(() => {
@@ -209,7 +219,7 @@ export default function POSPage() {
   };
 
   const handlePayment = () => {
-    // Record transaction and link to client file when client is selected
+    // Record transaction and link to client file, pet, and/or booking when selected
     const customerId =
       selectedClientId && selectedClientId !== "__walk_in__"
         ? selectedClientId
@@ -225,6 +235,18 @@ export default function POSPage() {
         ? clients.find((c) => String(c.id) === selectedClientId)?.email
         : undefined);
 
+    // Get pet name if pet is selected
+    const petName = selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
+      ? clients
+          .find((c) => String(c.id) === selectedClientId)
+          ?.pets.find((p) => p.id === selectedPetId)?.name
+      : undefined;
+
+    // Get booking service if booking is selected
+    const booking = selectedBookingId
+      ? bookings.find((b) => b.id === selectedBookingId)
+      : null;
+
     addRetailTransaction({
       items: cart.map(({ id, ...item }) => item),
       subtotal,
@@ -238,6 +260,10 @@ export default function POSPage() {
       customerId,
       customerName: name,
       customerEmail: email,
+      petId: selectedPetId || undefined,
+      petName: petName,
+      bookingId: selectedBookingId || undefined,
+      bookingService: booking?.service,
       cashierId: "staff-001",
       cashierName: "Staff",
       notes: "",
@@ -257,6 +283,8 @@ export default function POSPage() {
     setSelectedClientId("");
     setCustomerName("");
     setCustomerEmail("");
+    setSelectedPetId(null);
+    setSelectedBookingId(null);
     setIsReceiptModalOpen(false);
     setPaymentForm({
       method: "cash",
@@ -270,14 +298,71 @@ export default function POSPage() {
     if (clientId === "__walk_in__") {
       setCustomerName("");
       setCustomerEmail("");
+      setSelectedPetId(null);
+      setSelectedBookingId(null);
       return;
     }
     const client = clients.find((c) => String(c.id) === clientId);
     if (client) {
       setCustomerName(client.name);
       setCustomerEmail(client.email || "");
+      // Reset pet and booking when client changes
+      setSelectedPetId(null);
+      setSelectedBookingId(null);
     }
   };
+
+  // Search customers by multiple criteria
+  const searchCustomers = (query: string) => {
+    if (!query.trim()) return [];
+    const lowerQuery = query.toLowerCase();
+    
+    return clients.filter((client) => {
+      // Search by email
+      if (client.email?.toLowerCase().includes(lowerQuery)) return true;
+      // Search by phone
+      if (client.phone?.toLowerCase().includes(lowerQuery)) return true;
+      // Search by full name
+      if (client.name.toLowerCase().includes(lowerQuery)) return true;
+      // Search by first name
+      const firstName = client.name.split(" ")[0]?.toLowerCase();
+      if (firstName?.includes(lowerQuery)) return true;
+      // Search by last name
+      const lastName = client.name.split(" ").slice(1).join(" ").toLowerCase();
+      if (lastName.includes(lowerQuery)) return true;
+      // Search by pet name
+      if (client.pets?.some((pet) => pet.name.toLowerCase().includes(lowerQuery))) return true;
+      return false;
+    });
+  };
+
+  const filteredCustomers = useMemo(() => {
+    return searchCustomers(linkSearchQuery);
+  }, [linkSearchQuery]);
+
+  // Get pets for selected client
+  const clientPets = useMemo(() => {
+    if (!selectedClientId || selectedClientId === "__walk_in__") return [];
+    const client = clients.find((c) => String(c.id) === selectedClientId);
+    return client?.pets || [];
+  }, [selectedClientId]);
+
+  // Get bookings for selected client/pet
+  const clientBookings = useMemo(() => {
+    if (!selectedClientId || selectedClientId === "__walk_in__") return [];
+    const clientIdNum = parseInt(selectedClientId);
+    
+    return bookings.filter((booking) => {
+      if (booking.clientId !== clientIdNum) return false;
+      // If pet is selected, filter by pet
+      if (selectedPetId && booking.petId !== selectedPetId) return false;
+      // Only show active/upcoming bookings
+      return booking.status === "confirmed" || booking.status === "checked-in" || booking.status === "pending";
+    }).sort((a, b) => {
+      // Sort by start date, most recent first
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+    });
+  }, [selectedClientId, selectedPetId]);
 
   const filteredProducts = products.filter(
     (p) =>
@@ -436,57 +521,158 @@ export default function POSPage() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-col h-[calc(100%-8rem)]">
-            {/* Customer / Client Link - Links sale to client file */}
-            <div className="space-y-2 mb-3">
-              <Label className="text-xs font-medium flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5" />
-                Link to Client (optional)
-              </Label>
-              <Select
-                value={selectedClientId}
-                onValueChange={handleClientSelect}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select client to track purchase..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__walk_in__">Walk-in (no client)</SelectItem>
-                  {clients
-                    .filter((c) => c.status === "active")
-                    .map((client) => (
-                      <SelectItem
-                        key={client.id}
-                        value={String(client.id)}
-                      >
-                        {client.name} {client.email && `(${client.email})`}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    placeholder="Customer name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="pl-7 h-8 text-sm"
-                  />
-                </div>
-                <div className="relative flex-1">
-                  <Mail className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    placeholder="Email for receipt"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="pl-7 h-8 text-sm"
-                  />
-                </div>
+            {/* Customer / Pet / Booking Link - Links sale to client file, pet, and/or booking */}
+            <div className="space-y-3 mb-3 p-3 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  Attach to Account / Pet / Booking
+                </Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setIsLinkModalOpen(true)}
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  Search
+                </Button>
               </div>
+
+              {/* Selected Customer */}
+              {selectedClientId && selectedClientId !== "__walk_in__" ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{customerName}</p>
+                      {customerEmail && (
+                        <p className="text-xs text-muted-foreground truncate">{customerEmail}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setSelectedClientId("");
+                        setCustomerName("");
+                        setCustomerEmail("");
+                        setSelectedPetId(null);
+                        setSelectedBookingId(null);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  {/* Selected Pet */}
+                  {selectedPetId && (
+                    <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                      <PawPrint className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {clientPets.find((p) => p.id === selectedPetId)?.name || "Pet"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {clientPets.find((p) => p.id === selectedPetId)?.type} • {clientPets.find((p) => p.id === selectedPetId)?.breed}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setSelectedPetId(null)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Selected Booking */}
+                  {selectedBookingId && (
+                    <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {clientBookings.find((b) => b.id === selectedBookingId)?.service || "Booking"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            const booking = clientBookings.find((b) => b.id === selectedBookingId);
+                            if (!booking) return "";
+                            return `${booking.startDate}${booking.endDate !== booking.startDate ? ` - ${booking.endDate}` : ""}`;
+                          })()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setSelectedBookingId(null)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Quick Add Pet/Booking */}
+                  {!selectedPetId && clientPets.length > 0 && (
+                    <Select
+                      value={selectedPetId?.toString() || ""}
+                      onValueChange={(value) => setSelectedPetId(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Link to pet (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No pet</SelectItem>
+                        {clientPets.map((pet) => (
+                          <SelectItem key={pet.id} value={pet.id.toString()}>
+                            {pet.name} ({pet.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {!selectedBookingId && clientBookings.length > 0 && (
+                    <Select
+                      value={selectedBookingId?.toString() || ""}
+                      onValueChange={(value) => setSelectedBookingId(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Apply to booking/stay (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No booking</SelectItem>
+                        {clientBookings.map((booking) => (
+                          <SelectItem key={booking.id} value={booking.id.toString()}>
+                            {booking.service} • {booking.startDate}
+                            {booking.petId && (
+                              <> • {clientPets.find((p) => p.id === booking.petId)?.name}</>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs"
+                  onClick={() => setIsLinkModalOpen(true)}
+                >
+                  <LinkIcon className="h-3 w-3 mr-1" />
+                  Link to Customer / Pet / Booking
+                </Button>
+              )}
+
               {selectedClientId && selectedClientId !== "__walk_in__" && (
                 <p className="text-xs text-muted-foreground">
-                  Purchase will appear in client&apos;s Purchase History
+                  Purchase will appear in customer file and invoice correctly
                 </p>
               )}
             </div>
@@ -963,6 +1149,125 @@ export default function POSPage() {
               Cancel
             </Button>
             <Button onClick={handlePayment}>Complete Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Customer / Pet / Booking Modal */}
+      <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Search Customer / Pet / Booking</DialogTitle>
+            <DialogDescription>
+              Search by email, phone, name, or pet name
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by email, phone, name, first name, last name, or pet name..."
+                value={linkSearchQuery}
+                onChange={(e) => setLinkSearchQuery(e.target.value)}
+                className="pl-10"
+                autoFocus
+              />
+            </div>
+
+            <ScrollArea className="h-[400px]">
+              {linkSearchQuery.trim() ? (
+                filteredCustomers.length > 0 ? (
+                  <div className="space-y-2">
+                    {filteredCustomers.map((client) => (
+                      <div
+                        key={client.id}
+                        className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => {
+                          handleClientSelect(String(client.id));
+                          setIsLinkModalOpen(false);
+                          setLinkSearchQuery("");
+                        }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <p className="font-medium">{client.name}</p>
+                              {selectedClientId === String(client.id) && (
+                                <Badge variant="default" className="text-xs">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-1 space-y-1 text-sm text-muted-foreground">
+                              {client.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {client.email}
+                                </div>
+                              )}
+                              {client.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {client.phone}
+                                </div>
+                              )}
+                              {client.pets && client.pets.length > 0 && (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <PawPrint className="h-3 w-3" />
+                                  {client.pets.map((pet, idx) => (
+                                    <Badge key={pet.id} variant="outline" className="text-xs">
+                                      {pet.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                    <p>No customers found</p>
+                    <p className="text-sm mt-1">Try a different search term</p>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p>Start typing to search customers</p>
+                  <p className="text-sm mt-1">
+                    Search by email, phone, name, or pet name
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsLinkModalOpen(false);
+                setLinkSearchQuery("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                handleClientSelect("__walk_in__");
+                setIsLinkModalOpen(false);
+                setLinkSearchQuery("");
+              }}
+            >
+              Walk-in (No Customer)
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
