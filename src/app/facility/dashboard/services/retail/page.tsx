@@ -68,6 +68,16 @@ import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import {
+  getFiservConfig,
+  getTokenizedCardsByClient,
+  getDefaultTokenizedCard,
+  type TokenizedCard,
+} from "@/data/fiserv-payments";
+import {
+  processFiservPayment,
+  type FiservPaymentRequest,
+} from "@/lib/fiserv-payment-service";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -163,6 +173,18 @@ export default function POSPage() {
     selectedBookingId: null as number | null,
   });
   const [isBookingSelectModalOpen, setIsBookingSelectModalOpen] = useState(false);
+  
+  // Fiserv payment state
+  const [selectedTokenizedCard, setSelectedTokenizedCard] = useState<TokenizedCard | null>(null);
+  const [saveCardToAccount, setSaveCardToAccount] = useState(false);
+  const [newCardDetails, setNewCardDetails] = useState({
+    number: "",
+    expMonth: "",
+    expYear: "",
+    cvv: "",
+    cardholderName: "",
+  });
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const stats = getRetailStats();
 
@@ -487,86 +509,194 @@ export default function POSPage() {
     setEditPriceForm({ unitPrice: 0, discount: 0, discountType: "fixed" });
   };
 
-  const handlePayment = () => {
-    // Record transaction and link to client file, pet, and/or booking when selected
-    const customerId =
-      selectedClientId && selectedClientId !== "__walk_in__"
-        ? selectedClientId
+  const handlePayment = async () => {
+    setIsProcessingPayment(true);
+    
+    try {
+      // Record transaction and link to client file, pet, and/or booking when selected
+      const customerId =
+        selectedClientId && selectedClientId !== "__walk_in__"
+          ? selectedClientId
+          : undefined;
+      const name =
+        customerName ||
+        (selectedClientId && selectedClientId !== "__walk_in__"
+          ? clients.find((c) => String(c.id) === selectedClientId)?.name
+          : undefined);
+      const email =
+        customerEmail ||
+        (selectedClientId && selectedClientId !== "__walk_in__"
+          ? clients.find((c) => String(c.id) === selectedClientId)?.email
+          : undefined);
+
+      // Get pet name if pet is selected
+      const petName = selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
+        ? clients
+            .find((c) => String(c.id) === selectedClientId)
+            ?.pets.find((p) => p.id === selectedPetId)?.name
         : undefined;
-    const name =
-      customerName ||
-      (selectedClientId && selectedClientId !== "__walk_in__"
-        ? clients.find((c) => String(c.id) === selectedClientId)?.name
-        : undefined);
-    const email =
-      customerEmail ||
-      (selectedClientId && selectedClientId !== "__walk_in__"
-        ? clients.find((c) => String(c.id) === selectedClientId)?.email
-        : undefined);
 
-    // Get pet name if pet is selected
-    const petName = selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
-      ? clients
-          .find((c) => String(c.id) === selectedClientId)
-          ?.pets.find((p) => p.id === selectedPetId)?.name
-      : undefined;
+      // Get booking service if booking is selected
+      const booking = selectedBookingId
+        ? bookings.find((b) => b.id === selectedBookingId)
+        : null;
 
-    // Get booking service if booking is selected
-    const booking = selectedBookingId
-      ? bookings.find((b) => b.id === selectedBookingId)
-      : null;
+      const facilityId = 11; // TODO: Get from context
+      const fiservConfig = getFiservConfig(facilityId);
+      
+      // Process card payments through Fiserv if enabled
+      if (
+        (paymentForm.method === "credit" || paymentForm.method === "debit") &&
+        fiservConfig?.integrationSettings.posEnabled &&
+        fiservConfig?.enabledPaymentMethods.card
+      ) {
+        // Determine payment source
+        let paymentSource: "new_card" | "tokenized_card" = "new_card";
+        let tokenizedCardId: string | undefined;
+        
+        if (selectedTokenizedCard && customerId) {
+          paymentSource = "tokenized_card";
+          tokenizedCardId = selectedTokenizedCard.id;
+        } else if (customerId && !newCardDetails.number) {
+          // Try to use default card on file
+          const defaultCard = getDefaultTokenizedCard(facilityId, Number(customerId));
+          if (defaultCard) {
+            paymentSource = "tokenized_card";
+            tokenizedCardId = defaultCard.id;
+          }
+        }
 
-    addRetailTransaction({
-      items: cart.map(({ id, ...item }) => item),
-      subtotal,
-      discountTotal,
-      cartDiscount: cartDiscount || undefined,
-      promoCodeUsed: appliedPromoCode?.code || undefined,
-      accountDiscountApplied: accountDiscount?.id || undefined,
-      taxTotal,
-      tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
-      tipPercentage: tipPercentage || undefined,
-      total: grandTotal,
-      paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
-      payments: paymentForm.splitPayments
-        ? paymentForm.payments
-        : [{ method: paymentForm.method, amount: grandTotal }],
-      customerId,
-      customerName: name,
-      customerEmail: email,
-      petId: selectedPetId || undefined,
-      petName: petName,
-      bookingId: selectedBookingId || undefined,
-      bookingService: booking?.service,
-      cashierId: currentUserId || "staff-001",
-      cashierName: "Staff",
-      notes: "",
-    });
-    
-    // Apply promo code usage count (increment usage in data)
-    if (appliedPromoCode) {
-      const promo = getPromoCodeByCode(appliedPromoCode.code);
-      if (promo) {
-        applyPromoCode(appliedPromoCode.code);
+        // Prepare Fiserv payment request
+        const fiservRequest: FiservPaymentRequest = {
+          facilityId,
+          clientId: customerId ? Number(customerId) : 0,
+          amount: grandTotal - (calculatedTipAmount || 0),
+          currency: "USD",
+          paymentSource,
+          tokenizedCardId,
+          newCard: paymentSource === "new_card" && newCardDetails.number
+            ? {
+                number: newCardDetails.number.replace(/\s/g, ""),
+                expMonth: parseInt(newCardDetails.expMonth, 10),
+                expYear: parseInt(newCardDetails.expYear, 10),
+                cvv: newCardDetails.cvv,
+                cardholderName: newCardDetails.cardholderName || name || "Customer",
+                saveToAccount: saveCardToAccount && !!customerId,
+                setAsDefault: saveCardToAccount && !!customerId,
+              }
+            : undefined,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          description: `POS Transaction - ${cart.length} item(s)`,
+          context: "pos",
+          bookingId: selectedBookingId || undefined,
+        };
+
+        // Process payment through Fiserv
+        const fiservResponse = await processFiservPayment(fiservRequest);
+
+        if (!fiservResponse.success) {
+          alert(`Payment failed: ${fiservResponse.error?.message || "Unknown error"}`);
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Payment successful - record transaction with Fiserv details
+        addRetailTransaction({
+          items: cart.map(({ id, ...item }) => item),
+          subtotal,
+          discountTotal,
+          cartDiscount: cartDiscount || undefined,
+          promoCodeUsed: appliedPromoCode?.code || undefined,
+          accountDiscountApplied: accountDiscount?.id || undefined,
+          taxTotal,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          tipPercentage: tipPercentage || undefined,
+          total: grandTotal,
+          paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+          payments: paymentForm.splitPayments
+            ? paymentForm.payments
+            : [{ method: paymentForm.method, amount: grandTotal }],
+          customerId,
+          customerName: name,
+          customerEmail: email,
+          petId: selectedPetId || undefined,
+          petName: petName,
+          bookingId: selectedBookingId || undefined,
+          bookingService: booking?.service,
+          cashierId: currentUserId || "staff-001",
+          cashierName: "Staff",
+          notes: `Fiserv Transaction: ${fiservResponse.fiservTransactionId}`,
+        });
+      } else {
+        // Non-card payment or Fiserv not enabled - process normally
+        addRetailTransaction({
+          items: cart.map(({ id, ...item }) => item),
+          subtotal,
+          discountTotal,
+          cartDiscount: cartDiscount || undefined,
+          promoCodeUsed: appliedPromoCode?.code || undefined,
+          accountDiscountApplied: accountDiscount?.id || undefined,
+          taxTotal,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          tipPercentage: tipPercentage || undefined,
+          total: grandTotal,
+          paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+          payments: paymentForm.splitPayments
+            ? paymentForm.payments
+            : [{ method: paymentForm.method, amount: grandTotal }],
+          customerId,
+          customerName: name,
+          customerEmail: email,
+          petId: selectedPetId || undefined,
+          petName: petName,
+          bookingId: selectedBookingId || undefined,
+          bookingService: booking?.service,
+          cashierId: currentUserId || "staff-001",
+          cashierName: "Staff",
+          notes: "",
+        });
       }
-    }
-    
-    // Clear cart and discounts
-    setCart([]);
-    setCartDiscount(null);
-    setAppliedPromoCode(null);
-    setSelectedClientId("");
-    setCustomerName("");
-    setCustomerEmail("");
-    setSelectedPetId(null);
-    setSelectedBookingId(null);
-    // Clear tips
-    setTipAmount(0);
-    setTipPercentage(null);
-    setTipCustomAmount("");
+      
+      // Apply promo code usage count (increment usage in data)
+      if (appliedPromoCode) {
+        const promo = getPromoCodeByCode(appliedPromoCode.code);
+        if (promo) {
+          applyPromoCode(appliedPromoCode.code);
+        }
+      }
+      
+      // Clear cart and discounts
+      setCart([]);
+      setCartDiscount(null);
+      setAppliedPromoCode(null);
+      setSelectedClientId("");
+      setCustomerName("");
+      setCustomerEmail("");
+      setSelectedPetId(null);
+      setSelectedBookingId(null);
+      // Clear tips
+      setTipAmount(0);
+      setTipPercentage(null);
+      setTipCustomAmount("");
+      // Clear Fiserv state
+      setSelectedTokenizedCard(null);
+      setSaveCardToAccount(false);
+      setNewCardDetails({
+        number: "",
+        expMonth: "",
+        expYear: "",
+        cvv: "",
+        cardholderName: "",
+      });
 
-    setIsPaymentModalOpen(false);
-    setIsReceiptModalOpen(true);
+      setIsPaymentModalOpen(false);
+      setIsReceiptModalOpen(true);
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      alert("An error occurred while processing the payment. Please try again.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const completeTransaction = (sendReceipt: boolean) => {
@@ -2147,6 +2277,151 @@ export default function POSPage() {
                     <Input type="number" min={grandTotal} placeholder="0.00" />
                   </div>
                 )}
+
+                {/* Fiserv Card Selection */}
+                {(paymentForm.method === "credit" || paymentForm.method === "debit") && (
+                  <div className="space-y-4">
+                    {(() => {
+                      const facilityId = 11; // TODO: Get from context
+                      const fiservConfig = getFiservConfig(facilityId);
+                      const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
+                        ? Number(selectedClientId) 
+                        : null;
+                      const tokenizedCards = customerId && fiservConfig?.enabledPaymentMethods.cardOnFile
+                        ? getTokenizedCardsByClient(facilityId, customerId)
+                        : [];
+
+                      if (tokenizedCards.length > 0) {
+                        return (
+                          <>
+                            <div className="grid gap-2">
+                              <Label>Use Saved Card</Label>
+                              <Select
+                                value={selectedTokenizedCard?.id || "new"}
+                                onValueChange={(value) => {
+                                  if (value === "new") {
+                                    setSelectedTokenizedCard(null);
+                                  } else {
+                                    const card = tokenizedCards.find((c) => c.id === value);
+                                    setSelectedTokenizedCard(card || null);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="new">Enter New Card</SelectItem>
+                                  {tokenizedCards.map((card) => (
+                                    <SelectItem key={card.id} value={card.id}>
+                                      {card.cardBrand?.toUpperCase()} •••• {card.cardLast4} (Exp {card.cardExpMonth}/{card.cardExpYear})
+                                      {card.isDefault && " • Default"}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {!selectedTokenizedCard && (
+                      <div className="space-y-3 border rounded-lg p-4">
+                        <Label>Card Details</Label>
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Card Number</Label>
+                          <Input
+                            type="text"
+                            placeholder="1234 5678 9012 3456"
+                            value={newCardDetails.number}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\s/g, "");
+                              if (/^\d*$/.test(value) && value.length <= 16) {
+                                const formatted = value.match(/.{1,4}/g)?.join(" ") || value;
+                                setNewCardDetails({ ...newCardDetails, number: formatted });
+                              }
+                            }}
+                            maxLength={19}
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="grid gap-2">
+                            <Label className="text-xs">Month</Label>
+                            <Input
+                              type="text"
+                              placeholder="MM"
+                              value={newCardDetails.expMonth}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, "");
+                                if (value.length <= 2) {
+                                  setNewCardDetails({ ...newCardDetails, expMonth: value });
+                                }
+                              }}
+                              maxLength={2}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label className="text-xs">Year</Label>
+                            <Input
+                              type="text"
+                              placeholder="YYYY"
+                              value={newCardDetails.expYear}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, "");
+                                if (value.length <= 4) {
+                                  setNewCardDetails({ ...newCardDetails, expYear: value });
+                                }
+                              }}
+                              maxLength={4}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label className="text-xs">CVV</Label>
+                            <Input
+                              type="text"
+                              placeholder="123"
+                              value={newCardDetails.cvv}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, "");
+                                if (value.length <= 4) {
+                                  setNewCardDetails({ ...newCardDetails, cvv: value });
+                                }
+                              }}
+                              maxLength={4}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Cardholder Name</Label>
+                          <Input
+                            type="text"
+                            placeholder="John Doe"
+                            value={newCardDetails.cardholderName}
+                            onChange={(e) =>
+                              setNewCardDetails({ ...newCardDetails, cardholderName: e.target.value })
+                            }
+                          />
+                        </div>
+                        {selectedClientId && selectedClientId !== "__walk_in__" && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="saveCard"
+                              checked={saveCardToAccount}
+                              onChange={(e) => setSaveCardToAccount(e.target.checked)}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor="saveCard" className="text-sm font-normal">
+                              Save card to customer account for future payments
+                            </Label>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2166,14 +2441,16 @@ export default function POSPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handlePayment}>
-              {paymentForm.chargeType === "add_to_booking"
-                ? "Add to Booking"
-                : paymentForm.chargeType === "charge_to_active_stay"
-                  ? "Charge to Stay"
-                  : paymentForm.chargeType === "charge_to_account"
-                    ? "Charge to Account"
-                    : "Complete Payment"}
+            <Button onClick={handlePayment} disabled={isProcessingPayment}>
+              {isProcessingPayment
+                ? "Processing..."
+                : paymentForm.chargeType === "add_to_booking"
+                  ? "Add to Booking"
+                  : paymentForm.chargeType === "charge_to_active_stay"
+                    ? "Charge to Stay"
+                    : paymentForm.chargeType === "charge_to_account"
+                      ? "Charge to Account"
+                      : "Complete Payment"}
             </Button>
           </DialogFooter>
         </DialogContent>
