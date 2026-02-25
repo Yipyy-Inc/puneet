@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Plus,
+  Minus,
   MoreHorizontal,
   Truck,
   Building2,
@@ -23,6 +24,7 @@ import {
   Wallet,
   PackageCheck,
   AlertCircle,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -703,7 +705,8 @@ export default function OrdersPage() {
       defaultVisible: true,
       render: (item) => {
         const status = item.status as string;
-        const hasReturns = (item.returns as Return[] | undefined)?.length > 0;
+        const returns = item.returns as Return[] | undefined;
+        const hasReturns = returns && returns.length > 0;
         return (
           <div className="flex items-center gap-2">
             <Badge

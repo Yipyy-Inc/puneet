@@ -486,7 +486,10 @@ export default function RetailReportsPage() {
                   />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    formatter={(value: unknown) => {
+                      const numValue = typeof value === 'number' ? value : 0;
+                      return `$${numValue.toFixed(2)}`;
+                    }}
                   />
                   <Legend />
                   <Line
@@ -592,7 +595,10 @@ export default function RetailReportsPage() {
                   />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    formatter={(value: unknown) => {
+                      const numValue = typeof value === 'number' ? value : 0;
+                      return `$${numValue.toFixed(2)}`;
+                    }}
                   />
                   <Legend />
                   <Bar dataKey="revenue" fill="#8884d8" name="Revenue" />

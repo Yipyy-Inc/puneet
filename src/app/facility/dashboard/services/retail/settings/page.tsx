@@ -112,6 +112,15 @@ export default function RetailSettingsPage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isCustomPaymentMethodModalOpen, setIsCustomPaymentMethodModalOpen] = useState(false);
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<CustomPaymentMethod | null>(null);
+  const [customPaymentMethodsList, setCustomPaymentMethodsList] = useState<CustomPaymentMethod[]>(customPaymentMethods);
+  const [customPaymentForm, setCustomPaymentForm] = useState({
+    name: "",
+    description: "",
+    isActive: true,
+    canBeUsedForRefunds: true,
+  });
 
   const handleSave = () => {
     // TODO: Save to backend
@@ -486,7 +495,7 @@ export default function RetailSettingsPage() {
                       isActive: true,
                       canBeUsedForRefunds: true,
                     });
-                    setIsCustomPaymentModalOpen(true);
+                    setIsCustomPaymentMethodModalOpen(true);
                   }}
                   disabled={!isEditing}
                   size="sm"
@@ -496,7 +505,7 @@ export default function RetailSettingsPage() {
                 </Button>
               </div>
               <div className="space-y-2">
-                {customPaymentMethodsList.map((method) => (
+                {customPaymentMethods.map((method) => (
                   <div
                     key={method.id}
                     className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
@@ -530,7 +539,7 @@ export default function RetailSettingsPage() {
                             isActive: method.isActive,
                             canBeUsedForRefunds: method.canBeUsedForRefunds,
                           });
-                          setIsCustomPaymentModalOpen(true);
+                          setIsCustomPaymentMethodModalOpen(true);
                         }}
                         disabled={!isEditing}
                       >
@@ -1147,7 +1156,7 @@ export default function RetailSettingsPage() {
       </div>
 
       {/* Custom Payment Method Modal */}
-      <Dialog open={isCustomPaymentModalOpen} onOpenChange={setIsCustomPaymentModalOpen}>
+      <Dialog open={isCustomPaymentMethodModalOpen} onOpenChange={setIsCustomPaymentMethodModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -1214,7 +1223,7 @@ export default function RetailSettingsPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setIsCustomPaymentModalOpen(false);
+                setIsCustomPaymentMethodModalOpen(false);
                 setEditingPaymentMethod(null);
                 setCustomPaymentForm({
                   name: "",
@@ -1257,7 +1266,7 @@ export default function RetailSettingsPage() {
                   };
                   setCustomPaymentMethodsList([...customPaymentMethodsList, newMethod]);
                 }
-                setIsCustomPaymentModalOpen(false);
+                setIsCustomPaymentMethodModalOpen(false);
                 setEditingPaymentMethod(null);
                 setCustomPaymentForm({
                   name: "",

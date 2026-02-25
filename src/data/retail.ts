@@ -14,9 +14,6 @@ export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_book
 export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
 export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
 export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
-export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
-export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
-export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
 export type MovementType =
   | "sale"
   | "purchase"

@@ -586,6 +586,8 @@ export default function POSPage() {
       method: "cash",
       splitPayments: false,
       payments: [{ method: "cash", amount: 0 }],
+      chargeType: "pay_now",
+      selectedBookingId: null,
     });
   };
 
@@ -652,8 +654,8 @@ export default function POSPage() {
       if (booking.clientId !== clientIdNum) return false;
       // If pet is selected, filter by pet
       if (selectedPetId && booking.petId !== selectedPetId) return false;
-      // Only show active/upcoming bookings
-      return booking.status === "confirmed" || booking.status === "checked-in" || booking.status === "pending";
+      // Only show active/upcoming bookings (exclude completed and cancelled)
+      return booking.status === "pending" || booking.status === "confirmed";
     }).sort((a, b) => {
       // Sort by start date, most recent first
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
@@ -674,7 +676,7 @@ export default function POSPage() {
       const startDate = booking.startDate.split("T")[0];
       const endDate = booking.endDate.split("T")[0];
       return (
-        booking.status === "checked-in" &&
+        (booking.status === "confirmed" || booking.status === "pending") &&
         startDate <= today &&
         endDate >= today
       );
@@ -697,8 +699,8 @@ export default function POSPage() {
     return bookings.filter((booking) => {
       if (booking.clientId !== clientIdNum) return false;
       if (selectedPetId && booking.petId !== selectedPetId) return false;
-      // Show confirmed, pending, and checked-in bookings (can add items to these)
-      return booking.status === "confirmed" || booking.status === "checked-in" || booking.status === "pending";
+      // Show confirmed and pending bookings (can add items to these)
+      return booking.status === "confirmed" || booking.status === "pending";
     }).sort((a, b) => {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
@@ -1862,9 +1864,9 @@ export default function POSPage() {
                             </Badge>
                             <Badge
                               variant={
-                                booking.status === "checked-in"
+                                booking.status === "confirmed"
                                   ? "default"
-                                  : booking.status === "confirmed"
+                                  : booking.status === "pending"
                                     ? "secondary"
                                     : "outline"
                               }
