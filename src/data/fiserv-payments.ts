@@ -10,12 +10,48 @@
  * - Membership/package payments
  */
 
+export interface CloverTerminalConfig {
+  facilityId: number;
+  // Terminal identification
+  terminalId: string;
+  terminalName: string;
+  terminalSerialNumber: string;
+  // Connection settings
+  connectionType: "wifi" | "ethernet" | "bluetooth";
+  ipAddress?: string;
+  macAddress?: string;
+  // Status
+  isActive: boolean;
+  isOnline: boolean;
+  lastSeen?: string;
+  // Printing settings
+  autoPrintReceipts: boolean;
+  printCustomerCopy: boolean;
+  printMerchantCopy: boolean;
+  // Payment methods supported
+  supportsTap: boolean;
+  supportsChip: boolean;
+  supportsSwipe: boolean;
+  // Metadata
+  location?: string; // Physical location of terminal
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface FiservPaymentConfig {
   facilityId: number;
   // Fiserv API credentials
   apiKey: string;
   merchantId: string;
   terminalId?: string;
+  // Clover Terminal configuration
+  cloverTerminal?: {
+    enabled: boolean;
+    terminalId?: string;
+    autoPrintReceipts: boolean;
+    defaultPaymentMethod: "terminal" | "web" | "both";
+  };
   // Environment
   environment: "sandbox" | "production";
   // Payment method configuration
@@ -96,13 +132,48 @@ export interface TokenizedCard {
   expiresAt?: string; // If card expires
 }
 
+export interface CloverTerminalTransaction {
+  id: string;
+  facilityId: number;
+  // Terminal info
+  terminalId: string;
+  terminalName: string;
+  // Transaction details
+  cloverTransactionId: string;
+  amount: number;
+  currency: "USD" | "CAD";
+  tipAmount?: number;
+  totalAmount: number;
+  // Payment method used
+  paymentMethod: "tap" | "chip" | "swipe";
+  cardBrand?: string;
+  cardLast4?: string;
+  // Status
+  status: "pending" | "completed" | "failed" | "cancelled";
+  // Linking
+  invoiceId?: string;
+  customerId?: number;
+  bookingId?: number;
+  // Receipt
+  receiptPrinted: boolean;
+  receiptPrintedAt?: string;
+  receiptData?: string; // Receipt content
+  // Metadata
+  processedAt: string;
+  createdAt: string;
+  errorMessage?: string;
+}
+
 export interface FiservPaymentRequest {
   facilityId: number;
   clientId: number;
   amount: number;
   currency: "USD" | "CAD";
   // Payment source
-  paymentSource: "new_card" | "tokenized_card" | "cash" | "gift_card" | "store_credit" | "split";
+  paymentSource: "new_card" | "tokenized_card" | "cash" | "gift_card" | "store_credit" | "split" | "clover_terminal";
+  // Clover terminal payment
+  cloverTerminalId?: string;
+  cloverPaymentMethod?: "tap" | "chip" | "swipe";
   tokenizedCardId?: string; // If using card on file
   // New card details (if paymentSource is "new_card")
   newCard?: {
@@ -231,10 +302,62 @@ export const mockFiservConfigs: FiservPaymentConfig[] = [
       membershipEnabled: true,
       recurringGroomingEnabled: true,
     },
+    cloverTerminal: {
+      enabled: true,
+      terminalId: "clover_terminal_001",
+      autoPrintReceipts: true,
+      defaultPaymentMethod: "terminal",
+    },
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
   },
 ];
+
+export const mockCloverTerminals: CloverTerminalConfig[] = [
+  {
+    facilityId: 11,
+    terminalId: "clover_terminal_001",
+    terminalName: "Front Counter Terminal",
+    terminalSerialNumber: "CLV-2024-001",
+    connectionType: "wifi",
+    ipAddress: "192.168.1.100",
+    macAddress: "00:1B:44:11:3A:B7",
+    isActive: true,
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    autoPrintReceipts: true,
+    printCustomerCopy: true,
+    printMerchantCopy: true,
+    supportsTap: true,
+    supportsChip: true,
+    supportsSwipe: true,
+    location: "Front Counter - Main POS",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    facilityId: 11,
+    terminalId: "clover_terminal_002",
+    terminalName: "Grooming Station Terminal",
+    terminalSerialNumber: "CLV-2024-002",
+    connectionType: "ethernet",
+    ipAddress: "192.168.1.101",
+    isActive: true,
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    autoPrintReceipts: true,
+    printCustomerCopy: true,
+    printMerchantCopy: false,
+    supportsTap: true,
+    supportsChip: true,
+    supportsSwipe: true,
+    location: "Grooming Station",
+    createdAt: "2024-01-15T00:00:00Z",
+    updatedAt: "2024-01-15T00:00:00Z",
+  },
+];
+
+export const mockCloverTransactions: CloverTerminalTransaction[] = [];
 
 export const mockTokenizedCards: TokenizedCard[] = [
   {
@@ -352,4 +475,83 @@ export function deleteTokenizedCard(cardId: string): boolean {
   // Soft delete - mark as inactive
   mockTokenizedCards[index].isActive = false;
   return true;
+}
+
+// Clover Terminal helper functions
+export function getCloverTerminal(
+  facilityId: number,
+  terminalId?: string
+): CloverTerminalConfig | undefined {
+  const terminals = mockCloverTerminals.filter(
+    (t) => t.facilityId === facilityId && t.isActive
+  );
+  if (terminalId) {
+    return terminals.find((t) => t.terminalId === terminalId);
+  }
+  return terminals[0]; // Return first active terminal
+}
+
+export function getCloverTerminalsByFacility(
+  facilityId: number
+): CloverTerminalConfig[] {
+  return mockCloverTerminals.filter(
+    (t) => t.facilityId === facilityId && t.isActive
+  );
+}
+
+export function addCloverTerminal(
+  terminal: Omit<CloverTerminalConfig, "id" | "createdAt" | "updatedAt">
+): CloverTerminalConfig {
+  const newTerminal: CloverTerminalConfig = {
+    ...terminal,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  mockCloverTerminals.push(newTerminal);
+  return newTerminal;
+}
+
+export function updateCloverTerminal(
+  terminalId: string,
+  updates: Partial<CloverTerminalConfig>
+): CloverTerminalConfig | undefined {
+  const index = mockCloverTerminals.findIndex((t) => t.terminalId === terminalId);
+  if (index === -1) return undefined;
+  
+  mockCloverTerminals[index] = {
+    ...mockCloverTerminals[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  return mockCloverTerminals[index];
+}
+
+export function addCloverTransaction(
+  transaction: Omit<CloverTerminalTransaction, "id" | "createdAt">
+): CloverTerminalTransaction {
+  const newTransaction: CloverTerminalTransaction = {
+    ...transaction,
+    id: `clover_txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  mockCloverTransactions.push(newTransaction);
+  return newTransaction;
+}
+
+export function getCloverTransactionsByInvoice(
+  invoiceId: string
+): CloverTerminalTransaction[] {
+  return mockCloverTransactions.filter((t) => t.invoiceId === invoiceId);
+}
+
+export function getCloverTransactionsByCustomer(
+  customerId: number
+): CloverTerminalTransaction[] {
+  return mockCloverTransactions.filter((t) => t.customerId === customerId);
+}
+
+export function getCloverTransactionsByBooking(
+  bookingId: number
+): CloverTerminalTransaction[] {
+  return mockCloverTransactions.filter((t) => t.bookingId === bookingId);
 }

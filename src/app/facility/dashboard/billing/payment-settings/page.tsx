@@ -27,7 +27,11 @@ import {
   FiservPaymentConfig,
   getFiservConfig,
   mockFiservConfigs,
+  getCloverTerminalsByFacility,
+  getCloverTerminal,
+  type CloverTerminalConfig,
 } from "@/data/fiserv-payments";
+import { Printer, Wifi, Ethernet, Bluetooth } from "lucide-react";
 
 export default function PaymentSettingsPage() {
   const facilityId = 11; // TODO: Get from auth context
@@ -84,12 +88,19 @@ export default function PaymentSettingsPage() {
           membershipEnabled: true,
           recurringGroomingEnabled: true,
         },
+        cloverTerminal: {
+          enabled: false,
+          autoPrintReceipts: true,
+          defaultPaymentMethod: "terminal",
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       setConfig(defaultConfig);
     }
   }, [facilityId]);
+
+  const cloverTerminals = getCloverTerminalsByFacility(facilityId);
 
   const handleSave = async () => {
     if (!config) return;
@@ -825,6 +836,200 @@ export default function PaymentSettingsPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Clover Terminal Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Printer className="h-5 w-5" />
+            Clover Terminal Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure Fiserv Clover physical terminal for in-person payments
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Clover Terminal</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow payments through physical Clover terminal (Tap/Chip/Swipe)
+              </p>
+            </div>
+            <Switch
+              checked={config.cloverTerminal?.enabled ?? false}
+              onCheckedChange={(checked) =>
+                updateConfig({
+                  cloverTerminal: {
+                    ...config.cloverTerminal,
+                    enabled: checked,
+                    autoPrintReceipts: config.cloverTerminal?.autoPrintReceipts ?? true,
+                    defaultPaymentMethod: config.cloverTerminal?.defaultPaymentMethod ?? "terminal",
+                  },
+                })
+              }
+              disabled={!isEditing}
+            />
+          </div>
+
+          {config.cloverTerminal?.enabled && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Select Terminal</Label>
+                <Select
+                  value={config.cloverTerminal?.terminalId || ""}
+                  onValueChange={(value) =>
+                    updateConfig({
+                      cloverTerminal: {
+                        ...config.cloverTerminal,
+                        terminalId: value,
+                        enabled: true,
+                        autoPrintReceipts: config.cloverTerminal?.autoPrintReceipts ?? true,
+                        defaultPaymentMethod: config.cloverTerminal?.defaultPaymentMethod ?? "terminal",
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a terminal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cloverTerminals.map((terminal) => (
+                      <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
+                        <div className="flex items-center gap-2">
+                          {terminal.connectionType === "wifi" && <Wifi className="h-4 w-4" />}
+                          {terminal.connectionType === "ethernet" && <Ethernet className="h-4 w-4" />}
+                          {terminal.connectionType === "bluetooth" && <Bluetooth className="h-4 w-4" />}
+                          <span>{terminal.terminalName}</span>
+                          {terminal.isOnline ? (
+                            <Badge variant="default" className="ml-2">Online</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="ml-2">Offline</Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {cloverTerminals.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No Clover terminals configured. Please add a terminal first.
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-Print Receipts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically print receipts on terminal after payment
+                  </p>
+                </div>
+                <Switch
+                  checked={config.cloverTerminal?.autoPrintReceipts ?? true}
+                  onCheckedChange={(checked) =>
+                    updateConfig({
+                      cloverTerminal: {
+                        ...config.cloverTerminal,
+                        autoPrintReceipts: checked,
+                        enabled: true,
+                        defaultPaymentMethod: config.cloverTerminal?.defaultPaymentMethod ?? "terminal",
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <Separator />
+              <div className="space-y-2">
+                <Label>Default Payment Method</Label>
+                <Select
+                  value={config.cloverTerminal?.defaultPaymentMethod || "terminal"}
+                  onValueChange={(value: "terminal" | "web" | "both") =>
+                    updateConfig({
+                      cloverTerminal: {
+                        ...config.cloverTerminal,
+                        defaultPaymentMethod: value,
+                        enabled: true,
+                        autoPrintReceipts: config.cloverTerminal?.autoPrintReceipts ?? true,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="terminal">Terminal Only (Tap/Chip/Swipe)</SelectItem>
+                    <SelectItem value="web">Web App Only</SelectItem>
+                    <SelectItem value="both">Both (Prompt for Choice)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  When "Both" is selected, cashier will be prompted to choose between terminal or web payment
+                </p>
+              </div>
+
+              {config.cloverTerminal?.terminalId && (
+                <>
+                  <Separator />
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <Label className="text-sm font-semibold">Terminal Information</Label>
+                    {(() => {
+                      const terminal = getCloverTerminal(facilityId, config.cloverTerminal?.terminalId);
+                      if (!terminal) return null;
+                      return (
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Name:</span>
+                            <span>{terminal.terminalName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Serial:</span>
+                            <span>{terminal.terminalSerialNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Location:</span>
+                            <span>{terminal.location || "Not specified"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Connection:</span>
+                            <span className="capitalize">{terminal.connectionType}</span>
+                            {terminal.ipAddress && (
+                              <span className="text-muted-foreground">({terminal.ipAddress})</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Status:</span>
+                            {terminal.isOnline ? (
+                              <Badge variant="default">Online</Badge>
+                            ) : (
+                              <Badge variant="secondary">Offline</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Supports:</span>
+                            <div className="flex gap-1">
+                              {terminal.supportsTap && <Badge variant="outline">Tap</Badge>}
+                              {terminal.supportsChip && <Badge variant="outline">Chip</Badge>}
+                              {terminal.supportsSwipe && <Badge variant="outline">Swipe</Badge>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

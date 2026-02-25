@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -72,12 +73,18 @@ import {
   getFiservConfig,
   getTokenizedCardsByClient,
   getDefaultTokenizedCard,
+  getCloverTerminal,
+  getCloverTerminalsByFacility,
   type TokenizedCard,
 } from "@/data/fiserv-payments";
 import {
   processFiservPayment,
   type FiservPaymentRequest,
 } from "@/lib/fiserv-payment-service";
+import {
+  processCloverPayment,
+  type CloverPaymentRequest,
+} from "@/lib/clover-terminal-service";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -185,6 +192,10 @@ export default function POSPage() {
     cardholderName: "",
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Clover terminal state
+  const [useCloverTerminal, setUseCloverTerminal] = useState(false);
+  const [cloverTerminalId, setCloverTerminalId] = useState<string | null>(null);
 
   const stats = getRetailStats();
 
@@ -544,9 +555,76 @@ export default function POSPage() {
       const facilityId = 11; // TODO: Get from context
       const fiservConfig = getFiservConfig(facilityId);
       
-      // Process card payments through Fiserv if enabled
+      // Process payment through Clover terminal if enabled and selected
       if (
+        useCloverTerminal &&
+        cloverTerminalId &&
+        fiservConfig?.cloverTerminal?.enabled &&
+        (paymentForm.method === "credit" || paymentForm.method === "debit")
+      ) {
+        const terminal = getCloverTerminal(facilityId, cloverTerminalId);
+        
+        if (!terminal || !terminal.isOnline) {
+          alert("Clover terminal is not available or offline. Please use another payment method.");
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Prepare Clover terminal payment request
+        const cloverRequest: CloverPaymentRequest = {
+          facilityId,
+          terminalId: cloverTerminalId,
+          amount: grandTotal - (calculatedTipAmount || 0),
+          currency: "USD",
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          description: `POS Transaction - ${cart.length} item(s)`,
+          invoiceId: undefined, // TODO: Link to invoice if applicable
+          customerId: customerId ? Number(customerId) : undefined,
+          bookingId: selectedBookingId || undefined,
+          printReceipt: fiservConfig.cloverTerminal?.autoPrintReceipts ?? true,
+          printCustomerCopy: true,
+          printMerchantCopy: true,
+        };
+
+        // Process payment through Clover terminal
+        const cloverResponse = await processCloverPayment(cloverRequest);
+
+        if (!cloverResponse.success) {
+          alert(`Payment failed: ${cloverResponse.error?.message || "Unknown error"}`);
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Payment successful - record transaction with Clover details
+        addRetailTransaction({
+          items: cart.map(({ id, ...item }) => item),
+          subtotal,
+          discountTotal,
+          cartDiscount: cartDiscount || undefined,
+          promoCodeUsed: appliedPromoCode?.code || undefined,
+          accountDiscountApplied: accountDiscount?.id || undefined,
+          taxTotal,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          tipPercentage: tipPercentage || undefined,
+          total: grandTotal,
+          paymentMethod: paymentForm.method,
+          payments: [{ method: paymentForm.method, amount: grandTotal }],
+          customerId,
+          customerName: name,
+          customerEmail: email,
+          petId: selectedPetId || undefined,
+          petName: petName,
+          bookingId: selectedBookingId || undefined,
+          bookingService: booking?.service,
+          cashierId: currentUserId || "staff-001",
+          cashierName: "Staff",
+          notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
+        });
+      }
+      // Process card payments through Fiserv if enabled (web payment)
+      else if (
         (paymentForm.method === "credit" || paymentForm.method === "debit") &&
+        !useCloverTerminal &&
         fiservConfig?.integrationSettings.posEnabled &&
         fiservConfig?.enabledPaymentMethods.card
       ) {
@@ -2256,9 +2334,14 @@ export default function POSPage() {
                   <Label>Payment Method</Label>
                   <Select
                     value={paymentForm.method}
-                    onValueChange={(value: PaymentMethod) =>
-                      setPaymentForm({ ...paymentForm, method: value })
-                    }
+                    onValueChange={(value: PaymentMethod) => {
+                      setPaymentForm({ ...paymentForm, method: value });
+                      // Reset Clover terminal selection when changing payment method
+                      if (value !== "credit" && value !== "debit") {
+                        setUseCloverTerminal(false);
+                        setCloverTerminalId(null);
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -2270,6 +2353,88 @@ export default function POSPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Clover Terminal Selection */}
+                {(paymentForm.method === "credit" || paymentForm.method === "debit") && (() => {
+                  const facilityId = 11; // TODO: Get from context
+                  const fiservConfig = getFiservConfig(facilityId);
+                  const terminals = fiservConfig?.cloverTerminal?.enabled
+                    ? getCloverTerminalsByFacility(facilityId)
+                    : [];
+
+                  if (terminals.length > 0) {
+                    return (
+                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Use Clover Terminal</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Process payment via physical terminal (Tap/Chip/Swipe)
+                            </p>
+                          </div>
+                          <Switch
+                            checked={useCloverTerminal}
+                            onCheckedChange={(checked) => {
+                              setUseCloverTerminal(checked);
+                              if (checked && terminals.length > 0) {
+                                // Auto-select first terminal or configured terminal
+                                const defaultTerminalId = fiservConfig?.cloverTerminal?.terminalId || terminals[0].terminalId;
+                                setCloverTerminalId(defaultTerminalId);
+                              } else {
+                                setCloverTerminalId(null);
+                              }
+                            }}
+                          />
+                        </div>
+                        {useCloverTerminal && (
+                          <div className="grid gap-2">
+                            <Label className="text-xs">Select Terminal</Label>
+                            <Select
+                              value={cloverTerminalId || ""}
+                              onValueChange={setCloverTerminalId}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select terminal" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {terminals.map((terminal) => (
+                                  <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
+                                    <div className="flex items-center gap-2">
+                                      <span>{terminal.terminalName}</span>
+                                      {terminal.isOnline ? (
+                                        <Badge variant="default" className="ml-2">Online</Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="ml-2">Offline</Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {cloverTerminalId && (() => {
+                              const terminal = getCloverTerminal(facilityId, cloverTerminalId);
+                              if (!terminal) return null;
+                              return (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {terminal.location && <span>Location: {terminal.location} • </span>}
+                                  Supports: {[
+                                    terminal.supportsTap && "Tap",
+                                    terminal.supportsChip && "Chip",
+                                    terminal.supportsSwipe && "Swipe",
+                                  ].filter(Boolean).join(", ")}
+                                  {fiservConfig?.cloverTerminal?.autoPrintReceipts && (
+                                    <span> • Auto-print enabled</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {paymentForm.method === "cash" && (
                   <div className="grid gap-2">
