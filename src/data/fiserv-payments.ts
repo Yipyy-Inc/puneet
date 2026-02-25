@@ -187,6 +187,7 @@ export interface FiservPaymentConfig {
     tipOptions: number[]; // Tip percentages
     captureMethod: "automatic" | "manual";
     refundPolicy: "full_refund" | "partial_refund" | "store_credit_only";
+    splitPaymentRefundPolicy: "proportional" | "last_payment_first"; // How to refund split payments
   };
   // Integration settings
   integrationSettings: {
@@ -395,6 +396,7 @@ export const mockFiservConfigs: FiservPaymentConfig[] = [
       tipOptions: [15, 18, 20, 25],
       captureMethod: "automatic",
       refundPolicy: "full_refund",
+      splitPaymentRefundPolicy: "last_payment_first", // "proportional" or "last_payment_first"
     },
     integrationSettings: {
       posEnabled: true,

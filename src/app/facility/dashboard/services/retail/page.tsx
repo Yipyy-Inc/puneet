@@ -32,6 +32,8 @@ import {
   RotateCcw,
   Wifi,
   WifiOff,
+  Wallet,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -189,12 +191,26 @@ export default function POSPage() {
   const [tipPercentage, setTipPercentage] = useState<number | null>(null);
   const [tipCustomAmount, setTipCustomAmount] = useState<string>("");
 
-  const [paymentForm, setPaymentForm] = useState({
-    method: "cash" as PaymentMethod,
+  const [paymentForm, setPaymentForm] = useState<{
+    method: PaymentMethod;
+    splitPayments: boolean;
+    payments: { 
+      method: PaymentMethod; 
+      amount: number;
+      useYipyyPay?: boolean;
+      useCloverTerminal?: boolean;
+      yipyyPayDeviceId?: string;
+      cloverTerminalId?: string;
+      tokenizedCardId?: string;
+    }[];
+    chargeType: "pay_now" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay";
+    selectedBookingId: number | null;
+  }>({
+    method: "cash",
     splitPayments: false,
-    payments: [{ method: "cash" as PaymentMethod, amount: 0 }],
-    chargeType: "pay_now" as "pay_now" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay",
-    selectedBookingId: null as number | null,
+    payments: [{ method: "cash", amount: 0 }],
+    chargeType: "pay_now",
+    selectedBookingId: null,
   });
   const [isBookingSelectModalOpen, setIsBookingSelectModalOpen] = useState(false);
   
@@ -587,8 +603,208 @@ export default function POSPage() {
       const facilityId = 11; // TODO: Get from context
       const fiservConfig = getFiservConfig(facilityId);
       
-      // Process payment through Clover terminal if enabled and selected
-      if (
+      // Handle split payments
+      if (paymentForm.splitPayments && paymentForm.payments.length > 0) {
+        const processedPayments: Array<{
+          method: PaymentMethod;
+          amount: number;
+          transactionId?: string;
+          yipyyPayTransactionId?: string;
+          cloverTransactionId?: string;
+          fiservTransactionId?: string;
+          notes?: string;
+        }> = [];
+        let allPaymentsSuccessful = true;
+        let paymentErrors: string[] = [];
+
+        // Process each payment in the split
+        for (let i = 0; i < paymentForm.payments.length; i++) {
+          const payment = paymentForm.payments[i];
+          
+          try {
+            // Process Pay with iPhone
+            if ((payment.method === "credit" || payment.method === "debit") && payment.useYipyyPay && payment.yipyyPayDeviceId) {
+              const device = getYipyyPayDevice(facilityId, payment.yipyyPayDeviceId);
+              
+              if (!device || !device.isAuthorized || !device.isActive) {
+                paymentErrors.push(`Payment ${i + 1} (iPhone): Device not available`);
+                allPaymentsSuccessful = false;
+                continue;
+              }
+
+              const yipyyPayRequest: YipyyPayRequest = {
+                facilityId,
+                deviceId: payment.yipyyPayDeviceId,
+                amount: payment.amount,
+                currency: "USD",
+                description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
+                customerId: customerId ? Number(customerId) : undefined,
+                bookingId: selectedBookingId || undefined,
+                sendReceipt: fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
+                processedBy: currentUserId || "staff-001",
+                processedById: currentUserId ? Number(currentUserId) : undefined,
+              };
+
+              const yipyyPayResponse = await processYipyyPay(yipyyPayRequest);
+              
+              if (yipyyPayResponse.success) {
+                processedPayments.push({
+                  method: payment.method,
+                  amount: payment.amount,
+                  yipyyPayTransactionId: yipyyPayResponse.transactionId,
+                  notes: `Pay with iPhone (${device.deviceName})`,
+                });
+              } else {
+                paymentErrors.push(`Payment ${i + 1} (iPhone): ${yipyyPayResponse.error?.message || "Failed"}`);
+                allPaymentsSuccessful = false;
+              }
+            }
+            // Process Clover Terminal
+            else if ((payment.method === "credit" || payment.method === "debit") && payment.useCloverTerminal && payment.cloverTerminalId) {
+              const terminal = getCloverTerminal(facilityId, payment.cloverTerminalId);
+              
+              if (!terminal || !terminal.isOnline) {
+                paymentErrors.push(`Payment ${i + 1} (Clover): Terminal not available`);
+                allPaymentsSuccessful = false;
+                continue;
+              }
+
+              const cloverRequest: CloverPaymentRequest = {
+                facilityId,
+                terminalId: payment.cloverTerminalId,
+                amount: payment.amount,
+                currency: "USD",
+                description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
+                customerId: customerId ? Number(customerId) : undefined,
+                bookingId: selectedBookingId || undefined,
+                printReceipt: fiservConfig?.cloverTerminal?.autoPrintReceipts ?? true,
+                printCustomerCopy: true,
+                printMerchantCopy: true,
+              };
+
+              const cloverResponse = await processCloverPayment(cloverRequest);
+              
+              if (cloverResponse.success) {
+                processedPayments.push({
+                  method: payment.method,
+                  amount: payment.amount,
+                  cloverTransactionId: cloverResponse.cloverTransactionId,
+                  fiservTransactionId: cloverResponse.fiservTransactionId,
+                  notes: `Clover Terminal (${terminal.terminalName})`,
+                });
+              } else {
+                paymentErrors.push(`Payment ${i + 1} (Clover): ${cloverResponse.error?.message || "Failed"}`);
+                allPaymentsSuccessful = false;
+              }
+            }
+            // Process Fiserv (web card payment)
+            else if ((payment.method === "credit" || payment.method === "debit") && !payment.useYipyyPay && !payment.useCloverTerminal) {
+              let paymentSource: "new_card" | "tokenized_card" = "new_card";
+              let tokenizedCardId: string | undefined = payment.tokenizedCardId;
+              
+              if (tokenizedCardId && customerId) {
+                paymentSource = "tokenized_card";
+              } else if (customerId && selectedTokenizedCard) {
+                paymentSource = "tokenized_card";
+                tokenizedCardId = selectedTokenizedCard.id;
+              }
+
+              const fiservRequest: FiservPaymentRequest = {
+                facilityId,
+                clientId: customerId ? Number(customerId) : 0,
+                amount: payment.amount,
+                currency: "USD",
+                paymentSource,
+                tokenizedCardId,
+                newCard: paymentSource === "new_card" && newCardDetails.number
+                  ? {
+                      number: newCardDetails.number.replace(/\s/g, ""),
+                      expMonth: parseInt(newCardDetails.expMonth, 10),
+                      expYear: parseInt(newCardDetails.expYear, 10),
+                      cvv: newCardDetails.cvv,
+                      cardholderName: newCardDetails.cardholderName || name || "Customer",
+                      saveToAccount: saveCardToAccount && !!customerId,
+                      setAsDefault: saveCardToAccount && !!customerId,
+                    }
+                  : undefined,
+                description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
+                context: "pos",
+                bookingId: selectedBookingId || undefined,
+              };
+
+              const fiservResponse = await processFiservPayment(fiservRequest);
+              
+              if (fiservResponse.success) {
+                processedPayments.push({
+                  method: payment.method,
+                  amount: payment.amount,
+                  fiservTransactionId: fiservResponse.fiservTransactionId,
+                  notes: `Card Payment (Fiserv)`,
+                });
+              } else {
+                paymentErrors.push(`Payment ${i + 1} (Card): ${fiservResponse.error?.message || "Failed"}`);
+                allPaymentsSuccessful = false;
+              }
+            }
+            // Process Cash, Store Credit, Gift Card (no processing needed, just record)
+            else {
+              processedPayments.push({
+                method: payment.method,
+                amount: payment.amount,
+                notes: payment.method === "cash" ? "Cash" : payment.method === "store_credit" ? "Store Credit" : "Gift Card",
+              });
+            }
+          } catch (error) {
+            paymentErrors.push(`Payment ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+            allPaymentsSuccessful = false;
+          }
+        }
+
+        if (!allPaymentsSuccessful) {
+          alert(`Some payments failed:\n${paymentErrors.join("\n")}\n\nPlease retry or use a different payment method.`);
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // All payments successful - record transaction
+        const paymentNotes = processedPayments
+          .map((p, idx) => `${idx + 1}. ${p.notes || p.method}: $${p.amount.toFixed(2)}`)
+          .join(" | ");
+
+        addRetailTransaction({
+          items: cart.map(({ id, ...item }) => item),
+          subtotal,
+          discountTotal,
+          cartDiscount: cartDiscount || undefined,
+          promoCodeUsed: appliedPromoCode?.code || undefined,
+          accountDiscountApplied: accountDiscount?.id || undefined,
+          taxTotal,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          tipPercentage: tipPercentage || undefined,
+          total: grandTotal,
+          paymentMethod: "split",
+          payments: processedPayments.map(p => ({
+            method: p.method,
+            amount: p.amount,
+          })),
+          customerId,
+          customerName: name,
+          customerEmail: email,
+          petId: selectedPetId || undefined,
+          petName: petName,
+          bookingId: selectedBookingId || undefined,
+          bookingService: booking?.service,
+          cashierId: currentUserId || "staff-001",
+          cashierName: "Staff",
+          notes: `Split Payment: ${paymentNotes}`,
+          // Store transaction IDs from last card payment (for refund purposes)
+          yipyyPayTransactionId: processedPayments.find(p => p.yipyyPayTransactionId)?.yipyyPayTransactionId,
+          cloverTransactionId: processedPayments.find(p => p.cloverTransactionId)?.cloverTransactionId,
+          fiservTransactionId: processedPayments.find(p => p.fiservTransactionId)?.fiservTransactionId,
+        });
+      }
+      // Process payment through Clover terminal if enabled and selected (single payment)
+      else if (
         useCloverTerminal &&
         cloverTerminalId &&
         fiservConfig?.cloverTerminal?.enabled &&
@@ -2385,67 +2601,315 @@ export default function POSPage() {
                   </Button>
                 </div>
 
-                {paymentForm.payments.map((payment, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Label className="text-xs">Method</Label>
-                      <Select
-                        value={payment.method}
-                        onValueChange={(value: PaymentMethod) => {
-                          const newPayments = [...paymentForm.payments];
-                          newPayments[index].method = value;
-                          setPaymentForm({
-                            ...paymentForm,
-                            payments: newPayments,
-                          });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="credit">Credit Card</SelectItem>
-                          <SelectItem value="debit">Debit Card</SelectItem>
-                        </SelectContent>
-                      </Select>
+                {paymentForm.payments.map((payment, index) => {
+                  const facilityId = 11; // TODO: Get from context
+                  const fiservConfig = getFiservConfig(facilityId);
+                  const inPersonMethods = fiservConfig?.inPersonMethods;
+                  const isLastPayment = index === paymentForm.payments.length - 1;
+                  const remainingAmount = grandTotal - paymentForm.payments
+                    .slice(0, index)
+                    .reduce((sum, p) => sum + p.amount, 0);
+                  
+                  return (
+                    <div key={index} className="space-y-3 p-4 border rounded-lg">
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Label className="text-xs">Method</Label>
+                          <Select
+                            value={payment.method}
+                            onValueChange={(value: PaymentMethod) => {
+                              const newPayments = [...paymentForm.payments];
+                              newPayments[index] = {
+                                ...newPayments[index],
+                                method: value,
+                                // Reset iPhone/Clover flags when changing method
+                                useYipyyPay: value === "credit" || value === "debit" ? newPayments[index].useYipyyPay : false,
+                                useCloverTerminal: value === "credit" || value === "debit" ? newPayments[index].useCloverTerminal : false,
+                              };
+                              setPaymentForm({
+                                ...paymentForm,
+                                payments: newPayments,
+                              });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inPersonMethods?.cash !== false && (
+                                <SelectItem value="cash">
+                                  <div className="flex items-center gap-2">
+                                    <Banknote className="h-4 w-4" />
+                                    <span>Cash</span>
+                                  </div>
+                                </SelectItem>
+                              )}
+                              {(inPersonMethods?.cloverTerminal || inPersonMethods?.payWithiPhone || fiservConfig?.enabledPaymentMethods.card) && (
+                                <>
+                                  <SelectItem value="credit">
+                                    <div className="flex items-center gap-2">
+                                      <CreditCard className="h-4 w-4" />
+                                      <span>Credit Card</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="debit">
+                                    <div className="flex items-center gap-2">
+                                      <CreditCard className="h-4 w-4" />
+                                      <span>Debit Card</span>
+                                    </div>
+                                  </SelectItem>
+                                </>
+                              )}
+                              {inPersonMethods?.storeCredit !== false && (
+                                <SelectItem value="store_credit">
+                                  <div className="flex items-center gap-2">
+                                    <Wallet className="h-4 w-4" />
+                                    <span>Store Credit</span>
+                                  </div>
+                                </SelectItem>
+                              )}
+                              {inPersonMethods?.giftCard !== false && (
+                                <SelectItem value="gift_card">
+                                  <div className="flex items-center gap-2">
+                                    <Gift className="h-4 w-4" />
+                                    <span>Gift Card</span>
+                                  </div>
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <Label className="text-xs">Amount</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={isLastPayment ? remainingAmount : undefined}
+                            step="0.01"
+                            value={payment.amount}
+                            onChange={(e) => {
+                              const newPayments = [...paymentForm.payments];
+                              const amount = parseFloat(e.target.value) || 0;
+                              if (isLastPayment) {
+                                newPayments[index].amount = Math.min(amount, remainingAmount);
+                              } else {
+                                newPayments[index].amount = amount;
+                              }
+                              setPaymentForm({
+                                ...paymentForm,
+                                payments: newPayments,
+                              });
+                            }}
+                            onBlur={() => {
+                              // Auto-adjust last payment to cover remaining balance
+                              if (isLastPayment) {
+                                const newPayments = [...paymentForm.payments];
+                                const totalSoFar = newPayments
+                                  .slice(0, index)
+                                  .reduce((sum, p) => sum + p.amount, 0);
+                                newPayments[index].amount = grandTotal - totalSoFar;
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  payments: newPayments,
+                                });
+                              }
+                            }}
+                          />
+                          {isLastPayment && (
+                            <div className="mt-1 space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Remaining: ${remainingAmount.toFixed(2)}
+                              </p>
+                              {(payment.method === "credit" || payment.method === "debit") && inPersonMethods?.payWithiPhone && (
+                                <p className="text-xs text-blue-600 font-medium">
+                                  💡 Final payment can be completed with Pay with iPhone
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {paymentForm.payments.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const newPayments = paymentForm.payments.filter(
+                                (_, i) => i !== index,
+                              );
+                              // Recalculate last payment amount
+                              if (newPayments.length > 0) {
+                                const totalSoFar = newPayments
+                                  .slice(0, -1)
+                                  .reduce((sum, p) => sum + p.amount, 0);
+                                newPayments[newPayments.length - 1].amount = grandTotal - totalSoFar;
+                              }
+                              setPaymentForm({
+                                ...paymentForm,
+                                payments: newPayments,
+                              });
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Pay with iPhone option for credit/debit */}
+                      {(payment.method === "credit" || payment.method === "debit") && inPersonMethods?.payWithiPhone && (
+                        <div className="space-y-2 border rounded-lg p-3 bg-muted/50">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs">Pay with iPhone (Tap to Pay)</Label>
+                            <Switch
+                              checked={payment.useYipyyPay || false}
+                              onCheckedChange={(checked) => {
+                                const newPayments = [...paymentForm.payments];
+                                newPayments[index] = {
+                                  ...newPayments[index],
+                                  useYipyyPay: checked,
+                                  useCloverTerminal: checked ? false : newPayments[index].useCloverTerminal,
+                                };
+                                if (checked) {
+                                  const devices = getYipyyPayDevicesByFacility(facilityId);
+                                  if (devices.length > 0) {
+                                    newPayments[index].yipyyPayDeviceId = devices[0].deviceId;
+                                  }
+                                } else {
+                                  newPayments[index].yipyyPayDeviceId = undefined;
+                                }
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  payments: newPayments,
+                                });
+                              }}
+                            />
+                          </div>
+                          {payment.useYipyyPay && (
+                            <div className="grid gap-2">
+                              <Label className="text-xs">Select iPhone Device</Label>
+                              <Select
+                                value={payment.yipyyPayDeviceId || ""}
+                                onValueChange={(value) => {
+                                  const newPayments = [...paymentForm.payments];
+                                  newPayments[index].yipyyPayDeviceId = value;
+                                  setPaymentForm({
+                                    ...paymentForm,
+                                    payments: newPayments,
+                                  });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select device" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getYipyyPayDevicesByFacility(facilityId).map((device) => (
+                                    <SelectItem key={device.id} value={device.deviceId}>
+                                      <div className="flex items-center gap-2">
+                                        <Smartphone className="h-4 w-4" />
+                                        <span>{device.deviceName}</span>
+                                        {device.isAuthorized ? (
+                                          <Badge variant="default" className="ml-2">Ready</Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="ml-2">Pending</Badge>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Clover Terminal option for credit/debit */}
+                      {(payment.method === "credit" || payment.method === "debit") && !payment.useYipyyPay && inPersonMethods?.cloverTerminal && (
+                        <div className="space-y-2 border rounded-lg p-3 bg-muted/50">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs">Use Clover Terminal</Label>
+                            <Switch
+                              checked={payment.useCloverTerminal || false}
+                              onCheckedChange={(checked) => {
+                                const newPayments = [...paymentForm.payments];
+                                newPayments[index] = {
+                                  ...newPayments[index],
+                                  useCloverTerminal: checked,
+                                };
+                                if (checked) {
+                                  const terminals = getCloverTerminalsByFacility(facilityId);
+                                  if (terminals.length > 0) {
+                                    newPayments[index].cloverTerminalId = terminals[0].terminalId;
+                                  }
+                                } else {
+                                  newPayments[index].cloverTerminalId = undefined;
+                                }
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  payments: newPayments,
+                                });
+                              }}
+                            />
+                          </div>
+                          {payment.useCloverTerminal && (
+                            <div className="grid gap-2">
+                              <Label className="text-xs">Select Terminal</Label>
+                              <Select
+                                value={payment.cloverTerminalId || ""}
+                                onValueChange={(value) => {
+                                  const newPayments = [...paymentForm.payments];
+                                  newPayments[index].cloverTerminalId = value;
+                                  setPaymentForm({
+                                    ...paymentForm,
+                                    payments: newPayments,
+                                  });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select terminal" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getCloverTerminalsByFacility(facilityId).map((terminal) => (
+                                    <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
+                                      <div className="flex items-center gap-2">
+                                        <Printer className="h-4 w-4" />
+                                        <span>{terminal.terminalName}</span>
+                                        {terminal.isOnline ? (
+                                          <Badge variant="default" className="ml-2">Online</Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="ml-2">Offline</Badge>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Store Credit for split payment */}
+                      {payment.method === "store_credit" && selectedClientId && selectedClientId !== "__walk_in__" && (
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground">
+                            Available: ${getStoreCreditBalance(selectedClientId).toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Gift Card for split payment */}
+                      {payment.method === "gift_card" && (
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Gift Card Code</Label>
+                          <Input
+                            type="text"
+                            placeholder="Enter gift card code"
+                            className="text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <Label className="text-xs">Amount</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={payment.amount}
-                        onChange={(e) => {
-                          const newPayments = [...paymentForm.payments];
-                          newPayments[index].amount =
-                            parseFloat(e.target.value) || 0;
-                          setPaymentForm({
-                            ...paymentForm,
-                            payments: newPayments,
-                          });
-                        }}
-                      />
-                    </div>
-                    {paymentForm.payments.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newPayments = paymentForm.payments.filter(
-                            (_, i) => i !== index,
-                          );
-                          setPaymentForm({
-                            ...paymentForm,
-                            payments: newPayments,
-                          });
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div className="text-sm">
                   <span>
