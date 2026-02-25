@@ -1,15 +1,19 @@
 // Retail / POS module mock data
 
 export type ProductStatus = "active" | "inactive" | "discontinued";
-export type VariantType = "size" | "color" | "flavor" | "weight";
+export type VariantType = "size" | "color" | "flavor" | "weight" | "design" | "custom";
 export type OrderStatus =
   | "pending"
   | "ordered"
   | "shipped"
+  | "partially_received"
   | "received"
   | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
-export type PaymentMethod = "cash" | "credit" | "debit" | "split";
+export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay" | "store_credit" | "gift_card" | "custom";
+export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
+export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
+export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
 export type MovementType =
   | "sale"
   | "purchase"
@@ -20,15 +24,18 @@ export type MovementType =
 export interface ProductVariant {
   id: string;
   name: string;
-  sku: string;
-  barcode: string;
-  price: number;
-  costPrice: number;
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  variantType: VariantType;
-  variantValue: string;
+  sku: string; // Unique SKU for this variant
+  barcode: string; // Unique barcode for this variant
+  price: number; // Selling price
+  costPrice: number; // Cost price
+  stock: number; // Current stock count
+  minStock: number; // Minimum stock threshold
+  maxStock: number; // Maximum stock threshold
+  variantType: VariantType; // Type of variation (size, color, etc.)
+  variantValue: string; // The actual value (e.g., "Large", "Red", "500g")
+  customVariantType?: string; // Custom variant type name if variantType is "custom"
+  imageUrl?: string; // Image URL for this specific variant
+  imageUrls?: string[]; // Multiple images for this variant
 }
 
 export interface Product {
@@ -118,6 +125,53 @@ export interface CartItem {
   discount: number;
   discountType: "fixed" | "percent";
   total: number;
+  isComp?: boolean; // Employee comp / free item
+  compReason?: string; // Reason for comp (manager only)
+}
+
+export type CartDiscountType = "percent" | "fixed" | "promo_code" | "account_discount" | "employee_discount";
+
+export interface CartDiscount {
+  type: CartDiscountType;
+  value: number; // Percentage or fixed amount
+  promoCode?: string; // If type is "promo_code"
+  appliedBy?: string; // User ID who applied the discount
+  reason?: string; // Reason for discount (for manager comps)
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  minPurchase?: number; // Minimum purchase amount required
+  maxDiscount?: number; // Maximum discount amount (for percentage)
+  validFrom: string;
+  validTo: string;
+  usageLimit?: number; // Total number of times it can be used
+  usageCount: number; // Current usage count
+  isActive: boolean;
+  applicableTo?: string[]; // Product IDs or categories (empty = all products)
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AccountDiscount {
+  id: string;
+  customerId: string;
+  customerName: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  applicableTo?: "all" | "products" | "services" | "both";
+  productCategories?: string[]; // If applicableTo includes products
+  validFrom: string;
+  validTo?: string; // Optional expiration
+  isActive: boolean;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Transaction {
@@ -127,23 +181,116 @@ export interface Transaction {
   items: CartItem[];
   subtotal: number;
   discountTotal: number;
+  cartDiscount?: CartDiscount; // Cart-wide discount applied
+  promoCodeUsed?: string; // Promo code if used
+  accountDiscountApplied?: string; // Account discount ID if applied
   taxTotal: number;
+  tipAmount?: number; // Optional tip amount
+  tipPercentage?: number; // Tip percentage if applied
   total: number;
   paymentMethod: PaymentMethod;
   payments: {
     method: PaymentMethod;
     amount: number;
+    customMethodName?: string; // If method is "custom"
   }[];
   status: TransactionStatus;
   customerId?: string;
   customerName?: string;
   customerEmail?: string;
+  petId?: number; // Link to specific pet
+  petName?: string; // Pet name for display
+  bookingId?: number; // Link to booking/stay
+  bookingService?: string; // Service type (daycare, boarding, grooming, etc.)
+  chargedToBookingId?: number; // If paymentMethod is "add_to_booking" or "charge_to_active_stay", this is the booking ID items were added to
+  chargedToAccount?: boolean; // If paymentMethod is "charge_to_account", indicates items charged to account
   cashierId: string;
   cashierName: string;
   receiptSent: boolean;
   receiptEmail?: string;
   notes: string;
   createdAt: string;
+  returns?: Return[]; // Associated returns
+}
+
+export interface ReturnItem {
+  transactionItemId: string; // Reference to original transaction item
+  productId: string;
+  productName: string;
+  variantId?: string;
+  variantName?: string;
+  sku: string;
+  quantity: number; // Quantity being returned
+  originalQuantity: number; // Original quantity purchased
+  unitPrice: number;
+  discount: number;
+  total: number;
+  reason: ReturnReason;
+  reasonNotes?: string;
+  restocked: boolean; // Whether item was returned to inventory
+}
+
+export interface Return {
+  id: string;
+  returnNumber: string;
+  transactionId: string;
+  transactionNumber: string;
+  items: ReturnItem[];
+  subtotal: number; // Total of returned items
+  refundTotal: number; // Amount to refund
+  refundMethod: RefundMethod;
+  customRefundMethodName?: string; // If refundMethod is "custom"
+  storeCreditAmount?: number; // If refundMethod is "store_credit"
+  giftCardNumber?: string; // If refundMethod is "gift_card"
+  status: ReturnStatus;
+  customerId?: string;
+  customerName?: string;
+  customerEmail?: string;
+  processedBy: string; // User ID who processed the return
+  processedByName: string;
+  notes?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface StoreCredit {
+  id: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  balance: number; // Remaining balance
+  issuedFrom?: string; // Return ID if issued from a return
+  expiresAt?: string; // Optional expiration date
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GiftCard {
+  id: string;
+  cardNumber: string;
+  pin?: string;
+  amount: number;
+  balance: number; // Remaining balance
+  issuedFrom?: string; // Return ID if issued from a return
+  customerId?: string; // If linked to a customer
+  customerName?: string;
+  expiresAt?: string; // Optional expiration date
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomPaymentMethod {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  canBeUsedForRefunds: boolean;
+  icon?: string; // Icon identifier
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InventoryMovement {
@@ -1587,4 +1734,222 @@ export function addRetailTransaction(
   } as Transaction;
   transactions.push(newTxn);
   return newTxn;
+}
+
+// Mock data for promo codes
+export const promoCodes: PromoCode[] = [
+  {
+    id: "promo-001",
+    code: "WELCOME10",
+    description: "10% off for new customers",
+    discountType: "percent",
+    discountValue: 10,
+    minPurchase: 50,
+    maxDiscount: 20,
+    validFrom: "2024-01-01",
+    validTo: "2024-12-31",
+    usageLimit: 1000,
+    usageCount: 45,
+    isActive: true,
+    createdBy: "admin",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "promo-002",
+    code: "SAVE20",
+    description: "$20 off orders over $100",
+    discountType: "fixed",
+    discountValue: 20,
+    minPurchase: 100,
+    validFrom: "2024-03-01",
+    validTo: "2024-03-31",
+    usageLimit: 500,
+    usageCount: 12,
+    isActive: true,
+    createdBy: "admin",
+    createdAt: "2024-03-01",
+  },
+];
+
+// Mock data for account discounts
+export const accountDiscounts: AccountDiscount[] = [
+  {
+    id: "acc-disc-001",
+    customerId: "15",
+    customerName: "Alice Johnson",
+    discountType: "percent",
+    discountValue: 15,
+    applicableTo: "products",
+    validFrom: "2024-01-01",
+    isActive: true,
+    notes: "Employee discount - 15% off all products",
+    createdBy: "admin",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+];
+
+// Helper functions for discounts
+export function getPromoCodeByCode(code: string): PromoCode | null {
+  const promo = promoCodes.find(
+    (p) => p.code.toUpperCase() === code.toUpperCase() && p.isActive
+  );
+  if (!promo) return null;
+  
+  // Check if still valid
+  const now = new Date();
+  const validFrom = new Date(promo.validFrom);
+  const validTo = new Date(promo.validTo);
+  
+  if (now < validFrom || now > validTo) return null;
+  if (promo.usageLimit && promo.usageCount >= promo.usageLimit) return null;
+  
+  return promo;
+}
+
+export function getAccountDiscount(customerId: string): AccountDiscount | null {
+  const discount = accountDiscounts.find(
+    (d) => d.customerId === String(customerId) && d.isActive
+  );
+  if (!discount) return null;
+  
+  // Check if still valid
+  const now = new Date();
+  const validFrom = new Date(discount.validFrom);
+  if (now < validFrom) return null;
+  
+  if (discount.validTo) {
+    const validTo = new Date(discount.validTo);
+    if (now > validTo) return null;
+  }
+  
+  return discount;
+}
+
+export function applyPromoCode(code: string): PromoCode | null {
+  const promo = getPromoCodeByCode(code);
+  if (promo) {
+    promo.usageCount++;
+  }
+  return promo;
+}
+
+// Mock data for returns
+export const returns: Return[] = [];
+
+// Mock data for store credits
+export const storeCredits: StoreCredit[] = [];
+
+// Mock data for gift cards
+export const giftCards: GiftCard[] = [];
+
+// Mock data for custom payment methods
+export const customPaymentMethods: CustomPaymentMethod[] = [
+  {
+    id: "custom-001",
+    name: "Check",
+    description: "Personal or business check",
+    isActive: true,
+    canBeUsedForRefunds: true,
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+  {
+    id: "custom-002",
+    name: "Venmo",
+    description: "Venmo payment",
+    isActive: true,
+    canBeUsedForRefunds: false,
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+  },
+];
+
+// Helper functions for returns
+export function getTransactionById(transactionId: string): Transaction | null {
+  return transactions.find((t) => t.id === transactionId) || null;
+}
+
+export function getAllTransactions(): Transaction[] {
+  return transactions.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export function createReturn(
+  returnData: Omit<Return, "id" | "returnNumber" | "createdAt">
+): Return {
+  const id = `ret-${Date.now()}`;
+  const today = getDateString(0);
+  const count = returns.filter((r) => r.createdAt.startsWith(today)).length + 1;
+  const returnNumber = `RET-${today.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
+  
+  const newReturn: Return = {
+    ...returnData,
+    id,
+    returnNumber,
+    createdAt: new Date().toISOString().slice(0, 19),
+  };
+  
+  returns.push(newReturn);
+  
+  // Update transaction to include return
+  const transaction = getTransactionById(returnData.transactionId);
+  if (transaction) {
+    if (!transaction.returns) {
+      transaction.returns = [];
+    }
+    transaction.returns.push(newReturn);
+  }
+  
+  return newReturn;
+}
+
+export function createStoreCredit(
+  creditData: Omit<StoreCredit, "id" | "createdAt" | "updatedAt">
+): StoreCredit {
+  const id = `sc-${Date.now()}`;
+  const now = new Date().toISOString().slice(0, 19);
+  
+  const newCredit: StoreCredit = {
+    ...creditData,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  storeCredits.push(newCredit);
+  return newCredit;
+}
+
+export function createGiftCard(
+  cardData: Omit<GiftCard, "id" | "cardNumber" | "createdAt" | "updatedAt">
+): GiftCard {
+  const id = `gc-${Date.now()}`;
+  const cardNumber = `GC-${Date.now().toString().slice(-10)}`;
+  const now = new Date().toISOString().slice(0, 19);
+  
+  const newCard: GiftCard = {
+    ...cardData,
+    id,
+    cardNumber,
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  giftCards.push(newCard);
+  return newCard;
+}
+
+export function getStoreCreditBalance(customerId: string): number {
+  return storeCredits
+    .filter((sc) => sc.customerId === customerId && sc.balance > 0)
+    .reduce((sum, sc) => sum + sc.balance, 0);
+}
+
+export function getGiftCardBalance(cardNumber: string): number {
+  const card = giftCards.find(
+    (gc) => gc.cardNumber === cardNumber && gc.isActive
+  );
+  return card?.balance || 0;
 }

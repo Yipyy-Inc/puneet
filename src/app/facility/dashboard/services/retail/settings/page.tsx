@@ -14,7 +14,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw } from "lucide-react";
+import { Save, RotateCcw, Plus, Trash2, Edit } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  customPaymentMethods,
+  type CustomPaymentMethod,
+} from "@/data/retail";
 
 export default function RetailSettingsPage() {
   const [settings, setSettings] = useState({
@@ -28,6 +40,15 @@ export default function RetailSettingsPage() {
     defaultTaxRate: 8.25,
     enableTips: false,
     tipPercentages: [15, 18, 20, 25],
+    // Tips configuration by service type
+    tipsByServiceType: {
+      grooming: { enabled: true, percentages: [15, 18, 20, 25] },
+      training: { enabled: false, percentages: [15, 18, 20] },
+      daycare: { enabled: true, percentages: [10, 15, 20] },
+      boarding: { enabled: true, percentages: [10, 15, 20] },
+      retail: { enabled: false, percentages: [15, 18, 20, 25] },
+      other: { enabled: true, percentages: [15, 18, 20, 25] },
+    },
     roundToNearestCent: true,
     printReceipts: true,
     emailReceipts: true,
@@ -91,6 +112,15 @@ export default function RetailSettingsPage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isCustomPaymentMethodModalOpen, setIsCustomPaymentMethodModalOpen] = useState(false);
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<CustomPaymentMethod | null>(null);
+  const [customPaymentMethodsList, setCustomPaymentMethodsList] = useState<CustomPaymentMethod[]>(customPaymentMethods);
+  const [customPaymentForm, setCustomPaymentForm] = useState({
+    name: "",
+    description: "",
+    isActive: true,
+    canBeUsedForRefunds: true,
+  });
 
   const handleSave = () => {
     // TODO: Save to backend
@@ -245,6 +275,88 @@ export default function RetailSettingsPage() {
                 disabled={!isEditing}
               />
             </div>
+            {settings.enableTips && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Tips by Service Type</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Configure tip options for different service types
+                  </p>
+                  
+                  {Object.entries(settings.tipsByServiceType).map(([serviceType, config]) => (
+                    <div key={serviceType} className="p-3 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="capitalize">{serviceType}</Label>
+                        <Switch
+                          checked={config.enabled}
+                          onCheckedChange={(checked) =>
+                            setSettings({
+                              ...settings,
+                              tipsByServiceType: {
+                                ...settings.tipsByServiceType,
+                                [serviceType]: { ...config, enabled: checked },
+                              },
+                            })
+                          }
+                          disabled={!isEditing}
+                        />
+                      </div>
+                      {config.enabled && (
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">
+                            Tip Percentages
+                          </Label>
+                          <div className="flex gap-2 flex-wrap">
+                            {config.percentages.map((percent, index) => (
+                              <Input
+                                key={index}
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={percent}
+                                onChange={(e) => {
+                                  const newPercentages = [...config.percentages];
+                                  newPercentages[index] = parseInt(e.target.value) || 0;
+                                  setSettings({
+                                    ...settings,
+                                    tipsByServiceType: {
+                                      ...settings.tipsByServiceType,
+                                      [serviceType]: { ...config, percentages: newPercentages },
+                                    },
+                                  });
+                                }}
+                                disabled={!isEditing}
+                                className="w-16 h-8 text-xs"
+                              />
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                const newPercentages = [...config.percentages, 0];
+                                setSettings({
+                                  ...settings,
+                                  tipsByServiceType: {
+                                    ...settings.tipsByServiceType,
+                                    [serviceType]: { ...config, percentages: newPercentages },
+                                  },
+                                });
+                              }}
+                              disabled={!isEditing}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -363,6 +475,97 @@ export default function RetailSettingsPage() {
                   }
                   disabled={!isEditing}
                 />
+              </div>
+            </div>
+            <Separator />
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Label className="text-base font-medium">Custom Payment Methods</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Add custom payment methods (e.g., Check, Venmo, etc.)
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingPaymentMethod(null);
+                    setCustomPaymentForm({
+                      name: "",
+                      description: "",
+                      isActive: true,
+                      canBeUsedForRefunds: true,
+                    });
+                    setIsCustomPaymentMethodModalOpen(true);
+                  }}
+                  disabled={!isEditing}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Method
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {customPaymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{method.name}</p>
+                        {!method.isActive && (
+                          <span className="text-xs text-muted-foreground">(Inactive)</span>
+                        )}
+                      </div>
+                      {method.description && (
+                        <p className="text-sm text-muted-foreground">{method.description}</p>
+                      )}
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {method.canBeUsedForRefunds ? "Can be used for refunds" : "Not available for refunds"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setEditingPaymentMethod(method);
+                          setCustomPaymentForm({
+                            name: method.name,
+                            description: method.description || "",
+                            isActive: method.isActive,
+                            canBeUsedForRefunds: method.canBeUsedForRefunds,
+                          });
+                          setIsCustomPaymentMethodModalOpen(true);
+                        }}
+                        disabled={!isEditing}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => {
+                          setCustomPaymentMethodsList(
+                            customPaymentMethodsList.filter((m) => m.id !== method.id)
+                          );
+                        }}
+                        disabled={!isEditing}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {customPaymentMethodsList.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No custom payment methods added yet
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -951,6 +1154,134 @@ export default function RetailSettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Custom Payment Method Modal */}
+      <Dialog open={isCustomPaymentMethodModalOpen} onOpenChange={setIsCustomPaymentMethodModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingPaymentMethod ? "Edit Custom Payment Method" : "Add Custom Payment Method"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingPaymentMethod
+                ? "Update the custom payment method details."
+                : "Add a new custom payment method that can be used at checkout and for refunds."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Name</Label>
+              <Input
+                value={customPaymentForm.name}
+                onChange={(e) =>
+                  setCustomPaymentForm({ ...customPaymentForm, name: e.target.value })
+                }
+                placeholder="e.g., Check, Venmo, PayPal"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Description (Optional)</Label>
+              <Textarea
+                value={customPaymentForm.description}
+                onChange={(e) =>
+                  setCustomPaymentForm({ ...customPaymentForm, description: e.target.value })
+                }
+                placeholder="Brief description of this payment method"
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Active</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable this payment method for use
+                </p>
+              </div>
+              <Switch
+                checked={customPaymentForm.isActive}
+                onCheckedChange={(checked) =>
+                  setCustomPaymentForm({ ...customPaymentForm, isActive: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Can be used for refunds</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow this method to be used when processing returns/refunds
+                </p>
+              </div>
+              <Switch
+                checked={customPaymentForm.canBeUsedForRefunds}
+                onCheckedChange={(checked) =>
+                  setCustomPaymentForm({ ...customPaymentForm, canBeUsedForRefunds: checked })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCustomPaymentMethodModalOpen(false);
+                setEditingPaymentMethod(null);
+                setCustomPaymentForm({
+                  name: "",
+                  description: "",
+                  isActive: true,
+                  canBeUsedForRefunds: true,
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingPaymentMethod) {
+                  // Update existing
+                  setCustomPaymentMethodsList(
+                    customPaymentMethodsList.map((m) =>
+                      m.id === editingPaymentMethod.id
+                        ? {
+                            ...m,
+                            name: customPaymentForm.name,
+                            description: customPaymentForm.description,
+                            isActive: customPaymentForm.isActive,
+                            canBeUsedForRefunds: customPaymentForm.canBeUsedForRefunds,
+                            updatedAt: new Date().toISOString().slice(0, 19),
+                          }
+                        : m
+                    )
+                  );
+                } else {
+                  // Add new
+                  const newMethod: CustomPaymentMethod = {
+                    id: `custom-${Date.now()}`,
+                    name: customPaymentForm.name,
+                    description: customPaymentForm.description,
+                    isActive: customPaymentForm.isActive,
+                    canBeUsedForRefunds: customPaymentForm.canBeUsedForRefunds,
+                    createdAt: new Date().toISOString().slice(0, 19),
+                    updatedAt: new Date().toISOString().slice(0, 19),
+                  };
+                  setCustomPaymentMethodsList([...customPaymentMethodsList, newMethod]);
+                }
+                setIsCustomPaymentMethodModalOpen(false);
+                setEditingPaymentMethod(null);
+                setCustomPaymentForm({
+                  name: "",
+                  description: "",
+                  isActive: true,
+                  canBeUsedForRefunds: true,
+                });
+              }}
+              disabled={!customPaymentForm.name.trim()}
+            >
+              {editingPaymentMethod ? "Save Changes" : "Add Method"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Trophy,
   Plus,
   Settings,
+  ShoppingCart,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
@@ -387,6 +388,10 @@ export default function ReportsPage() {
               <Trophy className="h-4 w-4 mr-2" />
               Top Customers
             </TabsTrigger>
+            <TabsTrigger value="retail">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Retail / POS
+            </TabsTrigger>
             <TabsTrigger value="custom">
               <Settings className="h-4 w-4 mr-2" />
               Custom Reports
@@ -646,6 +651,162 @@ export default function ReportsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Retail Reports */}
+        <TabsContent value="retail" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Retail / POS Reports</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Comprehensive retail performance, sales, and inventory analytics.
+                For detailed reports, visit the{" "}
+                <a
+                  href="/facility/dashboard/services/retail/reports"
+                  className="text-primary hover:underline"
+                >
+                  Retail Reports page
+                </a>
+                .
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Sales by Period
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      View daily, weekly, or monthly sales trends
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Top Products
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      Best performing products by revenue or quantity
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Profit Margin
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      Revenue, cost, and profit analysis
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Sales by Staff
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      Performance metrics by cashier/staff member
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Sales by Category
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      Revenue and profit breakdown by product category
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Service-Linked Sales
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      Retail items sold as add-ons to services
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        window.location.href =
+                          "/facility/dashboard/services/retail/reports";
+                      }}
+                    >
+                      View Report
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>

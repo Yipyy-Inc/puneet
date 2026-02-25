@@ -15,6 +15,10 @@ import {
   CheckCircle2,
   Clock,
   Eye,
+  ShoppingCart,
+  FileText,
+  CheckSquare,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,10 +55,13 @@ import {
   lowStockAlerts,
   getLowStockProducts,
   getInventoryValue,
+  suppliers,
+  getActiveSuppliers,
   type InventoryMovement,
   type LowStockAlert,
   type Product,
   type ProductVariant,
+  type PurchaseOrderItem,
 } from "@/data/retail";
 
 type InventoryMovementWithRecord = InventoryMovement & Record<string, unknown>;
@@ -66,9 +73,35 @@ export default function InventoryPage() {
   >("overview");
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [isAlertDetailModalOpen, setIsAlertDetailModalOpen] = useState(false);
+  const [isReorderListModalOpen, setIsReorderListModalOpen] = useState(false);
+  const [isCreatePOModalOpen, setIsCreatePOModalOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<LowStockAlert | null>(
     null,
   );
+  const [selectedAlertsForReorder, setSelectedAlertsForReorder] = useState<
+    Set<string>
+  >(new Set());
+  const [reorderItems, setReorderItems] = useState<
+    Array<{
+      alertId: string;
+      productId: string;
+      productName: string;
+      variantId?: string;
+      variantName?: string;
+      sku: string;
+      currentStock: number;
+      minStock: number;
+      maxStock: number;
+      suggestedQuantity: number;
+      unitCost: number;
+      selected: boolean;
+    }>
+  >([]);
+  const [poForm, setPoForm] = useState({
+    supplierId: "",
+    expectedDelivery: "",
+    notes: "",
+  });
 
   const [adjustmentForm, setAdjustmentForm] = useState({
     productId: "",
@@ -80,6 +113,23 @@ export default function InventoryPage() {
   const inventoryValue = getInventoryValue();
   const lowStockItems = getLowStockProducts();
   const pendingAlerts = lowStockAlerts.filter((a) => a.status === "pending");
+
+  // Format date consistently to avoid hydration errors
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${month}/${day}/${year}`;
+  };
+
+  // Format time consistently
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
 
   const handleAdjustStock = () => {
     // In a real app, this would save to the backend
@@ -95,6 +145,130 @@ export default function InventoryPage() {
   const handleAcknowledgeAlert = (alert: LowStockAlert) => {
     // In a real app, this would update the alert status
     console.log("Acknowledging alert:", alert.id);
+  };
+
+  const handleGenerateReorderList = () => {
+    // Convert pending alerts to reorder items with suggested quantities
+    const items = pendingAlerts.map((alert) => {
+      // Find the product/variant to get cost and max stock
+      let product: Product | undefined;
+      let variant: ProductVariant | undefined;
+      
+      if (alert.variantId) {
+        product = products.find((p) => p.id === alert.productId);
+        variant = product?.variants.find((v) => v.id === alert.variantId);
+      } else {
+        product = products.find((p) => p.id === alert.productId);
+      }
+
+      const maxStock = variant?.maxStock || product?.maxStock || alert.minStock * 3;
+      const unitCost = variant?.costPrice || product?.baseCostPrice || 0;
+      
+      // Suggested quantity: enough to reach max stock (or at least min stock * 2)
+      const suggestedQuantity = Math.max(
+        maxStock - alert.currentStock,
+        alert.minStock * 2 - alert.currentStock
+      );
+
+      return {
+        alertId: alert.id,
+        productId: alert.productId,
+        productName: alert.productName,
+        variantId: alert.variantId,
+        variantName: alert.variantName,
+        sku: alert.sku,
+        currentStock: alert.currentStock,
+        minStock: alert.minStock,
+        maxStock,
+        suggestedQuantity: Math.max(1, suggestedQuantity),
+        unitCost,
+        selected: true,
+      };
+    });
+
+    setReorderItems(items);
+    setSelectedAlertsForReorder(new Set(items.map((item) => item.alertId)));
+    setIsReorderListModalOpen(true);
+  };
+
+  const handleCreatePOFromReorderList = () => {
+    const selectedItems = reorderItems.filter((item) => item.selected);
+    if (selectedItems.length === 0) {
+      alert("Please select at least one item to create a purchase order.");
+      return;
+    }
+    setIsReorderListModalOpen(false);
+    setIsCreatePOModalOpen(true);
+  };
+
+  const handleToggleReorderItem = (alertId: string) => {
+    setReorderItems((prev) =>
+      prev.map((item) =>
+        item.alertId === alertId ? { ...item, selected: !item.selected } : item
+      )
+    );
+    setSelectedAlertsForReorder((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(alertId)) {
+        newSet.delete(alertId);
+      } else {
+        newSet.add(alertId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleUpdateReorderQuantity = (alertId: string, quantity: number) => {
+    setReorderItems((prev) =>
+      prev.map((item) =>
+        item.alertId === alertId
+          ? { ...item, suggestedQuantity: Math.max(1, quantity) }
+          : item
+      )
+    );
+  };
+
+  const handleAddSingleAlertToReorder = (alert: LowStockAlert) => {
+    const product = products.find((p) => p.id === alert.productId);
+    const variant = alert.variantId
+      ? product?.variants.find((v) => v.id === alert.variantId)
+      : undefined;
+    const maxStock = variant?.maxStock || product?.maxStock || alert.minStock * 3;
+    const unitCost = variant?.costPrice || product?.baseCostPrice || 0;
+    const suggestedQuantity = Math.max(
+      maxStock - alert.currentStock,
+      alert.minStock * 2 - alert.currentStock
+    );
+    
+    const newItem = {
+      alertId: alert.id,
+      productId: alert.productId,
+      productName: alert.productName,
+      variantId: alert.variantId,
+      variantName: alert.variantName,
+      sku: alert.sku,
+      currentStock: alert.currentStock,
+      minStock: alert.minStock,
+      maxStock,
+      suggestedQuantity: Math.max(1, suggestedQuantity),
+      unitCost,
+      selected: true,
+    };
+
+    setReorderItems((prev) => {
+      // Check if item already exists
+      const existingIndex = prev.findIndex((item) => item.alertId === alert.id);
+      if (existingIndex >= 0) {
+        return prev;
+      }
+      return [...prev, newItem];
+    });
+    setSelectedAlertsForReorder((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(alert.id);
+      return newSet;
+    });
+    setIsReorderListModalOpen(true);
   };
 
   const getMovementTypeIcon = (type: string) => {
@@ -150,12 +324,12 @@ export default function InventoryPage() {
       label: "Date",
       defaultVisible: true,
       render: (item) => {
-        const date = new Date(item.createdAt as string);
+        const dateString = item.createdAt as string;
         return (
           <div>
-            <div className="font-medium">{date.toLocaleDateString()}</div>
+            <div className="font-medium">{formatDate(dateString)}</div>
             <div className="text-xs text-muted-foreground">
-              {date.toLocaleTimeString()}
+              {formatTime(dateString)}
             </div>
           </div>
         );
@@ -249,7 +423,7 @@ export default function InventoryPage() {
       key: "createdAt",
       label: "Date",
       defaultVisible: true,
-      render: (item) => new Date(item.createdAt as string).toLocaleDateString(),
+      render: (item) => formatDate(item.createdAt as string),
     },
     {
       key: "productName",
@@ -581,7 +755,7 @@ export default function InventoryPage() {
                             : movement.quantity}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(movement.createdAt).toLocaleDateString()}
+                          {formatDate(movement.createdAt)}
                         </p>
                       </div>
                     </div>
@@ -617,6 +791,20 @@ export default function InventoryPage() {
 
         {/* Alerts Tab */}
         <TabsContent value="alerts" className="mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Low Stock Alerts</h3>
+              <p className="text-sm text-muted-foreground">
+                {pendingAlerts.length} pending alerts need attention
+              </p>
+            </div>
+            {pendingAlerts.length > 0 && (
+              <Button onClick={handleGenerateReorderList}>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Generate Reorder List
+              </Button>
+            )}
+          </div>
           <DataTable
             data={lowStockAlerts as LowStockAlertWithRecord[]}
             columns={alertColumns}
@@ -650,7 +838,12 @@ export default function InventoryPage() {
                       Acknowledge
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem>Create Purchase Order</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleAddSingleAlertToReorder(item as LowStockAlert)}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Add to Reorder List
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -793,7 +986,7 @@ export default function InventoryPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Alert Created:</span>
                   <span>
-                    {new Date(selectedAlert.createdAt).toLocaleDateString()}
+                    {formatDate(selectedAlert.createdAt)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -815,9 +1008,7 @@ export default function InventoryPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Acknowledged:</span>
                     <span>
-                      {new Date(
-                        selectedAlert.acknowledgedAt,
-                      ).toLocaleDateString()}{" "}
+                      {formatDate(selectedAlert.acknowledgedAt)}{" "}
                       by {selectedAlert.acknowledgedBy}
                     </span>
                   </div>
@@ -838,7 +1029,383 @@ export default function InventoryPage() {
                 Acknowledge Alert
               </Button>
             )}
-            <Button>Create Purchase Order</Button>
+            <Button
+              onClick={() => {
+                if (selectedAlert) {
+                  handleAddSingleAlertToReorder(selectedAlert);
+                  setIsAlertDetailModalOpen(false);
+                }
+              }}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Create Purchase Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reorder List Modal */}
+      <Dialog
+        open={isReorderListModalOpen}
+        onOpenChange={setIsReorderListModalOpen}
+      >
+        <DialogContent className="w-[98vw] max-w-none sm:max-w-none max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reorder List</DialogTitle>
+            <DialogDescription>
+              Select items and adjust quantities to create a purchase order
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {reorderItems.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No items in reorder list
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setReorderItems((prev) =>
+                          prev.map((item) => ({ ...item, selected: true }))
+                        );
+                        setSelectedAlertsForReorder(
+                          new Set(reorderItems.map((item) => item.alertId))
+                        );
+                      }}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setReorderItems((prev) =>
+                          prev.map((item) => ({ ...item, selected: false }))
+                        );
+                        setSelectedAlertsForReorder(new Set());
+                      }}
+                    >
+                      Deselect All
+                    </Button>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {reorderItems.filter((item) => item.selected).length} of{" "}
+                    {reorderItems.length} selected
+                  </div>
+                </div>
+
+                <div className="space-y-2 border rounded-lg divide-y">
+                  {reorderItems.map((item) => (
+                    <div
+                      key={item.alertId}
+                      className={`p-4 ${
+                        item.selected ? "bg-blue-50 border-blue-200" : "bg-background"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex items-center pt-1">
+                          <input
+                            type="checkbox"
+                            checked={item.selected}
+                            onChange={() => handleToggleReorderItem(item.alertId)}
+                            className="rounded h-4 w-4"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{item.productName}</p>
+                            {item.variantName && (
+                              <Badge variant="outline" className="text-xs">
+                                {item.variantName}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
+                            <div>
+                              <span className="font-medium">SKU:</span> {item.sku}
+                            </div>
+                            <div>
+                              <span className="font-medium">Current:</span>{" "}
+                              <span className="text-red-600">{item.currentStock}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Min:</span> {item.minStock}
+                            </div>
+                            <div>
+                              <span className="font-medium">Max:</span> {item.maxStock}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Reorder Quantity:</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.suggestedQuantity}
+                                onChange={(e) =>
+                                  handleUpdateReorderQuantity(
+                                    item.alertId,
+                                    parseInt(e.target.value) || 1
+                                  )
+                                }
+                                className="w-24 h-8"
+                                disabled={!item.selected}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                (Suggested: {item.suggestedQuantity})
+                              </span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Unit Cost:</span>{" "}
+                              <span className="font-medium">
+                                ${item.unitCost.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Total:</span>{" "}
+                              <span className="font-medium">
+                                $
+                                {(item.suggestedQuantity * item.unitCost).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setReorderItems((prev) =>
+                              prev.filter((i) => i.alertId !== item.alertId)
+                            );
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 rounded-lg bg-muted space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Total Items:</span>
+                    <span className="font-medium">
+                      {reorderItems.filter((item) => item.selected).length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Quantity:</span>
+                    <span className="font-medium">
+                      {reorderItems
+                        .filter((item) => item.selected)
+                        .reduce((sum, item) => sum + item.suggestedQuantity, 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                    <span>Estimated Total Cost:</span>
+                    <span>
+                      $
+                      {reorderItems
+                        .filter((item) => item.selected)
+                        .reduce(
+                          (sum, item) =>
+                            sum + item.suggestedQuantity * item.unitCost,
+                          0
+                        )
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReorderListModalOpen(false);
+                setReorderItems([]);
+                setSelectedAlertsForReorder(new Set());
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreatePOFromReorderList}
+              disabled={
+                reorderItems.length === 0 ||
+                reorderItems.filter((item) => item.selected).length === 0
+              }
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Create Purchase Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Purchase Order Modal */}
+      <Dialog open={isCreatePOModalOpen} onOpenChange={setIsCreatePOModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+            <DialogDescription>
+              Create a purchase order from the selected reorder items
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label>Supplier</Label>
+              <Select
+                value={poForm.supplierId}
+                onValueChange={(value) =>
+                  setPoForm({ ...poForm, supplierId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getActiveSuppliers().map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name} ({supplier.paymentTerms})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Expected Delivery Date</Label>
+              <Input
+                type="date"
+                value={poForm.expectedDelivery}
+                onChange={(e) =>
+                  setPoForm({ ...poForm, expectedDelivery: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Order Items</Label>
+              <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                {reorderItems
+                  .filter((item) => item.selected)
+                  .map((item) => (
+                    <div key={item.alertId} className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{item.productName}</p>
+                          {item.variantName && (
+                            <p className="text-sm text-muted-foreground">
+                              {item.variantName}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            SKU: {item.sku}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p>
+                            {item.suggestedQuantity} × ${item.unitCost.toFixed(2)}
+                          </p>
+                          <p className="font-medium">
+                            $
+                            {(item.suggestedQuantity * item.unitCost).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-muted space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal</span>
+                <span>
+                  $
+                  {reorderItems
+                    .filter((item) => item.selected)
+                    .reduce(
+                      (sum, item) =>
+                        sum + item.suggestedQuantity * item.unitCost,
+                      0
+                    )
+                    .toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Tax</span>
+                <span>$0.00</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Shipping</span>
+                <span>$0.00</span>
+              </div>
+              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <span>Total</span>
+                <span>
+                  $
+                  {reorderItems
+                    .filter((item) => item.selected)
+                    .reduce(
+                      (sum, item) =>
+                        sum + item.suggestedQuantity * item.unitCost,
+                      0
+                    )
+                    .toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                value={poForm.notes}
+                onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })}
+                placeholder="Any special instructions or notes..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreatePOModalOpen(false);
+                setReorderItems([]);
+                setSelectedAlertsForReorder(new Set());
+                setPoForm({ supplierId: "", expectedDelivery: "", notes: "" });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // In a real app, this would create the purchase order
+                const selectedItems = reorderItems.filter((item) => item.selected);
+                alert(
+                  `Purchase order created successfully with ${selectedItems.length} items!`
+                );
+                setIsCreatePOModalOpen(false);
+                setReorderItems([]);
+                setSelectedAlertsForReorder(new Set());
+                setPoForm({ supplierId: "", expectedDelivery: "", notes: "" });
+              }}
+              disabled={!poForm.supplierId || !poForm.expectedDelivery}
+            >
+              Create Purchase Order
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

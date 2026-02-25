@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Plus,
+  Minus,
   MoreHorizontal,
   Truck,
   Building2,
@@ -14,6 +15,16 @@ import {
   XCircle,
   Mail,
   MapPin,
+  Receipt,
+  RotateCcw,
+  ArrowLeft,
+  User,
+  CreditCard,
+  Gift,
+  Wallet,
+  PackageCheck,
+  AlertCircle,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,25 +61,86 @@ import {
   products,
   getActiveSuppliers,
   getPendingOrders,
+  getTransactionById,
+  createReturn,
+  createStoreCredit,
+  createGiftCard,
+  getStoreCreditBalance,
+  customPaymentMethods,
+  returns,
+  inventoryMovements,
   type PurchaseOrder,
   type Supplier,
   type PurchaseOrderItem,
+  type Transaction,
+  type Return,
+  type ReturnItem,
+  type RefundMethod,
+  type ReturnReason,
+  type CustomPaymentMethod,
+  type CartItem,
+  getAllTransactions,
+  type InventoryMovement,
+  type Product,
+  type ProductVariant,
 } from "@/data/retail";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
 
 export default function OrdersPage() {
-  const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers">(
+  const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers" | "transactions">(
     "orders",
   );
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [isReceiveOrderModalOpen, setIsReceiveOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [receivingForm, setReceivingForm] = useState<{
+    items: Array<{
+      productId: string;
+      variantId?: string;
+      sku: string;
+      orderedQuantity: number;
+      receivedQuantity: number;
+      newReceivedQuantity: number;
+    }>;
+  }>({ items: [] });
+  
+  // Return form state
+  const [returnForm, setReturnForm] = useState<{
+    items: Array<{
+      transactionItemId: string;
+      productId: string;
+      productName: string;
+      variantId?: string;
+      variantName?: string;
+      sku: string;
+      quantity: number;
+      originalQuantity: number;
+      unitPrice: number;
+      discount: number;
+      discountType: "fixed" | "percent";
+      total: number;
+      reason: ReturnReason;
+      reasonNotes?: string;
+      restocked: boolean;
+    }>;
+    refundMethod: RefundMethod;
+    customRefundMethodName?: string;
+    storeCreditAmount?: number;
+    giftCardNumber?: string;
+    notes?: string;
+  }>({
+    items: [],
+    refundMethod: "original_payment",
+  });
 
   const [orderForm, setOrderForm] = useState({
     supplierId: "",
@@ -93,6 +165,7 @@ export default function OrdersPage() {
 
   const activeSuppliers = getActiveSuppliers();
   const pendingOrders = getPendingOrders();
+  const allTransactions = getAllTransactions();
 
   const handleCreateOrder = () => {
     setOrderForm({
@@ -145,6 +218,92 @@ export default function OrdersPage() {
     setIsViewOrderModalOpen(true);
   };
 
+  const handleViewTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    // Could open a view modal here
+  };
+
+  const handleInitiateReturn = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setReturnForm({
+      items: [],
+      refundMethod: "original_payment",
+    });
+    setIsReturnModalOpen(true);
+  };
+
+  const handleProcessReturn = () => {
+    if (!selectedTransaction || returnForm.items.length === 0) return;
+
+    const refundTotal = returnForm.items.reduce((sum, item) => {
+      const subtotal = item.unitPrice * item.quantity;
+      const discountAmount = item.discountType === "percent"
+        ? (subtotal * item.discount) / 100
+        : item.discount;
+      return sum + subtotal - discountAmount;
+    }, 0);
+
+    // Create return
+    const newReturn = createReturn({
+      transactionId: selectedTransaction.id,
+      transactionNumber: selectedTransaction.transactionNumber,
+      items: returnForm.items.map(item => ({
+        ...item,
+        reasonNotes: item.reasonNotes,
+      })),
+      subtotal: refundTotal,
+      refundTotal,
+      refundMethod: returnForm.refundMethod,
+      customRefundMethodName: returnForm.customRefundMethodName,
+      storeCreditAmount: returnForm.refundMethod === "store_credit" ? refundTotal : undefined,
+      giftCardNumber: returnForm.refundMethod === "gift_card" ? returnForm.giftCardNumber : undefined,
+      status: "completed",
+      customerId: selectedTransaction.customerId,
+      customerName: selectedTransaction.customerName,
+      customerEmail: selectedTransaction.customerEmail,
+      processedBy: "current-user-id", // TODO: Get from auth
+      processedByName: "Current User", // TODO: Get from auth
+      notes: returnForm.notes,
+      completedAt: new Date().toISOString().slice(0, 19),
+    });
+
+    // Create store credit if applicable
+    if (returnForm.refundMethod === "store_credit" && selectedTransaction.customerId) {
+      createStoreCredit({
+        customerId: selectedTransaction.customerId,
+        customerName: selectedTransaction.customerName || "Customer",
+        amount: refundTotal,
+        balance: refundTotal,
+        issuedFrom: newReturn.id,
+        notes: `Issued from return ${newReturn.returnNumber}`,
+      });
+    }
+
+    // Create gift card if applicable
+    if (returnForm.refundMethod === "gift_card") {
+      createGiftCard({
+        amount: refundTotal,
+        balance: refundTotal,
+        issuedFrom: newReturn.id,
+        customerId: selectedTransaction.customerId,
+        customerName: selectedTransaction.customerName,
+        isActive: true,
+        notes: `Issued from return ${newReturn.returnNumber}`,
+      });
+    }
+
+    // TODO: Restock items to inventory
+    // This would update product/variant stock levels
+
+    // Close modal and reset
+    setIsReturnModalOpen(false);
+    setSelectedTransaction(null);
+    setReturnForm({ items: [], refundMethod: "original_payment" });
+
+    // Show success message
+    alert(`Return processed successfully: ${newReturn.returnNumber}`);
+  };
+
   const handleSaveOrder = () => {
     // In a real app, this would save to the backend
     setIsOrderModalOpen(false);
@@ -155,6 +314,145 @@ export default function OrdersPage() {
     setIsSupplierModalOpen(false);
   };
 
+  const handleOpenReceiveOrder = (order: PurchaseOrder) => {
+    setSelectedOrder(order);
+    // Initialize receiving form with current received quantities
+    setReceivingForm({
+      items: order.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        sku: item.sku,
+        orderedQuantity: item.quantity,
+        receivedQuantity: item.receivedQuantity,
+        newReceivedQuantity: item.receivedQuantity, // Start with current received quantity
+      })),
+    });
+    setIsReceiveOrderModalOpen(true);
+  };
+
+  const handleUpdateReceivingQuantity = (
+    sku: string,
+    quantity: number
+  ) => {
+    setReceivingForm((prev) => ({
+      items: prev.items.map((item) =>
+        item.sku === sku
+          ? {
+              ...item,
+              newReceivedQuantity: Math.max(
+                0,
+                Math.min(quantity, item.orderedQuantity)
+              ),
+            }
+          : item
+      ),
+    }));
+  };
+
+  const handleProcessReceiving = () => {
+    if (!selectedOrder) return;
+
+    const itemsToReceive = receivingForm.items.filter(
+      (item) => item.newReceivedQuantity > item.receivedQuantity
+    );
+
+    if (itemsToReceive.length === 0) {
+      alert("No items to receive. Please increase quantities for at least one item.");
+      return;
+    }
+
+    // Update stock levels and create inventory movements
+    itemsToReceive.forEach((item) => {
+      const quantityToReceive = item.newReceivedQuantity - item.receivedQuantity;
+      
+      // Find product/variant
+      let product: Product | undefined;
+      let variant: ProductVariant | undefined;
+      
+      if (item.variantId) {
+        product = products.find((p) => p.id === item.productId);
+        variant = product?.variants.find((v) => v.id === item.variantId);
+      } else {
+        product = products.find((p) => p.id === item.productId);
+      }
+
+      if (!product) {
+        console.error(`Product not found: ${item.productId}`);
+        return;
+      }
+
+      // Update stock
+      const previousStock = variant?.stock ?? product.stock;
+      const newStock = previousStock + quantityToReceive;
+
+      if (variant) {
+        variant.stock = newStock;
+      } else {
+        product.stock = newStock;
+      }
+
+      // Create inventory movement
+      const movement: InventoryMovement = {
+        id: `mov-${Date.now()}-${item.sku}`,
+        productId: item.productId,
+        productName: product.name,
+        variantId: item.variantId,
+        variantName: variant?.name,
+        sku: item.sku,
+        movementType: "purchase",
+        quantity: quantityToReceive,
+        previousStock,
+        newStock,
+        reason: `Purchase order received: ${selectedOrder.orderNumber}`,
+        referenceId: selectedOrder.id,
+        referenceType: "purchase_order",
+        createdBy: "Current User", // TODO: Get from auth
+        createdAt: new Date().toISOString(),
+      };
+
+      inventoryMovements.push(movement);
+    });
+
+    // Update order items with new received quantities
+    selectedOrder.items = selectedOrder.items.map((orderItem) => {
+      const receivingItem = receivingForm.items.find(
+        (item) => item.sku === orderItem.sku
+      );
+      if (receivingItem) {
+        return {
+          ...orderItem,
+          receivedQuantity: receivingItem.newReceivedQuantity,
+        };
+      }
+      return orderItem;
+    });
+
+    // Update order status based on received quantities
+    const allItemsReceived = selectedOrder.items.every(
+      (item) => item.receivedQuantity >= item.quantity
+    );
+    const someItemsReceived = selectedOrder.items.some(
+      (item) => item.receivedQuantity > 0
+    );
+
+    if (allItemsReceived) {
+      selectedOrder.status = "received";
+      selectedOrder.receivedAt = new Date().toISOString();
+    } else if (someItemsReceived) {
+      selectedOrder.status = "partially_received";
+    }
+
+    // Close modal and reset
+    setIsReceiveOrderModalOpen(false);
+    setSelectedOrder(null);
+    setReceivingForm({ items: [] });
+
+    // Show success message
+    alert(
+      `Order ${selectedOrder.orderNumber} received successfully. Stock levels updated.`
+    );
+  };
+
   const getOrderStatusVariant = (status: string) => {
     switch (status) {
       case "pending":
@@ -162,6 +460,8 @@ export default function OrdersPage() {
       case "ordered":
         return "default";
       case "shipped":
+        return "outline";
+      case "partially_received":
         return "outline";
       case "received":
         return "default";
@@ -180,6 +480,8 @@ export default function OrdersPage() {
         return <Package className="h-4 w-4" />;
       case "shipped":
         return <Truck className="h-4 w-4" />;
+      case "partially_received":
+        return <PackageCheck className="h-4 w-4" />;
       case "received":
         return <CheckCircle2 className="h-4 w-4" />;
       case "cancelled":
@@ -329,6 +631,7 @@ export default function OrdersPage() {
         { value: "pending", label: "Pending" },
         { value: "ordered", label: "Ordered" },
         { value: "shipped", label: "Shipped" },
+        { value: "partially_received", label: "Partially Received" },
         { value: "received", label: "Received" },
         { value: "cancelled", label: "Cancelled" },
       ],
@@ -343,6 +646,100 @@ export default function OrdersPage() {
         { value: "all", label: "All Statuses" },
         { value: "active", label: "Active" },
         { value: "inactive", label: "Inactive" },
+      ],
+    },
+  ];
+
+  const transactionColumns: ColumnDef<Transaction>[] = [
+    {
+      key: "transactionNumber",
+      label: "Transaction #",
+      defaultVisible: true,
+      render: (item) => (
+        <span className="font-mono font-medium">{item.transactionNumber}</span>
+      ),
+    },
+    {
+      key: "customerName",
+      label: "Customer",
+      icon: User,
+      defaultVisible: true,
+      render: (item) => item.customerName || "Walk-in",
+    },
+    {
+      key: "items",
+      label: "Items",
+      defaultVisible: true,
+      render: (item) => {
+        const items = item.items as CartItem[];
+        return <span>{items.length} items</span>;
+      },
+    },
+    {
+      key: "total",
+      label: "Total",
+      icon: DollarSign,
+      defaultVisible: true,
+      render: (item) => `$${(item.total as number).toFixed(2)}`,
+    },
+    {
+      key: "paymentMethod",
+      label: "Payment",
+      icon: CreditCard,
+      defaultVisible: true,
+      render: (item) => {
+        const method = item.paymentMethod as string;
+        return method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      },
+    },
+    {
+      key: "createdAt",
+      label: "Date",
+      icon: Calendar,
+      defaultVisible: true,
+      render: (item) => new Date(item.createdAt as string).toLocaleDateString(),
+    },
+    {
+      key: "status",
+      label: "Status",
+      defaultVisible: true,
+      render: (item) => {
+        const status = item.status as string;
+        const returns = item.returns as Return[] | undefined;
+        const hasReturns = returns && returns.length > 0;
+        return (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={
+                status === "completed"
+                  ? "default"
+                  : status === "refunded"
+                  ? "secondary"
+                  : "destructive"
+              }
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Badge>
+            {hasReturns && (
+              <Badge variant="outline" className="text-xs">
+                Has Returns
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const transactionFilters: FilterDef[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "all", label: "All Statuses" },
+        { value: "completed", label: "Completed" },
+        { value: "refunded", label: "Refunded" },
+        { value: "voided", label: "Voided" },
       ],
     },
   ];
@@ -411,7 +808,7 @@ export default function OrdersPage() {
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          setSelectedTab(value as "orders" | "suppliers")
+          setSelectedTab(value as "orders" | "suppliers" | "transactions")
         }
       >
         <div className="flex items-center justify-between">
@@ -420,20 +817,26 @@ export default function OrdersPage() {
               <Package className="h-4 w-4" />
               Purchase Orders
             </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Transactions
+            </TabsTrigger>
             <TabsTrigger value="suppliers" className="gap-2">
               <Building2 className="h-4 w-4" />
               Suppliers
             </TabsTrigger>
           </TabsList>
 
-          <Button
-            onClick={
-              selectedTab === "orders" ? handleCreateOrder : handleAddSupplier
-            }
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {selectedTab === "orders" ? "New Order" : "Add Supplier"}
-          </Button>
+          {selectedTab !== "transactions" && (
+            <Button
+              onClick={
+                selectedTab === "orders" ? handleCreateOrder : handleAddSupplier
+              }
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {selectedTab === "orders" ? "New Order" : "Add Supplier"}
+            </Button>
+          )}
         </div>
 
         {/* Orders Tab */}
@@ -458,12 +861,54 @@ export default function OrdersPage() {
                     View Details
                   </DropdownMenuItem>
                   <DropdownMenuItem>Edit Order</DropdownMenuItem>
-                  {item.status === "shipped" && (
-                    <DropdownMenuItem>Mark as Received</DropdownMenuItem>
+                  {(item.status === "shipped" ||
+                    item.status === "ordered" ||
+                    item.status === "partially_received") && (
+                    <DropdownMenuItem
+                      onClick={() => handleOpenReceiveOrder(item as PurchaseOrder)}
+                    >
+                      <PackageCheck className="h-4 w-4 mr-2" />
+                      Receive Order
+                    </DropdownMenuItem>
                   )}
                   {(item.status === "pending" || item.status === "ordered") && (
                     <DropdownMenuItem className="text-destructive">
                       Cancel Order
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          />
+        </TabsContent>
+
+        {/* Transactions Tab */}
+        <TabsContent value="transactions" className="mt-4">
+          <DataTable
+            data={allTransactions as Transaction[]}
+            columns={transactionColumns}
+            filters={transactionFilters}
+            searchKey="transactionNumber"
+            searchPlaceholder="Search by transaction number, customer..."
+            actions={(item) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleViewTransaction(item as Transaction)}
+                  >
+                    View Details
+                  </DropdownMenuItem>
+                  {(item as Transaction).status === "completed" && (
+                    <DropdownMenuItem
+                      onClick={() => handleInitiateReturn(item as Transaction)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Return / Refund
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -939,6 +1384,571 @@ export default function OrdersPage() {
             {selectedOrder?.status === "shipped" && (
               <Button>Mark as Received</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Return / Refund Modal */}
+      <Dialog open={isReturnModalOpen} onOpenChange={setIsReturnModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Return / Refund</DialogTitle>
+            <DialogDescription>
+              Process a return and refund for transaction {selectedTransaction?.transactionNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTransaction && (
+            <div className="space-y-6 py-4">
+              {/* Transaction Info */}
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Transaction</p>
+                    <p className="font-medium font-mono">{selectedTransaction.transactionNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="font-medium">
+                      {new Date(selectedTransaction.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {selectedTransaction.customerName && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Customer</p>
+                      <p className="font-medium">{selectedTransaction.customerName}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Original Total</p>
+                    <p className="font-medium">${selectedTransaction.total.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Select Items to Return */}
+              <div>
+                <Label className="text-base font-medium mb-3 block">
+                  Select Items to Return
+                </Label>
+                <div className="space-y-2 border rounded-lg p-4">
+                  {selectedTransaction.items.map((item, index) => {
+                    const returnItem = returnForm.items.find(
+                      (ri) => ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                    );
+                    const isSelected = !!returnItem;
+                    const maxQuantity = item.quantity;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg border ${
+                          isSelected ? "bg-blue-50 border-blue-200" : "bg-background"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const newReturnItem = {
+                                      transactionItemId: `${selectedTransaction.id}-${index}`,
+                                      productId: item.productId,
+                                      productName: item.productName,
+                                      variantId: item.variantId,
+                                      variantName: item.variantName,
+                                      sku: item.sku,
+                                      quantity: 1,
+                                      originalQuantity: item.quantity,
+                                      unitPrice: item.unitPrice,
+                                      discount: item.discount,
+                                      discountType: item.discountType,
+                                      total: item.total,
+                                      reason: "customer_request" as ReturnReason,
+                                      restocked: true,
+                                    };
+                                    setReturnForm({
+                                      ...returnForm,
+                                      items: [...returnForm.items, newReturnItem],
+                                    });
+                                  } else {
+                                    setReturnForm({
+                                      ...returnForm,
+                                      items: returnForm.items.filter(
+                                        (ri) => ri.transactionItemId !== `${selectedTransaction.id}-${index}`
+                                      ),
+                                    });
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <div className="flex-1">
+                                <p className="font-medium">{item.productName}</p>
+                                {item.variantName && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {item.variantName}
+                                  </p>
+                                )}
+                                <p className="text-sm text-muted-foreground">
+                                  ${item.unitPrice.toFixed(2)} each × {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {isSelected && returnItem && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, quantity: Math.max(1, ri.quantity - 1) }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                                disabled={returnItem.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm">
+                                {returnItem.quantity}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, quantity: Math.min(maxQuantity, ri.quantity + 1) }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                                disabled={returnItem.quantity >= maxQuantity}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Select
+                                value={returnItem.reason}
+                                onValueChange={(value: ReturnReason) => {
+                                  const updated = returnForm.items.map((ri) =>
+                                    ri.transactionItemId === `${selectedTransaction.id}-${index}`
+                                      ? { ...ri, reason: value }
+                                      : ri
+                                  );
+                                  setReturnForm({ ...returnForm, items: updated });
+                                }}
+                              >
+                                <SelectTrigger className="w-40 h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="defective">Defective</SelectItem>
+                                  <SelectItem value="wrong_item">Wrong Item</SelectItem>
+                                  <SelectItem value="not_as_described">Not as Described</SelectItem>
+                                  <SelectItem value="customer_request">Customer Request</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Return Summary */}
+              {returnForm.items.length > 0 && (
+                <div className="p-4 rounded-lg bg-muted space-y-2">
+                  <h4 className="font-medium">Return Summary</h4>
+                  <div className="space-y-1">
+                    {returnForm.items.map((item, index) => {
+                      const subtotal = item.unitPrice * item.quantity;
+                      const discountAmount = item.discountType === "percent"
+                        ? (subtotal * item.discount) / 100
+                        : item.discount;
+                      const total = subtotal - discountAmount;
+                      return (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span>
+                            {item.productName} × {item.quantity}
+                          </span>
+                          <span>${total.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-between font-bold pt-2 border-t">
+                      <span>Refund Total</span>
+                      <span>
+                        $
+                        {returnForm.items
+                          .reduce((sum, item) => {
+                            const subtotal = item.unitPrice * item.quantity;
+                            const discountAmount = item.discountType === "percent"
+                              ? (subtotal * item.discount) / 100
+                              : item.discount;
+                            return sum + subtotal - discountAmount;
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund Method */}
+              {returnForm.items.length > 0 && (
+                <div>
+                  <Label className="text-base font-medium mb-3 block">
+                    Refund Method
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={returnForm.refundMethod === "original_payment" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "original_payment" })}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Original Payment</p>
+                        <p className="text-xs text-muted-foreground">
+                          Refund to original payment method
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "store_credit" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "store_credit" })}
+                    >
+                      <Wallet className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Store Credit</p>
+                        <p className="text-xs text-muted-foreground">
+                          Issue store credit to customer
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "gift_card" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "gift_card" })}
+                    >
+                      <Gift className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Gift Card</p>
+                        <p className="text-xs text-muted-foreground">
+                          Issue gift card
+                        </p>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
+                      className="h-auto p-4 flex flex-col items-start gap-2"
+                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
+                    >
+                      <Banknote className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Cash</p>
+                        <p className="text-xs text-muted-foreground">
+                          Cash refund
+                        </p>
+                      </div>
+                    </Button>
+                    {customPaymentMethods
+                      .filter((m) => m.isActive && m.canBeUsedForRefunds)
+                      .map((method) => (
+                        <Button
+                          key={method.id}
+                          variant={returnForm.refundMethod === "custom" && returnForm.customRefundMethodName === method.name ? "default" : "outline"}
+                          className="h-auto p-4 flex flex-col items-start gap-2"
+                          onClick={() => setReturnForm({ ...returnForm, refundMethod: "custom", customRefundMethodName: method.name })}
+                        >
+                          <CreditCard className="h-5 w-5" />
+                          <div className="text-left">
+                            <p className="font-medium">{method.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {method.description || "Custom payment method"}
+                            </p>
+                          </div>
+                        </Button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Fields based on Refund Method */}
+              {returnForm.items.length > 0 && returnForm.refundMethod === "store_credit" && (
+                <div className="grid gap-2">
+                  <Label>Store Credit Amount</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={returnForm.storeCreditAmount || ""}
+                    onChange={(e) =>
+                      setReturnForm({
+                        ...returnForm,
+                        storeCreditAmount: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="Enter amount"
+                  />
+                </div>
+              )}
+
+              {returnForm.items.length > 0 && returnForm.refundMethod === "gift_card" && (
+                <div className="grid gap-2">
+                  <Label>Gift Card Number (optional - will be generated if empty)</Label>
+                  <Input
+                    type="text"
+                    value={returnForm.giftCardNumber || ""}
+                    onChange={(e) =>
+                      setReturnForm({
+                        ...returnForm,
+                        giftCardNumber: e.target.value,
+                      })
+                    }
+                    placeholder="Leave empty to generate new card"
+                  />
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="grid gap-2">
+                <Label>Notes (Optional)</Label>
+                <Textarea
+                  value={returnForm.notes || ""}
+                  onChange={(e) =>
+                    setReturnForm({ ...returnForm, notes: e.target.value })
+                  }
+                  placeholder="Additional notes about this return..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReturnModalOpen(false);
+                setSelectedTransaction(null);
+                setReturnForm({ items: [], refundMethod: "original_payment" });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessReturn}
+              disabled={returnForm.items.length === 0}
+            >
+              Process Return
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receive Order Modal */}
+      <Dialog
+        open={isReceiveOrderModalOpen}
+        onOpenChange={setIsReceiveOrderModalOpen}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Receive Purchase Order</DialogTitle>
+            <DialogDescription>
+              Enter the quantities received for each item. Stock levels will be updated automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold font-mono">{selectedOrder.orderNumber}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.supplierName}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      getOrderStatusVariant(selectedOrder.status) as
+                        | "default"
+                        | "secondary"
+                        | "destructive"
+                        | "outline"
+                    }
+                    className="gap-1"
+                  >
+                    {getOrderStatusIcon(selectedOrder.status)}
+                    {selectedOrder.status.charAt(0).toUpperCase() +
+                      selectedOrder.status.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm font-medium pb-2 border-b">
+                  <span className="font-medium">Item</span>
+                  <div className="flex items-center gap-8">
+                    <span className="w-24 text-center">Ordered</span>
+                    <span className="w-24 text-center">Received</span>
+                    <span className="w-24 text-center">To Receive</span>
+                  </div>
+                </div>
+
+                {receivingForm.items.map((item, index) => {
+                  const orderItem = selectedOrder.items.find(
+                    (oi) => oi.sku === item.sku
+                  );
+                  const quantityToReceive =
+                    item.newReceivedQuantity - item.receivedQuantity;
+                  const remainingQuantity =
+                    item.orderedQuantity - item.newReceivedQuantity;
+
+                  return (
+                    <div
+                      key={item.sku}
+                      className="p-4 border rounded-lg space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {orderItem?.productName || "Unknown Product"}
+                          </p>
+                          {orderItem?.variantName && (
+                            <p className="text-sm text-muted-foreground">
+                              {orderItem.variantName}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            SKU: {item.sku}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-8">
+                          <div className="w-24 text-center">
+                            <span className="text-sm font-medium">
+                              {item.orderedQuantity}
+                            </span>
+                          </div>
+                          <div className="w-24 text-center">
+                            <span className="text-sm text-muted-foreground">
+                              {item.receivedQuantity}
+                            </span>
+                          </div>
+                          <div className="w-24">
+                            <Input
+                              type="number"
+                              min={item.receivedQuantity}
+                              max={item.orderedQuantity}
+                              value={item.newReceivedQuantity}
+                              onChange={(e) =>
+                                handleUpdateReceivingQuantity(
+                                  item.sku,
+                                  parseInt(e.target.value) || item.receivedQuantity
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {quantityToReceive > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                          <PackageCheck className="h-4 w-4" />
+                          <span>
+                            Will receive {quantityToReceive} unit
+                            {quantityToReceive !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+
+                      {remainingQuantity > 0 && quantityToReceive > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>
+                            {remainingQuantity} unit
+                            {remainingQuantity !== 1 ? "s" : ""} remaining
+                          </span>
+                        </div>
+                      )}
+
+                      {item.newReceivedQuantity >= item.orderedQuantity && (
+                        <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Fully received</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-4 rounded-lg bg-muted space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Total Items to Receive:</span>
+                  <span className="font-medium">
+                    {receivingForm.items
+                      .filter(
+                        (item) => item.newReceivedQuantity > item.receivedQuantity
+                      )
+                      .reduce(
+                        (sum, item) =>
+                          sum + (item.newReceivedQuantity - item.receivedQuantity),
+                        0
+                      )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Items Fully Received:</span>
+                  <span className="font-medium">
+                    {
+                      receivingForm.items.filter(
+                        (item) => item.newReceivedQuantity >= item.orderedQuantity
+                      ).length
+                    }{" "}
+                    / {receivingForm.items.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReceiveOrderModalOpen(false);
+                setSelectedOrder(null);
+                setReceivingForm({ items: [] });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessReceiving}
+              disabled={
+                receivingForm.items.filter(
+                  (item) => item.newReceivedQuantity > item.receivedQuantity
+                ).length === 0
+              }
+            >
+              <PackageCheck className="h-4 w-4 mr-2" />
+              Process Receiving
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

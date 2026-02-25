@@ -3,12 +3,14 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+
 import {
   ShoppingCart,
   Package,
   Warehouse,
   ClipboardList,
   Settings,
+  BarChart3,
 } from "lucide-react";
 
 const tabs = [
@@ -31,6 +33,11 @@ const tabs = [
     name: "Orders",
     href: "/facility/dashboard/services/retail/orders",
     icon: ClipboardList,
+  },
+  {
+    name: "Reports",
+    href: "/facility/dashboard/services/retail/reports",
+    icon: BarChart3,
   },
   {
     name: "Settings",
