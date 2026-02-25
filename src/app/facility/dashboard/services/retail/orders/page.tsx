@@ -21,6 +21,8 @@ import {
   CreditCard,
   Gift,
   Wallet,
+  PackageCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +66,7 @@ import {
   getStoreCreditBalance,
   customPaymentMethods,
   returns,
+  inventoryMovements,
   type PurchaseOrder,
   type Supplier,
   type PurchaseOrderItem,
@@ -75,6 +78,9 @@ import {
   type CustomPaymentMethod,
   type CartItem,
   getAllTransactions,
+  type InventoryMovement,
+  type Product,
+  type ProductVariant,
 } from "@/data/retail";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
@@ -88,11 +94,22 @@ export default function OrdersPage() {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [isReceiveOrderModalOpen, setIsReceiveOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [receivingForm, setReceivingForm] = useState<{
+    items: Array<{
+      productId: string;
+      variantId?: string;
+      sku: string;
+      orderedQuantity: number;
+      receivedQuantity: number;
+      newReceivedQuantity: number;
+    }>;
+  }>({ items: [] });
   
   // Return form state
   const [returnForm, setReturnForm] = useState<{
@@ -295,6 +312,145 @@ export default function OrdersPage() {
     setIsSupplierModalOpen(false);
   };
 
+  const handleOpenReceiveOrder = (order: PurchaseOrder) => {
+    setSelectedOrder(order);
+    // Initialize receiving form with current received quantities
+    setReceivingForm({
+      items: order.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        sku: item.sku,
+        orderedQuantity: item.quantity,
+        receivedQuantity: item.receivedQuantity,
+        newReceivedQuantity: item.receivedQuantity, // Start with current received quantity
+      })),
+    });
+    setIsReceiveOrderModalOpen(true);
+  };
+
+  const handleUpdateReceivingQuantity = (
+    sku: string,
+    quantity: number
+  ) => {
+    setReceivingForm((prev) => ({
+      items: prev.items.map((item) =>
+        item.sku === sku
+          ? {
+              ...item,
+              newReceivedQuantity: Math.max(
+                0,
+                Math.min(quantity, item.orderedQuantity)
+              ),
+            }
+          : item
+      ),
+    }));
+  };
+
+  const handleProcessReceiving = () => {
+    if (!selectedOrder) return;
+
+    const itemsToReceive = receivingForm.items.filter(
+      (item) => item.newReceivedQuantity > item.receivedQuantity
+    );
+
+    if (itemsToReceive.length === 0) {
+      alert("No items to receive. Please increase quantities for at least one item.");
+      return;
+    }
+
+    // Update stock levels and create inventory movements
+    itemsToReceive.forEach((item) => {
+      const quantityToReceive = item.newReceivedQuantity - item.receivedQuantity;
+      
+      // Find product/variant
+      let product: Product | undefined;
+      let variant: ProductVariant | undefined;
+      
+      if (item.variantId) {
+        product = products.find((p) => p.id === item.productId);
+        variant = product?.variants.find((v) => v.id === item.variantId);
+      } else {
+        product = products.find((p) => p.id === item.productId);
+      }
+
+      if (!product) {
+        console.error(`Product not found: ${item.productId}`);
+        return;
+      }
+
+      // Update stock
+      const previousStock = variant?.stock ?? product.stock;
+      const newStock = previousStock + quantityToReceive;
+
+      if (variant) {
+        variant.stock = newStock;
+      } else {
+        product.stock = newStock;
+      }
+
+      // Create inventory movement
+      const movement: InventoryMovement = {
+        id: `mov-${Date.now()}-${item.sku}`,
+        productId: item.productId,
+        productName: product.name,
+        variantId: item.variantId,
+        variantName: variant?.name,
+        sku: item.sku,
+        movementType: "purchase",
+        quantity: quantityToReceive,
+        previousStock,
+        newStock,
+        reason: `Purchase order received: ${selectedOrder.orderNumber}`,
+        referenceId: selectedOrder.id,
+        referenceType: "purchase_order",
+        createdBy: "Current User", // TODO: Get from auth
+        createdAt: new Date().toISOString(),
+      };
+
+      inventoryMovements.push(movement);
+    });
+
+    // Update order items with new received quantities
+    selectedOrder.items = selectedOrder.items.map((orderItem) => {
+      const receivingItem = receivingForm.items.find(
+        (item) => item.sku === orderItem.sku
+      );
+      if (receivingItem) {
+        return {
+          ...orderItem,
+          receivedQuantity: receivingItem.newReceivedQuantity,
+        };
+      }
+      return orderItem;
+    });
+
+    // Update order status based on received quantities
+    const allItemsReceived = selectedOrder.items.every(
+      (item) => item.receivedQuantity >= item.quantity
+    );
+    const someItemsReceived = selectedOrder.items.some(
+      (item) => item.receivedQuantity > 0
+    );
+
+    if (allItemsReceived) {
+      selectedOrder.status = "received";
+      selectedOrder.receivedAt = new Date().toISOString();
+    } else if (someItemsReceived) {
+      selectedOrder.status = "partially_received";
+    }
+
+    // Close modal and reset
+    setIsReceiveOrderModalOpen(false);
+    setSelectedOrder(null);
+    setReceivingForm({ items: [] });
+
+    // Show success message
+    alert(
+      `Order ${selectedOrder.orderNumber} received successfully. Stock levels updated.`
+    );
+  };
+
   const getOrderStatusVariant = (status: string) => {
     switch (status) {
       case "pending":
@@ -302,6 +458,8 @@ export default function OrdersPage() {
       case "ordered":
         return "default";
       case "shipped":
+        return "outline";
+      case "partially_received":
         return "outline";
       case "received":
         return "default";
@@ -320,6 +478,8 @@ export default function OrdersPage() {
         return <Package className="h-4 w-4" />;
       case "shipped":
         return <Truck className="h-4 w-4" />;
+      case "partially_received":
+        return <PackageCheck className="h-4 w-4" />;
       case "received":
         return <CheckCircle2 className="h-4 w-4" />;
       case "cancelled":
@@ -469,6 +629,7 @@ export default function OrdersPage() {
         { value: "pending", label: "Pending" },
         { value: "ordered", label: "Ordered" },
         { value: "shipped", label: "Shipped" },
+        { value: "partially_received", label: "Partially Received" },
         { value: "received", label: "Received" },
         { value: "cancelled", label: "Cancelled" },
       ],
@@ -697,8 +858,15 @@ export default function OrdersPage() {
                     View Details
                   </DropdownMenuItem>
                   <DropdownMenuItem>Edit Order</DropdownMenuItem>
-                  {item.status === "shipped" && (
-                    <DropdownMenuItem>Mark as Received</DropdownMenuItem>
+                  {(item.status === "shipped" ||
+                    item.status === "ordered" ||
+                    item.status === "partially_received") && (
+                    <DropdownMenuItem
+                      onClick={() => handleOpenReceiveOrder(item as PurchaseOrder)}
+                    >
+                      <PackageCheck className="h-4 w-4 mr-2" />
+                      Receive Order
+                    </DropdownMenuItem>
                   )}
                   {(item.status === "pending" || item.status === "ordered") && (
                     <DropdownMenuItem className="text-destructive">
@@ -1583,6 +1751,200 @@ export default function OrdersPage() {
               disabled={returnForm.items.length === 0}
             >
               Process Return
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receive Order Modal */}
+      <Dialog
+        open={isReceiveOrderModalOpen}
+        onOpenChange={setIsReceiveOrderModalOpen}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Receive Purchase Order</DialogTitle>
+            <DialogDescription>
+              Enter the quantities received for each item. Stock levels will be updated automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold font-mono">{selectedOrder.orderNumber}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.supplierName}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      getOrderStatusVariant(selectedOrder.status) as
+                        | "default"
+                        | "secondary"
+                        | "destructive"
+                        | "outline"
+                    }
+                    className="gap-1"
+                  >
+                    {getOrderStatusIcon(selectedOrder.status)}
+                    {selectedOrder.status.charAt(0).toUpperCase() +
+                      selectedOrder.status.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm font-medium pb-2 border-b">
+                  <span className="font-medium">Item</span>
+                  <div className="flex items-center gap-8">
+                    <span className="w-24 text-center">Ordered</span>
+                    <span className="w-24 text-center">Received</span>
+                    <span className="w-24 text-center">To Receive</span>
+                  </div>
+                </div>
+
+                {receivingForm.items.map((item, index) => {
+                  const orderItem = selectedOrder.items.find(
+                    (oi) => oi.sku === item.sku
+                  );
+                  const quantityToReceive =
+                    item.newReceivedQuantity - item.receivedQuantity;
+                  const remainingQuantity =
+                    item.orderedQuantity - item.newReceivedQuantity;
+
+                  return (
+                    <div
+                      key={item.sku}
+                      className="p-4 border rounded-lg space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {orderItem?.productName || "Unknown Product"}
+                          </p>
+                          {orderItem?.variantName && (
+                            <p className="text-sm text-muted-foreground">
+                              {orderItem.variantName}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            SKU: {item.sku}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-8">
+                          <div className="w-24 text-center">
+                            <span className="text-sm font-medium">
+                              {item.orderedQuantity}
+                            </span>
+                          </div>
+                          <div className="w-24 text-center">
+                            <span className="text-sm text-muted-foreground">
+                              {item.receivedQuantity}
+                            </span>
+                          </div>
+                          <div className="w-24">
+                            <Input
+                              type="number"
+                              min={item.receivedQuantity}
+                              max={item.orderedQuantity}
+                              value={item.newReceivedQuantity}
+                              onChange={(e) =>
+                                handleUpdateReceivingQuantity(
+                                  item.sku,
+                                  parseInt(e.target.value) || item.receivedQuantity
+                                )
+                              }
+                              className="text-center"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {quantityToReceive > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                          <PackageCheck className="h-4 w-4" />
+                          <span>
+                            Will receive {quantityToReceive} unit
+                            {quantityToReceive !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+
+                      {remainingQuantity > 0 && quantityToReceive > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>
+                            {remainingQuantity} unit
+                            {remainingQuantity !== 1 ? "s" : ""} remaining
+                          </span>
+                        </div>
+                      )}
+
+                      {item.newReceivedQuantity >= item.orderedQuantity && (
+                        <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Fully received</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-4 rounded-lg bg-muted space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Total Items to Receive:</span>
+                  <span className="font-medium">
+                    {receivingForm.items
+                      .filter(
+                        (item) => item.newReceivedQuantity > item.receivedQuantity
+                      )
+                      .reduce(
+                        (sum, item) =>
+                          sum + (item.newReceivedQuantity - item.receivedQuantity),
+                        0
+                      )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Items Fully Received:</span>
+                  <span className="font-medium">
+                    {
+                      receivingForm.items.filter(
+                        (item) => item.newReceivedQuantity >= item.orderedQuantity
+                      ).length
+                    }{" "}
+                    / {receivingForm.items.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReceiveOrderModalOpen(false);
+                setSelectedOrder(null);
+                setReceivingForm({ items: [] });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessReceiving}
+              disabled={
+                receivingForm.items.filter(
+                  (item) => item.newReceivedQuantity > item.receivedQuantity
+                ).length === 0
+              }
+            >
+              <PackageCheck className="h-4 w-4 mr-2" />
+              Process Receiving
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -6,6 +6,7 @@ export type OrderStatus =
   | "pending"
   | "ordered"
   | "shipped"
+  | "partially_received"
   | "received"
   | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
