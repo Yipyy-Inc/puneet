@@ -651,6 +651,8 @@ export default function POSPage() {
           cashierId: currentUserId || "staff-001",
           cashierName: "Staff",
           notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
+          cloverTransactionId: cloverResponse.cloverTransactionId,
+          fiservTransactionId: cloverResponse.fiservTransactionId,
         });
       }
       // Process payment via Yipyy Pay / Tap to Pay on iPhone
@@ -718,6 +720,7 @@ export default function POSPage() {
           cashierId: currentUserId || "staff-001",
           cashierName: "Staff",
           notes: `Yipyy Pay (Tap to Pay - iPhone): ${yipyyPayResponse.yipyyTransactionId}${yipyyPayResponse.receiptSent ? " - Receipt sent" : ""}`,
+          yipyyPayTransactionId: yipyyPayResponse.transactionId, // Store Yipyy Pay transaction ID
         });
       }
       // Process card payments through Fiserv if enabled (web payment)
@@ -804,6 +807,8 @@ export default function POSPage() {
           cashierId: currentUserId || "staff-001",
           cashierName: "Staff",
           notes: `Fiserv Transaction: ${fiservResponse.fiservTransactionId}`,
+          fiservTransactionId: fiservResponse.fiservTransactionId,
+          tokenizedCardId: fiservResponse.tokenizedCardId,
         });
       } else {
         // Handle Store Credit and Gift Card payments
@@ -3425,6 +3430,7 @@ export default function POSPage() {
                               cashierId: currentUserId || "staff-001",
                               cashierName: "Staff",
                               notes: `Yipyy Pay Transaction: ${response.yipyyTransactionId}`,
+                              yipyyPayTransactionId: response.transactionId, // Store Yipyy Pay transaction ID
                             });
 
                             // Apply promo code usage

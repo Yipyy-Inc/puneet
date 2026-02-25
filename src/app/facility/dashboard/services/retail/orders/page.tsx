@@ -25,6 +25,8 @@ import {
   PackageCheck,
   AlertCircle,
   Banknote,
+  Smartphone,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,11 +86,19 @@ import {
   type Product,
   type ProductVariant,
 } from "@/data/retail";
+import { processFiservRefund } from "@/lib/fiserv-payment-service";
+import { getYipyyPayTransactionByTransactionId, getCloverTerminalTransactionByTransactionId } from "@/data/fiserv-payments";
+import { useFacilityRole } from "@/hooks/use-facility-role";
+import { hasPermission } from "@/lib/role-utils";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
 
 export default function OrdersPage() {
+  const { role: facilityRole } = useFacilityRole();
+  const isManager = facilityRole === "manager" || facilityRole === "owner";
+  const canOverrideRefund = hasPermission(facilityRole, "process_refund") && isManager;
+  
   const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers" | "transactions">(
     "orders",
   );
@@ -232,7 +242,7 @@ export default function OrdersPage() {
     setIsReturnModalOpen(true);
   };
 
-  const handleProcessReturn = () => {
+  const handleProcessReturn = async () => {
     if (!selectedTransaction || returnForm.items.length === 0) return;
 
     const refundTotal = returnForm.items.reduce((sum, item) => {
@@ -243,7 +253,145 @@ export default function OrdersPage() {
       return sum + subtotal - discountAmount;
     }, 0);
 
-    // Create return
+    const facilityId = 11; // TODO: Get from context
+    let fiservRefundId: string | undefined;
+    let refundProcessed = false;
+    let refundError: string | undefined;
+
+    // Process refund via original payment method if applicable
+    if (returnForm.refundMethod === "original_payment") {
+      // Check if original payment was via Yipyy Pay (iPhone)
+      if (selectedTransaction.yipyyPayTransactionId) {
+        const yipyyPayTxn = getYipyyPayTransactionByTransactionId(selectedTransaction.yipyyPayTransactionId);
+        if (yipyyPayTxn) {
+          // Process refund through Fiserv (Yipyy Pay uses Fiserv backend)
+          const fiservRefundRequest = {
+            facilityId,
+            originalTransactionId: selectedTransaction.id,
+            fiservTransactionId: yipyyPayTxn.yipyyTransactionId,
+            amount: refundTotal,
+            reason: returnForm.notes || "Refund for return",
+            metadata: {
+              returnReason: returnForm.items[0]?.reason || "customer_request",
+              yipyyPayTransactionId: selectedTransaction.yipyyPayTransactionId,
+            },
+          };
+          
+          try {
+            const fiservRefundResponse = await processFiservRefund(fiservRefundRequest);
+            if (fiservRefundResponse.success) {
+              fiservRefundId = fiservRefundResponse.fiservRefundId;
+              refundProcessed = true;
+            } else {
+              refundError = fiservRefundResponse.error?.message || "Fiserv refund failed";
+              // If refund fails and user is manager, allow override
+              if (!canOverrideRefund) {
+                alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+                return;
+              }
+            }
+          } catch (error) {
+            refundError = "Error processing Fiserv refund";
+            if (!canOverrideRefund) {
+              alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+              return;
+            }
+          }
+        }
+      }
+      // Check if original payment was via Clover Terminal
+      else if (selectedTransaction.cloverTransactionId) {
+        const cloverTxn = getCloverTerminalTransactionByTransactionId(selectedTransaction.cloverTransactionId);
+        if (cloverTxn) {
+          // Process refund through Fiserv
+          const fiservRefundRequest = {
+            facilityId,
+            originalTransactionId: selectedTransaction.id,
+            fiservTransactionId: cloverTxn.fiservTransactionId,
+            amount: refundTotal,
+            reason: returnForm.notes || "Refund for return",
+            metadata: {
+              returnReason: returnForm.items[0]?.reason || "customer_request",
+              cloverTransactionId: selectedTransaction.cloverTransactionId,
+            },
+          };
+          
+          try {
+            const fiservRefundResponse = await processFiservRefund(fiservRefundRequest);
+            if (fiservRefundResponse.success) {
+              fiservRefundId = fiservRefundResponse.fiservRefundId;
+              refundProcessed = true;
+            } else {
+              refundError = fiservRefundResponse.error?.message || "Fiserv refund failed";
+              if (!canOverrideRefund) {
+                alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+                return;
+              }
+            }
+          } catch (error) {
+            refundError = "Error processing Fiserv refund";
+            if (!canOverrideRefund) {
+              alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+              return;
+            }
+          }
+        }
+      }
+      // Check if original payment was via Fiserv (saved card or new card)
+      else if (selectedTransaction.fiservTransactionId) {
+        const fiservRefundRequest = {
+          facilityId,
+          originalTransactionId: selectedTransaction.id,
+          fiservTransactionId: selectedTransaction.fiservTransactionId,
+          amount: refundTotal,
+          reason: returnForm.notes || "Refund for return",
+          metadata: {
+            returnReason: returnForm.items[0]?.reason || "customer_request",
+            tokenizedCardId: selectedTransaction.tokenizedCardId,
+          },
+        };
+        
+        try {
+          const fiservRefundResponse = await processFiservRefund(fiservRefundRequest);
+          if (fiservRefundResponse.success) {
+            fiservRefundId = fiservRefundResponse.fiservRefundId;
+            refundProcessed = true;
+          } else {
+            refundError = fiservRefundResponse.error?.message || "Fiserv refund failed";
+            if (!canOverrideRefund) {
+              alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+              return;
+            }
+          }
+        } catch (error) {
+          refundError = "Error processing Fiserv refund";
+          if (!canOverrideRefund) {
+            alert(`Refund failed: ${refundError}. Please contact a manager for override options.`);
+            return;
+          }
+        }
+      }
+      // For cash payments, refund is immediate
+      else if (selectedTransaction.paymentMethod === "cash") {
+        refundProcessed = true;
+      }
+    }
+
+    // Create return with audit trail
+    const auditNotes = [
+      `Refund Method: ${returnForm.refundMethod}`,
+      returnForm.refundMethod === "original_payment" && refundProcessed && fiservRefundId
+        ? `Fiserv Refund ID: ${fiservRefundId}`
+        : null,
+      returnForm.refundMethod === "original_payment" && refundError
+        ? `Refund Error: ${refundError}${canOverrideRefund ? " (Manager Override)" : ""}`
+        : null,
+      returnForm.refundMethod !== "original_payment" && canOverrideRefund
+        ? `Manager Override: ${returnForm.refundMethod}`
+        : null,
+      returnForm.notes ? `Notes: ${returnForm.notes}` : null,
+    ].filter(Boolean).join(" | ");
+
     const newReturn = createReturn({
       transactionId: selectedTransaction.id,
       transactionNumber: selectedTransaction.transactionNumber,
@@ -257,14 +405,16 @@ export default function OrdersPage() {
       customRefundMethodName: returnForm.customRefundMethodName,
       storeCreditAmount: returnForm.refundMethod === "store_credit" ? refundTotal : undefined,
       giftCardNumber: returnForm.refundMethod === "gift_card" ? returnForm.giftCardNumber : undefined,
-      status: "completed",
+      status: refundProcessed || returnForm.refundMethod !== "original_payment" ? "completed" : "pending",
       customerId: selectedTransaction.customerId,
       customerName: selectedTransaction.customerName,
       customerEmail: selectedTransaction.customerEmail,
       processedBy: "current-user-id", // TODO: Get from auth
       processedByName: "Current User", // TODO: Get from auth
-      notes: returnForm.notes,
-      completedAt: new Date().toISOString().slice(0, 19),
+      notes: auditNotes,
+      completedAt: refundProcessed || returnForm.refundMethod !== "original_payment" 
+        ? new Date().toISOString().slice(0, 19)
+        : undefined,
     });
 
     // Create store credit if applicable
@@ -275,7 +425,7 @@ export default function OrdersPage() {
         amount: refundTotal,
         balance: refundTotal,
         issuedFrom: newReturn.id,
-        notes: `Issued from return ${newReturn.returnNumber}`,
+        notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
       });
     }
 
@@ -288,7 +438,7 @@ export default function OrdersPage() {
         customerId: selectedTransaction.customerId,
         customerName: selectedTransaction.customerName,
         isActive: true,
-        notes: `Issued from return ${newReturn.returnNumber}`,
+        notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
       });
     }
 
@@ -301,7 +451,10 @@ export default function OrdersPage() {
     setReturnForm({ items: [], refundMethod: "original_payment" });
 
     // Show success message
-    alert(`Return processed successfully: ${newReturn.returnNumber}`);
+    const successMessage = refundProcessed || returnForm.refundMethod !== "original_payment"
+      ? `Return processed successfully: ${newReturn.returnNumber}`
+      : `Return created but refund pending: ${newReturn.returnNumber}. ${refundError || "Please process refund manually."}`;
+    alert(successMessage);
   };
 
   const handleSaveOrder = () => {
@@ -1611,6 +1764,45 @@ export default function OrdersPage() {
                   <Label className="text-base font-medium mb-3 block">
                     Refund Method
                   </Label>
+                  
+                  {/* Show original payment method info */}
+                  {selectedTransaction && (
+                    <div className="mb-3 p-3 rounded-lg bg-muted">
+                      <p className="text-sm font-medium mb-1">Original Payment Method:</p>
+                      <div className="flex items-center gap-2">
+                        {selectedTransaction.yipyyPayTransactionId && (
+                          <Badge variant="default" className="gap-1">
+                            <Smartphone className="h-3 w-3" />
+                            Pay with iPhone
+                          </Badge>
+                        )}
+                        {selectedTransaction.cloverTransactionId && (
+                          <Badge variant="default" className="gap-1">
+                            <Printer className="h-3 w-3" />
+                            Clover Terminal
+                          </Badge>
+                        )}
+                        {selectedTransaction.fiservTransactionId && !selectedTransaction.yipyyPayTransactionId && !selectedTransaction.cloverTransactionId && (
+                          <Badge variant="default" className="gap-1">
+                            <CreditCard className="h-3 w-3" />
+                            Card Payment (Fiserv)
+                          </Badge>
+                        )}
+                        {!selectedTransaction.yipyyPayTransactionId && !selectedTransaction.cloverTransactionId && !selectedTransaction.fiservTransactionId && (
+                          <Badge variant="outline" className="gap-1">
+                            {selectedTransaction.paymentMethod === "cash" && <Banknote className="h-3 w-3" />}
+                            {selectedTransaction.paymentMethod === "store_credit" && <Wallet className="h-3 w-3" />}
+                            {selectedTransaction.paymentMethod === "gift_card" && <Gift className="h-3 w-3" />}
+                            {selectedTransaction.paymentMethod.charAt(0).toUpperCase() + selectedTransaction.paymentMethod.slice(1).replace(/_/g, " ")}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Refund will default to original payment method
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-3">
                     <Button
                       variant={returnForm.refundMethod === "original_payment" ? "default" : "outline"}
@@ -1629,12 +1821,16 @@ export default function OrdersPage() {
                       variant={returnForm.refundMethod === "store_credit" ? "default" : "outline"}
                       className="h-auto p-4 flex flex-col items-start gap-2"
                       onClick={() => setReturnForm({ ...returnForm, refundMethod: "store_credit" })}
+                      disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
                     >
                       <Wallet className="h-5 w-5" />
                       <div className="text-left">
                         <p className="font-medium">Store Credit</p>
                         <p className="text-xs text-muted-foreground">
                           Issue store credit to customer
+                          {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
+                            <span className="block text-orange-600 mt-1">Manager only</span>
+                          )}
                         </p>
                       </div>
                     </Button>
@@ -1642,28 +1838,34 @@ export default function OrdersPage() {
                       variant={returnForm.refundMethod === "gift_card" ? "default" : "outline"}
                       className="h-auto p-4 flex flex-col items-start gap-2"
                       onClick={() => setReturnForm({ ...returnForm, refundMethod: "gift_card" })}
+                      disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
                     >
                       <Gift className="h-5 w-5" />
                       <div className="text-left">
                         <p className="font-medium">Gift Card</p>
                         <p className="text-xs text-muted-foreground">
-                          Issue gift card
+                          Issue gift card to customer
+                          {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
+                            <span className="block text-orange-600 mt-1">Manager only</span>
+                          )}
                         </p>
                       </div>
                     </Button>
-                    <Button
-                      variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
-                      className="h-auto p-4 flex flex-col items-start gap-2"
-                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
-                    >
-                      <Banknote className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Cash</p>
-                        <p className="text-xs text-muted-foreground">
-                          Cash refund
-                        </p>
-                      </div>
-                    </Button>
+                    {canOverrideRefund && (
+                      <Button
+                        variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
+                        className="h-auto p-4 flex flex-col items-start gap-2"
+                        onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
+                      >
+                        <Banknote className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium">Cash (Override)</p>
+                          <p className="text-xs text-muted-foreground">
+                            Manager override - refund in cash
+                          </p>
+                        </div>
+                      </Button>
+                    )}
                     {customPaymentMethods
                       .filter((m) => m.isActive && m.canBeUsedForRefunds)
                       .map((method) => (

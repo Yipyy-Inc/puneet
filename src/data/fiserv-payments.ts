@@ -820,3 +820,15 @@ export function getYipyyPayTransactionsByBooking(
 ): YipyyPayTransaction[] {
   return mockYipyyPayTransactions.filter((t) => t.bookingId === bookingId);
 }
+
+export function getYipyyPayTransactionByTransactionId(
+  transactionId: string
+): YipyyPayTransaction | undefined {
+  return mockYipyyPayTransactions.find((t) => t.id === transactionId || t.yipyyTransactionId === transactionId);
+}
+
+export function getCloverTerminalTransactionByTransactionId(
+  transactionId: string
+): CloverTerminalTransaction | undefined {
+  return mockCloverTransactions.find((t) => t.id === transactionId || t.cloverTransactionId === transactionId);
+}

@@ -233,6 +233,11 @@ export interface Transaction {
   notes: string;
   createdAt: string;
   returns?: Return[]; // Associated returns
+  // Payment processing details
+  fiservTransactionId?: string; // Fiserv transaction ID if paid via Fiserv
+  yipyyPayTransactionId?: string; // Yipyy Pay transaction ID if paid via iPhone
+  cloverTransactionId?: string; // Clover terminal transaction ID if paid via Clover
+  tokenizedCardId?: string; // Tokenized card ID if paid with saved card
 }
 
 export interface ReturnItem {
