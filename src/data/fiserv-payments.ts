@@ -107,12 +107,39 @@ export interface YipyyPayTransaction {
   errorMessage?: string;
 }
 
+export interface InPersonPaymentMethods {
+  // Payment method toggles
+  cloverTerminal: boolean;
+  payWithiPhone: boolean;
+  manualCardEntry: boolean;
+  cash: boolean;
+  storeCredit: boolean;
+  giftCard: boolean;
+  // iPhone-specific settings
+  iphoneSettings?: {
+    enabledLocations: string[]; // Location IDs where iPhone payments are enabled
+    restrictedRoles?: string[]; // Roles allowed to use iPhone payments (empty = all roles)
+    deviceRequirements: {
+      minIOSVersion: string;
+      supportedModels: string[];
+    };
+  };
+  // Manual card entry settings
+  manualCardEntrySettings?: {
+    adminOnly: boolean;
+    requireCvv: boolean;
+    requireZipCode: boolean;
+  };
+}
+
 export interface FiservPaymentConfig {
   facilityId: number;
   // Fiserv API credentials
   apiKey: string;
   merchantId: string;
   terminalId?: string;
+  // In-Person Payment Methods configuration
+  inPersonMethods?: InPersonPaymentMethods;
   // Clover Terminal configuration
   cloverTerminal?: {
     enabled: boolean;
@@ -386,6 +413,54 @@ export const mockFiservConfigs: FiservPaymentConfig[] = [
       enabled: true,
       requireReceipt: true,
       autoSendReceipt: true,
+    },
+    inPersonMethods: {
+      cloverTerminal: true,
+      payWithiPhone: true,
+      manualCardEntry: false,
+      cash: true,
+      storeCredit: true,
+      giftCard: true,
+      iphoneSettings: {
+        enabledLocations: ["loc-001", "loc-002"],
+        restrictedRoles: [],
+        deviceRequirements: {
+          minIOSVersion: "16.0",
+          supportedModels: [
+            "iPhone XS",
+            "iPhone XS Max",
+            "iPhone XR",
+            "iPhone 11",
+            "iPhone 11 Pro",
+            "iPhone 11 Pro Max",
+            "iPhone 12",
+            "iPhone 12 mini",
+            "iPhone 12 Pro",
+            "iPhone 12 Pro Max",
+            "iPhone 13",
+            "iPhone 13 mini",
+            "iPhone 13 Pro",
+            "iPhone 13 Pro Max",
+            "iPhone 14",
+            "iPhone 14 Plus",
+            "iPhone 14 Pro",
+            "iPhone 14 Pro Max",
+            "iPhone 15",
+            "iPhone 15 Plus",
+            "iPhone 15 Pro",
+            "iPhone 15 Pro Max",
+            "iPhone 16",
+            "iPhone 16 Plus",
+            "iPhone 16 Pro",
+            "iPhone 16 Pro Max",
+          ],
+        },
+      },
+      manualCardEntrySettings: {
+        adminOnly: true,
+        requireCvv: true,
+        requireZipCode: true,
+      },
     },
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw, CreditCard, Settings, AlertCircle } from "lucide-react";
+import { Save, RotateCcw, CreditCard, Settings, AlertCircle, Banknote } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -35,7 +35,10 @@ import {
   type CloverTerminalConfig,
   type YipyyPayDevice,
 } from "@/data/fiserv-payments";
-import { Printer, Wifi, Ethernet, Bluetooth, Smartphone } from "lucide-react";
+import { Printer, Wifi, Ethernet, Bluetooth, Smartphone, CheckCircle2, Info } from "lucide-react";
+import { locations } from "@/data/settings";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function PaymentSettingsPage() {
   const facilityId = 11; // TODO: Get from auth context
@@ -102,6 +105,54 @@ export default function PaymentSettingsPage() {
           requireReceipt: true,
           autoSendReceipt: true,
         },
+        inPersonMethods: {
+          cloverTerminal: true,
+          payWithiPhone: true,
+          manualCardEntry: false,
+          cash: true,
+          storeCredit: true,
+          giftCard: true,
+          iphoneSettings: {
+            enabledLocations: locations.map((loc) => loc.id),
+            restrictedRoles: [],
+            deviceRequirements: {
+              minIOSVersion: "16.0",
+              supportedModels: [
+                "iPhone XS",
+                "iPhone XS Max",
+                "iPhone XR",
+                "iPhone 11",
+                "iPhone 11 Pro",
+                "iPhone 11 Pro Max",
+                "iPhone 12",
+                "iPhone 12 mini",
+                "iPhone 12 Pro",
+                "iPhone 12 Pro Max",
+                "iPhone 13",
+                "iPhone 13 mini",
+                "iPhone 13 Pro",
+                "iPhone 13 Pro Max",
+                "iPhone 14",
+                "iPhone 14 Plus",
+                "iPhone 14 Pro",
+                "iPhone 14 Pro Max",
+                "iPhone 15",
+                "iPhone 15 Plus",
+                "iPhone 15 Pro",
+                "iPhone 15 Pro Max",
+                "iPhone 16",
+                "iPhone 16 Plus",
+                "iPhone 16 Pro",
+                "iPhone 16 Pro Max",
+              ],
+            },
+          },
+          manualCardEntrySettings: {
+            adminOnly: true,
+            requireCvv: true,
+            requireZipCode: true,
+          },
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -112,6 +163,7 @@ export default function PaymentSettingsPage() {
   const cloverTerminals = getCloverTerminalsByFacility(facilityId);
   const yipyyPayConfig = getYipyyPayConfig(facilityId);
   const yipyyPayDevices = getYipyyPayDevicesByFacility(facilityId);
+  const facilityLocations = locations.filter((loc) => loc.isActive);
 
   const handleSave = async () => {
     if (!config) return;
@@ -276,6 +328,479 @@ export default function PaymentSettingsPage() {
               disabled={!isEditing}
               placeholder="Enter Terminal ID if applicable"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* In-Person Payment Methods */}
+      <Card>
+        <CardHeader>
+          <CardTitle>In-Person Payment Methods</CardTitle>
+          <CardDescription>
+            Configure payment methods available for in-person transactions at your facility
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            {/* Clover Terminal */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Printer className="h-4 w-4" />
+                  Clover Terminal (Fiserv)
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Physical terminal for Tap/Chip/Swipe payments
+                </p>
+              </div>
+              <Switch
+                checked={config.inPersonMethods?.cloverTerminal ?? false}
+                onCheckedChange={(checked) =>
+                  updateConfig({
+                    inPersonMethods: {
+                      ...config.inPersonMethods,
+                      cloverTerminal: checked,
+                      payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                      manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                      cash: config.inPersonMethods?.cash ?? true,
+                      storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                      giftCard: config.inPersonMethods?.giftCard ?? true,
+                      iphoneSettings: config.inPersonMethods?.iphoneSettings,
+                      manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
+                    },
+                  })
+                }
+                disabled={!isEditing}
+              />
+            </div>
+
+            {/* Pay with iPhone */}
+            <div className="p-3 border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    Pay with iPhone (Tap to Pay)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Contactless payments directly on iPhone - no terminal needed
+                  </p>
+                </div>
+                <Switch
+                  checked={config.inPersonMethods?.payWithiPhone ?? false}
+                  onCheckedChange={(checked) =>
+                    updateConfig({
+                      inPersonMethods: {
+                        ...config.inPersonMethods,
+                        payWithiPhone: checked,
+                        cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                        manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                        cash: config.inPersonMethods?.cash ?? true,
+                        storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                        giftCard: config.inPersonMethods?.giftCard ?? true,
+                        iphoneSettings: checked
+                          ? config.inPersonMethods?.iphoneSettings || {
+                              enabledLocations: facilityLocations.map((loc) => loc.id),
+                              restrictedRoles: [],
+                              deviceRequirements: {
+                                minIOSVersion: "16.0",
+                                supportedModels: [],
+                              },
+                            }
+                          : config.inPersonMethods?.iphoneSettings,
+                        manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+
+              {/* iPhone Settings (collapsible) */}
+              {config.inPersonMethods?.payWithiPhone && (
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between">
+                      <span className="text-sm">iPhone Setup & Configuration</span>
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-3">
+                    {/* Device Requirements */}
+                    <div className="p-3 bg-muted rounded-lg space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                        <div className="flex-1 space-y-2">
+                          <Label className="text-sm font-semibold">Device Eligibility Requirements</Label>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p><strong>Minimum iOS Version:</strong> {config.inPersonMethods?.iphoneSettings?.deviceRequirements.minIOSVersion || "16.0"}</p>
+                            <p><strong>Supported iPhone Models:</strong></p>
+                            <ul className="list-disc list-inside ml-2 space-y-1">
+                              <li>iPhone XS and newer</li>
+                              <li>Requires NFC capability</li>
+                              <li>Must have iOS {config.inPersonMethods?.iphoneSettings?.deviceRequirements.minIOSVersion || "16.0"} or later</li>
+                            </ul>
+                            <p className="mt-2 text-blue-600">
+                              <strong>Note:</strong> Tap to Pay requires iPhone XS or newer with iOS 16.0+. 
+                              The device must be authorized in Yipyy Pay settings.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enable per Location */}
+                    <div className="space-y-2">
+                      <Label>Enable for Locations</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Select which locations can accept iPhone payments
+                      </p>
+                      <div className="space-y-2">
+                        {facilityLocations.map((location) => (
+                          <div key={location.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`iphone-loc-${location.id}`}
+                              checked={
+                                config.inPersonMethods?.iphoneSettings?.enabledLocations.includes(
+                                  location.id
+                                ) ?? false
+                              }
+                              onCheckedChange={(checked) => {
+                                const currentLocations =
+                                  config.inPersonMethods?.iphoneSettings?.enabledLocations || [];
+                                const newLocations = checked
+                                  ? [...currentLocations, location.id]
+                                  : currentLocations.filter((id) => id !== location.id);
+                                updateConfig({
+                                  inPersonMethods: {
+                                    ...config.inPersonMethods,
+                                    iphoneSettings: {
+                                      ...config.inPersonMethods?.iphoneSettings,
+                                      enabledLocations: newLocations,
+                                      restrictedRoles:
+                                        config.inPersonMethods?.iphoneSettings?.restrictedRoles || [],
+                                      deviceRequirements:
+                                        config.inPersonMethods?.iphoneSettings?.deviceRequirements || {
+                                          minIOSVersion: "16.0",
+                                          supportedModels: [],
+                                        },
+                                    },
+                                  },
+                                });
+                              }}
+                              disabled={!isEditing}
+                            />
+                            <Label
+                              htmlFor={`iphone-loc-${location.id}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {location.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Role Restrictions */}
+                    <div className="space-y-2">
+                      <Label>Restrict to Roles (Optional)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty to allow all roles. Select specific roles to restrict access.
+                      </p>
+                      <div className="space-y-2">
+                        {["Admin", "Manager", "Front Desk", "Staff"].map((role) => (
+                          <div key={role} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`iphone-role-${role}`}
+                              checked={
+                                config.inPersonMethods?.iphoneSettings?.restrictedRoles?.includes(
+                                  role
+                                ) ?? false
+                              }
+                              onCheckedChange={(checked) => {
+                                const currentRoles =
+                                  config.inPersonMethods?.iphoneSettings?.restrictedRoles || [];
+                                const newRoles = checked
+                                  ? [...currentRoles, role]
+                                  : currentRoles.filter((r) => r !== role);
+                                updateConfig({
+                                  inPersonMethods: {
+                                    ...config.inPersonMethods,
+                                    iphoneSettings: {
+                                      ...config.inPersonMethods?.iphoneSettings,
+                                      restrictedRoles: newRoles,
+                                      enabledLocations:
+                                        config.inPersonMethods?.iphoneSettings?.enabledLocations || [],
+                                      deviceRequirements:
+                                        config.inPersonMethods?.iphoneSettings?.deviceRequirements || {
+                                          minIOSVersion: "16.0",
+                                          supportedModels: [],
+                                        },
+                                    },
+                                  },
+                                });
+                              }}
+                              disabled={!isEditing}
+                            />
+                            <Label
+                              htmlFor={`iphone-role-${role}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {role}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      {(!config.inPersonMethods?.iphoneSettings?.restrictedRoles ||
+                        config.inPersonMethods.iphoneSettings.restrictedRoles.length === 0) && (
+                        <p className="text-xs text-muted-foreground italic">
+                          All roles can use iPhone payments
+                        </p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+
+            {/* Manual Card Entry */}
+            <div className="p-3 border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Manual Card Entry
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enter card details manually (optional / admin-only)
+                  </p>
+                </div>
+                <Switch
+                  checked={config.inPersonMethods?.manualCardEntry ?? false}
+                  onCheckedChange={(checked) =>
+                    updateConfig({
+                      inPersonMethods: {
+                        ...config.inPersonMethods,
+                        manualCardEntry: checked,
+                        cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                        payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                        cash: config.inPersonMethods?.cash ?? true,
+                        storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                        giftCard: config.inPersonMethods?.giftCard ?? true,
+                        iphoneSettings: config.inPersonMethods?.iphoneSettings,
+                        manualCardEntrySettings: checked
+                          ? config.inPersonMethods?.manualCardEntrySettings || {
+                              adminOnly: true,
+                              requireCvv: true,
+                              requireZipCode: true,
+                            }
+                          : config.inPersonMethods?.manualCardEntrySettings,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+
+              {/* Manual Card Entry Settings */}
+              {config.inPersonMethods?.manualCardEntry && (
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between">
+                      <span className="text-sm">Manual Entry Settings</span>
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm">Admin Only</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Restrict manual card entry to admin users only
+                        </p>
+                      </div>
+                      <Switch
+                        checked={config.inPersonMethods?.manualCardEntrySettings?.adminOnly ?? true}
+                        onCheckedChange={(checked) =>
+                          updateConfig({
+                            inPersonMethods: {
+                              ...config.inPersonMethods,
+                              manualCardEntrySettings: {
+                                ...config.inPersonMethods?.manualCardEntrySettings,
+                                adminOnly: checked,
+                                requireCvv:
+                                  config.inPersonMethods?.manualCardEntrySettings?.requireCvv ?? true,
+                                requireZipCode:
+                                  config.inPersonMethods?.manualCardEntrySettings?.requireZipCode ??
+                                  true,
+                              },
+                            },
+                          })
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm">Require CVV</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Require CVV code for manual card entry
+                        </p>
+                      </div>
+                      <Switch
+                        checked={config.inPersonMethods?.manualCardEntrySettings?.requireCvv ?? true}
+                        onCheckedChange={(checked) =>
+                          updateConfig({
+                            inPersonMethods: {
+                              ...config.inPersonMethods,
+                              manualCardEntrySettings: {
+                                ...config.inPersonMethods?.manualCardEntrySettings,
+                                requireCvv: checked,
+                                adminOnly:
+                                  config.inPersonMethods?.manualCardEntrySettings?.adminOnly ?? true,
+                                requireZipCode:
+                                  config.inPersonMethods?.manualCardEntrySettings?.requireZipCode ??
+                                  true,
+                              },
+                            },
+                          })
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm">Require ZIP Code</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Require billing ZIP code for manual card entry
+                        </p>
+                      </div>
+                      <Switch
+                        checked={
+                          config.inPersonMethods?.manualCardEntrySettings?.requireZipCode ?? true
+                        }
+                        onCheckedChange={(checked) =>
+                          updateConfig({
+                            inPersonMethods: {
+                              ...config.inPersonMethods,
+                              manualCardEntrySettings: {
+                                ...config.inPersonMethods?.manualCardEntrySettings,
+                                requireZipCode: checked,
+                                adminOnly:
+                                  config.inPersonMethods?.manualCardEntrySettings?.adminOnly ?? true,
+                                requireCvv:
+                                  config.inPersonMethods?.manualCardEntrySettings?.requireCvv ?? true,
+                              },
+                            },
+                          })
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Cash */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Cash
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Accept cash payments at POS
+                </p>
+              </div>
+              <Switch
+                checked={config.inPersonMethods?.cash ?? true}
+                onCheckedChange={(checked) =>
+                  updateConfig({
+                    inPersonMethods: {
+                      ...config.inPersonMethods,
+                      cash: checked,
+                      cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                      payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                      manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                      storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                      giftCard: config.inPersonMethods?.giftCard ?? true,
+                      iphoneSettings: config.inPersonMethods?.iphoneSettings,
+                      manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
+                    },
+                  })
+                }
+                disabled={!isEditing}
+              />
+            </div>
+
+            {/* Store Credit */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Store Credit
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow customers to use store credit
+                </p>
+              </div>
+              <Switch
+                checked={config.inPersonMethods?.storeCredit ?? true}
+                onCheckedChange={(checked) =>
+                  updateConfig({
+                    inPersonMethods: {
+                      ...config.inPersonMethods,
+                      storeCredit: checked,
+                      cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                      payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                      manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                      cash: config.inPersonMethods?.cash ?? true,
+                      giftCard: config.inPersonMethods?.giftCard ?? true,
+                      iphoneSettings: config.inPersonMethods?.iphoneSettings,
+                      manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
+                    },
+                  })
+                }
+                disabled={!isEditing}
+              />
+            </div>
+
+            {/* Gift Card */}
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Gift Card
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Accept gift card payments
+                </p>
+              </div>
+              <Switch
+                checked={config.inPersonMethods?.giftCard ?? true}
+                onCheckedChange={(checked) =>
+                  updateConfig({
+                    inPersonMethods: {
+                      ...config.inPersonMethods,
+                      giftCard: checked,
+                      cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                      payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                      manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                      cash: config.inPersonMethods?.cash ?? true,
+                      storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                      iphoneSettings: config.inPersonMethods?.iphoneSettings,
+                      manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
+                    },
+                  })
+                }
+                disabled={!isEditing}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
