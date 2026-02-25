@@ -208,6 +208,11 @@ export default function POSPage() {
   // Yipyy Pay / Tap to Pay state
   const [useYipyyPay, setUseYipyyPay] = useState(false);
   const [yipyyPayDeviceId, setYipyyPayDeviceId] = useState<string | null>(null);
+  
+  // Store Credit and Gift Card state
+  const [selectedGiftCardCode, setSelectedGiftCardCode] = useState("");
+  const [selectedGiftCard, setSelectedGiftCard] = useState<{ id: string; balance: number; code: string } | null>(null);
+  const [storeCreditAmount, setStoreCreditAmount] = useState<number>(0);
 
   const stats = getRetailStats();
 
@@ -786,6 +791,37 @@ export default function POSPage() {
           notes: `Fiserv Transaction: ${fiservResponse.fiservTransactionId}`,
         });
       } else {
+        // Handle Store Credit and Gift Card payments
+        let finalAmount = grandTotal;
+        let paymentNotes = "";
+
+        // Apply store credit if selected
+        if (paymentForm.method === "store_credit" && storeCreditAmount > 0) {
+          finalAmount = grandTotal - storeCreditAmount;
+          paymentNotes = `Store Credit Applied: $${storeCreditAmount.toFixed(2)}`;
+          if (finalAmount > 0) {
+            paymentNotes += ` | Remaining: $${finalAmount.toFixed(2)}`;
+            // TODO: Prompt for additional payment method for remaining amount
+            alert(`Store credit applied: $${storeCreditAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`);
+            setIsProcessingPayment(false);
+            return;
+          }
+        }
+
+        // Apply gift card if selected
+        if (paymentForm.method === "gift_card" && selectedGiftCard) {
+          const giftCardAmount = Math.min(selectedGiftCard.balance, grandTotal);
+          finalAmount = grandTotal - giftCardAmount;
+          paymentNotes = `Gift Card Applied: $${giftCardAmount.toFixed(2)} (Card: ${selectedGiftCard.code})`;
+          if (finalAmount > 0) {
+            paymentNotes += ` | Remaining: $${finalAmount.toFixed(2)}`;
+            // TODO: Prompt for additional payment method for remaining amount
+            alert(`Gift card applied: $${giftCardAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`);
+            setIsProcessingPayment(false);
+            return;
+          }
+        }
+
         // Non-card payment or Fiserv not enabled - process normally
         addRetailTransaction({
           items: cart.map(({ id, ...item }) => item),
@@ -797,11 +833,11 @@ export default function POSPage() {
           taxTotal,
           tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
           tipPercentage: tipPercentage || undefined,
-          total: grandTotal,
+          total: finalAmount > 0 ? finalAmount : grandTotal,
           paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
           payments: paymentForm.splitPayments
             ? paymentForm.payments
-            : [{ method: paymentForm.method, amount: grandTotal }],
+            : [{ method: paymentForm.method, amount: finalAmount > 0 ? finalAmount : grandTotal }],
           customerId,
           customerName: name,
           customerEmail: email,
@@ -811,7 +847,7 @@ export default function POSPage() {
           bookingService: booking?.service,
           cashierId: currentUserId || "staff-001",
           cashierName: "Staff",
-          notes: "",
+          notes: paymentNotes || "",
         });
       }
       
@@ -2429,9 +2465,95 @@ export default function POSPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="credit">Credit Card</SelectItem>
-                      <SelectItem value="debit">Debit Card</SelectItem>
+                      {(() => {
+                        const facilityId = 11; // TODO: Get from context
+                        const fiservConfig = getFiservConfig(facilityId);
+                        const inPersonMethods = fiservConfig?.inPersonMethods;
+                        const paymentOptions: JSX.Element[] = [];
+
+                        // Cash
+                        if (inPersonMethods?.cash !== false) {
+                          paymentOptions.push(
+                            <SelectItem key="cash" value="cash">
+                              <div className="flex items-center gap-2">
+                                <Banknote className="h-4 w-4" />
+                                <span>Cash</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        }
+
+                        // Credit/Debit Card (with Clover Terminal or iPhone options)
+                        if (inPersonMethods?.cloverTerminal || inPersonMethods?.payWithiPhone || fiservConfig?.enabledPaymentMethods.card) {
+                          paymentOptions.push(
+                            <SelectItem key="credit" value="credit">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                <span>Credit Card</span>
+                                {inPersonMethods?.cloverTerminal && (
+                                  <Badge variant="outline" className="ml-2 text-xs">Clover Terminal</Badge>
+                                )}
+                                {inPersonMethods?.payWithiPhone && (
+                                  <Badge variant="outline" className="ml-2 text-xs">iPhone</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                          paymentOptions.push(
+                            <SelectItem key="debit" value="debit">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                <span>Debit Card</span>
+                                {inPersonMethods?.cloverTerminal && (
+                                  <Badge variant="outline" className="ml-2 text-xs">Clover Terminal</Badge>
+                                )}
+                                {inPersonMethods?.payWithiPhone && (
+                                  <Badge variant="outline" className="ml-2 text-xs">iPhone</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        }
+
+                        // Store Credit
+                        if (inPersonMethods?.storeCredit !== false) {
+                          paymentOptions.push(
+                            <SelectItem key="store_credit" value="store_credit">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                <span>Store Credit</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        }
+
+                        // Gift Card
+                        if (inPersonMethods?.giftCard !== false) {
+                          paymentOptions.push(
+                            <SelectItem key="gift_card" value="gift_card">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                <span>Gift Card</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        }
+
+                        // Manual Card Entry (if enabled and admin)
+                        if (inPersonMethods?.manualCardEntry && isManager) {
+                          paymentOptions.push(
+                            <SelectItem key="manual_card" value="credit">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" />
+                                <span>Manual Card Entry</span>
+                                <Badge variant="secondary" className="ml-2 text-xs">Admin Only</Badge>
+                              </div>
+                            </SelectItem>
+                          );
+                        }
+
+                        return paymentOptions;
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>
@@ -2605,54 +2727,209 @@ export default function POSPage() {
                   </div>
                 )}
 
-                {/* Fiserv Card Selection */}
-                {(paymentForm.method === "credit" || paymentForm.method === "debit") && (
-                  <div className="space-y-4">
-                    {(() => {
-                      const facilityId = 11; // TODO: Get from context
-                      const fiservConfig = getFiservConfig(facilityId);
-                      const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
-                        ? Number(selectedClientId) 
-                        : null;
-                      const tokenizedCards = customerId && fiservConfig?.enabledPaymentMethods.cardOnFile
-                        ? getTokenizedCardsByClient(facilityId, customerId)
-                        : [];
+                {/* Store Credit */}
+                {paymentForm.method === "store_credit" && (() => {
+                  const facilityId = 11; // TODO: Get from context
+                  const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
+                    ? selectedClientId 
+                    : null;
+                  const availableStoreCredit = customerId 
+                    ? getStoreCreditBalance(customerId)
+                    : 0;
 
-                      if (tokenizedCards.length > 0) {
-                        return (
-                          <>
-                            <div className="grid gap-2">
-                              <Label>Use Saved Card</Label>
-                              <Select
-                                value={selectedTokenizedCard?.id || "new"}
-                                onValueChange={(value) => {
-                                  if (value === "new") {
-                                    setSelectedTokenizedCard(null);
-                                  } else {
-                                    const card = tokenizedCards.find((c) => c.id === value);
-                                    setSelectedTokenizedCard(card || null);
-                                  }
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="new">Enter New Card</SelectItem>
-                                  {tokenizedCards.map((card) => (
-                                    <SelectItem key={card.id} value={card.id}>
-                                      {card.cardBrand?.toUpperCase()} •••• {card.cardLast4} (Exp {card.cardExpMonth}/{card.cardExpYear})
-                                      {card.isDefault && " • Default"}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </>
-                        );
-                      }
-                      return null;
-                    })()}
+                  if (!customerId) {
+                    return (
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Please select a customer to use store credit
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 border rounded-lg p-4">
+                      <div className="space-y-2">
+                        <Label>Available Store Credit</Label>
+                        <div className="text-2xl font-bold text-green-600">
+                          ${availableStoreCredit.toFixed(2)}
+                        </div>
+                        {availableStoreCredit < grandTotal && (
+                          <p className="text-xs text-muted-foreground">
+                            Store credit balance is less than total. Remaining amount will need to be paid with another method.
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Amount to Apply</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={Math.min(availableStoreCredit, grandTotal)}
+                          step="0.01"
+                          value={storeCreditAmount || ""}
+                          onChange={(e) => {
+                            const amount = parseFloat(e.target.value) || 0;
+                            setStoreCreditAmount(Math.min(amount, availableStoreCredit, grandTotal));
+                          }}
+                          placeholder={`Max: $${Math.min(availableStoreCredit, grandTotal).toFixed(2)}`}
+                        />
+                      </div>
+                      {storeCreditAmount > 0 && (
+                        <div className="text-sm">
+                          <span>Remaining after store credit: </span>
+                          <span className="font-semibold">
+                            ${(grandTotal - storeCreditAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Gift Card */}
+                {paymentForm.method === "gift_card" && (
+                  <div className="space-y-3 border rounded-lg p-4">
+                    <div className="grid gap-2">
+                      <Label>Gift Card Code</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Enter gift card code"
+                          value={selectedGiftCardCode}
+                          onChange={(e) => setSelectedGiftCardCode(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const facilityId = 11; // TODO: Get from context
+                              const giftCard = giftCards.find(
+                                (gc) => gc.code === selectedGiftCardCode && gc.facilityId === facilityId && gc.status === "active"
+                              );
+                              if (giftCard) {
+                                setSelectedGiftCard({
+                                  id: giftCard.id,
+                                  balance: giftCard.currentBalance,
+                                  code: giftCard.code,
+                                });
+                                if (giftCard.currentBalance < grandTotal) {
+                                  alert(
+                                    `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`
+                                  );
+                                }
+                              } else {
+                                alert("Gift card not found or inactive");
+                                setSelectedGiftCard(null);
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const facilityId = 11; // TODO: Get from context
+                            const giftCard = giftCards.find(
+                              (gc) => gc.code === selectedGiftCardCode && gc.facilityId === facilityId && gc.status === "active"
+                            );
+                            if (giftCard) {
+                              setSelectedGiftCard({
+                                id: giftCard.id,
+                                balance: giftCard.currentBalance,
+                                code: giftCard.code,
+                              });
+                              if (giftCard.currentBalance < grandTotal) {
+                                alert(
+                                  `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`
+                                );
+                              }
+                            } else {
+                              alert("Gift card not found or inactive");
+                              setSelectedGiftCard(null);
+                            }
+                          }}
+                        >
+                          Lookup
+                        </Button>
+                      </div>
+                    </div>
+                    {selectedGiftCard && (
+                      <div className="p-3 bg-muted rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Gift Card: {selectedGiftCard.code}</span>
+                          <Badge variant="default">Active</Badge>
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          ${selectedGiftCard.balance.toFixed(2)}
+                        </div>
+                        {selectedGiftCard.balance < grandTotal && (
+                          <p className="text-xs text-muted-foreground">
+                            Remaining amount: ${(grandTotal - selectedGiftCard.balance).toFixed(2)} will need to be paid with another method
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Saved Card on File Selection */}
+                {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && !useYipyyPay && (() => {
+                  const facilityId = 11; // TODO: Get from context
+                  const fiservConfig = getFiservConfig(facilityId);
+                  const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
+                    ? Number(selectedClientId) 
+                    : null;
+                  const tokenizedCards = customerId && fiservConfig?.enabledPaymentMethods.cardOnFile
+                    ? getTokenizedCardsByClient(facilityId, customerId)
+                    : [];
+
+                  if (tokenizedCards.length > 0) {
+                    return (
+                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                        <Label className="text-sm font-semibold">Saved Card on File</Label>
+                        <div className="grid gap-2">
+                          <Select
+                            value={selectedTokenizedCard?.id || "new"}
+                            onValueChange={(value) => {
+                              if (value === "new") {
+                                setSelectedTokenizedCard(null);
+                              } else {
+                                const card = tokenizedCards.find((c) => c.id === value);
+                                setSelectedTokenizedCard(card || null);
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new">Enter New Card</SelectItem>
+                              {tokenizedCards.map((card) => (
+                                <SelectItem key={card.id} value={card.id}>
+                                  <div className="flex items-center gap-2">
+                                    <CreditCard className="h-4 w-4" />
+                                    <span>{card.cardBrand?.toUpperCase()} •••• {card.cardLast4}</span>
+                                    <span className="text-muted-foreground">(Exp {card.cardExpMonth}/{card.cardExpYear})</span>
+                                    {card.isDefault && <Badge variant="outline" className="ml-2 text-xs">Default</Badge>}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedTokenizedCard 
+                              ? `Using saved ${selectedTokenizedCard.cardBrand?.toUpperCase()} card ending in ${selectedTokenizedCard.cardLast4}`
+                              : "Select a saved card or enter new card details below"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Fiserv Card Selection - New Card Entry */}
+                {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && !useYipyyPay && (
+                  <div className="space-y-4">
 
                     {!selectedTokenizedCard && (
                       <div className="space-y-3 border rounded-lg p-4">

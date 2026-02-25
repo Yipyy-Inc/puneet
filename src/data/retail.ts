@@ -114,17 +114,39 @@ export interface PurchaseOrder {
   createdBy: string;
 }
 
+export type CartItemType = "product" | "service" | "package" | "membership";
+
 export interface CartItem {
-  productId: string;
+  // Item identification
+  itemType: CartItemType;
+  productId?: string; // For retail products
+  serviceId?: string; // For services (daycare, boarding, grooming, training, etc.)
+  packageId?: string; // For packages
+  membershipId?: string; // For memberships
+  
+  // Item details
   productName: string;
   variantId?: string;
   variantName?: string;
   sku: string;
+  
+  // Service-specific (if itemType is "service")
+  serviceType?: string; // "daycare" | "boarding" | "grooming" | "training" | etc.
+  serviceDate?: string; // Date for service
+  serviceDuration?: number; // Duration in minutes
+  
+  // Package/Membership-specific
+  packageDetails?: string; // Package description
+  membershipPlanId?: string; // Membership plan ID
+  
+  // Pricing
   quantity: number;
   unitPrice: number;
   discount: number;
   discountType: "fixed" | "percent";
   total: number;
+  
+  // Comp/Free items
   isComp?: boolean; // Employee comp / free item
   compReason?: string; // Reason for comp (manager only)
 }
