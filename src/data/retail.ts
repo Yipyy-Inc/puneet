@@ -238,6 +238,8 @@ export interface Transaction {
   yipyyPayTransactionId?: string; // Yipyy Pay transaction ID if paid via iPhone
   cloverTransactionId?: string; // Clover terminal transaction ID if paid via Clover
   tokenizedCardId?: string; // Tokenized card ID if paid with saved card
+  // Location and reconciliation
+  locationId?: string; // Location where transaction occurred
 }
 
 export interface ReturnItem {

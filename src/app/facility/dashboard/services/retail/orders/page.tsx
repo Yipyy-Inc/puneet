@@ -19,6 +19,7 @@ import {
   RotateCcw,
   ArrowLeft,
   User,
+  User as UserIcon,
   CreditCard,
   Gift,
   Wallet,
@@ -27,6 +28,7 @@ import {
   Banknote,
   Smartphone,
   Printer,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +96,11 @@ import {
 } from "@/data/fiserv-payments";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission } from "@/lib/role-utils";
+import { 
+  getPaymentMethodLabel, 
+  formatTransactionTimestamp,
+  getLocationName,
+} from "@/lib/payment-method-utils";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
@@ -1019,19 +1026,141 @@ export default function OrdersPage() {
     },
     {
       key: "paymentMethod",
-      label: "Payment",
+      label: "Payment Method",
       icon: CreditCard,
       defaultVisible: true,
       render: (item) => {
-        const method = item.paymentMethod as string;
-        return method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+        const paymentInfo = getPaymentMethodLabel(item as Transaction);
+        const PaymentIcon = paymentInfo.icon;
+        return (
+          <div className="flex items-center gap-2">
+            <PaymentIcon className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col">
+              <span className="font-medium">{paymentInfo.label}</span>
+              {paymentInfo.transactionId && (
+                <span className="text-xs text-muted-foreground font-mono">
+                  ID: {paymentInfo.transactionId.slice(0, 12)}...
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "processorTransactionId",
+      label: "Processor ID",
+      defaultVisible: false,
+      render: (item) => {
+        const txn = item as Transaction;
+        const transactionId = txn.yipyyPayTransactionId || 
+                             txn.cloverTransactionId || 
+                             txn.fiservTransactionId;
+        if (!transactionId) return <span className="text-muted-foreground">—</span>;
+        return (
+          <div className="flex flex-col">
+            <span className="font-mono text-xs">{transactionId}</span>
+            {txn.yipyyPayTransactionId && (
+              <span className="text-xs text-muted-foreground">Yipyy Pay</span>
+            )}
+            {txn.cloverTransactionId && (
+              <span className="text-xs text-muted-foreground">Clover</span>
+            )}
+            {txn.fiservTransactionId && !txn.yipyyPayTransactionId && !txn.cloverTransactionId && (
+              <span className="text-xs text-muted-foreground">Fiserv</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "cashier",
+      label: "Staff Member",
+      icon: UserIcon,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">{txn.cashierName || "Unknown"}</span>
+            {txn.cashierId && (
+              <span className="text-xs text-muted-foreground">ID: {txn.cashierId}</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "location",
+      label: "Location",
+      icon: MapPin,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        const locationName = getLocationName(txn.locationId);
+        return (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span>{locationName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      icon: Clock,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        return (
+          <div className="flex flex-col">
+            <span>{formatTransactionTimestamp(txn.createdAt)}</span>
+            <span className="text-xs text-muted-foreground">
+              {new Date(txn.createdAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "bookingReference",
+      label: "Booking/Service",
+      icon: LinkIcon,
+      defaultVisible: false,
+      render: (item) => {
+        const txn = item as Transaction;
+        if (!txn.bookingId && !txn.bookingService) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex flex-col">
+            {txn.bookingId && (
+              <span className="font-medium">Booking #{txn.bookingId}</span>
+            )}
+            {txn.bookingService && (
+              <span className="text-xs text-muted-foreground capitalize">
+                {txn.bookingService}
+              </span>
+            )}
+            {txn.petName && (
+              <span className="text-xs text-muted-foreground">
+                Pet: {txn.petName}
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {
       key: "createdAt",
       label: "Date",
       icon: Calendar,
-      defaultVisible: true,
+      defaultVisible: false,
       render: (item) => new Date(item.createdAt as string).toLocaleDateString(),
     },
     {

@@ -801,6 +801,7 @@ export default function POSPage() {
           yipyyPayTransactionId: processedPayments.find(p => p.yipyyPayTransactionId)?.yipyyPayTransactionId,
           cloverTransactionId: processedPayments.find(p => p.cloverTransactionId)?.cloverTransactionId,
           fiservTransactionId: processedPayments.find(p => p.fiservTransactionId)?.fiservTransactionId,
+          locationId: "loc-001", // TODO: Get from context
         });
       }
       // Process payment through Clover terminal if enabled and selected (single payment)
@@ -869,6 +870,7 @@ export default function POSPage() {
           notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
           cloverTransactionId: cloverResponse.cloverTransactionId,
           fiservTransactionId: cloverResponse.fiservTransactionId,
+          locationId: "loc-001", // TODO: Get from context
         });
       }
       // Process payment via Yipyy Pay / Tap to Pay on iPhone
@@ -937,6 +939,7 @@ export default function POSPage() {
           cashierName: "Staff",
           notes: `Yipyy Pay (Tap to Pay - iPhone): ${yipyyPayResponse.yipyyTransactionId}${yipyyPayResponse.receiptSent ? " - Receipt sent" : ""}`,
           yipyyPayTransactionId: yipyyPayResponse.transactionId, // Store Yipyy Pay transaction ID
+          locationId: "loc-001", // TODO: Get from context
         });
       }
       // Process card payments through Fiserv if enabled (web payment)
@@ -1025,6 +1028,7 @@ export default function POSPage() {
           notes: `Fiserv Transaction: ${fiservResponse.fiservTransactionId}`,
           fiservTransactionId: fiservResponse.fiservTransactionId,
           tokenizedCardId: fiservResponse.tokenizedCardId,
+          locationId: "loc-001", // TODO: Get from context
         });
       } else {
         // Handle Store Credit and Gift Card payments
@@ -1084,6 +1088,7 @@ export default function POSPage() {
           cashierId: currentUserId || "staff-001",
           cashierName: "Staff",
           notes: paymentNotes || "",
+          locationId: "loc-001", // TODO: Get from context
         });
       }
       
