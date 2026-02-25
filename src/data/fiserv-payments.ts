@@ -39,6 +39,74 @@ export interface CloverTerminalConfig {
   updatedAt: string;
 }
 
+export interface YipyyPayConfig {
+  facilityId: number;
+  // Yipyy Pay / Tap to Pay settings
+  enabled: boolean;
+  merchantId?: string;
+  apiKey?: string;
+  // Device configuration
+  authorizedDevices: YipyyPayDevice[];
+  // Payment settings
+  requireReceipt: boolean;
+  autoSendReceipt: boolean;
+  // Limits
+  maxTransactionAmount?: number;
+  minTransactionAmount?: number;
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface YipyyPayDevice {
+  id: string;
+  facilityId: number;
+  deviceName: string;
+  deviceId: string; // iPhone device identifier
+  deviceType: "iphone";
+  isActive: boolean;
+  isAuthorized: boolean;
+  authorizedBy?: string;
+  authorizedAt?: string;
+  lastUsedAt?: string;
+  // Metadata
+  createdAt: string;
+}
+
+export interface YipyyPayTransaction {
+  id: string;
+  facilityId: number;
+  // Device info
+  deviceId: string;
+  deviceName: string;
+  // Transaction details
+  yipyyTransactionId: string;
+  amount: number;
+  currency: "USD" | "CAD";
+  tipAmount?: number;
+  totalAmount: number;
+  // Payment method used (always "tap" for Tap to Pay)
+  paymentMethod: "tap";
+  cardBrand?: string;
+  cardLast4?: string;
+  // Status
+  status: "pending" | "completed" | "failed" | "cancelled";
+  // Linking
+  invoiceId?: string;
+  customerId?: number;
+  bookingId?: number;
+  // Receipt
+  receiptSent: boolean;
+  receiptSentAt?: string;
+  receiptData?: string;
+  // Metadata
+  processedAt: string;
+  createdAt: string;
+  processedBy?: string;
+  processedById?: number;
+  errorMessage?: string;
+}
+
 export interface FiservPaymentConfig {
   facilityId: number;
   // Fiserv API credentials
@@ -51,6 +119,12 @@ export interface FiservPaymentConfig {
     terminalId?: string;
     autoPrintReceipts: boolean;
     defaultPaymentMethod: "terminal" | "web" | "both";
+  };
+  // Yipyy Pay / Tap to Pay configuration
+  yipyyPay?: {
+    enabled: boolean;
+    requireReceipt: boolean;
+    autoSendReceipt: boolean;
   };
   // Environment
   environment: "sandbox" | "production";
@@ -308,6 +382,11 @@ export const mockFiservConfigs: FiservPaymentConfig[] = [
       autoPrintReceipts: true,
       defaultPaymentMethod: "terminal",
     },
+    yipyyPay: {
+      enabled: true,
+      requireReceipt: true,
+      autoSendReceipt: true,
+    },
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
   },
@@ -358,6 +437,53 @@ export const mockCloverTerminals: CloverTerminalConfig[] = [
 ];
 
 export const mockCloverTransactions: CloverTerminalTransaction[] = [];
+
+// Yipyy Pay / Tap to Pay mock data
+export const mockYipyyPayConfigs: YipyyPayConfig[] = [
+  {
+    facilityId: 11,
+    enabled: true,
+    merchantId: "yipyy_merchant_001",
+    apiKey: "yipyy_api_key_12345",
+    authorizedDevices: [],
+    requireReceipt: true,
+    autoSendReceipt: true,
+    maxTransactionAmount: 10000,
+    minTransactionAmount: 0.01,
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+];
+
+export const mockYipyyPayDevices: YipyyPayDevice[] = [
+  {
+    id: "device_001",
+    facilityId: 11,
+    deviceName: "Manager iPhone",
+    deviceId: "iphone_device_001",
+    deviceType: "iphone",
+    isActive: true,
+    isAuthorized: true,
+    authorizedBy: "Admin",
+    authorizedAt: "2024-01-01T00:00:00Z",
+    lastUsedAt: new Date().toISOString(),
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "device_002",
+    facilityId: 11,
+    deviceName: "Front Desk iPhone",
+    deviceId: "iphone_device_002",
+    deviceType: "iphone",
+    isActive: true,
+    isAuthorized: true,
+    authorizedBy: "Admin",
+    authorizedAt: "2024-01-01T00:00:00Z",
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+];
+
+export const mockYipyyPayTransactions: YipyyPayTransaction[] = [];
 
 export const mockTokenizedCards: TokenizedCard[] = [
   {
@@ -554,4 +680,68 @@ export function getCloverTransactionsByBooking(
   bookingId: number
 ): CloverTerminalTransaction[] {
   return mockCloverTransactions.filter((t) => t.bookingId === bookingId);
+}
+
+// Yipyy Pay helper functions
+export function getYipyyPayConfig(facilityId: number): YipyyPayConfig | undefined {
+  return mockYipyyPayConfigs.find((config) => config.facilityId === facilityId);
+}
+
+export function getYipyyPayDevicesByFacility(
+  facilityId: number
+): YipyyPayDevice[] {
+  return mockYipyyPayDevices.filter(
+    (device) => device.facilityId === facilityId && device.isActive && device.isAuthorized
+  );
+}
+
+export function getYipyyPayDevice(
+  facilityId: number,
+  deviceId: string
+): YipyyPayDevice | undefined {
+  return mockYipyyPayDevices.find(
+    (device) => device.facilityId === facilityId && device.deviceId === deviceId && device.isActive && device.isAuthorized
+  );
+}
+
+export function addYipyyPayDevice(
+  device: Omit<YipyyPayDevice, "id" | "createdAt">
+): YipyyPayDevice {
+  const newDevice: YipyyPayDevice = {
+    ...device,
+    id: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  mockYipyyPayDevices.push(newDevice);
+  return newDevice;
+}
+
+export function addYipyyPayTransaction(
+  transaction: Omit<YipyyPayTransaction, "id" | "createdAt">
+): YipyyPayTransaction {
+  const newTransaction: YipyyPayTransaction = {
+    ...transaction,
+    id: `yipyy_txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  mockYipyyPayTransactions.push(newTransaction);
+  return newTransaction;
+}
+
+export function getYipyyPayTransactionsByInvoice(
+  invoiceId: string
+): YipyyPayTransaction[] {
+  return mockYipyyPayTransactions.filter((t) => t.invoiceId === invoiceId);
+}
+
+export function getYipyyPayTransactionsByCustomer(
+  customerId: number
+): YipyyPayTransaction[] {
+  return mockYipyyPayTransactions.filter((t) => t.customerId === customerId);
+}
+
+export function getYipyyPayTransactionsByBooking(
+  bookingId: number
+): YipyyPayTransaction[] {
+  return mockYipyyPayTransactions.filter((t) => t.bookingId === bookingId);
 }

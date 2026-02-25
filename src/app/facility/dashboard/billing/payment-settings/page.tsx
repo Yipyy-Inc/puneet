@@ -29,9 +29,13 @@ import {
   mockFiservConfigs,
   getCloverTerminalsByFacility,
   getCloverTerminal,
+  getYipyyPayConfig,
+  getYipyyPayDevicesByFacility,
+  getYipyyPayDevice,
   type CloverTerminalConfig,
+  type YipyyPayDevice,
 } from "@/data/fiserv-payments";
-import { Printer, Wifi, Ethernet, Bluetooth } from "lucide-react";
+import { Printer, Wifi, Ethernet, Bluetooth, Smartphone } from "lucide-react";
 
 export default function PaymentSettingsPage() {
   const facilityId = 11; // TODO: Get from auth context
@@ -93,6 +97,11 @@ export default function PaymentSettingsPage() {
           autoPrintReceipts: true,
           defaultPaymentMethod: "terminal",
         },
+        yipyyPay: {
+          enabled: false,
+          requireReceipt: true,
+          autoSendReceipt: true,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -101,6 +110,8 @@ export default function PaymentSettingsPage() {
   }, [facilityId]);
 
   const cloverTerminals = getCloverTerminalsByFacility(facilityId);
+  const yipyyPayConfig = getYipyyPayConfig(facilityId);
+  const yipyyPayDevices = getYipyyPayDevicesByFacility(facilityId);
 
   const handleSave = async () => {
     if (!config) return;
@@ -1025,6 +1036,157 @@ export default function PaymentSettingsPage() {
                         </div>
                       );
                     })()}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Yipyy Pay / Tap to Pay Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Yipyy Pay / Tap to Pay Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure iPhone Tap to Pay for contactless payments (no terminal needed)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Tap to Pay</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow contactless card payments directly on iPhone
+              </p>
+            </div>
+            <Switch
+              checked={config.yipyyPay?.enabled ?? false}
+              onCheckedChange={(checked) =>
+                updateConfig({
+                  yipyyPay: {
+                    ...config.yipyyPay,
+                    enabled: checked,
+                    requireReceipt: config.yipyyPay?.requireReceipt ?? true,
+                    autoSendReceipt: config.yipyyPay?.autoSendReceipt ?? true,
+                  },
+                })
+              }
+              disabled={!isEditing}
+            />
+          </div>
+
+          {config.yipyyPay?.enabled && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Authorized iPhone Devices</Label>
+                {yipyyPayDevices.length > 0 ? (
+                  <div className="space-y-2">
+                    {yipyyPayDevices.map((device) => (
+                      <div
+                        key={device.id}
+                        className="p-3 border rounded-lg flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Smartphone className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{device.deviceName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Device ID: {device.deviceId}
+                              {device.lastUsedAt && (
+                                <span> • Last used: {new Date(device.lastUsedAt).toLocaleDateString()}</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={device.isAuthorized ? "default" : "secondary"}>
+                          {device.isAuthorized ? "Authorized" : "Pending"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border rounded-lg text-center text-sm text-muted-foreground">
+                    <Smartphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No authorized iPhone devices</p>
+                    <p className="text-xs mt-1">
+                      Authorize an iPhone device to enable Tap to Pay
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Require Receipt</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require receipt for all Tap to Pay transactions
+                  </p>
+                </div>
+                <Switch
+                  checked={config.yipyyPay?.requireReceipt ?? true}
+                  onCheckedChange={(checked) =>
+                    updateConfig({
+                      yipyyPay: {
+                        ...config.yipyyPay,
+                        requireReceipt: checked,
+                        enabled: true,
+                        autoSendReceipt: config.yipyyPay?.autoSendReceipt ?? true,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-Send Receipt</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically send receipt to customer after payment
+                  </p>
+                </div>
+                <Switch
+                  checked={config.yipyyPay?.autoSendReceipt ?? true}
+                  onCheckedChange={(checked) =>
+                    updateConfig({
+                      yipyyPay: {
+                        ...config.yipyyPay,
+                        autoSendReceipt: checked,
+                        enabled: true,
+                        requireReceipt: config.yipyyPay?.requireReceipt ?? true,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+
+              {yipyyPayConfig && (
+                <>
+                  <Separator />
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <Label className="text-sm font-semibold">Transaction Limits</Label>
+                    <div className="text-sm space-y-1">
+                      {yipyyPayConfig.minTransactionAmount && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Minimum:</span>
+                          <span>${yipyyPayConfig.minTransactionAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {yipyyPayConfig.maxTransactionAmount && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Maximum:</span>
+                          <span>${yipyyPayConfig.maxTransactionAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}

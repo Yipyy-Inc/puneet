@@ -25,6 +25,7 @@ import {
   Check,
   Phone,
   Clock,
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +76,9 @@ import {
   getDefaultTokenizedCard,
   getCloverTerminal,
   getCloverTerminalsByFacility,
+  getYipyyPayConfig,
+  getYipyyPayDevicesByFacility,
+  getYipyyPayDevice,
   type TokenizedCard,
 } from "@/data/fiserv-payments";
 import {
@@ -85,6 +89,10 @@ import {
   processCloverPayment,
   type CloverPaymentRequest,
 } from "@/lib/clover-terminal-service";
+import {
+  processYipyyPay,
+  type YipyyPayRequest,
+} from "@/lib/yipyy-pay-service";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -196,6 +204,10 @@ export default function POSPage() {
   // Clover terminal state
   const [useCloverTerminal, setUseCloverTerminal] = useState(false);
   const [cloverTerminalId, setCloverTerminalId] = useState<string | null>(null);
+  
+  // Yipyy Pay / Tap to Pay state
+  const [useYipyyPay, setUseYipyyPay] = useState(false);
+  const [yipyyPayDeviceId, setYipyyPayDeviceId] = useState<string | null>(null);
 
   const stats = getRetailStats();
 
@@ -621,10 +633,78 @@ export default function POSPage() {
           notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
         });
       }
+      // Process payment via Yipyy Pay / Tap to Pay on iPhone
+      else if (
+        useYipyyPay &&
+        yipyyPayDeviceId &&
+        fiservConfig?.yipyyPay?.enabled &&
+        (paymentForm.method === "credit" || paymentForm.method === "debit")
+      ) {
+        const yipyyPayConfig = getYipyyPayConfig(facilityId);
+        const device = getYipyyPayDevice(facilityId, yipyyPayDeviceId);
+        
+        if (!device || !device.isAuthorized || !device.isActive) {
+          alert("Yipyy Pay device is not available or not authorized. Please use another payment method.");
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Prepare Yipyy Pay request
+        const yipyyPayRequest: YipyyPayRequest = {
+          facilityId,
+          deviceId: yipyyPayDeviceId,
+          amount: grandTotal - (calculatedTipAmount || 0),
+          currency: "USD",
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          description: `POS Transaction - ${cart.length} item(s)`,
+          invoiceId: undefined, // TODO: Link to invoice if applicable
+          customerId: customerId ? Number(customerId) : undefined,
+          bookingId: selectedBookingId || undefined,
+          sendReceipt: fiservConfig.yipyyPay?.autoSendReceipt ?? true,
+          processedBy: "Staff",
+          processedById: currentUserId ? Number(currentUserId) : undefined,
+        };
+
+        // Process payment via Yipyy Pay / Tap to Pay
+        const yipyyPayResponse = await processYipyyPay(yipyyPayRequest);
+
+        if (!yipyyPayResponse.success) {
+          alert(`Payment failed: ${yipyyPayResponse.error?.message || "Unknown error"}`);
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Payment successful - record transaction with Yipyy Pay details
+        addRetailTransaction({
+          items: cart.map(({ id, ...item }) => item),
+          subtotal,
+          discountTotal,
+          cartDiscount: cartDiscount || undefined,
+          promoCodeUsed: appliedPromoCode?.code || undefined,
+          accountDiscountApplied: accountDiscount?.id || undefined,
+          taxTotal,
+          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+          tipPercentage: tipPercentage || undefined,
+          total: grandTotal,
+          paymentMethod: paymentForm.method,
+          payments: [{ method: paymentForm.method, amount: grandTotal }],
+          customerId,
+          customerName: name,
+          customerEmail: email,
+          petId: selectedPetId || undefined,
+          petName: petName,
+          bookingId: selectedBookingId || undefined,
+          bookingService: booking?.service,
+          cashierId: currentUserId || "staff-001",
+          cashierName: "Staff",
+          notes: `Yipyy Pay (Tap to Pay - iPhone): ${yipyyPayResponse.yipyyTransactionId}${yipyyPayResponse.receiptSent ? " - Receipt sent" : ""}`,
+        });
+      }
       // Process card payments through Fiserv if enabled (web payment)
       else if (
         (paymentForm.method === "credit" || paymentForm.method === "debit") &&
         !useCloverTerminal &&
+        !useYipyyPay &&
         fiservConfig?.integrationSettings.posEnabled &&
         fiservConfig?.enabledPaymentMethods.card
       ) {
@@ -2336,10 +2416,12 @@ export default function POSPage() {
                     value={paymentForm.method}
                     onValueChange={(value: PaymentMethod) => {
                       setPaymentForm({ ...paymentForm, method: value });
-                      // Reset Clover terminal selection when changing payment method
+                      // Reset Clover terminal and Yipyy Pay selection when changing payment method
                       if (value !== "credit" && value !== "debit") {
                         setUseCloverTerminal(false);
                         setCloverTerminalId(null);
+                        setUseYipyyPay(false);
+                        setYipyyPayDeviceId(null);
                       }
                     }}
                   >
@@ -2424,6 +2506,86 @@ export default function POSPage() {
                                   ].filter(Boolean).join(", ")}
                                   {fiservConfig?.cloverTerminal?.autoPrintReceipts && (
                                     <span> • Auto-print enabled</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Yipyy Pay / Tap to Pay Selection */}
+                {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && (() => {
+                  const facilityId = 11; // TODO: Get from context
+                  const fiservConfig = getFiservConfig(facilityId);
+                  const devices = fiservConfig?.yipyyPay?.enabled
+                    ? getYipyyPayDevicesByFacility(facilityId)
+                    : [];
+
+                  if (devices.length > 0) {
+                    return (
+                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Pay with iPhone (Tap to Pay)</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Accept contactless payment directly on iPhone - no terminal needed
+                            </p>
+                          </div>
+                          <Switch
+                            checked={useYipyyPay}
+                            onCheckedChange={(checked) => {
+                              setUseYipyyPay(checked);
+                              if (checked && devices.length > 0) {
+                                // Auto-select first available device
+                                setYipyyPayDeviceId(devices[0].deviceId);
+                              } else {
+                                setYipyyPayDeviceId(null);
+                              }
+                            }}
+                          />
+                        </div>
+                        {useYipyyPay && (
+                          <div className="grid gap-2">
+                            <Label className="text-xs">Select iPhone Device</Label>
+                            <Select
+                              value={yipyyPayDeviceId || ""}
+                              onValueChange={setYipyyPayDeviceId}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select device" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {devices.map((device) => (
+                                  <SelectItem key={device.id} value={device.deviceId}>
+                                    <div className="flex items-center gap-2">
+                                      <Smartphone className="h-4 w-4" />
+                                      <span>{device.deviceName}</span>
+                                      {device.isAuthorized ? (
+                                        <Badge variant="default" className="ml-2">Ready</Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="ml-2">Pending</Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {yipyyPayDeviceId && (() => {
+                              const device = getYipyyPayDevice(facilityId, yipyyPayDeviceId);
+                              if (!device) return null;
+                              return (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {device.lastUsedAt && (
+                                    <span>Last used: {new Date(device.lastUsedAt).toLocaleDateString()} • </span>
+                                  )}
+                                  Tap customer's card or phone to iPhone
+                                  {fiservConfig?.yipyyPay?.autoSendReceipt && (
+                                    <span> • Receipt will be sent automatically</span>
                                   )}
                                 </div>
                               );
