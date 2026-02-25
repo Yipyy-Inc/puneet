@@ -26,6 +26,12 @@ import {
   Phone,
   Clock,
   Smartphone,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +47,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -93,6 +100,8 @@ import {
   processYipyyPay,
   type YipyyPayRequest,
 } from "@/lib/yipyy-pay-service";
+import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
+import { locations } from "@/data/settings";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -213,6 +222,12 @@ export default function POSPage() {
   const [selectedGiftCardCode, setSelectedGiftCardCode] = useState("");
   const [selectedGiftCard, setSelectedGiftCard] = useState<{ id: string; balance: number; code: string } | null>(null);
   const [storeCreditAmount, setStoreCreditAmount] = useState<number>(0);
+  
+  // Tap to Pay modal state
+  const [isTapToPayModalOpen, setIsTapToPayModalOpen] = useState(false);
+  const [tapToPayStatus, setTapToPayStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
+  const [tapToPayError, setTapToPayError] = useState<string | null>(null);
+  const [tapToPayResponse, setTapToPayResponse] = useState<any>(null);
 
   const stats = getRetailStats();
 
@@ -3176,6 +3191,470 @@ export default function POSPage() {
               Walk-in (No Customer)
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tap to Pay Modal */}
+      <Dialog open={isTapToPayModalOpen} onOpenChange={(open) => {
+        setIsTapToPayModalOpen(open);
+        if (!open) {
+          setTapToPayStatus("idle");
+          setTapToPayError(null);
+          setTapToPayResponse(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Pay with iPhone (Tap to Pay)
+            </DialogTitle>
+            <DialogDescription>
+              Process contactless payment directly on iPhone
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const facilityId = 11; // TODO: Get from context
+            const fiservConfig = getFiservConfig(facilityId);
+            const inPersonMethods = fiservConfig?.inPersonMethods;
+            const device = yipyyPayDeviceId ? getYipyyPayDevice(facilityId, yipyyPayDeviceId) : null;
+            const minIOSVersion = inPersonMethods?.iphoneSettings?.deviceRequirements.minIOSVersion || "16.0";
+            const deviceCheck = isDeviceReadyForTapToPay(minIOSVersion);
+            const enabledLocations = inPersonMethods?.iphoneSettings?.enabledLocations || [];
+            const restrictedRoles = inPersonMethods?.iphoneSettings?.restrictedRoles || [];
+            const currentLocation = "loc-001"; // TODO: Get from context
+            const isLocationEnabled = enabledLocations.includes(currentLocation);
+            const isRoleAuthorized = restrictedRoles.length === 0 || restrictedRoles.includes(facilityRole);
+
+            // Pre-payment checks
+            if (tapToPayStatus === "idle") {
+              const checks: { label: string; passed: boolean; error?: string }[] = [
+                {
+                  label: "Device is iPhone",
+                  passed: deviceCheck.isIPhone,
+                  error: "Device is not an iPhone",
+                },
+                {
+                  label: `iOS ${minIOSVersion}+`,
+                  passed: deviceCheck.isIOSSupported,
+                  error: `iOS version ${deviceCheck.iosVersion || "unknown"} is below minimum ${minIOSVersion}`,
+                },
+                {
+                  label: "NFC Support",
+                  passed: deviceCheck.supportsNFC,
+                  error: "Device does not support NFC (requires iPhone XS or newer)",
+                },
+                {
+                  label: "Facility has method enabled",
+                  passed: inPersonMethods?.payWithiPhone === true,
+                  error: "Pay with iPhone is not enabled for this facility",
+                },
+                {
+                  label: "Location enabled",
+                  passed: isLocationEnabled,
+                  error: "Pay with iPhone is not enabled for this location",
+                },
+                {
+                  label: "Role authorized",
+                  passed: isRoleAuthorized,
+                  error: "Your role is not authorized to use Pay with iPhone",
+                },
+                {
+                  label: "Device authorized",
+                  passed: device?.isAuthorized === true && device?.isActive === true,
+                  error: "Selected iPhone device is not authorized or active",
+                },
+              ];
+
+              const failedChecks = checks.filter((c) => !c.passed);
+
+              if (failedChecks.length > 0) {
+                return (
+                  <div className="space-y-4">
+                    <Alert className="border-destructive">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <AlertDescription>
+                        <div className="font-semibold mb-2">Pre-payment checks failed:</div>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          {failedChecks.map((check, idx) => (
+                            <li key={idx} className="text-destructive">
+                              {check.label}: {check.error}
+                            </li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsTapToPayModalOpen(false);
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        Back to Payment
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                );
+              }
+
+              // All checks passed - show payment prompt
+              return (
+                <div className="space-y-6">
+                  {/* Amount Display */}
+                  <div className="text-center space-y-2">
+                    <div className="text-5xl font-bold text-primary">
+                      ${grandTotal.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>Subtotal: ${subtotal.toFixed(2)}</div>
+                      {taxTotal > 0 && <div>Tax: ${taxTotal.toFixed(2)}</div>}
+                      {calculatedTipAmount > 0 && (
+                        <div>Tip: ${calculatedTipAmount.toFixed(2)}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Visual Prompt */}
+                  <div className="flex flex-col items-center space-y-4 p-6 bg-muted rounded-lg border-2 border-dashed">
+                    <div className="text-center space-y-2">
+                      <Smartphone className="h-16 w-16 mx-auto text-primary animate-pulse" />
+                      <p className="text-lg font-semibold">
+                        Hold customer's card/phone/watch
+                      </p>
+                      <p className="text-lg font-semibold text-primary">
+                        near the top of iPhone to pay
+                      </p>
+                    </div>
+                    {device && (
+                      <div className="text-sm text-muted-foreground text-center">
+                        Device: {device.deviceName}
+                        {device.isAuthorized && (
+                          <Badge variant="default" className="ml-2">Ready</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setIsTapToPayModalOpen(false);
+                        setIsPaymentModalOpen(true);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={async () => {
+                        if (!yipyyPayDeviceId) return;
+
+                        setTapToPayStatus("processing");
+                        setTapToPayError(null);
+
+                        try {
+                          const customerId =
+                            selectedClientId && selectedClientId !== "__walk_in__"
+                              ? selectedClientId
+                              : undefined;
+                          const name =
+                            customerName ||
+                            (selectedClientId && selectedClientId !== "__walk_in__"
+                              ? clients.find((c) => String(c.id) === selectedClientId)?.name
+                              : undefined);
+                          const email =
+                            customerEmail ||
+                            (selectedClientId && selectedClientId !== "__walk_in__"
+                              ? clients.find((c) => String(c.id) === selectedClientId)?.email
+                              : undefined);
+
+                          const yipyyPayRequest: YipyyPayRequest = {
+                            facilityId: 11,
+                            deviceId: yipyyPayDeviceId,
+                            amount: grandTotal - (calculatedTipAmount || 0),
+                            currency: "USD",
+                            tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+                            description: `POS Transaction - ${cart.length} item(s)`,
+                            invoiceId: undefined,
+                            customerId: customerId ? Number(customerId) : undefined,
+                            bookingId: selectedBookingId || undefined,
+                            sendReceipt: fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
+                            processedBy: currentUserId || "staff-001",
+                            processedById: currentUserId ? Number(currentUserId) : undefined,
+                          };
+
+                          const response = await processYipyyPay(yipyyPayRequest);
+                          setTapToPayResponse(response);
+
+                          if (response.success) {
+                            setTapToPayStatus("success");
+                            
+                            // Record transaction
+                            addRetailTransaction({
+                              items: cart.map(({ id, ...item }) => item),
+                              subtotal,
+                              discountTotal,
+                              cartDiscount: cartDiscount || undefined,
+                              promoCodeUsed: appliedPromoCode?.code || undefined,
+                              accountDiscountApplied: accountDiscount?.id || undefined,
+                              taxTotal,
+                              tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+                              tipPercentage: tipPercentage || undefined,
+                              total: grandTotal,
+                              paymentMethod: paymentForm.method,
+                              payments: [{ method: paymentForm.method, amount: grandTotal }],
+                              customerId,
+                              customerName: name,
+                              customerEmail: email,
+                              petId: selectedPetId || undefined,
+                              petName: selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
+                                ? clients
+                                    .find((c) => String(c.id) === selectedClientId)
+                                    ?.pets.find((p) => p.id === selectedPetId)?.name
+                                : undefined,
+                              bookingId: selectedBookingId || undefined,
+                              bookingService: selectedBookingId
+                                ? bookings.find((b) => b.id === selectedBookingId)?.service
+                                : undefined,
+                              cashierId: currentUserId || "staff-001",
+                              cashierName: "Staff",
+                              notes: `Yipyy Pay Transaction: ${response.yipyyTransactionId}`,
+                            });
+
+                            // Apply promo code usage
+                            if (appliedPromoCode) {
+                              const promo = getPromoCodeByCode(appliedPromoCode.code);
+                              if (promo) {
+                                applyPromoCode(appliedPromoCode.code);
+                              }
+                            }
+
+                            // Clear cart
+                            setCart([]);
+                            setCartDiscount(null);
+                            setAppliedPromoCode(null);
+                            setSelectedClientId("");
+                            setCustomerName("");
+                            setCustomerEmail("");
+                            setSelectedPetId(null);
+                            setSelectedBookingId(null);
+                            setTipAmount(0);
+                            setTipPercentage(null);
+                            setTipCustomAmount("");
+                            setUseYipyyPay(false);
+                            setYipyyPayDeviceId(null);
+                          } else {
+                            setTapToPayStatus("failed");
+                            setTapToPayError(response.error?.message || "Payment failed");
+                          }
+                        } catch (error) {
+                          setTapToPayStatus("failed");
+                          setTapToPayError("An error occurred while processing the payment");
+                          console.error("Tap to Pay error:", error);
+                        }
+                      }}
+                    >
+                      Start Payment
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+
+            // Processing state
+            if (tapToPayStatus === "processing") {
+              return (
+                <div className="space-y-6 text-center">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      <Smartphone className="h-20 w-20 text-primary animate-pulse" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-semibold">Processing payment...</p>
+                      <p className="text-sm text-muted-foreground">
+                        Hold customer's card/phone/watch near the top of iPhone
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Success state
+            if (tapToPayStatus === "success" && tapToPayResponse) {
+              return (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center space-y-4 text-center">
+                    <CheckCircle2 className="h-16 w-16 text-green-600" />
+                    <div className="space-y-1">
+                      <p className="text-xl font-semibold text-green-600">Payment Successful!</p>
+                      <p className="text-sm text-muted-foreground">
+                        Transaction ID: {tapToPayResponse.yipyyTransactionId}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Receipt Options */}
+                  <div className="space-y-2">
+                    <Label>Receipt Delivery</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          window.print();
+                        }}
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        disabled={!customerEmail}
+                        onClick={() => {
+                          // TODO: Send email receipt
+                          alert("Receipt sent via email");
+                        }}
+                      >
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        disabled={!customerEmail}
+                        onClick={() => {
+                          // TODO: Send SMS receipt
+                          alert("Receipt sent via SMS");
+                        }}
+                      >
+                        <Phone className="h-4 w-4" />
+                        SMS
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          setIsTapToPayModalOpen(false);
+                          setIsReceiptModalOpen(true);
+                        }}
+                      >
+                        Skip
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setIsTapToPayModalOpen(false);
+                      setIsReceiptModalOpen(true);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              );
+            }
+
+            // Failed state
+            if (tapToPayStatus === "failed") {
+              return (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center space-y-4 text-center">
+                    <XCircle className="h-16 w-16 text-destructive" />
+                    <div className="space-y-1">
+                      <p className="text-xl font-semibold text-destructive">Payment Failed</p>
+                      <p className="text-sm text-muted-foreground">{tapToPayError}</p>
+                    </div>
+                  </div>
+
+                  {/* Retry Options */}
+                  <div className="space-y-2">
+                    <Label>Retry Options</Label>
+                    <div className="grid gap-2">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        onClick={async () => {
+                          setTapToPayStatus("idle");
+                          setTapToPayError(null);
+                          // Retry will be handled by the idle state logic
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Retry Tap to Pay
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        onClick={() => {
+                          setIsTapToPayModalOpen(false);
+                          setUseYipyyPay(false);
+                          setUseCloverTerminal(true);
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <Printer className="h-4 w-4" />
+                        Switch to Clover Terminal
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        onClick={() => {
+                          setIsTapToPayModalOpen(false);
+                          setUseYipyyPay(false);
+                          setPaymentForm({ ...paymentForm, method: "cash" });
+                          setIsPaymentModalOpen(true);
+                        }}
+                      >
+                        <Banknote className="h-4 w-4" />
+                        Switch to Cash
+                      </Button>
+                      {selectedClientId && selectedClientId !== "__walk_in__" && (
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-2"
+                          onClick={() => {
+                            setIsTapToPayModalOpen(false);
+                            setUseYipyyPay(false);
+                            setPaymentForm({ ...paymentForm, method: "store_credit" });
+                            setIsPaymentModalOpen(true);
+                          }}
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          Switch to Store Credit
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setIsTapToPayModalOpen(false);
+                      setIsPaymentModalOpen(true);
+                    }}
+                  >
+                    Back to Payment
+                  </Button>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </DialogContent>
       </Dialog>
 
