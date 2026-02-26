@@ -189,6 +189,41 @@ export interface FiservPaymentConfig {
     refundPolicy: "full_refund" | "partial_refund" | "store_credit_only";
     splitPaymentRefundPolicy: "proportional" | "last_payment_first"; // How to refund split payments
   };
+  // Refund method configuration
+  refundMethods: {
+    originalPayment: boolean; // Refund to original payment method
+    cash: boolean; // Cash refunds
+    storeCredit: boolean; // Store credit refunds
+    giftCard: boolean; // Gift card refunds
+    custom: boolean; // Custom payment method refunds
+  };
+  // Refund rules
+  refundRules: {
+    managerApprovalRequired: boolean; // Require manager approval for refunds
+    managerApprovalThreshold?: number; // Amount threshold for manager approval (in dollars)
+    requireReason: boolean; // Require return reason
+    requireNotes: boolean; // Require notes for refunds
+    allowOverride: boolean; // Allow manager to override refund method
+  };
+  // Store credit settings
+  storeCreditSettings: {
+    enabled: boolean;
+    expiryEnabled: boolean; // Enable expiry dates
+    defaultExpiryDays?: number; // Default expiry in days (if expiryEnabled)
+    allowTransfer: boolean; // Allow transferring store credit between customers
+    minAmount?: number; // Minimum store credit amount
+    maxAmount?: number; // Maximum store credit amount
+  };
+  // Gift card settings
+  giftCardSettings: {
+    enabled: boolean;
+    expiryEnabled: boolean; // Enable expiry dates
+    defaultExpiryDays?: number; // Default expiry in days (if expiryEnabled)
+    allowReload: boolean; // Allow reloading gift cards
+    minAmount?: number; // Minimum gift card amount
+    maxAmount?: number; // Maximum gift card amount
+    requireActivation: boolean; // Require activation before use
+  };
   // Integration settings
   integrationSettings: {
     posEnabled: boolean;
@@ -397,6 +432,35 @@ export const mockFiservConfigs: FiservPaymentConfig[] = [
       captureMethod: "automatic",
       refundPolicy: "full_refund",
       splitPaymentRefundPolicy: "last_payment_first", // "proportional" or "last_payment_first"
+    },
+    refundMethods: {
+      originalPayment: true,
+      cash: true,
+      storeCredit: true,
+      giftCard: true,
+      custom: true,
+    },
+    refundRules: {
+      managerApprovalRequired: true,
+      managerApprovalThreshold: 100, // Require manager approval for refunds over $100
+      requireReason: false, // Recommended but not required
+      requireNotes: false, // Recommended but not required
+      allowOverride: true, // Allow manager to override refund method
+    },
+    storeCreditSettings: {
+      enabled: true,
+      expiryEnabled: false, // Disable expiry by default
+      allowTransfer: false,
+      minAmount: 1, // Minimum $1
+      maxAmount: 10000, // Maximum $10,000
+    },
+    giftCardSettings: {
+      enabled: true,
+      expiryEnabled: false, // Disable expiry by default
+      allowReload: true,
+      minAmount: 5, // Minimum $5
+      maxAmount: 5000, // Maximum $5,000
+      requireActivation: false,
     },
     integrationSettings: {
       posEnabled: true,

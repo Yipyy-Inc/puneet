@@ -244,21 +244,33 @@ export default function OrdersPage() {
   const handleProcessReturn = async () => {
     if (!selectedTransaction || returnForm.items.length === 0) return;
 
-    // Validate that at least one item has a reason (recommended)
-    const itemsWithoutReason = returnForm.items.filter(item => !item.reason || item.reason === "other" && !item.reasonNotes);
-    if (itemsWithoutReason.length > 0) {
-      const proceed = confirm(
-        "Warning: Some items don't have a return reason specified. It's recommended to provide a reason for audit purposes. Do you want to continue anyway?"
-      );
-      if (!proceed) return;
-    }
+    const facilityId = 11; // TODO: Get from context
+    const fiservConfig = getFiservConfig(facilityId);
+    const refundRules = fiservConfig?.refundRules;
+    const refundMethods = fiservConfig?.refundMethods;
 
-    // Validate that notes are provided if refund method is override (recommended)
-    if (returnForm.refundMethod !== "original_payment" && !returnForm.notes) {
-      const proceed = confirm(
-        "Warning: No notes provided for this refund override. It's recommended to document why the refund method was changed. Do you want to continue anyway?"
-      );
-      if (!proceed) return;
+    // Check if refund method is enabled
+    if (refundMethods) {
+      if (returnForm.refundMethod === "original_payment" && !refundMethods.originalPayment) {
+        alert("Original payment refunds are disabled. Please select another refund method.");
+        return;
+      }
+      if (returnForm.refundMethod === "cash" && !refundMethods.cash) {
+        alert("Cash refunds are disabled. Please select another refund method.");
+        return;
+      }
+      if (returnForm.refundMethod === "store_credit" && !refundMethods.storeCredit) {
+        alert("Store credit refunds are disabled. Please select another refund method.");
+        return;
+      }
+      if (returnForm.refundMethod === "gift_card" && !refundMethods.giftCard) {
+        alert("Gift card refunds are disabled. Please select another refund method.");
+        return;
+      }
+      if (returnForm.refundMethod === "custom" && !refundMethods.custom) {
+        alert("Custom payment method refunds are disabled. Please select another refund method.");
+        return;
+      }
     }
 
     const refundTotal = returnForm.items.reduce((sum, item) => {
@@ -269,7 +281,44 @@ export default function OrdersPage() {
       return sum + subtotal - discountAmount;
     }, 0);
 
-    const facilityId = 11; // TODO: Get from context
+    // Check manager approval requirement
+    if (refundRules?.managerApprovalRequired) {
+      const threshold = refundRules.managerApprovalThreshold || 0;
+      if (refundTotal > threshold && !canOverrideRefund) {
+        alert(`Manager approval required for refunds over $${threshold.toFixed(2)}. Current refund amount: $${refundTotal.toFixed(2)}. Please contact a manager.`);
+        return;
+      }
+    }
+
+    // Validate that at least one item has a reason (if required)
+    if (refundRules?.requireReason) {
+      const itemsWithoutReason = returnForm.items.filter(item => !item.reason || item.reason === "other" && !item.reasonNotes);
+      if (itemsWithoutReason.length > 0) {
+        alert("Return reason is required for all items. Please select a reason for each item.");
+        return;
+      }
+    } else {
+      // Recommended but not required
+      const itemsWithoutReason = returnForm.items.filter(item => !item.reason || item.reason === "other" && !item.reasonNotes);
+      if (itemsWithoutReason.length > 0) {
+        const proceed = confirm(
+          "Warning: Some items don't have a return reason specified. It's recommended to provide a reason for audit purposes. Do you want to continue anyway?"
+        );
+        if (!proceed) return;
+      }
+    }
+
+    // Validate that notes are provided (if required)
+    if (refundRules?.requireNotes && !returnForm.notes) {
+      alert("Notes are required for all refunds. Please provide notes explaining the refund.");
+      return;
+    } else if (!refundRules?.requireNotes && returnForm.refundMethod !== "original_payment" && !returnForm.notes) {
+      // Recommended but not required for overrides
+      const proceed = confirm(
+        "Warning: No notes provided for this refund override. It's recommended to document why the refund method was changed. Do you want to continue anyway?"
+      );
+      if (!proceed) return;
+    }
     let fiservRefundId: string | undefined;
     let refundProcessed = false;
     let refundError: string | undefined;
@@ -2190,88 +2239,102 @@ export default function OrdersPage() {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant={returnForm.refundMethod === "original_payment" ? "default" : "outline"}
-                      className="h-auto p-4 flex flex-col items-start gap-2"
-                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "original_payment" })}
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Original Payment</p>
-                        <p className="text-xs text-muted-foreground">
-                          Refund to original payment method
-                        </p>
+                  {(() => {
+                    const facilityId = 11; // TODO: Get from context
+                    const fiservConfig = getFiservConfig(facilityId);
+                    const refundMethods = fiservConfig?.refundMethods;
+                    
+                    return (
+                      <div className="grid grid-cols-2 gap-3">
+                        {refundMethods?.originalPayment !== false && (
+                          <Button
+                            variant={returnForm.refundMethod === "original_payment" ? "default" : "outline"}
+                            className="h-auto p-4 flex flex-col items-start gap-2"
+                            onClick={() => setReturnForm({ ...returnForm, refundMethod: "original_payment" })}
+                          >
+                            <ArrowLeft className="h-5 w-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Original Payment</p>
+                              <p className="text-xs text-muted-foreground">
+                                Refund to original payment method
+                              </p>
+                            </div>
+                          </Button>
+                        )}
+                        {refundMethods?.storeCredit !== false && (
+                          <Button
+                            variant={returnForm.refundMethod === "store_credit" ? "default" : "outline"}
+                            className="h-auto p-4 flex flex-col items-start gap-2"
+                            onClick={() => setReturnForm({ ...returnForm, refundMethod: "store_credit" })}
+                            disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
+                          >
+                            <Wallet className="h-5 w-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Store Credit</p>
+                              <p className="text-xs text-muted-foreground">
+                                Issue store credit to customer
+                                {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
+                                  <span className="block text-orange-600 mt-1">Manager only</span>
+                                )}
+                              </p>
+                            </div>
+                          </Button>
+                        )}
+                        {refundMethods?.giftCard !== false && (
+                          <Button
+                            variant={returnForm.refundMethod === "gift_card" ? "default" : "outline"}
+                            className="h-auto p-4 flex flex-col items-start gap-2"
+                            onClick={() => setReturnForm({ ...returnForm, refundMethod: "gift_card" })}
+                            disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
+                          >
+                            <Gift className="h-5 w-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Gift Card</p>
+                              <p className="text-xs text-muted-foreground">
+                                Issue gift card to customer
+                                {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
+                                  <span className="block text-orange-600 mt-1">Manager only</span>
+                                )}
+                              </p>
+                            </div>
+                          </Button>
+                        )}
+                        {canOverrideRefund && refundMethods?.cash !== false && (
+                          <Button
+                            variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
+                            className="h-auto p-4 flex flex-col items-start gap-2"
+                            onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
+                          >
+                            <Banknote className="h-5 w-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Cash (Override)</p>
+                              <p className="text-xs text-muted-foreground">
+                                Manager override - refund in cash
+                              </p>
+                            </div>
+                          </Button>
+                        )}
+                        {refundMethods?.custom !== false && customPaymentMethods
+                          .filter((m) => m.isActive && m.canBeUsedForRefunds)
+                          .map((method) => (
+                            <Button
+                              key={method.id}
+                              variant={returnForm.refundMethod === "custom" && returnForm.customRefundMethodName === method.name ? "default" : "outline"}
+                              className="h-auto p-4 flex flex-col items-start gap-2"
+                              onClick={() => setReturnForm({ ...returnForm, refundMethod: "custom", customRefundMethodName: method.name })}
+                            >
+                              <CreditCard className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">{method.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {method.description || "Custom payment method"}
+                                </p>
+                              </div>
+                            </Button>
+                          ))}
                       </div>
-                    </Button>
-                    <Button
-                      variant={returnForm.refundMethod === "store_credit" ? "default" : "outline"}
-                      className="h-auto p-4 flex flex-col items-start gap-2"
-                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "store_credit" })}
-                      disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
-                    >
-                      <Wallet className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Store Credit</p>
-                        <p className="text-xs text-muted-foreground">
-                          Issue store credit to customer
-                          {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
-                            <span className="block text-orange-600 mt-1">Manager only</span>
-                          )}
-                        </p>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={returnForm.refundMethod === "gift_card" ? "default" : "outline"}
-                      className="h-auto p-4 flex flex-col items-start gap-2"
-                      onClick={() => setReturnForm({ ...returnForm, refundMethod: "gift_card" })}
-                      disabled={!canOverrideRefund && returnForm.refundMethod === "original_payment"}
-                    >
-                      <Gift className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Gift Card</p>
-                        <p className="text-xs text-muted-foreground">
-                          Issue gift card to customer
-                          {!canOverrideRefund && returnForm.refundMethod === "original_payment" && (
-                            <span className="block text-orange-600 mt-1">Manager only</span>
-                          )}
-                        </p>
-                      </div>
-                    </Button>
-                    {canOverrideRefund && (
-                      <Button
-                        variant={returnForm.refundMethod === "cash" ? "default" : "outline"}
-                        className="h-auto p-4 flex flex-col items-start gap-2"
-                        onClick={() => setReturnForm({ ...returnForm, refundMethod: "cash" })}
-                      >
-                        <Banknote className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="font-medium">Cash (Override)</p>
-                          <p className="text-xs text-muted-foreground">
-                            Manager override - refund in cash
-                          </p>
-                        </div>
-                      </Button>
-                    )}
-                    {customPaymentMethods
-                      .filter((m) => m.isActive && m.canBeUsedForRefunds)
-                      .map((method) => (
-                        <Button
-                          key={method.id}
-                          variant={returnForm.refundMethod === "custom" && returnForm.customRefundMethodName === method.name ? "default" : "outline"}
-                          className="h-auto p-4 flex flex-col items-start gap-2"
-                          onClick={() => setReturnForm({ ...returnForm, refundMethod: "custom", customRefundMethodName: method.name })}
-                        >
-                          <CreditCard className="h-5 w-5" />
-                          <div className="text-left">
-                            <p className="font-medium">{method.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {method.description || "Custom payment method"}
-                            </p>
-                          </div>
-                        </Button>
-                      ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
 
