@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { facilityConfig } from "@/data/facility-config";
 import type { VaccinationRecord } from "@/data/pet-data";
 
 interface AddVaccinationModalProps {
@@ -53,12 +54,14 @@ export function AddVaccinationModal({
     notes: "",
   });
 
+  // Get vaccines from facility config
+  const facilityVaccines = facilityConfig.vaccinationRequirements.requiredVaccinations.map(
+    (v) => v.name
+  );
+
   const commonVaccines = [
-    "Rabies",
-    "DHPP (Distemper)",
-    "Bordetella",
+    ...facilityVaccines,
     "Canine Influenza",
-    "Leptospirosis",
     "Lyme Disease",
     "FVRCP (Cat)",
     "FeLV (Cat)",
@@ -118,6 +121,7 @@ export function AddVaccinationModal({
         veterinaryClinic: formData.veterinaryClinic || undefined,
         documentUrl,
         notes: formData.notes || undefined,
+        status: "pending_review", // New uploads require facility review
       };
 
       await onSave(vaccination);
@@ -171,10 +175,10 @@ export function AddVaccinationModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Vaccination Record</DialogTitle>
+          <DialogHeader>
+          <DialogTitle>Upload Vaccination Record</DialogTitle>
           <DialogDescription>
-            Add a vaccination record for {petName}
+            Upload a vaccination record for {petName}. This will be reviewed by the facility before approval.
           </DialogDescription>
         </DialogHeader>
 
@@ -337,12 +341,12 @@ export function AddVaccinationModal({
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  Uploading...
                 </>
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Add Record
+                  Upload for Review
                 </>
               )}
             </Button>

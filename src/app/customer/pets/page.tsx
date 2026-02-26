@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Search, Dog, Cat, Calendar, Syringe, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { vaccinationRecords } from "@/data/pet-data";
+import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -180,6 +181,18 @@ export default function CustomerPetsPage() {
                         <Badge variant="destructive" className="text-xs">
                           Allergies: {pet.allergies}
                         </Badge>
+                      </div>
+                    )}
+
+                    {/* Compliance Checklist */}
+                    {selectedFacility && (
+                      <div className="pt-2">
+                        <PetComplianceChecklist
+                          pet={pet}
+                          clientId={MOCK_CUSTOMER_ID}
+                          facilityId={selectedFacility.id}
+                          compact={true}
+                        />
                       </div>
                     )}
 

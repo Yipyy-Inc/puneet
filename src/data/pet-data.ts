@@ -23,6 +23,29 @@ export interface VaccinationRecord {
   nextDueDate?: string;
   reminderSent?: boolean;
   notes?: string;
+  // Upload status for facility review
+  status?: "pending_review" | "approved" | "rejected";
+  reviewedBy?: string;
+  reviewedById?: number;
+  reviewedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface CareInstructions {
+  petId: number;
+  feedingSchedule?: string; // e.g., "8:00 AM, 12:00 PM, 6:00 PM"
+  feedingAmount?: string; // e.g., "1 cup per meal"
+  medicationList?: Array<{
+    name: string;
+    dosage: string;
+    frequency: string;
+    notes?: string;
+  }>;
+  groomingSensitivities?: string; // e.g., "Sensitive to loud noises during grooming"
+  behaviorNotes?: string; // Owner-provided behavior notes
+  lastUpdated?: string;
+  lastUpdatedBy?: string;
+  lastUpdatedById?: number;
 }
 
 export interface ReportCard {
@@ -705,5 +728,38 @@ export const banRecords: BanRecord[] = [
     unbannedAt: "2024-01-05T09:00:00Z",
     unbannedBy: "Sarah Johnson",
     unbannedById: 1,
+  },
+];
+
+// Mock care instructions data
+export const careInstructions: CareInstructions[] = [
+  {
+    petId: 1,
+    feedingSchedule: "8:00 AM, 12:00 PM, 6:00 PM",
+    feedingAmount: "1.5 cups per meal",
+    medicationList: [],
+    groomingSensitivities: "Sensitive to loud noises during grooming",
+    behaviorNotes: "Very friendly, loves to play with other dogs",
+    lastUpdated: "2024-01-15T10:00:00Z",
+    lastUpdatedBy: "Alice Johnson",
+    lastUpdatedById: 15,
+  },
+  {
+    petId: 2,
+    feedingSchedule: "7:00 AM, 5:00 PM",
+    feedingAmount: "1/2 cup per meal",
+    medicationList: [
+      {
+        name: "Flea Prevention",
+        dosage: "1 tablet",
+        frequency: "Monthly",
+        notes: "Give with food",
+      },
+    ],
+    groomingSensitivities: "Prefers gentle brushing",
+    behaviorNotes: "Indoor only, prefers quiet spaces",
+    lastUpdated: "2024-02-01T11:00:00Z",
+    lastUpdatedBy: "Alice Johnson",
+    lastUpdatedById: 15,
   },
 ];

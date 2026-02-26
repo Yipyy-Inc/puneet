@@ -173,4 +173,14 @@ export const facilityConfig = {
       },
     },
   },
+  careInstructions: {
+    enabled: true,
+    customerEditableFields: {
+      feedingSchedule: true,
+      feedingAmount: true,
+      medicationList: true,
+      groomingSensitivities: true,
+      behaviorNotes: true,
+    },
+  },
 };
