@@ -244,6 +244,23 @@ export default function OrdersPage() {
   const handleProcessReturn = async () => {
     if (!selectedTransaction || returnForm.items.length === 0) return;
 
+    // Validate that at least one item has a reason (recommended)
+    const itemsWithoutReason = returnForm.items.filter(item => !item.reason || item.reason === "other" && !item.reasonNotes);
+    if (itemsWithoutReason.length > 0) {
+      const proceed = confirm(
+        "Warning: Some items don't have a return reason specified. It's recommended to provide a reason for audit purposes. Do you want to continue anyway?"
+      );
+      if (!proceed) return;
+    }
+
+    // Validate that notes are provided if refund method is override (recommended)
+    if (returnForm.refundMethod !== "original_payment" && !returnForm.notes) {
+      const proceed = confirm(
+        "Warning: No notes provided for this refund override. It's recommended to document why the refund method was changed. Do you want to continue anyway?"
+      );
+      if (!proceed) return;
+    }
+
     const refundTotal = returnForm.items.reduce((sum, item) => {
       const subtotal = item.unitPrice * item.quantity;
       const discountAmount = item.discountType === "percent"
@@ -554,6 +571,12 @@ export default function OrdersPage() {
       }
     }
     
+    // Handle cash refund override (when refund method is explicitly set to cash)
+    if (returnForm.refundMethod === "cash") {
+      refundProcessed = true;
+      // Cash refunds are immediate - no processing needed
+    }
+    
     // Log method override if not original payment
     if (returnForm.refundMethod !== "original_payment" && canOverrideRefund) {
       logPaymentAction("method_override", {
@@ -663,6 +686,20 @@ export default function OrdersPage() {
         isActive: true,
         notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
       });
+    }
+
+    // Update transaction status and add return to transaction history
+    if (selectedTransaction) {
+      // Add return to transaction's returns array
+      const updatedReturns = [...(selectedTransaction.returns || []), newReturn];
+      // Update transaction status if fully refunded
+      const totalRefunded = updatedReturns.reduce((sum, r) => sum + r.refundTotal, 0);
+      if (totalRefunded >= selectedTransaction.total) {
+        // Transaction is fully refunded
+        // Note: In a real app, this would update the transaction in the database
+        // For now, we just log it
+        console.log(`Transaction ${selectedTransaction.transactionNumber} fully refunded`);
+      }
     }
 
     // TODO: Restock items to inventory
@@ -2045,7 +2082,7 @@ export default function OrdersPage() {
                                 }}
                               >
                                 <SelectTrigger className="w-40 h-8 text-xs">
-                                  <SelectValue />
+                                  <SelectValue placeholder="Select reason" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="defective">Defective</SelectItem>
@@ -2056,6 +2093,11 @@ export default function OrdersPage() {
                                 </SelectContent>
                               </Select>
                             </div>
+                          )}
+                          {isSelected && returnItem && (!returnItem.reason || (returnItem.reason === "other" && !returnItem.reasonNotes)) && (
+                            <p className="text-xs text-orange-600 mt-1 ml-2">
+                              ⚠️ Return reason recommended for audit purposes
+                            </p>
                           )}
                         </div>
                       </div>
@@ -2272,15 +2314,26 @@ export default function OrdersPage() {
 
               {/* Notes */}
               <div className="grid gap-2">
-                <Label>Notes (Optional)</Label>
+                <Label>
+                  Notes {returnForm.refundMethod !== "original_payment" && <span className="text-orange-600">(Recommended)</span>}
+                </Label>
                 <Textarea
                   value={returnForm.notes || ""}
                   onChange={(e) =>
                     setReturnForm({ ...returnForm, notes: e.target.value })
                   }
-                  placeholder="Additional notes about this return..."
+                  placeholder={
+                    returnForm.refundMethod !== "original_payment"
+                      ? "Please document why the refund method was changed..."
+                      : "Additional notes about this return..."
+                  }
                   rows={3}
                 />
+                {returnForm.refundMethod !== "original_payment" && !returnForm.notes && (
+                  <p className="text-xs text-orange-600">
+                    ⚠️ It's recommended to provide notes when using an override refund method for audit purposes.
+                  </p>
+                )}
               </div>
             </div>
           )}
