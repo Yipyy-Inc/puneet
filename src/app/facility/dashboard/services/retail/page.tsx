@@ -3229,7 +3229,7 @@ export default function POSPage() {
                                   {device.lastUsedAt && (
                                     <span>Last used: {new Date(device.lastUsedAt).toLocaleDateString()} • </span>
                                   )}
-                                  Tap customer's card or phone to iPhone
+                                  Tap card, iPhone, or Apple Watch to the top of the phone.
                                   {fiservConfig?.yipyyPay?.autoSendReceipt && (
                                     <span> • Receipt will be sent automatically</span>
                                   )}
@@ -3839,10 +3839,7 @@ export default function POSPage() {
                     <div className="text-center space-y-2">
                       <Smartphone className="h-16 w-16 mx-auto text-primary animate-pulse" />
                       <p className="text-lg font-semibold">
-                        Hold customer's card/phone/watch
-                      </p>
-                      <p className="text-lg font-semibold text-primary">
-                        near the top of iPhone to pay
+                        Tap card, iPhone, or Apple Watch to the top of the phone.
                       </p>
                     </div>
                     {device && (
@@ -3999,7 +3996,7 @@ export default function POSPage() {
                     <div className="space-y-2">
                       <p className="text-lg font-semibold">Processing payment...</p>
                       <p className="text-sm text-muted-foreground">
-                        Hold customer's card/phone/watch near the top of iPhone
+                        Tap card, iPhone, or Apple Watch to the top of the phone.
                       </p>
                     </div>
                   </div>
