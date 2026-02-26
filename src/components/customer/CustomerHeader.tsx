@@ -3,6 +3,9 @@
 import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
+import { QuickBookButton } from "./QuickBookButton";
+import { ContactFacilityButton } from "./ContactFacilityButton";
+import { CustomerNotifications } from "./CustomerNotifications";
 import { Button } from "@/components/ui/button";
 import { User, LogOut, Settings, MessageSquare, Dog, FileText, CreditCard, Building2, Shield } from "lucide-react";
 import { useTransition } from "react";
@@ -97,13 +100,14 @@ export function CustomerHeader() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Messages Button */}
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/customer/messages">
-            <MessageSquare className="h-5 w-5" />
-            <span className="sr-only">Messages</span>
-          </Link>
-        </Button>
+        {/* Quick Book Button */}
+        <QuickBookButton />
+
+        {/* Notifications Center */}
+        <CustomerNotifications />
+
+        {/* Contact Facility Button */}
+        <ContactFacilityButton />
 
         {/* Facility Switcher */}
         <FacilitySwitcher />

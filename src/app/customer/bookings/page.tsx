@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { bookings } from "@/data/bookings";
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerBookingsPage() {
+  const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const { bookingFlow, grooming } = useSettings();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -41,10 +43,16 @@ export default function CustomerBookingsPage() {
   // Check if grooming is enabled (status.disabled !== true means enabled)
   const isGroomingEnabled = grooming?.status?.disabled !== true;
 
-  // Prevent hydration mismatch
+  // Check for service query parameter to auto-open booking modal
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const service = searchParams?.get("service");
+    if (service === "grooming" && isGroomingEnabled) {
+      setIsGroomingBookingOpen(true);
+    } else if (service && ["daycare", "boarding"].includes(service)) {
+      setIsBookingModalOpen(true);
+    }
+  }, [searchParams, isGroomingEnabled]);
 
   // Get customer's bookings for selected facility
   const customerBookings = useMemo(() => {
