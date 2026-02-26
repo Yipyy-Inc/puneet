@@ -75,6 +75,8 @@ export type Permission =
   | "take_payment"
   | "process_refund"
   | "apply_discount"
+  | "manual_card_entry"
+  | "override_refund_method"
   | "manage_staff"
   | "manage_services"
   | "manage_pricing"
@@ -123,6 +125,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   take_payment: "Take Payment",
   process_refund: "Process Refund",
   apply_discount: "Apply Discount",
+  manual_card_entry: "Manual Card Entry",
+  override_refund_method: "Override Refund Method",
   manage_staff: "Manage Staff",
   manage_services: "Manage Services",
   manage_pricing: "Manage Pricing",
@@ -177,6 +181,8 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
     "take_payment",
     "process_refund",
     "apply_discount",
+    "manual_card_entry",
+    "override_refund_method",
     "view_financials",
     "view_revenue",
     "view_wages",
@@ -275,6 +281,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "take_payment",
     "process_refund",
     "apply_discount",
+    "manual_card_entry",
+    "override_refund_method",
     "manage_staff",
     "add_pet_notes",
     "add_grooming_notes",

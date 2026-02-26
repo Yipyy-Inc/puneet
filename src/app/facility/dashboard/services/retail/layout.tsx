@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Settings,
   BarChart3,
+  FileText,
 } from "lucide-react";
 
 const tabs = [
@@ -38,6 +39,11 @@ const tabs = [
     name: "Reports",
     href: "/facility/dashboard/services/retail/reports",
     icon: BarChart3,
+  },
+  {
+    name: "Audit Logs",
+    href: "/facility/dashboard/services/retail/audit",
+    icon: FileText,
   },
   {
     name: "Settings",

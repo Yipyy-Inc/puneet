@@ -112,6 +112,8 @@ interface CartItemWithId extends CartItem {
 export default function POSPage() {
   const searchParams = useSearchParams();
   const { role: facilityRole } = useFacilityRole();
+  const currentUserId = "staff-001"; // TODO: Get from auth context
+  const { role: facilityRole } = useFacilityRole();
   const currentUserId = getCurrentUserId();
   const canApplyDiscount = hasPermission(facilityRole, "apply_discount", currentUserId || undefined);
   const isManager = facilityRole === "manager" || facilityRole === "owner";
@@ -572,6 +574,21 @@ export default function POSPage() {
     setIsProcessingPayment(true);
     
     try {
+      const facilityId = 11; // TODO: Get from context
+      const staffName = "Staff"; // TODO: Get from auth context
+      
+      // Check permission for manual card entry if using new card
+      if ((paymentForm.method === "credit" || paymentForm.method === "debit") && 
+          !useCloverTerminal && 
+          !useYipyyPay && 
+          !selectedTokenizedCard && 
+          newCardDetails.number &&
+          !hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined)) {
+        alert("Manual card entry requires admin/manager permission. Please use a saved card or contact a manager.");
+        setIsProcessingPayment(false);
+        return;
+      }
+      
       // Record transaction and link to client file, pet, and/or booking when selected
       const customerId =
         selectedClientId && selectedClientId !== "__walk_in__"
@@ -600,8 +617,26 @@ export default function POSPage() {
         ? bookings.find((b) => b.id === selectedBookingId)
         : null;
 
-      const facilityId = 11; // TODO: Get from context
       const fiservConfig = getFiservConfig(facilityId);
+      
+      // Log payment attempt
+      logPaymentAction("payment_capture", {
+        facilityId,
+        staffId: currentUserId || "staff-001",
+        staffName,
+        staffRole: facilityRole,
+        amount: grandTotal,
+        paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+        customerId,
+        customerName: name,
+        notes: `POS transaction - ${cart.length} item(s)`,
+        metadata: {
+          cartItems: cart.length,
+          tipAmount: calculatedTipAmount,
+          tipPercentage: tipPercentage,
+          isManualEntry: !selectedTokenizedCard && newCardDetails.number ? true : false,
+        },
+      });
       
       // Handle split payments
       if (paymentForm.splitPayments && paymentForm.payments.length > 0) {
@@ -3419,8 +3454,16 @@ export default function POSPage() {
                 {/* Fiserv Card Selection - New Card Entry */}
                 {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && !useYipyyPay && (
                   <div className="space-y-4">
+                    {/* Manual Card Entry - Check Permission */}
+                    {!selectedTokenizedCard && !hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined) && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          ⚠️ Manual card entry requires admin/manager permission. Please use a saved card or contact a manager.
+                        </p>
+                      </div>
+                    )}
 
-                    {!selectedTokenizedCard && (
+                    {!selectedTokenizedCard && hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined) && (
                       <div className="space-y-3 border rounded-lg p-4">
                         <Label>Card Details</Label>
                         <div className="grid gap-2">

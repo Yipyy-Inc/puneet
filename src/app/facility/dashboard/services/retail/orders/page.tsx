@@ -101,6 +101,7 @@ import {
   formatTransactionTimestamp,
   getLocationName,
 } from "@/lib/payment-method-utils";
+import { logPaymentAction } from "@/lib/payment-audit";
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
@@ -565,6 +566,52 @@ export default function OrdersPage() {
         refundProcessed = true;
       }
     }
+    
+    // Log method override if not original payment
+    if (returnForm.refundMethod !== "original_payment" && canOverrideRefund) {
+      logPaymentAction("method_override", {
+        facilityId,
+        transactionId: selectedTransaction.id,
+        transactionNumber: selectedTransaction.transactionNumber,
+        amount: refundTotal,
+        originalPaymentMethod: selectedTransaction.paymentMethod,
+        overrideMethod: returnForm.refundMethod,
+        staffId: currentUserId,
+        staffName: "Staff",
+        staffRole: facilityRole,
+        customerId: selectedTransaction.customerId,
+        customerName: selectedTransaction.customerName,
+        reason: returnForm.notes || "Manager override",
+        notes: `Refund method overridden from ${selectedTransaction.paymentMethod} to ${returnForm.refundMethod}`,
+        metadata: {
+          canOverride: canOverrideRefund,
+          isManager: isManager,
+        },
+      });
+    }
+
+    // Log refund action
+    logPaymentAction("refund", {
+      facilityId,
+      transactionId: selectedTransaction.id,
+      transactionNumber: selectedTransaction.transactionNumber,
+      amount: refundTotal,
+      paymentMethod: returnForm.refundMethod,
+      originalPaymentMethod: selectedTransaction.paymentMethod,
+      processorTransactionId: fiservRefundId,
+      staffId: currentUserId,
+      staffName: "Staff",
+      staffRole: facilityRole,
+      customerId: selectedTransaction.customerId,
+      customerName: selectedTransaction.customerName,
+      reason: returnForm.notes || "Customer return",
+      notes: `Refund processed: ${refundProcessed ? "Success" : "Failed"}`,
+      metadata: {
+        refundError: refundError,
+        itemsReturned: returnForm.items.length,
+        isOverride: returnForm.refundMethod !== "original_payment",
+      },
+    });
 
     // Create return with audit trail
     const auditNotes = [
