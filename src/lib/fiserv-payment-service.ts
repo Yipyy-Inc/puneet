@@ -16,6 +16,9 @@ import {
   addTokenizedCard,
 } from "@/data/fiserv-payments";
 
+// Re-export types for convenience
+export type { FiservPaymentRequest, FiservPaymentResponse, FiservRefundRequest, FiservRefundResponse };
+
 /**
  * Process a payment through Fiserv
  */

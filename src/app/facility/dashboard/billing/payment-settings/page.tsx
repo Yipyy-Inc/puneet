@@ -35,7 +35,7 @@ import {
   type CloverTerminalConfig,
   type YipyyPayDevice,
 } from "@/data/fiserv-payments";
-import { Printer, Wifi, Ethernet, Bluetooth, Smartphone, CheckCircle2, Info } from "lucide-react";
+import { Printer, Wifi, EthernetPort, Bluetooth, Smartphone, CheckCircle2, Info } from "lucide-react";
 import { locations } from "@/data/settings";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -87,6 +87,7 @@ export default function PaymentSettingsPage() {
           tipOptions: [15, 18, 20, 25],
           captureMethod: "automatic",
           refundPolicy: "full_refund",
+          splitPaymentRefundPolicy: "last_payment_first",
         },
         integrationSettings: {
           posEnabled: true,
@@ -358,7 +359,6 @@ export default function PaymentSettingsPage() {
                 onCheckedChange={(checked) =>
                   updateConfig({
                     inPersonMethods: {
-                      ...config.inPersonMethods,
                       cloverTerminal: checked,
                       payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
                       manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
@@ -391,9 +391,8 @@ export default function PaymentSettingsPage() {
                   onCheckedChange={(checked) =>
                     updateConfig({
                       inPersonMethods: {
-                        ...config.inPersonMethods,
-                        payWithiPhone: checked,
                         cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                        payWithiPhone: checked,
                         manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
                         cash: config.inPersonMethods?.cash ?? true,
                         storeCredit: config.inPersonMethods?.storeCredit ?? true,
@@ -473,7 +472,12 @@ export default function PaymentSettingsPage() {
                                   : currentLocations.filter((id) => id !== location.id);
                                 updateConfig({
                                   inPersonMethods: {
-                                    ...config.inPersonMethods,
+                                    cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                                    payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                                    manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                                    cash: config.inPersonMethods?.cash ?? true,
+                                    storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                                    giftCard: config.inPersonMethods?.giftCard ?? true,
                                     iphoneSettings: {
                                       ...config.inPersonMethods?.iphoneSettings,
                                       enabledLocations: newLocations,
@@ -525,7 +529,12 @@ export default function PaymentSettingsPage() {
                                   : currentRoles.filter((r) => r !== role);
                                 updateConfig({
                                   inPersonMethods: {
-                                    ...config.inPersonMethods,
+                                    cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                                    payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                                    manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                                    cash: config.inPersonMethods?.cash ?? true,
+                                    storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                                    giftCard: config.inPersonMethods?.giftCard ?? true,
                                     iphoneSettings: {
                                       ...config.inPersonMethods?.iphoneSettings,
                                       restrictedRoles: newRoles,
@@ -580,10 +589,9 @@ export default function PaymentSettingsPage() {
                   onCheckedChange={(checked) =>
                     updateConfig({
                       inPersonMethods: {
-                        ...config.inPersonMethods,
-                        manualCardEntry: checked,
                         cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
                         payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                        manualCardEntry: checked,
                         cash: config.inPersonMethods?.cash ?? true,
                         storeCredit: config.inPersonMethods?.storeCredit ?? true,
                         giftCard: config.inPersonMethods?.giftCard ?? true,
@@ -624,7 +632,13 @@ export default function PaymentSettingsPage() {
                         onCheckedChange={(checked) =>
                           updateConfig({
                             inPersonMethods: {
-                              ...config.inPersonMethods,
+                              cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                              payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                              manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                              cash: config.inPersonMethods?.cash ?? true,
+                              storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                              giftCard: config.inPersonMethods?.giftCard ?? true,
+                              iphoneSettings: config.inPersonMethods?.iphoneSettings,
                               manualCardEntrySettings: {
                                 ...config.inPersonMethods?.manualCardEntrySettings,
                                 adminOnly: checked,
@@ -653,7 +667,13 @@ export default function PaymentSettingsPage() {
                         onCheckedChange={(checked) =>
                           updateConfig({
                             inPersonMethods: {
-                              ...config.inPersonMethods,
+                              cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                              payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                              manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                              cash: config.inPersonMethods?.cash ?? true,
+                              storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                              giftCard: config.inPersonMethods?.giftCard ?? true,
+                              iphoneSettings: config.inPersonMethods?.iphoneSettings,
                               manualCardEntrySettings: {
                                 ...config.inPersonMethods?.manualCardEntrySettings,
                                 requireCvv: checked,
@@ -684,7 +704,13 @@ export default function PaymentSettingsPage() {
                         onCheckedChange={(checked) =>
                           updateConfig({
                             inPersonMethods: {
-                              ...config.inPersonMethods,
+                              cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
+                              payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
+                              manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                              cash: config.inPersonMethods?.cash ?? true,
+                              storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                              giftCard: config.inPersonMethods?.giftCard ?? true,
+                              iphoneSettings: config.inPersonMethods?.iphoneSettings,
                               manualCardEntrySettings: {
                                 ...config.inPersonMethods?.manualCardEntrySettings,
                                 requireZipCode: checked,
@@ -722,11 +748,10 @@ export default function PaymentSettingsPage() {
                 onCheckedChange={(checked) =>
                   updateConfig({
                     inPersonMethods: {
-                      ...config.inPersonMethods,
-                      cash: checked,
                       cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
                       payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
                       manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
+                      cash: checked,
                       storeCredit: config.inPersonMethods?.storeCredit ?? true,
                       giftCard: config.inPersonMethods?.giftCard ?? true,
                       iphoneSettings: config.inPersonMethods?.iphoneSettings,
@@ -754,12 +779,11 @@ export default function PaymentSettingsPage() {
                 onCheckedChange={(checked) =>
                   updateConfig({
                     inPersonMethods: {
-                      ...config.inPersonMethods,
-                      storeCredit: checked,
                       cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
                       payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
                       manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
                       cash: config.inPersonMethods?.cash ?? true,
+                      storeCredit: checked,
                       giftCard: config.inPersonMethods?.giftCard ?? true,
                       iphoneSettings: config.inPersonMethods?.iphoneSettings,
                       manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
@@ -786,13 +810,12 @@ export default function PaymentSettingsPage() {
                 onCheckedChange={(checked) =>
                   updateConfig({
                     inPersonMethods: {
-                      ...config.inPersonMethods,
-                      giftCard: checked,
                       cloverTerminal: config.inPersonMethods?.cloverTerminal ?? false,
                       payWithiPhone: config.inPersonMethods?.payWithiPhone ?? false,
                       manualCardEntry: config.inPersonMethods?.manualCardEntry ?? false,
                       cash: config.inPersonMethods?.cash ?? true,
                       storeCredit: config.inPersonMethods?.storeCredit ?? true,
+                      giftCard: checked,
                       iphoneSettings: config.inPersonMethods?.iphoneSettings,
                       manualCardEntrySettings: config.inPersonMethods?.manualCardEntrySettings,
                     },
@@ -1438,7 +1461,7 @@ export default function PaymentSettingsPage() {
                       <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
                         <div className="flex items-center gap-2">
                           {terminal.connectionType === "wifi" && <Wifi className="h-4 w-4" />}
-                          {terminal.connectionType === "ethernet" && <Ethernet className="h-4 w-4" />}
+                          {terminal.connectionType === "ethernet" && <EthernetPort className="h-4 w-4" />}
                           {terminal.connectionType === "bluetooth" && <Bluetooth className="h-4 w-4" />}
                           <span>{terminal.terminalName}</span>
                           {terminal.isOnline ? (

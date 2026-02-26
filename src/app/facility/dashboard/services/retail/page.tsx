@@ -67,6 +67,7 @@ import {
   getPromoCodeByCode,
   getAccountDiscount,
   applyPromoCode,
+  getStoreCreditBalance,
   type Product,
   type ProductVariant,
   type CartItem,
@@ -77,6 +78,7 @@ import {
 } from "@/data/retail";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { giftCards } from "@/data/payments";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import {
@@ -103,6 +105,7 @@ import {
   type YipyyPayRequest,
 } from "@/lib/yipyy-pay-service";
 import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
+import { logPaymentAction } from "@/lib/payment-audit";
 import { locations } from "@/data/settings";
 
 interface CartItemWithId extends CartItem {
@@ -111,8 +114,6 @@ interface CartItemWithId extends CartItem {
 
 export default function POSPage() {
   const searchParams = useSearchParams();
-  const { role: facilityRole } = useFacilityRole();
-  const currentUserId = "staff-001"; // TODO: Get from auth context
   const { role: facilityRole } = useFacilityRole();
   const currentUserId = getCurrentUserId();
   const canApplyDiscount = hasPermission(facilityRole, "apply_discount", currentUserId || undefined);
@@ -386,6 +387,7 @@ export default function POSPage() {
     } else {
       const newItem: CartItemWithId = {
         id: cartItemId,
+        itemType: "product",
         productId: product.id,
         productName: product.name,
         variantId: isVariant ? (item as ProductVariant).id : undefined,
@@ -724,7 +726,7 @@ export default function POSPage() {
                   method: payment.method,
                   amount: payment.amount,
                   cloverTransactionId: cloverResponse.cloverTransactionId,
-                  fiservTransactionId: cloverResponse.fiservTransactionId,
+                  fiservTransactionId: cloverResponse.transactionId, // Clover transaction ID is used as Fiserv transaction ID
                   notes: `Clover Terminal (${terminal.terminalName})`,
                 });
               } else {
@@ -904,7 +906,7 @@ export default function POSPage() {
           cashierName: "Staff",
           notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
           cloverTransactionId: cloverResponse.cloverTransactionId,
-          fiservTransactionId: cloverResponse.fiservTransactionId,
+          fiservTransactionId: cloverResponse.transactionId, // Clover transaction ID is used as Fiserv transaction ID
           locationId: "loc-001", // TODO: Get from context
         });
       }
@@ -2993,7 +2995,7 @@ export default function POSPage() {
                         const facilityId = 11; // TODO: Get from context
                         const fiservConfig = getFiservConfig(facilityId);
                         const inPersonMethods = fiservConfig?.inPersonMethods;
-                        const paymentOptions: JSX.Element[] = [];
+                        const paymentOptions: React.ReactElement[] = [];
 
                         // Cash
                         if (inPersonMethods?.cash !== false) {

@@ -253,6 +253,7 @@ export interface ReturnItem {
   originalQuantity: number; // Original quantity purchased
   unitPrice: number;
   discount: number;
+  discountType?: "fixed" | "percent";
   total: number;
   reason: ReturnReason;
   reasonNotes?: string;
@@ -1186,6 +1187,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-001",
         productName: "Premium Dog Food",
         variantId: "var-001-2",
@@ -1198,6 +1200,7 @@ const transactions: Transaction[] = [
         total: 109.98,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-3",
@@ -1232,6 +1235,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-002",
     items: [
       {
+        itemType: "product",
         productId: "prod-002",
         productName: "Interactive Puzzle Toy",
         variantId: "var-002-3",
@@ -1265,6 +1269,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-003",
     items: [
       {
+        itemType: "product",
         productId: "prod-005",
         productName: "Orthopedic Dog Bed",
         variantId: "var-005-2",
@@ -1277,6 +1282,7 @@ const transactions: Transaction[] = [
         total: 71.99,
       },
       {
+        itemType: "product",
         productId: "prod-007",
         productName: "Retractable Dog Leash",
         sku: "RDL-007",
@@ -1287,6 +1293,7 @@ const transactions: Transaction[] = [
         total: 24.99,
       },
       {
+        itemType: "product",
         productId: "prod-004",
         productName: "Natural Dog Shampoo",
         sku: "NDS-004",
@@ -1322,6 +1329,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240311-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-012",
         productName: "Dog Training Clicker",
         sku: "DTC-012",
@@ -1332,6 +1340,7 @@ const transactions: Transaction[] = [
         total: 15.98,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-1",
@@ -1365,6 +1374,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240311-002",
     items: [
       {
+        itemType: "product",
         productId: "prod-003",
         productName: "Adjustable Dog Collar",
         variantId: "var-003-3",
@@ -1398,6 +1408,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240312-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-001",
         productName: "Premium Dog Food",
         variantId: "var-001-1",
@@ -1410,6 +1421,7 @@ const transactions: Transaction[] = [
         total: 24.99,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-1",

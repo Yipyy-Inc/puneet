@@ -87,6 +87,7 @@ import {
   type InventoryMovement,
   type Product,
   type ProductVariant,
+  type PaymentMethod,
 } from "@/data/retail";
 import { processFiservRefund } from "@/lib/fiserv-payment-service";
 import { 
@@ -95,7 +96,7 @@ import {
   getFiservConfig,
 } from "@/data/fiserv-payments";
 import { useFacilityRole } from "@/hooks/use-facility-role";
-import { hasPermission } from "@/lib/role-utils";
+import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { 
   getPaymentMethodLabel, 
   formatTransactionTimestamp,
@@ -108,8 +109,10 @@ type SupplierWithRecord = Supplier & Record<string, unknown>;
 
 export default function OrdersPage() {
   const { role: facilityRole } = useFacilityRole();
+  const currentUserId = getCurrentUserId() || "staff-001";
   const isManager = facilityRole === "manager" || facilityRole === "owner";
-  const canOverrideRefund = hasPermission(facilityRole, "process_refund") && isManager;
+  const canOverrideRefund =
+    hasPermission(facilityRole, "process_refund", currentUserId || undefined) && isManager;
   
   const [selectedTab, setSelectedTab] = useState<"orders" | "suppliers" | "transactions">(
     "orders",
@@ -137,23 +140,7 @@ export default function OrdersPage() {
   
   // Return form state
   const [returnForm, setReturnForm] = useState<{
-    items: Array<{
-      transactionItemId: string;
-      productId: string;
-      productName: string;
-      variantId?: string;
-      variantName?: string;
-      sku: string;
-      quantity: number;
-      originalQuantity: number;
-      unitPrice: number;
-      discount: number;
-      discountType: "fixed" | "percent";
-      total: number;
-      reason: ReturnReason;
-      reasonNotes?: string;
-      restocked: boolean;
-    }>;
+    items: ReturnItem[];
     refundMethod: RefundMethod;
     customRefundMethodName?: string;
     storeCreditAmount?: number;
@@ -337,7 +324,7 @@ export default function OrdersPage() {
                 const fiservRefundRequest = {
                   facilityId,
                   originalTransactionId: selectedTransaction.id,
-                  fiservTransactionId: cloverTxn.fiservTransactionId,
+                  fiservTransactionId: cloverTxn.cloverTransactionId, // Clover transaction ID is used as Fiserv transaction ID
                   amount: refundAmount,
                   reason: returnForm.notes || "Refund for return (split payment)",
                   metadata: {
@@ -497,7 +484,7 @@ export default function OrdersPage() {
           const fiservRefundRequest = {
             facilityId,
             originalTransactionId: selectedTransaction.id,
-            fiservTransactionId: cloverTxn.fiservTransactionId,
+            fiservTransactionId: cloverTxn.cloverTransactionId, // Clover transaction ID is used as Fiserv transaction ID
             amount: refundTotal,
             reason: returnForm.notes || "Refund for return",
             metadata: {
@@ -1964,8 +1951,8 @@ export default function OrdersPage() {
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={(e) => {
-                                  if (e.target.checked) {
-                                    const newReturnItem = {
+                                  if (e.target.checked && item.productId) {
+                                    const newReturnItem: ReturnItem = {
                                       transactionItemId: `${selectedTransaction.id}-${index}`,
                                       productId: item.productId,
                                       productName: item.productName,
@@ -1976,7 +1963,7 @@ export default function OrdersPage() {
                                       originalQuantity: item.quantity,
                                       unitPrice: item.unitPrice,
                                       discount: item.discount,
-                                      discountType: item.discountType,
+                                      discountType: item.discountType || "fixed",
                                       total: item.total,
                                       reason: "customer_request" as ReturnReason,
                                       restocked: true,
