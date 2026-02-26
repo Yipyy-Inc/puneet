@@ -138,6 +138,11 @@ export function getTopProducts(
 
   filtered.forEach((txn) => {
     txn.items.forEach((item) => {
+      // Skip non-product items
+      if (item.itemType !== "product" || !item.productId) {
+        return;
+      }
+
       const key = item.variantId
         ? `${item.productId}-${item.variantId}`
         : item.productId;

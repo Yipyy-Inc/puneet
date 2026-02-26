@@ -114,17 +114,39 @@ export interface PurchaseOrder {
   createdBy: string;
 }
 
+export type CartItemType = "product" | "service" | "package" | "membership";
+
 export interface CartItem {
-  productId: string;
+  // Item identification
+  itemType: CartItemType;
+  productId?: string; // For retail products
+  serviceId?: string; // For services (daycare, boarding, grooming, training, etc.)
+  packageId?: string; // For packages
+  membershipId?: string; // For memberships
+  
+  // Item details
   productName: string;
   variantId?: string;
   variantName?: string;
   sku: string;
+  
+  // Service-specific (if itemType is "service")
+  serviceType?: string; // "daycare" | "boarding" | "grooming" | "training" | etc.
+  serviceDate?: string; // Date for service
+  serviceDuration?: number; // Duration in minutes
+  
+  // Package/Membership-specific
+  packageDetails?: string; // Package description
+  membershipPlanId?: string; // Membership plan ID
+  
+  // Pricing
   quantity: number;
   unitPrice: number;
   discount: number;
   discountType: "fixed" | "percent";
   total: number;
+  
+  // Comp/Free items
   isComp?: boolean; // Employee comp / free item
   compReason?: string; // Reason for comp (manager only)
 }
@@ -211,6 +233,13 @@ export interface Transaction {
   notes: string;
   createdAt: string;
   returns?: Return[]; // Associated returns
+  // Payment processing details
+  fiservTransactionId?: string; // Fiserv transaction ID if paid via Fiserv
+  yipyyPayTransactionId?: string; // Yipyy Pay transaction ID if paid via iPhone
+  cloverTransactionId?: string; // Clover terminal transaction ID if paid via Clover
+  tokenizedCardId?: string; // Tokenized card ID if paid with saved card
+  // Location and reconciliation
+  locationId?: string; // Location where transaction occurred
 }
 
 export interface ReturnItem {
@@ -224,6 +253,7 @@ export interface ReturnItem {
   originalQuantity: number; // Original quantity purchased
   unitPrice: number;
   discount: number;
+  discountType?: "fixed" | "percent";
   total: number;
   reason: ReturnReason;
   reasonNotes?: string;
@@ -1157,6 +1187,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-001",
         productName: "Premium Dog Food",
         variantId: "var-001-2",
@@ -1169,6 +1200,7 @@ const transactions: Transaction[] = [
         total: 109.98,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-3",
@@ -1203,6 +1235,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-002",
     items: [
       {
+        itemType: "product",
         productId: "prod-002",
         productName: "Interactive Puzzle Toy",
         variantId: "var-002-3",
@@ -1236,6 +1269,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240310-003",
     items: [
       {
+        itemType: "product",
         productId: "prod-005",
         productName: "Orthopedic Dog Bed",
         variantId: "var-005-2",
@@ -1248,6 +1282,7 @@ const transactions: Transaction[] = [
         total: 71.99,
       },
       {
+        itemType: "product",
         productId: "prod-007",
         productName: "Retractable Dog Leash",
         sku: "RDL-007",
@@ -1258,6 +1293,7 @@ const transactions: Transaction[] = [
         total: 24.99,
       },
       {
+        itemType: "product",
         productId: "prod-004",
         productName: "Natural Dog Shampoo",
         sku: "NDS-004",
@@ -1293,6 +1329,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240311-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-012",
         productName: "Dog Training Clicker",
         sku: "DTC-012",
@@ -1303,6 +1340,7 @@ const transactions: Transaction[] = [
         total: 15.98,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-1",
@@ -1336,6 +1374,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240311-002",
     items: [
       {
+        itemType: "product",
         productId: "prod-003",
         productName: "Adjustable Dog Collar",
         variantId: "var-003-3",
@@ -1369,6 +1408,7 @@ const transactions: Transaction[] = [
     transactionNumber: "TXN-20240312-001",
     items: [
       {
+        itemType: "product",
         productId: "prod-001",
         productName: "Premium Dog Food",
         variantId: "var-001-1",
@@ -1381,6 +1421,7 @@ const transactions: Transaction[] = [
         total: 24.99,
       },
       {
+        itemType: "product",
         productId: "prod-006",
         productName: "Training Treats",
         variantId: "var-006-1",

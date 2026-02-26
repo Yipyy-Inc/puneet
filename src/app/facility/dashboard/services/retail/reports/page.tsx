@@ -47,6 +47,13 @@ import {
   type SalesByCategory,
   type SalesLinkedToServices,
 } from "@/lib/retail-reports";
+import { getAllTransactions, type Transaction } from "@/data/retail";
+import { 
+  getPaymentMethodLabel, 
+  formatTransactionTimestamp,
+  getLocationName,
+} from "@/lib/payment-method-utils";
+import { Smartphone, Printer, CreditCard, Banknote, Wallet, Gift, MapPin, Clock, User as UserIcon, Link as LinkIcon } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -454,6 +461,7 @@ export default function RetailReportsPage() {
           <TabsTrigger value="staff">Sales by Staff</TabsTrigger>
           <TabsTrigger value="category">Sales by Category</TabsTrigger>
           <TabsTrigger value="services">Linked to Services</TabsTrigger>
+          <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
         </TabsList>
 
         {/* Sales by Period */}
@@ -675,7 +683,210 @@ export default function RetailReportsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Reconciliation Report */}
+        <TabsContent value="reconciliation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Transaction Reconciliation</CardTitle>
+              <CardDescription>
+                Detailed transaction report with payment methods, processor IDs, staff, location, and timestamps
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReconciliationTable 
+                startDate={startDate} 
+                endDate={endDate} 
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Reconciliation Table Component
+function ReconciliationTable({ 
+  startDate, 
+  endDate 
+}: { 
+  startDate: Date; 
+  endDate: Date;
+}) {
+  const transactions = useMemo(() => {
+    const all = getAllTransactions();
+    return all.filter((txn) => {
+      const txnDate = new Date(txn.createdAt);
+      return txnDate >= startDate && txnDate <= endDate && txn.status === "completed";
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [startDate, endDate]);
+
+  const reconciliationColumns: ColumnDef<Transaction>[] = [
+    {
+      key: "transactionNumber",
+      label: "Transaction #",
+      defaultVisible: true,
+      render: (item) => (
+        <span className="font-mono font-medium">{item.transactionNumber}</span>
+      ),
+    },
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      icon: Clock,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        return (
+          <div className="flex flex-col">
+            <span>{formatTransactionTimestamp(txn.createdAt)}</span>
+            <span className="text-xs text-muted-foreground">
+              {new Date(txn.createdAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "paymentMethod",
+      label: "Payment Method",
+      icon: CreditCard,
+      defaultVisible: true,
+      render: (item) => {
+        const paymentInfo = getPaymentMethodLabel(item as Transaction);
+        const PaymentIcon = paymentInfo.icon;
+        return (
+          <div className="flex items-center gap-2">
+            <PaymentIcon className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col">
+              <span className="font-medium">{paymentInfo.label}</span>
+              {paymentInfo.processor && (
+                <span className="text-xs text-muted-foreground">
+                  {paymentInfo.processor}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "processorTransactionId",
+      label: "Processor Transaction ID",
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        const transactionId = txn.yipyyPayTransactionId || 
+                             txn.cloverTransactionId || 
+                             txn.fiservTransactionId;
+        if (!transactionId) return <span className="text-muted-foreground">—</span>;
+        return (
+          <div className="flex flex-col">
+            <span className="font-mono text-xs">{transactionId}</span>
+            {txn.yipyyPayTransactionId && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">Yipyy Pay</Badge>
+            )}
+            {txn.cloverTransactionId && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">Clover</Badge>
+            )}
+            {txn.fiservTransactionId && !txn.yipyyPayTransactionId && !txn.cloverTransactionId && (
+              <Badge variant="outline" className="text-xs w-fit mt-1">Fiserv</Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "staff",
+      label: "Staff Member",
+      icon: UserIcon,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">{txn.cashierName || "Unknown"}</span>
+            {txn.cashierId && (
+              <span className="text-xs text-muted-foreground">ID: {txn.cashierId}</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "location",
+      label: "Location",
+      icon: MapPin,
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        const locationName = getLocationName(txn.locationId);
+        return (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span>{locationName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "total",
+      label: "Amount",
+      icon: DollarSign,
+      defaultVisible: true,
+      render: (item) => `$${(item.total as number).toFixed(2)}`,
+    },
+    {
+      key: "bookingReference",
+      label: "Booking/Service",
+      icon: LinkIcon,
+      defaultVisible: false,
+      render: (item) => {
+        const txn = item as Transaction;
+        if (!txn.bookingId && !txn.bookingService) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex flex-col">
+            {txn.bookingId && (
+              <span className="font-medium">Booking #{txn.bookingId}</span>
+            )}
+            {txn.bookingService && (
+              <span className="text-xs text-muted-foreground capitalize">
+                {txn.bookingService}
+              </span>
+            )}
+            {txn.petName && (
+              <span className="text-xs text-muted-foreground">
+                Pet: {txn.petName}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      defaultVisible: true,
+      render: (item) => {
+        const txn = item as Transaction;
+        return txn.customerName || "Walk-in";
+      },
+    },
+  ];
+
+  return (
+    <DataTable
+      data={transactions}
+      columns={reconciliationColumns}
+      searchKey="transactionNumber"
+      searchPlaceholder="Search by transaction number, customer, staff..."
+    />
   );
 }
