@@ -243,6 +243,10 @@ export const campaigns: Campaign[] = [
 // LOYALTY & REFERRALS DATA
 // ========================================
 
+/**
+ * @deprecated Use FacilityLoyaltyConfig from facility-loyalty-config.ts instead
+ * This interface is kept for backward compatibility
+ */
 export interface LoyaltySettings {
   enabled: boolean;
   pointsPerDollar: number; // e.g., 1 point per $1 spent
