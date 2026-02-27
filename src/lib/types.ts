@@ -126,7 +126,7 @@ export interface NewBooking {
   endDate: string;
   checkInTime?: string;
   checkOutTime?: string;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+  status: "pending" | "request_submitted" | "waitlisted" | "confirmed" | "completed" | "cancelled";
   basePrice: number;
   discount: number;
   discountReason?: string;

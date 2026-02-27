@@ -39,13 +39,14 @@ interface StepperNavigationProps {
 function Stepper({ steps, currentStep, className }: StepperProps) {
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Step circles row - aligned horizontally */}
       <div className="flex items-center justify-between">
         {steps.map((step, index) => (
           <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center flex-1">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium",
+                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium shrink-0",
                   index < currentStep
                     ? "border-primary bg-primary text-primary-foreground"
                     : index === currentStep
@@ -59,33 +60,38 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
                   index + 1
                 )}
               </div>
-              <div className="mt-2 text-center">
-                <div
-                  className={cn(
-                    "text-sm font-medium",
-                    index <= currentStep
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {step.title}
-                </div>
-                {step.description && (
-                  <div className="text-xs text-muted-foreground mt-1 max-w-24">
-                    {step.description}
-                  </div>
-                )}
-              </div>
             </div>
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  "flex-1 h-px mx-4 mt-4",
+                  "flex-1 h-px mx-2",
                   index < currentStep ? "bg-primary" : "bg-muted-foreground/30",
                 )}
               />
             )}
           </React.Fragment>
+        ))}
+      </div>
+      {/* Step titles row - below circles */}
+      <div className="flex items-start justify-between">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex flex-col items-center flex-1 text-center">
+            <div
+              className={cn(
+                "text-sm font-medium",
+                index <= currentStep
+                  ? "text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {step.title}
+            </div>
+            {step.description && (
+              <div className="text-xs text-muted-foreground mt-1 max-w-24">
+                {step.description}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>

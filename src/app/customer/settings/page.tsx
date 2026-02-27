@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
+import { bookings } from "@/data/bookings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,10 @@ export default function CustomerSettingsPage() {
       phone: customer?.emergencyContact?.phone || "",
       email: customer?.emergencyContact?.email || "",
     },
+    pickupDropoff: {
+      authorizedPickupPeople: "",
+      notes: "",
+    },
   });
 
   const [notificationPreferences, setNotificationPreferences] = useState({
@@ -86,9 +91,23 @@ export default function CustomerSettingsPage() {
     pushBookingReminders: true,
     pushReportCards: true,
     pushPetUpdates: true,
+    // Per-pet preferences (report cards)
+    perPetReportCards: {} as Record<number, boolean>,
+    // Quiet hours for SMS/push
+    quietHoursEnabled: false,
+    quietHoursStart: "21:00",
+    quietHoursEnd: "07:00",
+    // Language preference
+    language: "en",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Derive pets for this customer (for per-pet notification preferences)
+  const customerPets = useMemo(() => {
+    return customer?.pets || [];
+  }, [customer]);
+
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -158,6 +177,10 @@ export default function CustomerSettingsPage() {
         relationship: customer?.emergencyContact?.relationship || "",
         phone: customer?.emergencyContact?.phone || "",
         email: customer?.emergencyContact?.email || "",
+      },
+      pickupDropoff: {
+        authorizedPickupPeople: "",
+        notes: "",
       },
     });
     setErrors({});
@@ -512,6 +535,71 @@ export default function CustomerSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Pick-up & Drop-off Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Pick-up & Drop-off Instructions
+            </CardTitle>
+            <CardDescription>
+              Let the facility know who is allowed to pick up your pets and any special
+              instructions for boarding or daycare.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="authorizedPickup">
+                  Who is allowed to pick up?{" "}
+                  <span className="text-xs text-muted-foreground font-normal">
+                    (Names of family, friends, pet transport services)
+                  </span>
+                </Label>
+                <Textarea
+                  id="authorizedPickup"
+                  placeholder="Example: Robert Johnson (spouse), Sarah Lee (sister), Paws Taxi Service"
+                  rows={4}
+                  value={profileData.pickupDropoff.authorizedPickupPeople}
+                  onChange={(e) =>
+                    setProfileData({
+                      ...profileData,
+                      pickupDropoff: {
+                        ...profileData.pickupDropoff,
+                        authorizedPickupPeople: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickupNotes">Additional instructions (optional)</Label>
+                <Textarea
+                  id="pickupNotes"
+                  placeholder="Gate code, parking details, which door to use, special handling notes..."
+                  rows={4}
+                  value={profileData.pickupDropoff.notes}
+                  onChange={(e) =>
+                    setProfileData({
+                      ...profileData,
+                      pickupDropoff: {
+                        ...profileData.pickupDropoff,
+                        notes: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Staff will use this information at check-in and pick-up. Make sure the people you
+              list bring a valid ID when picking up your pet.
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Notification Preferences */}
         <Card>
           <CardHeader>
@@ -648,6 +736,59 @@ export default function CustomerSettingsPage() {
             </div>
 
             <Separator />
+
+            {/* Per-Pet Report Card Preferences */}
+            {customerPets.length > 0 && (
+              <>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <UserCircle className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Per-Pet Report Cards</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Choose which pets should receive report cards and photo updates. This is
+                    optional and can be different for each pet.
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {customerPets.map((pet) => (
+                      <div
+                        key={pet.id}
+                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium flex items-center gap-2">
+                            {pet.type === "Dog" ? "🐶" : pet.type === "Cat" ? "🐱" : "🐾"} {pet.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {pet.breed} • Report cards{" "}
+                            {notificationPreferences.perPetReportCards[pet.id] ?? true
+                              ? "enabled"
+                              : "disabled"}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={
+                            notificationPreferences.perPetReportCards[pet.id] ?? true
+                          }
+                          onCheckedChange={(checked) =>
+                            setNotificationPreferences({
+                              ...notificationPreferences,
+                              perPetReportCards: {
+                                ...notificationPreferences.perPetReportCards,
+                                [pet.id]: checked,
+                              },
+                            })
+                          }
+                          disabled={!isEditing}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+              </>
+            )}
 
             {/* SMS Notifications */}
             <div className="space-y-4">
@@ -817,6 +958,110 @@ export default function CustomerSettingsPage() {
                     }
                     disabled={!isEditing}
                   />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Quiet Hours & Language */}
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Quiet Hours */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Bell className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Quiet Hours (SMS & Push)</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  During quiet hours, non‑urgent SMS and push notifications will be held and sent
+                  after your quiet period ends. Emergency alerts may still be delivered.
+                </p>
+                <div className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Enable Quiet Hours</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Temporarily mute reminders and updates overnight.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notificationPreferences.quietHoursEnabled}
+                    onCheckedChange={(checked) =>
+                      setNotificationPreferences({
+                        ...notificationPreferences,
+                        quietHoursEnabled: checked,
+                      })
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                {notificationPreferences.quietHoursEnabled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="quiet-start">Start Time</Label>
+                      <Input
+                        id="quiet-start"
+                        type="time"
+                        value={notificationPreferences.quietHoursStart}
+                        onChange={(e) =>
+                          setNotificationPreferences({
+                            ...notificationPreferences,
+                            quietHoursStart: e.target.value,
+                          })
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="quiet-end">End Time</Label>
+                      <Input
+                        id="quiet-end"
+                        type="time"
+                        value={notificationPreferences.quietHoursEnd}
+                        onChange={(e) =>
+                          setNotificationPreferences({
+                            ...notificationPreferences,
+                            quietHoursEnd: e.target.value,
+                          })
+                        }
+                        disabled={!isEditing}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Language Preference */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <UserCircle className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Language Preference</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Choose the language you prefer for emails, SMS (where supported), and in‑app
+                  communications for facilities that support multiple languages.
+                </p>
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="language">Language</Label>
+                  <Select
+                    value={notificationPreferences.language}
+                    onValueChange={(value) =>
+                      setNotificationPreferences({
+                        ...notificationPreferences,
+                        language: value,
+                      })
+                    }
+                    disabled={!isEditing}
+                  >
+                    <SelectTrigger id="language">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                      <SelectItem value="de">Deutsch</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

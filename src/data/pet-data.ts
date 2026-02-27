@@ -23,6 +23,29 @@ export interface VaccinationRecord {
   nextDueDate?: string;
   reminderSent?: boolean;
   notes?: string;
+  // Upload status for facility review
+  status?: "pending_review" | "approved" | "rejected";
+  reviewedBy?: string;
+  reviewedById?: number;
+  reviewedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface CareInstructions {
+  petId: number;
+  feedingSchedule?: string; // e.g., "8:00 AM, 12:00 PM, 6:00 PM"
+  feedingAmount?: string; // e.g., "1 cup per meal"
+  medicationList?: Array<{
+    name: string;
+    dosage: string;
+    frequency: string;
+    notes?: string;
+  }>;
+  groomingSensitivities?: string; // e.g., "Sensitive to loud noises during grooming"
+  behaviorNotes?: string; // Owner-provided behavior notes
+  lastUpdated?: string;
+  lastUpdatedBy?: string;
+  lastUpdatedById?: number;
 }
 
 export interface ReportCard {
@@ -50,6 +73,9 @@ export interface ReportCard {
   createdById: number;
   sentToOwner: boolean;
   sentAt?: string;
+  theme?: "everyday" | "halloween" | "christmas" | "valentines" | "easter" | "summer" | "winter";
+  replyMessage?: string; // Quick reply from customer
+  repliedAt?: string; // When customer replied
 }
 
 export interface PetRelationship {
@@ -264,12 +290,12 @@ export const vaccinationRecords: VaccinationRecord[] = [
     id: "vacc-001",
     petId: 1,
     vaccineName: "Rabies",
-    administeredDate: "2024-01-20",
-    expiryDate: "2025-01-20",
-    nextDueDate: "2025-01-20",
+    administeredDate: "2025-12-01",
+    expiryDate: "2027-12-01",
+    nextDueDate: "2027-12-01",
     veterinarianName: "Dr. Emily Chen",
     veterinaryClinic: "Happy Paws Veterinary Clinic",
-    documentUrl: "/documents/vaccinations/buddy-rabies-2024.pdf",
+    documentUrl: "/documents/vaccinations/buddy-rabies-2025.pdf",
     reminderSent: false,
     notes: "No adverse reactions",
   },
@@ -277,25 +303,25 @@ export const vaccinationRecords: VaccinationRecord[] = [
     id: "vacc-002",
     petId: 1,
     vaccineName: "DHPP (Distemper, Hepatitis, Parvovirus, Parainfluenza)",
-    administeredDate: "2024-01-20",
-    expiryDate: "2025-01-20",
-    nextDueDate: "2025-01-20",
+    administeredDate: "2025-12-01",
+    expiryDate: "2027-12-01",
+    nextDueDate: "2027-12-01",
     veterinarianName: "Dr. Emily Chen",
     veterinaryClinic: "Happy Paws Veterinary Clinic",
-    documentUrl: "/documents/vaccinations/buddy-dhpp-2024.pdf",
+    documentUrl: "/documents/vaccinations/buddy-dhpp-2025.pdf",
     reminderSent: false,
   },
   {
     id: "vacc-003",
     petId: 1,
     vaccineName: "Bordetella",
-    administeredDate: "2024-01-20",
-    expiryDate: "2024-07-20",
-    nextDueDate: "2024-07-20",
+    administeredDate: "2026-01-15",
+    expiryDate: "2026-07-15",
+    nextDueDate: "2026-07-15",
     veterinarianName: "Dr. Emily Chen",
     veterinaryClinic: "Happy Paws Veterinary Clinic",
-    reminderSent: true,
-    notes: "6-month booster required",
+    reminderSent: false,
+    notes: "6-month booster",
   },
   {
     id: "vacc-004",
@@ -407,6 +433,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-01-15T17:00:00Z",
+    theme: "everyday",
   },
   {
     id: "report-002",
@@ -441,6 +468,7 @@ export const reportCards: ReportCard[] = [
     createdById: 1,
     sentToOwner: true,
     sentAt: "2024-03-01T17:30:00Z",
+    theme: "summer",
   },
   {
     id: "report-003",
@@ -482,6 +510,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-01-20T20:00:00Z",
+    theme: "winter",
   },
   {
     id: "report-004",
@@ -505,6 +534,7 @@ export const reportCards: ReportCard[] = [
     createdById: 1,
     sentToOwner: true,
     sentAt: "2024-01-25T12:30:00Z",
+    theme: "valentines",
   },
   {
     id: "report-005",
@@ -538,6 +568,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-02-01T18:00:00Z",
+    theme: "easter",
   },
 ];
 
@@ -705,5 +736,38 @@ export const banRecords: BanRecord[] = [
     unbannedAt: "2024-01-05T09:00:00Z",
     unbannedBy: "Sarah Johnson",
     unbannedById: 1,
+  },
+];
+
+// Mock care instructions data
+export const careInstructions: CareInstructions[] = [
+  {
+    petId: 1,
+    feedingSchedule: "8:00 AM, 12:00 PM, 6:00 PM",
+    feedingAmount: "1.5 cups per meal",
+    medicationList: [],
+    groomingSensitivities: "Sensitive to loud noises during grooming",
+    behaviorNotes: "Very friendly, loves to play with other dogs",
+    lastUpdated: "2024-01-15T10:00:00Z",
+    lastUpdatedBy: "Alice Johnson",
+    lastUpdatedById: 15,
+  },
+  {
+    petId: 2,
+    feedingSchedule: "7:00 AM, 5:00 PM",
+    feedingAmount: "1/2 cup per meal",
+    medicationList: [
+      {
+        name: "Flea Prevention",
+        dosage: "1 tablet",
+        frequency: "Monthly",
+        notes: "Give with food",
+      },
+    ],
+    groomingSensitivities: "Prefers gentle brushing",
+    behaviorNotes: "Indoor only, prefers quiet spaces",
+    lastUpdated: "2024-02-01T11:00:00Z",
+    lastUpdatedBy: "Alice Johnson",
+    lastUpdatedById: 15,
   },
 ];

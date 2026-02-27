@@ -39,6 +39,8 @@ import {
   CheckCircle2,
   XCircle,
   Image as ImageIcon,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
@@ -47,6 +49,8 @@ import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { vaccinationRules } from "@/data/settings";
 import { facilityConfig } from "@/data/facility-config";
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
+import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
+import { careInstructions, type CareInstructions } from "@/data/pet-data";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -235,10 +239,344 @@ export default function CustomerPetDetailPage({
   const handleAddVaccination = async (vaccination: Omit<typeof vaccinationRecords[0], "id">) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Vaccination record added successfully!");
+    toast.success("Vaccination record uploaded! It will be reviewed by the facility.");
     // Refresh vaccinations list
     router.refresh();
   };
+
+  // Care Instructions Component
+  function CareInstructionsSection({ petId }: { petId: number }) {
+    const [isEditingCI, setIsEditingCI] = useState(false);
+    const [isSavingCI, setIsSavingCI] = useState(false);
+    const petCareInstructions = careInstructions.find((ci) => ci.petId === petId);
+    const [editedInstructions, setEditedInstructions] = useState<CareInstructions>(
+      petCareInstructions || {
+        petId,
+        medicationList: [],
+      }
+    );
+
+    const editableFields = facilityConfig.careInstructions.customerEditableFields;
+
+    const handleSaveCI = async () => {
+      setIsSavingCI(true);
+      try {
+        // TODO: Replace with actual API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast.success("Care instructions updated successfully!");
+        setIsEditingCI(false);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to update care instructions");
+      } finally {
+        setIsSavingCI(false);
+      }
+    };
+
+    const handleAddMedication = () => {
+      setEditedInstructions({
+        ...editedInstructions,
+        medicationList: [
+          ...(editedInstructions.medicationList || []),
+          { name: "", dosage: "", frequency: "", notes: "" },
+        ],
+      });
+    };
+
+    const handleRemoveMedication = (index: number) => {
+      const newList = [...(editedInstructions.medicationList || [])];
+      newList.splice(index, 1);
+      setEditedInstructions({ ...editedInstructions, medicationList: newList });
+    };
+
+    const handleMedicationChange = (
+      index: number,
+      field: "name" | "dosage" | "frequency" | "notes",
+      value: string
+    ) => {
+      const newList = [...(editedInstructions.medicationList || [])];
+      newList[index] = { ...newList[index], [field]: value };
+      setEditedInstructions({ ...editedInstructions, medicationList: newList });
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold">Care Instructions</CardTitle>
+              <CardDescription>
+                Provide care instructions for your pet. These will be shared with facility staff.
+              </CardDescription>
+            </div>
+            {!isEditingCI && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditingCI(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isEditingCI ? (
+            <>
+              {editableFields.feedingSchedule && (
+                <div className="space-y-2">
+                  <Label htmlFor="feedingSchedule">Feeding Schedule</Label>
+                  <Input
+                    id="feedingSchedule"
+                    value={editedInstructions.feedingSchedule || ""}
+                    onChange={(e) =>
+                      setEditedInstructions({
+                        ...editedInstructions,
+                        feedingSchedule: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 8:00 AM, 12:00 PM, 6:00 PM"
+                  />
+                </div>
+              )}
+
+              {editableFields.feedingAmount && (
+                <div className="space-y-2">
+                  <Label htmlFor="feedingAmount">Feeding Amount</Label>
+                  <Input
+                    id="feedingAmount"
+                    value={editedInstructions.feedingAmount || ""}
+                    onChange={(e) =>
+                      setEditedInstructions({
+                        ...editedInstructions,
+                        feedingAmount: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 1.5 cups per meal"
+                  />
+                </div>
+              )}
+
+              {editableFields.medicationList && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Medications</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddMedication}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Medication
+                    </Button>
+                  </div>
+                  {editedInstructions.medicationList && editedInstructions.medicationList.length > 0 ? (
+                    <div className="space-y-3">
+                      {editedInstructions.medicationList.map((med, index) => (
+                        <Card key={index} className="p-3">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                placeholder="Medication name"
+                                value={med.name}
+                                onChange={(e) =>
+                                  handleMedicationChange(index, "name", e.target.value)
+                                }
+                              />
+                              <Input
+                                placeholder="Dosage"
+                                value={med.dosage}
+                                onChange={(e) =>
+                                  handleMedicationChange(index, "dosage", e.target.value)
+                                }
+                              />
+                            </div>
+                            <Input
+                              placeholder="Frequency (e.g., Twice daily)"
+                              value={med.frequency}
+                              onChange={(e) =>
+                                handleMedicationChange(index, "frequency", e.target.value)
+                              }
+                            />
+                            <div className="flex items-center gap-2">
+                              <Textarea
+                                placeholder="Notes (optional)"
+                                value={med.notes || ""}
+                                onChange={(e) =>
+                                  handleMedicationChange(index, "notes", e.target.value)
+                                }
+                                rows={2}
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveMedication(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No medications added</p>
+                  )}
+                </div>
+              )}
+
+              {editableFields.groomingSensitivities && (
+                <div className="space-y-2">
+                  <Label htmlFor="groomingSensitivities">Grooming Sensitivities</Label>
+                  <Textarea
+                    id="groomingSensitivities"
+                    value={editedInstructions.groomingSensitivities || ""}
+                    onChange={(e) =>
+                      setEditedInstructions({
+                        ...editedInstructions,
+                        groomingSensitivities: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Sensitive to loud noises during grooming"
+                    rows={3}
+                  />
+                </div>
+              )}
+
+              {editableFields.behaviorNotes && (
+                <div className="space-y-2">
+                  <Label htmlFor="behaviorNotes">Behavior Notes</Label>
+                  <Textarea
+                    id="behaviorNotes"
+                    value={editedInstructions.behaviorNotes || ""}
+                    onChange={(e) =>
+                      setEditedInstructions({
+                        ...editedInstructions,
+                        behaviorNotes: e.target.value,
+                      })
+                    }
+                    placeholder="Owner-provided behavior notes"
+                    rows={4}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button onClick={handleSaveCI} disabled={isSavingCI}>
+                  {isSavingCI ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditingCI(false);
+                    setEditedInstructions(
+                      petCareInstructions || { petId, medicationList: [] }
+                    );
+                  }}
+                  disabled={isSavingCI}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {editableFields.feedingSchedule && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Feeding Schedule
+                  </p>
+                  <p className="text-sm">
+                    {editedInstructions.feedingSchedule || "Not specified"}
+                  </p>
+                </div>
+              )}
+
+              {editableFields.feedingAmount && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Feeding Amount
+                  </p>
+                  <p className="text-sm">
+                    {editedInstructions.feedingAmount || "Not specified"}
+                  </p>
+                </div>
+              )}
+
+              {editableFields.medicationList && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                    Medications
+                  </p>
+                  {editedInstructions.medicationList &&
+                  editedInstructions.medicationList.length > 0 ? (
+                    <div className="space-y-2">
+                      {editedInstructions.medicationList.map((med, index) => (
+                        <Card key={index} className="p-3">
+                          <div className="space-y-1">
+                            <p className="font-medium text-sm">{med.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {med.dosage} • {med.frequency}
+                            </p>
+                            {med.notes && (
+                              <p className="text-xs text-muted-foreground mt-1">{med.notes}</p>
+                            )}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No medications listed</p>
+                  )}
+                </div>
+              )}
+
+              {editableFields.groomingSensitivities && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Grooming Sensitivities
+                  </p>
+                  <p className="text-sm">
+                    {editedInstructions.groomingSensitivities || "None specified"}
+                  </p>
+                </div>
+              )}
+
+              {editableFields.behaviorNotes && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Behavior Notes
+                  </p>
+                  <p className="text-sm">
+                    {editedInstructions.behaviorNotes || "No notes provided"}
+                  </p>
+                </div>
+              )}
+
+              {!petCareInstructions && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No care instructions added yet</p>
+                  <Button variant="outline" className="mt-4" onClick={() => setIsEditingCI(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Care Instructions
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   const PetIcon = pet.type === "Cat" ? Cat : Dog;
 
@@ -279,6 +617,31 @@ export default function CustomerPetDetailPage({
       key: "veterinarianName",
       label: "Veterinarian",
       render: (vaccination) => vaccination.veterinarianName || "—",
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (vaccination) => {
+        if (!vaccination.status || vaccination.status === "approved") {
+          return <Badge variant="default">Approved</Badge>;
+        }
+        if (vaccination.status === "pending_review") {
+          return <Badge variant="secondary">Pending Review</Badge>;
+        }
+        if (vaccination.status === "rejected") {
+          return (
+            <div className="flex items-center gap-2">
+              <Badge variant="destructive">Rejected</Badge>
+              {vaccination.rejectionReason && (
+                <span className="text-xs text-muted-foreground" title={vaccination.rejectionReason}>
+                  <AlertTriangle className="h-3 w-3" />
+                </span>
+              )}
+            </div>
+          );
+        }
+        return <Badge variant="outline">Unknown</Badge>;
+      },
     },
     {
       key: "documentUrl",
@@ -439,6 +802,9 @@ export default function CustomerPetDetailPage({
             </TabsTrigger>
             <TabsTrigger value="bookings">Booking History</TabsTrigger>
             <TabsTrigger value="reports">Report Cards</TabsTrigger>
+            {facilityConfig.careInstructions.enabled && (
+              <TabsTrigger value="care-instructions">Care Instructions</TabsTrigger>
+            )}
             <TabsTrigger value="photos">Photos</TabsTrigger>
           </TabsList>
 
@@ -610,6 +976,26 @@ export default function CustomerPetDetailPage({
                 </CardContent>
               </Card>
             </div>
+
+            {/* Compliance Checklist */}
+            {selectedFacility && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Booking Eligibility</CardTitle>
+                  <CardDescription>
+                    Check if your pet is eligible to book services
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PetComplianceChecklist
+                    pet={pet}
+                    clientId={MOCK_CUSTOMER_ID}
+                    facilityId={selectedFacility.id}
+                    compact={false}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Vaccinations Tab */}
@@ -843,6 +1229,13 @@ export default function CustomerPetDetailPage({
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Care Instructions Tab */}
+          {facilityConfig.careInstructions.enabled && (
+            <TabsContent value="care-instructions" className="space-y-4">
+              <CareInstructionsSection petId={pet.id} />
+            </TabsContent>
+          )}
 
           {/* Photos Tab */}
           <TabsContent value="photos" className="space-y-4">

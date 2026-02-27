@@ -40,6 +40,8 @@ import {
 } from "@/lib/training-makeup";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { facilityConfig } from "@/data/facility-config";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -162,6 +164,7 @@ export default function TrainingMakeupPage() {
   const [isMakeupModalOpen, setIsMakeupModalOpen] = useState(false);
   const [selectedMissedSession, setSelectedMissedSession] = useState<MissedSessionInfo | null>(null);
   const [makeupAction, setMakeupAction] = useState<"schedule" | "skip">("schedule");
+  const [isSkipConfirmModalOpen, setIsSkipConfirmModalOpen] = useState(false);
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -219,7 +222,7 @@ export default function TrainingMakeupPage() {
   const handleSkipSession = (missed: MissedSessionInfo) => {
     setSelectedMissedSession(missed);
     setMakeupAction("skip");
-    setIsMakeupModalOpen(true);
+    setIsSkipConfirmModalOpen(true);
   };
 
   const confirmMakeupAction = async () => {
@@ -284,14 +287,29 @@ export default function TrainingMakeupPage() {
     });
   };
 
+  // Get makeup configuration
+  const makeupConfig = facilityConfig.training?.makeupSessions;
+  const expirationDays = makeupConfig?.expirationRules?.mustScheduleWithinDays || 30;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Makeup Sessions</h2>
         <p className="text-muted-foreground">
           Schedule makeup sessions for missed training classes
         </p>
       </div>
+
+      {/* Explanation of Makeup Sessions */}
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>What is a Makeup Session?</AlertTitle>
+        <AlertDescription>
+          If you miss a training class, you can schedule a <strong>makeup session</strong> - a private one-on-one session with a trainer to cover the material you missed. 
+          Makeup sessions must be scheduled within {expirationDays} days of the missed session. 
+          {makeupConfig?.expirationRules?.expiresAfterDays && ` Unused makeup credits expire after ${makeupConfig.expirationRules.expiresAfterDays} days.`}
+        </AlertDescription>
+      </Alert>
 
       {missedSessions.length === 0 ? (
         <Card>
@@ -305,7 +323,7 @@ export default function TrainingMakeupPage() {
         <div className="grid gap-4">
           {missedSessions.map((missed) => {
             const pet = customer?.pets.find((p) => p.id === missed.enrollment.petId);
-            const makeupPrice = calculateMakeupPrice(missed.series, missed.attendance.sessionNumber);
+            const makeupPrice = calculateMakeupPrice(missed.series, missed.attendance.sessionNumber, facilityConfig);
 
             return (
               <Card key={missed.attendance.id}>
@@ -330,14 +348,32 @@ export default function TrainingMakeupPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(missed.sessionDate)}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {getDayName(missed.series.dayOfWeek)} {missed.series.startTime}
+                  {/* Missed Session Details */}
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Missed Session Details</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <div>
+                            <p className="font-medium text-foreground">Date</p>
+                            <p>{formatDate(missed.sessionDate)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <div>
+                            <p className="font-medium text-foreground">Time</p>
+                            <p>{getDayName(missed.series.dayOfWeek)} {missed.series.startTime}</p>
+                          </div>
+                        </div>
+                      </div>
+                      {missed.attendance.trainerNotes && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-sm font-medium text-foreground mb-1">Reason / Notes:</p>
+                          <p className="text-sm text-muted-foreground">{missed.attendance.trainerNotes}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -375,9 +411,16 @@ export default function TrainingMakeupPage() {
                             Skip and Continue Week {missed.enrollment.currentSessionNumber}
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
-                          <DollarSign className="h-4 w-4" />
-                          Makeup session: ${makeupPrice}
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <DollarSign className="h-4 w-4" />
+                            Makeup session: ${makeupPrice}
+                          </div>
+                          {makeupConfig?.expirationRules?.enabled && (
+                            <p className="text-xs text-muted-foreground">
+                              Must be scheduled within {expirationDays} days of the missed session
+                            </p>
+                          )}
                         </div>
                       </div>
                     </>
@@ -410,7 +453,7 @@ export default function TrainingMakeupPage() {
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p>• Private one-on-one session with trainer</p>
                       <p>• Covers material from Week {selectedMissedSession.attendance.sessionNumber}</p>
-                      <p>• Price: ${calculateMakeupPrice(selectedMissedSession.series, selectedMissedSession.attendance.sessionNumber)}</p>
+                      <p>• Price: ${calculateMakeupPrice(selectedMissedSession.series, selectedMissedSession.attendance.sessionNumber, facilityConfig)}</p>
                       <p>• We'll contact you to schedule a convenient time</p>
                     </div>
                   </div>
@@ -423,14 +466,14 @@ export default function TrainingMakeupPage() {
                 </>
               ) : (
                 <>
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-900 font-medium mb-2">
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-sm text-destructive font-medium mb-2">
                       <AlertCircle className="h-4 w-4 inline mr-1" />
-                      Skipping Week {selectedMissedSession.attendance.sessionNumber}
+                      You will forfeit this session
                     </p>
-                    <p className="text-sm text-yellow-800">
-                      You'll continue with Week {selectedMissedSession.enrollment.currentSessionNumber} without making up the missed session.
-                      You can still schedule a makeup session later if needed.
+                    <p className="text-sm text-destructive/80">
+                      By skipping, you will forfeit Week {selectedMissedSession.attendance.sessionNumber} and continue directly to Week {selectedMissedSession.enrollment.currentSessionNumber}. 
+                      You can still schedule a makeup session later if needed, but this session will be marked as forfeited.
                     </p>
                   </div>
                 </>
@@ -450,6 +493,75 @@ export default function TrainingMakeupPage() {
             </Button>
             <Button onClick={confirmMakeupAction}>
               {makeupAction === "schedule" ? "Request Makeup Session" : "Skip Session"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skip Confirmation Modal */}
+      <Dialog open={isSkipConfirmModalOpen} onOpenChange={setIsSkipConfirmModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Skip Session</DialogTitle>
+            <DialogDescription>
+              You are about to forfeit Week {selectedMissedSession?.attendance.sessionNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMissedSession && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive font-medium mb-2">
+                  <AlertCircle className="h-4 w-4 inline mr-1" />
+                  Warning: You will forfeit this session
+                </p>
+                <p className="text-sm text-destructive/80 mb-3">
+                  By skipping, you will forfeit Week {selectedMissedSession.attendance.sessionNumber} and continue directly to Week {selectedMissedSession.enrollment.currentSessionNumber}.
+                </p>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>• This session will be marked as forfeited</p>
+                  <p>• You can still schedule a makeup session later if needed</p>
+                  <p>• You will continue with the next session in the series</p>
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <AlertCircle className="h-4 w-4 inline mr-1" />
+                  Consider scheduling a makeup session instead to ensure your pet doesn't miss important training material.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSkipConfirmModalOpen(false);
+                setSelectedMissedSession(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!selectedMissedSession) return;
+                setIsSkipConfirmModalOpen(false);
+                // Proceed with skip
+                try {
+                  // TODO: API call to skip session
+                  await new Promise((resolve) => setTimeout(resolve, 500));
+                  toast.success(
+                    `Week ${selectedMissedSession.attendance.sessionNumber} skipped. Continuing with Week ${selectedMissedSession.enrollment.currentSessionNumber}.`
+                  );
+                } catch (error: any) {
+                  toast.error(error.message || "Failed to skip session");
+                }
+                setSelectedMissedSession(null);
+              }}
+            >
+              Yes, Skip and Continue
             </Button>
           </DialogFooter>
         </DialogContent>

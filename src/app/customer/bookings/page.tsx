@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { bookings } from "@/data/bookings";
@@ -19,32 +20,57 @@ import {
   CheckCircle,
   AlertCircle,
   Plus,
+  MapPin,
+  MessageSquare,
+  Download,
+  Calendar as CalendarIcon,
+  Dog,
+  Cat,
+  Scissors,
+  Home,
+  GraduationCap,
 } from "lucide-react";
 import { CustomerBookingModal } from "@/components/customer/CustomerBookingModal";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
-import { GroomingBookingFlow } from "@/components/grooming/GroomingBookingFlow";
 import { toast } from "sonner";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerBookingsPage() {
+  const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const { bookingFlow, grooming } = useSettings();
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [isGroomingBookingOpen, setIsGroomingBookingOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<typeof bookings[0] | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
+  const [bookingForNote, setBookingForNote] = useState<typeof bookings[0] | null>(null);
   
   // Check if grooming is enabled (status.disabled !== true means enabled)
   const isGroomingEnabled = grooming?.status?.disabled !== true;
+  
+  // Get customer data
+  const customer = useMemo(
+    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
+    []
+  );
 
-  // Prevent hydration mismatch
+  // Check for service query parameter to auto-open booking modal
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const service = searchParams?.get("service");
+    if (service) {
+      setIsBookingModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Get customer's bookings for selected facility
   const customerBookings = useMemo(() => {
@@ -121,6 +147,10 @@ export default function CustomerBookingsPage() {
         return <Badge variant="default">Confirmed</Badge>;
       case "pending":
         return <Badge variant="secondary">Pending</Badge>;
+      case "request_submitted":
+        return <Badge variant="secondary">Request Submitted</Badge>;
+      case "waitlisted":
+        return <Badge variant="outline">Waitlisted</Badge>;
       case "completed":
         return <Badge variant="outline">Completed</Badge>;
       case "cancelled":
@@ -128,6 +158,88 @@ export default function CustomerBookingsPage() {
       default:
         return <Badge>{status}</Badge>;
     }
+  };
+
+  // Get pet for a booking
+  const getPetForBooking = (booking: typeof bookings[0]) => {
+    if (!customer) return null;
+    const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+    return customer.pets.find((p) => p.id === petId);
+  };
+
+  // Get service icon
+  const getServiceIcon = (service: string) => {
+    switch (service.toLowerCase()) {
+      case "grooming":
+        return Scissors;
+      case "daycare":
+        return Dog;
+      case "boarding":
+        return Home;
+      case "training":
+        return GraduationCap;
+      default:
+        return Calendar;
+    }
+  };
+
+  // Calculate duration
+  const getDuration = (booking: typeof bookings[0]) => {
+    if (booking.checkInTime && booking.checkOutTime) {
+      const start = new Date(`2000-01-01T${booking.checkInTime}`);
+      const end = new Date(`2000-01-01T${booking.checkOutTime}`);
+      const diffMs = end.getTime() - start.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      if (diffHours > 0) {
+        return `${diffHours}h ${diffMinutes > 0 ? `${diffMinutes}m` : ""}`;
+      }
+      return `${diffMinutes}m`;
+    }
+    return "—";
+  };
+
+  // Generate calendar file (.ics)
+  const handleAddToCalendar = (booking: typeof bookings[0]) => {
+    const pet = getPetForBooking(booking);
+    const petName = pet?.name || "Pet";
+    const startDateTime = new Date(`${booking.startDate}T${booking.checkInTime || "09:00"}`);
+    const endDateTime = booking.endDate && booking.checkOutTime
+      ? new Date(`${booking.endDate}T${booking.checkOutTime}`)
+      : new Date(startDateTime.getTime() + 60 * 60 * 1000); // Default 1 hour
+
+    const formatICSDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    };
+
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Yipyy//Booking//EN",
+      "BEGIN:VEVENT",
+      `UID:booking-${booking.id}@yipyy.com`,
+      `DTSTART:${formatICSDate(startDateTime)}`,
+      `DTEND:${formatICSDate(endDateTime)}`,
+      `SUMMARY:${booking.service.charAt(0).toUpperCase() + booking.service.slice(1)} - ${petName}`,
+      `DESCRIPTION:Service: ${booking.service}\\nPet: ${petName}\\nLocation: ${selectedFacility?.name || "Facility"}`,
+      `LOCATION:${selectedFacility?.name || "Facility"}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `booking-${booking.id}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Calendar event downloaded");
+  };
+
+  const handleAddNote = (booking: typeof bookings[0]) => {
+    setBookingForNote(booking);
+    setAddNoteDialogOpen(true);
   };
 
   const columns: ColumnDef<typeof bookings[0]>[] = [
@@ -212,18 +324,10 @@ export default function CustomerBookingsPage() {
               View and manage your service bookings
             </p>
           </div>
-          <div className="flex gap-2">
-            {isGroomingEnabled && (
-              <Button onClick={() => setIsGroomingBookingOpen(true)} variant="default">
-                <Plus className="h-4 w-4 mr-2" />
-                Book Grooming
-              </Button>
-            )}
-            <Button onClick={() => setIsBookingModalOpen(true)} variant={isGroomingEnabled ? "outline" : "default"}>
-              <Plus className="h-4 w-4 mr-2" />
-              {isGroomingEnabled ? "Book Other Service" : "New Booking"}
-            </Button>
-          </div>
+          <Button onClick={() => setIsBookingModalOpen(true)} variant="default" size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Book a Service
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -292,7 +396,156 @@ export default function CustomerBookingsPage() {
               </TabsList>
               <TabsContent value="upcoming" className="space-y-4">
                 {upcomingBookings.length > 0 ? (
-                  <DataTable data={upcomingBookings} columns={columns} />
+                  <div className="grid gap-4">
+                    {upcomingBookings.map((booking) => {
+                      const pet = getPetForBooking(booking);
+                      const ServiceIcon = getServiceIcon(booking.service);
+                      const PetIcon = pet?.type === "Cat" ? Cat : Dog;
+                      
+                      return (
+                        <Card key={booking.id} className="hover:shadow-lg transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex items-start gap-4">
+                              {/* Pet Photo */}
+                              <div className="flex-shrink-0">
+                                {pet?.imageUrl ? (
+                                  <img
+                                    src={pet.imageUrl}
+                                    alt={pet.name}
+                                    className="w-16 h-16 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <PetIcon className="h-8 w-8 text-primary" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Booking Details */}
+                              <div className="flex-1 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <ServiceIcon className="h-5 w-5 text-muted-foreground" />
+                                      <h3 className="font-semibold text-lg capitalize">
+                                        {booking.service}
+                                        {booking.serviceType && (
+                                          <span className="text-muted-foreground font-normal ml-2">
+                                            • {booking.serviceType.replace(/_/g, " ")}
+                                          </span>
+                                        )}
+                                      </h3>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      {pet?.name || "Pet"}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {getStatusBadge(booking.status)}
+                                    {booking.status === "request_submitted" && (
+                                      <Badge variant="outline" className="text-xs">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        Response in ~24h
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-muted-foreground">Date</p>
+                                      <p className="font-medium">{formatDate(booking.startDate)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-muted-foreground">Time</p>
+                                      <p className="font-medium">
+                                        {booking.checkInTime || "—"}
+                                        {booking.checkOutTime && ` - ${booking.checkOutTime}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-muted-foreground">Location</p>
+                                      <p className="font-medium">{selectedFacility?.name || "—"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-muted-foreground">Total</p>
+                                      <p className="font-medium">${booking.totalCost.toFixed(2)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-2 pt-2 border-t">
+                                  {(booking.status === "confirmed" || booking.status === "pending") && (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRescheduleBooking(booking)}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Reschedule
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCancelBooking(booking)}
+                                        className="text-destructive hover:text-destructive"
+                                      >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  )}
+                                  {booking.status === "request_submitted" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        window.location.href = "/customer/messages";
+                                      }}
+                                    >
+                                      <MessageSquare className="h-4 w-4 mr-2" />
+                                      Message Facility
+                                    </Button>
+                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Download className="h-4 w-4 mr-2" />
+                                        More
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleAddNote(booking)}>
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Add Note/Message
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleAddToCalendar(booking)}>
+                                        <CalendarIcon className="h-4 w-4 mr-2" />
+                                        Add to Calendar
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -309,7 +562,57 @@ export default function CustomerBookingsPage() {
               </TabsContent>
               <TabsContent value="past" className="space-y-4">
                 {pastBookings.length > 0 ? (
-                  <DataTable data={pastBookings} columns={columns} />
+                  <div className="grid gap-4">
+                    {pastBookings.map((booking) => {
+                      const pet = getPetForBooking(booking);
+                      const ServiceIcon = getServiceIcon(booking.service);
+                      const PetIcon = pet?.type === "Cat" ? Cat : Dog;
+                      
+                      return (
+                        <Card key={booking.id} className="opacity-75">
+                          <CardContent className="p-6">
+                            <div className="flex items-start gap-4">
+                              <div className="flex-shrink-0">
+                                {pet?.imageUrl ? (
+                                  <img
+                                    src={pet.imageUrl}
+                                    alt={pet.name}
+                                    className="w-16 h-16 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <PetIcon className="h-8 w-8 text-primary" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <ServiceIcon className="h-5 w-5 text-muted-foreground" />
+                                      <h3 className="font-semibold capitalize">
+                                        {booking.service}
+                                      </h3>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      {pet?.name || "Pet"} • {formatDate(booking.startDate)}
+                                    </p>
+                                  </div>
+                                  {getStatusBadge(booking.status)}
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span>${booking.totalCost.toFixed(2)}</span>
+                                  {booking.checkInTime && (
+                                    <span>{booking.checkInTime}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -325,21 +628,7 @@ export default function CustomerBookingsPage() {
         </Card>
       </div>
 
-      {/* Grooming Booking Flow */}
-      {isGroomingEnabled && (
-        <GroomingBookingFlow
-          open={isGroomingBookingOpen}
-          onOpenChange={(open) => {
-            setIsGroomingBookingOpen(open);
-            if (!open) {
-              // Refresh bookings list when modal closes
-              toast.success("Grooming booking completed!");
-            }
-          }}
-        />
-      )}
-
-      {/* Booking Modal */}
+      {/* Unified Booking Flow */}
       <CustomerBookingModal
         open={isBookingModalOpen}
         onOpenChange={(open) => {
@@ -363,6 +652,50 @@ export default function CustomerBookingsPage() {
         booking={bookingToCancel}
         onConfirm={confirmCancelBooking}
       />
+
+      {/* Add Note Dialog */}
+      <Dialog open={addNoteDialogOpen} onOpenChange={setAddNoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Note or Message</DialogTitle>
+            <DialogDescription>
+              Send a message or add a note to your booking
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {bookingForNote && (
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium mb-1">Booking Details:</p>
+                <p>
+                  {getPetForBooking(bookingForNote)?.name} • {bookingForNote.service} • {formatDate(bookingForNote.startDate)}
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="note">Message</Label>
+              <Textarea
+                id="note"
+                placeholder="Add any notes or questions about this booking..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddNoteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // TODO: Send message/note
+              toast.success("Message sent to facility");
+              setAddNoteDialogOpen(false);
+              setBookingForNote(null);
+            }}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Send Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

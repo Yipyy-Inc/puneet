@@ -49,6 +49,11 @@ export const facilityConfig = {
       lateCancellationFee: 0.25, // 25% of booking value
       noShowFee: 0.5, // 50% of booking value
     },
+    approvalWorkflow: {
+      enabled: false, // If true, bookings require facility approval
+      estimatedResponseTime: 24, // hours
+      autoConfirmAfterHours: null, // Auto-confirm after X hours if no response (null = no auto-confirm)
+    },
   },
   checkInOutTimes: {
     defaultSchedules: {
@@ -63,6 +68,14 @@ export const facilityConfig = {
       friday: { open: "06:00", close: "22:00" },
       saturday: { open: "07:00", close: "20:00" },
       sunday: { open: "08:00", close: "18:00" },
+    },
+  },
+  messaging: {
+    officeHours: {
+      enabled: true,
+      responseTimeExpectation: "We typically respond within 24 hours during business days",
+      awayMessage: "We're currently away. We'll respond to your message as soon as we're back!",
+      autoReplyEnabled: true,
     },
   },
   vaccinationRequirements: {
@@ -153,6 +166,11 @@ export const facilityConfig = {
       overview: ["totalBookings", "revenue", "activeClients"],
       detailed: ["bookingTrends", "servicePopularity", "staffPerformance"],
     },
+    photoSharing: {
+      enabled: true,
+      allowDownload: true,
+      allowShare: true,
+    },
   },
   waiversAndContracts: {
     templates: {
@@ -171,6 +189,45 @@ export const facilityConfig = {
         required: true,
         content: "Daycare agreement terms...",
       },
+    },
+  },
+  careInstructions: {
+    enabled: true,
+    customerEditableFields: {
+      feedingSchedule: true,
+      feedingAmount: true,
+      medicationList: true,
+      groomingSensitivities: true,
+      behaviorNotes: true,
+    },
+  },
+  training: {
+    makeupSessions: {
+      enabled: true,
+      pricingRules: {
+        type: "fixed", // "fixed" | "percentage" | "per_session"
+        fixedPrice: 40, // If type is "fixed"
+        percentageOfSeries: null, // If type is "percentage" (e.g., 0.15 for 15%)
+        perSessionPrice: null, // If type is "per_session"
+      },
+      expirationRules: {
+        enabled: true,
+        mustScheduleWithinDays: 30, // Must schedule makeup within 30 days of missed session
+        expiresAfterDays: 60, // Makeup credit expires after 60 days if not used
+      },
+      cancellationPolicy: "Free cancellation up to 24 hours before makeup session",
+      refundPolicy: "Makeup sessions are non-refundable once scheduled",
+    },
+    courseDetails: {
+      defaultWhatToBring: [
+        "Your dog on a 6-foot leash",
+        "High-value treats (small, soft, easy to swallow)",
+        "Your dog's favorite toy (optional)",
+        "Water bottle for your dog",
+        "Waste bags",
+      ],
+      defaultCancellationPolicy: "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
+      defaultRefundPolicy: "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
     },
   },
 };

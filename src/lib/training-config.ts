@@ -17,6 +17,10 @@ export interface TrainingCourseType {
   requiredVaccines: string[]; // Array of required vaccine names
   prerequisites: string[]; // Array of prerequisite course type IDs
   isActive: boolean; // Whether this course type is currently offered
+  // Course details for customer-facing information
+  whatToBring?: string[]; // List of items to bring
+  cancellationPolicy?: string; // Cancellation policy text
+  refundPolicy?: string; // Refund policy text
   createdAt: string;
   updatedAt: string;
 }
@@ -28,13 +32,22 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
   {
     id: "basic-obedience",
     name: "Basic Obedience / Beginner Manners",
-    description: "Teaches foundational commands like sit, stay, down, and polite leash walking.",
+    description: "Teaches foundational commands like sit, stay, down, and polite leash walking. Perfect for dogs who are new to training or need a refresher on basic manners. This course focuses on building a strong foundation for future training.",
     defaultWeeks: 6,
     ageRange: {
       minWeeks: 16, // 16+ weeks
     },
     requiredVaccines: ["Rabies", "DHPP", "Bordetella"],
     prerequisites: [],
+    whatToBring: [
+      "Your dog on a 6-foot leash (no retractable leashes)",
+      "High-value treats (small, soft, easy to swallow)",
+      "Your dog's favorite toy (optional)",
+      "Water bottle for your dog",
+      "Waste bags",
+    ],
+    cancellationPolicy: "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
+    refundPolicy: "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

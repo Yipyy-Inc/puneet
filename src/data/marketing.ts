@@ -355,6 +355,44 @@ export const customerLoyaltyData: CustomerLoyalty[] = [
       },
     ],
   },
+  {
+    clientId: 15,
+    points: 340,
+    tier: "tier-silver",
+    lifetimePoints: 450,
+    pointsHistory: [
+      {
+        date: "2026-02-26T10:00:00Z",
+        points: 85,
+        type: "earned",
+        description: "Grooming payment - $85.00",
+      },
+      {
+        date: "2026-02-20T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare payment - $50.00",
+      },
+      {
+        date: "2026-02-15T10:00:00Z",
+        points: 60,
+        type: "earned",
+        description: "Grooming payment - $60.00",
+      },
+      {
+        date: "2026-02-10T10:00:00Z",
+        points: 135,
+        type: "earned",
+        description: "Boarding payment - $135.00",
+      },
+      {
+        date: "2026-01-28T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare payment - $50.00",
+      },
+    ],
+  },
 ];
 
 export interface ReferralCode {

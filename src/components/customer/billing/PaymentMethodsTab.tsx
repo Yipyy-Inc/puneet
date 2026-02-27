@@ -21,11 +21,14 @@ import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
+// Mock flag - in production this would come from memberships / packages
+const HAS_AUTOPAY_MEMBERSHIP = true;
 
 export function PaymentMethodsTab() {
   const { selectedFacility } = useCustomerFacility();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const customerPaymentMethods = useMemo(() => {
     return paymentMethods.filter((pm) => pm.clientId === MOCK_CUSTOMER_ID);
@@ -41,6 +44,17 @@ export function PaymentMethodsTab() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const isCardExpired = (method: (typeof customerPaymentMethods)[number]) => {
+    if (!method.cardExpMonth || !method.cardExpYear) return false;
+    const now = new Date();
+    const expYear = method.cardExpYear;
+    const expMonth = method.cardExpMonth;
+    return (
+      expYear < now.getFullYear() ||
+      (expYear === now.getFullYear() && expMonth < now.getMonth() + 1)
+    );
+  };
 
   const getCardIcon = (brand?: string) => {
     switch (brand) {
@@ -99,18 +113,22 @@ export function PaymentMethodsTab() {
       return;
     }
 
-    // TODO: Integrate with payment processor (Stripe, etc.)
-    toast.success("Payment method added successfully!");
-    setIsAddModalOpen(false);
-    setFormData({
-      cardNumber: "",
-      expiryMonth: "",
-      expiryYear: "",
-      cvc: "",
-      cardholderName: "",
-      isDefault: false,
-    });
-    setErrors({});
+    // Simulate card verification with payment processor (e.g., Fiserv)
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      toast.success("Card verified and added successfully!");
+      setIsAddModalOpen(false);
+      setFormData({
+        cardNumber: "",
+        expiryMonth: "",
+        expiryYear: "",
+        cvc: "",
+        cardholderName: "",
+        isDefault: false,
+      });
+      setErrors({});
+    }, 800);
   };
 
   const handleDelete = async (id: string) => {
@@ -161,56 +179,100 @@ export function PaymentMethodsTab() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {customerPaymentMethods.map((method) => (
-            <Card key={method.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">{getCardIcon(method.cardBrand)}</div>
-                    <div>
-                      <CardTitle className="text-base">
-                        {method.cardBrand ? method.cardBrand.charAt(0).toUpperCase() + method.cardBrand.slice(1) : "Card"} •••• {method.cardLast4}
-                      </CardTitle>
-                      <CardDescription>
-                        {method.cardExpMonth && method.cardExpYear
-                          ? `Expires ${String(method.cardExpMonth).padStart(2, "0")}/${method.cardExpYear}`
-                          : "No expiry date"}
-                      </CardDescription>
+          {customerPaymentMethods.map((method) => {
+            const isOnlyCard = customerPaymentMethods.length === 1;
+            const disableRemove =
+              HAS_AUTOPAY_MEMBERSHIP && isOnlyCard && method.isDefault;
+
+            return (
+              <Card key={method.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{getCardIcon(method.cardBrand)}</div>
+                      <div>
+                        <CardTitle className="text-base">
+                          {method.cardBrand
+                            ? method.cardBrand.charAt(0).toUpperCase() +
+                              method.cardBrand.slice(1)
+                            : "Card"}{" "}
+                          •••• {method.cardLast4}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <span>
+                            {method.cardExpMonth && method.cardExpYear
+                              ? `Expires ${String(method.cardExpMonth).padStart(
+                                  2,
+                                  "0",
+                                )}/${method.cardExpYear}`
+                              : "No expiry date"}
+                          </span>
+                          {isCardExpired(method) && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              Expired
+                            </Badge>
+                          )}
+                        </CardDescription>
+                      </div>
                     </div>
+                    {method.isDefault && (
+                      <Badge variant="default" className="gap-1">
+                        <Check className="h-3 w-3" />
+                        Default
+                      </Badge>
+                    )}
                   </div>
-                  {method.isDefault && (
-                    <Badge variant="default" className="gap-1">
-                      <Check className="h-3 w-3" />
-                      Default
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  {!method.isDefault && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSetDefault(method.id)}
-                    >
-                      Set as Default
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(method.id)}
-                    disabled={isDeleting === method.id}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    {isDeleting === method.id ? "Removing..." : "Remove"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      {!method.isDefault && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetDefault(method.id)}
+                        >
+                          Set as Default
+                        </Button>
+                      )}
+                      {isCardExpired(method) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsAddModalOpen(true);
+                            setFormData((prev) => ({
+                              ...prev,
+                              cardholderName:
+                                method.cardholderName || prev.cardholderName,
+                            }));
+                          }}
+                        >
+                          Update Card
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(method.id)}
+                        disabled={isDeleting === method.id || disableRemove}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {isDeleting === method.id ? "Removing..." : "Remove"}
+                      </Button>
+                    </div>
+                    {disableRemove && (
+                      <p className="text-xs text-muted-foreground">
+                        You can’t remove your only card while an auto-pay membership is
+                        active. Please add another card first.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -329,7 +391,9 @@ export function PaymentMethodsTab() {
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddCard}>Add Card</Button>
+            <Button onClick={handleAddCard}>
+              {isVerifying ? "Verifying..." : "Verify & Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

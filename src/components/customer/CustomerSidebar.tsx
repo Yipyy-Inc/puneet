@@ -13,12 +13,17 @@ import {
   Settings,
   Camera,
   GraduationCap,
+  Users,
 } from "lucide-react";
 import {
   GenericSidebar,
   type MenuSection,
 } from "@/components/ui/generic-sidebar";
-import { petCams } from "@/data/additional-features";
+import { petCams, mobileAppSettings } from "@/data/additional-features";
+import { bookings } from "@/data/bookings";
+
+// Mock customer ID - TODO: Get from auth context
+const MOCK_CUSTOMER_ID = 15;
 
 export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
@@ -29,15 +34,37 @@ export function CustomerSidebar() {
     setIsMounted(true);
   }, []);
 
+  // Check if customer has an active stay at the selected facility
+  const hasActiveStay = useMemo(() => {
+    if (!isMounted || !selectedFacility) return false;
+    const today = new Date().toISOString().split("T")[0];
+    return bookings.some(
+      (b) =>
+        b.clientId === MOCK_CUSTOMER_ID &&
+        b.facilityId === selectedFacility.id &&
+        b.status === "confirmed" &&
+        b.startDate <= today &&
+        b.endDate >= today,
+    );
+  }, [isMounted, selectedFacility]);
+
+  // TODO: Replace with real membership logic when membership data is available
+  const hasCameraMembership = false;
+
   // Check if cameras are enabled for customers (only on client)
   const camerasEnabled = useMemo(() => {
     if (!isMounted) return false; // Safe default during SSR
+    if (!mobileAppSettings.enableLiveCamera) return false;
+
+    const hasCameraAccess = hasActiveStay || hasCameraMembership;
+    if (!hasCameraAccess) return false;
+
     const customerAccessibleCameras = petCams.filter(
       (cam) =>
-        cam.accessLevel === "public" || cam.accessLevel === "customers_only"
+        cam.accessLevel === "public" || cam.accessLevel === "customers_only",
     );
     return customerAccessibleCameras.length > 0;
-  }, [isMounted]);
+  }, [isMounted, hasActiveStay, hasCameraMembership]);
 
   const menuSections: MenuSection[] = useMemo(
     () => {
@@ -115,6 +142,16 @@ export function CustomerSidebar() {
             title: "Billing & Payments",
             url: "/customer/billing",
             icon: CreditCard,
+          },
+          {
+            title: "Documents & Agreements",
+            url: "/customer/documents",
+            icon: FileText,
+          },
+          {
+            title: "Household & Contacts",
+            url: "/customer/household",
+            icon: Users,
           },
           {
             title: "Settings",
