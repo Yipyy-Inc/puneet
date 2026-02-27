@@ -13,6 +13,7 @@ import {
   Settings,
   Camera,
   GraduationCap,
+  Users,
 } from "lucide-react";
 import {
   GenericSidebar,
@@ -141,6 +142,16 @@ export function CustomerSidebar() {
             title: "Billing & Payments",
             url: "/customer/billing",
             icon: CreditCard,
+          },
+          {
+            title: "Documents & Agreements",
+            url: "/customer/documents",
+            icon: FileText,
+          },
+          {
+            title: "Household & Contacts",
+            url: "/customer/household",
+            icon: Users,
           },
           {
             title: "Settings",
