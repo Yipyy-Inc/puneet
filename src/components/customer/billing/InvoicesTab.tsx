@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { FileText, Download, Search, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { InvoiceLoyaltySection } from "@/components/loyalty/InvoiceLoyaltySection";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -586,6 +587,22 @@ export function InvoicesTab() {
                         </div>
                       </div>
                     )}
+
+                    {/* Loyalty Section */}
+                    <div className="pt-4 border-t">
+                      <InvoiceLoyaltySection
+                        loyaltyPointsEarned={
+                          invoice.status === "paid" ? Math.floor(invoice.total) : undefined
+                        }
+                        loyaltyPointsRedeemed={
+                          (invoice as any).loyaltyPointsRedeemed
+                        }
+                        rewardRedemptionId={(invoice as any).rewardRedemptionId}
+                        discountCode={(invoice as any).discountCode}
+                        creditApplied={(invoice as any).creditApplied}
+                        tierDiscount={(invoice as any).tierDiscount}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
