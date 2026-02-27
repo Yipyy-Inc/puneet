@@ -49,6 +49,11 @@ export const facilityConfig = {
       lateCancellationFee: 0.25, // 25% of booking value
       noShowFee: 0.5, // 50% of booking value
     },
+    approvalWorkflow: {
+      enabled: false, // If true, bookings require facility approval
+      estimatedResponseTime: 24, // hours
+      autoConfirmAfterHours: null, // Auto-confirm after X hours if no response (null = no auto-confirm)
+    },
   },
   checkInOutTimes: {
     defaultSchedules: {
