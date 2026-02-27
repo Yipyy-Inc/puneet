@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { invoices, payments } from "@/data/payments";
+import { invoices, payments, paymentMethods } from "@/data/payments";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileText, Download, Search, Calendar, DollarSign } from "lucide-react";
+import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -86,14 +87,296 @@ export function InvoicesTab() {
   };
 
   const handleDownloadReceipt = (invoiceId: string) => {
-    // TODO: Implement receipt download
-    const payment = payments.find((p) => p.invoiceId === invoiceId);
-    if (payment?.receiptUrl) {
-      window.open(payment.receiptUrl, "_blank");
-    } else {
-      // Generate or download invoice PDF
-      console.log("Downloading invoice:", invoiceId);
+    const invoice = customerInvoices.find((inv) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    const relatedPayments = payments.filter((p) => invoice.paymentIds?.includes(p.id));
+
+    const title = invoice.invoiceNumber || invoice.id;
+
+    // Build a printable HTML document with a clean invoice layout.
+    // The browser's Print dialog lets the user "Save as PDF", which
+    // effectively gives them a nicely formatted PDF.
+    const win = window.open("", "_blank", "width=900,height=1000");
+    if (!win) return;
+
+    const paymentRows = relatedPayments
+      .map((payment) => {
+        const methodLabel =
+          payment.paymentMethod === "card"
+            ? `${payment.cardBrand?.toUpperCase() || "CARD"} •••• ${payment.cardLast4}`
+            : payment.paymentMethod.charAt(0).toUpperCase() +
+              payment.paymentMethod.slice(1);
+        return `
+          <tr>
+            <td>${formatDate(payment.createdAt)}</td>
+            <td>${methodLabel}</td>
+            <td class="text-right">${formatCurrency(payment.totalAmount)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const itemRows = invoice.items
+      .map(
+        (item) => `
+        <tr>
+          <td>${item.description}</td>
+          <td class="text-right">${item.quantity}</td>
+          <td class="text-right">${formatCurrency(item.unitPrice)}</td>
+          <td class="text-right">${formatCurrency(item.total)}</td>
+        </tr>
+      `,
+      )
+      .join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${title}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f4f5;
+            color: #0f172a;
+          }
+          .invoice-wrapper {
+            max-width: 800px;
+            margin: 24px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+            padding: 32px 40px;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+          }
+          .brand {
+            font-weight: 700;
+            font-size: 22px;
+            color: #111827;
+          }
+          .brand span {
+            color: #4f46e5;
+          }
+          .meta {
+            text-align: right;
+            font-size: 13px;
+            color: #6b7280;
+          }
+          h1 {
+            font-size: 28px;
+            margin: 0 0 4px 0;
+          }
+          h2 {
+            font-size: 18px;
+            margin: 24px 0 8px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+          }
+          th, td {
+            padding: 8px 0;
+            font-size: 13px;
+          }
+          th {
+            text-align: left;
+            color: #6b7280;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .text-right { text-align: right; }
+          .totals {
+            margin-top: 16px;
+            width: 260px;
+            margin-left: auto;
+            font-size: 13px;
+          }
+          .totals-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+          }
+          .totals-row.total {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 8px;
+            margin-top: 4px;
+            font-weight: 600;
+          }
+          .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+          }
+          .badge-paid { background: #dcfce7; color: #166534; }
+          .badge-pending { background: #e5e7eb; color: #374151; }
+          .badge-overdue { background: #fee2e2; color: #b91c1c; }
+          .footer {
+            margin-top: 32px;
+            font-size: 11px;
+            color: #9ca3af;
+            text-align: center;
+          }
+          @media print {
+            body { background: #ffffff; }
+            .invoice-wrapper {
+              box-shadow: none;
+              margin: 0;
+              border-radius: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-wrapper">
+          <div class="header">
+            <div>
+              <div class="brand">Yipyy<span> Pets</span></div>
+              <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
+                Billing & Payments
+              </div>
+            </div>
+            <div class="meta">
+              <h1>${title}</h1>
+              <div>Issued: ${formatDate(invoice.issuedDate)}</div>
+              ${
+                invoice.dueDate
+                  ? `<div>Due: ${formatDate(invoice.dueDate)}</div>`
+                  : ""
+              }
+              <div style="margin-top: 4px;">
+                Status:
+                <span class="badge ${
+                  invoice.status === "paid"
+                    ? "badge-paid"
+                    : invoice.status === "overdue"
+                      ? "badge-overdue"
+                      : "badge-pending"
+                }">
+                  ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h2>Invoice Items</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemRows}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="totals-row">
+              <span>Subtotal</span>
+              <span>${formatCurrency(invoice.subtotal)}</span>
+            </div>
+            ${
+              invoice.tax > 0
+                ? `<div class="totals-row">
+                    <span>Tax (${invoice.taxRate}%)</span>
+                    <span>${formatCurrency(invoice.tax)}</span>
+                  </div>`
+                : ""
+            }
+            ${
+              invoice.discount > 0
+                ? `<div class="totals-row">
+                    <span>Discount</span>
+                    <span>-${formatCurrency(invoice.discount)}</span>
+                  </div>`
+                : ""
+            }
+            <div class="totals-row total">
+              <span>Total</span>
+              <span>${formatCurrency(invoice.total)}</span>
+            </div>
+            <div class="totals-row">
+              <span>Amount Paid</span>
+              <span>${formatCurrency(invoice.amountPaid)}</span>
+            </div>
+            <div class="totals-row">
+              <span>Amount Due</span>
+              <span>${formatCurrency(invoice.amountDue)}</span>
+            </div>
+          </div>
+
+          ${
+            relatedPayments.length > 0
+              ? `
+          <h2>Payment History</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Method</th>
+                <th class="text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paymentRows}
+            </tbody>
+          </table>
+          `
+              : ""
+          }
+
+          <div class="footer">
+            Thank you for trusting us with your pet's care. This receipt was generated by Yipyy.
+          </div>
+        </div>
+        <script>
+          window.onload = function () {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  };
+
+  const handlePayNow = (invoiceId: string) => {
+    const invoice = customerInvoices.find((inv) => inv.id === invoiceId);
+    if (!invoice || invoice.amountDue <= 0) return;
+
+    const defaultCard = paymentMethods.find(
+      (pm) => pm.clientId === MOCK_CUSTOMER_ID && pm.isDefault,
+    );
+
+    if (!defaultCard) {
+      toast.error("No card on file. Please add a payment method first.");
+      return;
     }
+
+    // In production this would call Fiserv with the default card token and
+    // record a payment + receipt (including Clover terminal receipts when used).
+    toast.success(
+      `Paying ${formatCurrency(
+        invoice.amountDue,
+      )} with card on file (•••• ${defaultCard.cardLast4}) — mock flow`,
+    );
   };
 
   return (
@@ -261,11 +544,21 @@ export function InvoicesTab() {
                           </div>
                         )}
                         {invoice.amountDue > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Amount Due:</span>
-                            <span className="font-semibold">
-                              {formatCurrency(invoice.amountDue)}
-                            </span>
+                          <div className="flex items-center justify-between gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Amount Due:</span>{" "}
+                              <span className="font-semibold">
+                                {formatCurrency(invoice.amountDue)}
+                              </span>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handlePayNow(invoice.id)}
+                              className="whitespace-nowrap"
+                            >
+                              <DollarSign className="h-4 w-4 mr-1" />
+                              Pay Now
+                            </Button>
                           </div>
                         )}
                       </div>

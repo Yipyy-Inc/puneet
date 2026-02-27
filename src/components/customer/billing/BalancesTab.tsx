@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { customerCredits, giftCards } from "@/data/payments";
+import { customerCredits, giftCards, invoices } from "@/data/payments";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, Gift, CreditCard, TrendingUp, Calendar } from "lucide-react";
@@ -37,6 +37,14 @@ export function BalancesTab() {
     return filtered.filter((gc) => gc.status === "active");
   }, [selectedFacility]);
 
+  const customerOutstandingInvoices = useMemo(() => {
+    return invoices.filter(
+      (inv) =>
+        inv.clientId === MOCK_CUSTOMER_ID &&
+        (inv.status === "sent" || inv.status === "overdue"),
+    );
+  }, []);
+
   const totalCredits = useMemo(() => {
     return customerCreditsList.reduce((sum, c) => sum + c.remainingAmount, 0);
   }, [customerCreditsList]);
@@ -44,6 +52,10 @@ export function BalancesTab() {
   const totalGiftCardBalance = useMemo(() => {
     return customerGiftCards.reduce((sum, gc) => sum + gc.currentBalance, 0);
   }, [customerGiftCards]);
+
+  const totalOutstanding = useMemo(() => {
+    return customerOutstandingInvoices.reduce((sum, inv) => sum + inv.amountDue, 0);
+  }, [customerOutstandingInvoices]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -76,28 +88,62 @@ export function BalancesTab() {
     });
   };
 
+  // Build transaction history for credits (credit added / used)
+  const creditTransactions = useMemo(() => {
+    const tx: {
+      id: string;
+      type: "added" | "used";
+      amount: number;
+      description: string;
+      date: string;
+    }[] = [];
+
+    customerCreditsList.forEach((credit) => {
+      tx.push({
+        id: `${credit.id}-added`,
+        type: "added",
+        amount: credit.amount,
+        description: credit.description || getCreditReasonLabel(credit.reason),
+        date: credit.createdAt,
+      });
+
+      if (credit.amount > credit.remainingAmount && credit.lastUsedAt) {
+        tx.push({
+          id: `${credit.id}-used`,
+          type: "used",
+          amount: credit.amount - credit.remainingAmount,
+          description: `Credit used from ${getCreditReasonLabel(credit.reason)}`,
+          date: credit.lastUsedAt,
+        });
+      }
+    });
+
+    return tx.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [customerCreditsList]);
+
   return (
     <>
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Account Balances</h2>
         <p className="text-muted-foreground">
-          Track your credits and gift card balances
+          Store credit, gift cards, prepaid balances, and any outstanding amounts
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Total Credits
+              Store Credit
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{formatCurrency(totalCredits)}</div>
             <p className="text-sm text-muted-foreground mt-1">
-              {customerCreditsList.length} active credit{customerCreditsList.length !== 1 ? "s" : ""}
+              {customerCreditsList.length} active credit
+              {customerCreditsList.length !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
@@ -112,7 +158,25 @@ export function BalancesTab() {
           <CardContent>
             <div className="text-3xl font-bold">{formatCurrency(totalGiftCardBalance)}</div>
             <p className="text-sm text-muted-foreground mt-1">
-              {customerGiftCards.length} active gift card{customerGiftCards.length !== 1 ? "s" : ""}
+              {customerGiftCards.length} active gift card
+              {customerGiftCards.length !== 1 ? "s" : ""}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              Outstanding Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {formatCurrency(totalOutstanding)}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              From unpaid or overdue invoices (if your facility allows pay-later)
             </p>
           </CardContent>
         </Card>
@@ -121,7 +185,7 @@ export function BalancesTab() {
       {/* Credits List */}
       {customerCreditsList.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-4">Credits</h3>
+          <h3 className="text-lg font-semibold mb-4">Store Credits</h3>
           <div className="space-y-4">
             {customerCreditsList.map((credit) => (
               <Card key={credit.id}>
@@ -235,17 +299,61 @@ export function BalancesTab() {
         </div>
       )}
 
-      {customerCreditsList.length === 0 && customerGiftCards.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center space-y-3">
-            <Wallet className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-            <p className="font-semibold">No active balances</p>
-            <p className="text-sm text-muted-foreground">
-              Your credits and gift card balances will appear here
-            </p>
-          </CardContent>
-        </Card>
+      {/* Transaction History for Credits */}
+      {creditTransactions.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Credit Transaction History</h3>
+          <div className="space-y-2">
+            {creditTransactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between text-sm border-b py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp
+                    className={`h-4 w-4 ${
+                      tx.type === "added" ? "text-green-500" : "text-amber-500"
+                    }`}
+                  />
+                  <div>
+                    <div className="font-medium">
+                      {tx.type === "added" ? "Credit Added" : "Credit Used"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{tx.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`font-semibold ${
+                      tx.type === "added" ? "text-green-600" : "text-amber-600"
+                    }`}
+                  >
+                    {tx.type === "added" ? "+" : "-"}
+                    {formatCurrency(tx.amount)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(tx.date)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+
+      {customerCreditsList.length === 0 &&
+        customerGiftCards.length === 0 &&
+        customerOutstandingInvoices.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center space-y-3">
+              <Wallet className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+              <p className="font-semibold">No active balances</p>
+              <p className="text-sm text-muted-foreground">
+                Your credits, gift card balances, and outstanding amounts will appear here
+              </p>
+            </CardContent>
+          </Card>
+        )}
     </>
   );
 }

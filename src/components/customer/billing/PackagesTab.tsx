@@ -83,7 +83,7 @@ export function PackagesTab() {
         {/* Active Memberships */}
         {customerMemberships.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">My Memberships</h2>
+            <h2 className="text-2xl font-semibold mb-4">Your Active Memberships</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {customerMemberships.map((membership) => (
                 <Card key={membership.id}>
@@ -104,7 +104,9 @@ export function PackagesTab() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Monthly Price:</span>
-                      <span className="font-semibold">{formatCurrency(membership.monthlyPrice)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(membership.monthlyPrice)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Credits Remaining:</span>
@@ -120,12 +122,12 @@ export function PackagesTab() {
                     </div>
                     {membership.nextBillingDate && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Next Billing:</span>
+                        <span className="text-muted-foreground">Next Renewal:</span>
                         <span>{formatDate(membership.nextBillingDate)}</span>
                       </div>
                     )}
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="pt-2 border-t space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
                         {membership.autoRenew ? (
                           <>
                             <Check className="h-3 w-3 text-green-500" />
@@ -138,6 +140,11 @@ export function PackagesTab() {
                           </>
                         )}
                       </div>
+                      <p>
+                        Pause / cancel rules are defined by your facility. Typically, changes to
+                        memberships apply to the next billing cycle and may require notice (e.g.,
+                        7–14 days before renewal).
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
