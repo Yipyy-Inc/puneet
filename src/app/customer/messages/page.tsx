@@ -418,7 +418,7 @@ export default function CustomerMessagesPage() {
                   {/* Office Hours / Auto-Reply Banner */}
                   {messagingConfig?.officeHours?.enabled && (
                     <div className="px-4 pt-4">
-                      <Alert variant={isInOfficeHours ? "default" : "secondary"}>
+                      <Alert variant={isInOfficeHours ? "default" : "default"}>
                         <ClockIcon className="h-4 w-4" />
                         <AlertDescription>
                           {isInOfficeHours ? (
