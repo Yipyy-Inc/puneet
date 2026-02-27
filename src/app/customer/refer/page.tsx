@@ -27,6 +27,11 @@ import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { payments } from "@/data/payments";
+import {
+  getReferralRelationshipsByReferrer,
+  getReferralStats,
+  type ReferralRelationship,
+} from "@/data/referral-tracking";
 // QR Code will be generated using an external service or canvas
 
 // Mock customer ID - TODO: Get from auth context
@@ -80,69 +85,64 @@ export default function CustomerReferPage() {
     return loyaltyConfig.referralProgram;
   }, [loyaltyConfig]);
 
-  // Get referral tracking data
+  // Get referral relationships
+  const referralRelationships = useMemo(() => {
+    return getReferralRelationshipsByReferrer(MOCK_CUSTOMER_ID);
+  }, []);
+
+  // Get referral stats
+  const referralStatsData = useMemo(() => {
+    return getReferralStats(MOCK_CUSTOMER_ID);
+  }, []);
+
+  // Get referral tracking data from relationships
   const referralTracking = useMemo((): ReferralTracking[] => {
-    // In production, this would come from the database
-    // For now, we'll simulate based on referral codes and bookings
-    
-    const allReferralCodes = referralCodes.filter((ref) => ref.referrerId === MOCK_CUSTOMER_ID);
-    
-    // Mock tracking data - in production, this would query actual referrals
-    const mockTracking: ReferralTracking[] = [
-      {
-        friendName: "Sarah J",
-        friendEmail: "sarah.j@example.com",
-        status: "completed",
-        rewardStatus: "earned",
-        rewardAmount: referralProgram?.referrerReward.value || 20,
-        signedUpDate: "2026-01-15",
-        bookedDate: "2026-01-20",
-        completedDate: "2026-01-25",
-      },
-      {
-        friendName: "Mike T",
-        friendEmail: "mike.t@example.com",
-        status: "signed_up",
-        rewardStatus: "pending",
-        signedUpDate: "2026-02-10",
-      },
-      {
-        friendName: "Emma L",
-        friendEmail: "emma.l@example.com",
-        status: "booked",
-        rewardStatus: "pending",
-        signedUpDate: "2026-02-05",
-        bookedDate: "2026-02-12",
-      },
-    ];
+    return referralRelationships.map((rel) => {
+      // Find customer info
+      const friend = clients.find((c) => c.id === rel.referredCustomerId);
+      
+      // Determine status
+      let status: ReferralTracking["status"] = "pending";
+      if (rel.status === "completed") {
+        status = "completed";
+      } else if (rel.firstBookingId) {
+        status = "booked";
+      } else if (rel.status === "active") {
+        status = "signed_up";
+      }
 
-    return mockTracking;
-  }, [referralProgram]);
+      // Determine reward status
+      let rewardStatus: ReferralTracking["rewardStatus"] = "not_eligible";
+      if (rel.referrerRewardStatus === "issued") {
+        rewardStatus = "earned";
+      } else if (rel.referrerRewardStatus === "pending" || rel.referrerRewardStatus === "eligible") {
+        rewardStatus = "pending";
+      }
 
-  // Calculate referral stats
+      return {
+        friendName: friend?.name || `Customer #${rel.referredCustomerId}`,
+        friendEmail: friend?.email,
+        status,
+        rewardStatus,
+        rewardAmount: rel.referrerRewardValue,
+        signedUpDate: rel.createdAt,
+        bookedDate: rel.firstBookingDate,
+        completedDate: rel.referrerRewardIssuedAt,
+      };
+    });
+  }, [referralRelationships]);
+
+  // Use stats from referral tracking system
   const referralStats = useMemo(() => {
-    const totalSent = referralTracking.length;
-    const signedUp = referralTracking.filter((r) => r.status !== "pending").length;
-    const booked = referralTracking.filter((r) => r.status === "booked" || r.status === "completed").length;
-    const rewardsEarned = referralTracking.filter((r) => r.rewardStatus === "earned").length;
-    const rewardsPending = referralTracking.filter((r) => r.rewardStatus === "pending").length;
-    
-    const totalRewardsEarned = referralTracking
-      .filter((r) => r.rewardStatus === "earned")
-      .reduce((sum, r) => {
-        const amount = typeof r.rewardAmount === "number" ? r.rewardAmount : 0;
-        return sum + amount;
-      }, 0);
-
     return {
-      totalSent,
-      signedUp,
-      booked,
-      rewardsEarned,
-      rewardsPending,
-      totalRewardsEarned,
+      totalSent: referralStatsData.totalReferrals,
+      signedUp: referralStatsData.activeReferrals + referralStatsData.completedReferrals,
+      booked: referralStatsData.completedReferrals,
+      rewardsEarned: referralStatsData.rewardsEarned,
+      rewardsPending: referralStatsData.rewardsPending,
+      totalRewardsEarned: referralStatsData.totalRewardValue,
     };
-  }, [referralTracking]);
+  }, [referralStatsData]);
 
   // Copy referral link
   const handleCopyLink = async () => {
