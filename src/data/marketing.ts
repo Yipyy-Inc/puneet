@@ -431,6 +431,17 @@ export const referralCodes: ReferralCode[] = [
     createdAt: "2024-01-20T11:00:00Z",
     isActive: true,
   },
+  {
+    id: "ref-003",
+    code: "ALICE-PET",
+    referrerId: 15,
+    referrerReward: 25,
+    refereeReward: 25,
+    timesUsed: 2,
+    maxUses: 10,
+    createdAt: "2026-01-15T10:00:00Z",
+    isActive: true,
+  },
 ];
 
 export interface Badge {
