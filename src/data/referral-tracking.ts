@@ -236,24 +236,18 @@ export function validateReferral(
 
   if (existingRelationship) {
     errors.push("Referral relationship already exists");
+    // If reward was already issued, include that in the reason
+    if (existingRelationship.referrerRewardStatus === "issued") {
+      errors.push("Reward already issued for this referral");
+    }
     return {
       isValid: false,
       errors,
       warnings,
       canTriggerReward: false,
-      reason: "Duplicate referral relationship",
-    };
-  }
-
-  // Check if referrer has already received reward for this customer
-  if (existingRelationship && existingRelationship.referrerRewardStatus === "issued") {
-    errors.push("Reward already issued for this referral");
-    return {
-      isValid: false,
-      errors,
-      warnings,
-      canTriggerReward: false,
-      reason: "Reward already issued",
+      reason: existingRelationship.referrerRewardStatus === "issued" 
+        ? "Reward already issued" 
+        : "Duplicate referral relationship",
     };
   }
 
