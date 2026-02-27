@@ -158,6 +158,11 @@ export const facilityConfig = {
       overview: ["totalBookings", "revenue", "activeClients"],
       detailed: ["bookingTrends", "servicePopularity", "staffPerformance"],
     },
+    photoSharing: {
+      enabled: true,
+      allowDownload: true,
+      allowShare: true,
+    },
   },
   waiversAndContracts: {
     templates: {

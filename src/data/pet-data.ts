@@ -73,6 +73,9 @@ export interface ReportCard {
   createdById: number;
   sentToOwner: boolean;
   sentAt?: string;
+  theme?: "everyday" | "halloween" | "christmas" | "valentines" | "easter" | "summer" | "winter";
+  replyMessage?: string; // Quick reply from customer
+  repliedAt?: string; // When customer replied
 }
 
 export interface PetRelationship {
@@ -430,6 +433,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-01-15T17:00:00Z",
+    theme: "everyday",
   },
   {
     id: "report-002",
@@ -464,6 +468,7 @@ export const reportCards: ReportCard[] = [
     createdById: 1,
     sentToOwner: true,
     sentAt: "2024-03-01T17:30:00Z",
+    theme: "summer",
   },
   {
     id: "report-003",
@@ -505,6 +510,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-01-20T20:00:00Z",
+    theme: "winter",
   },
   {
     id: "report-004",
@@ -528,6 +534,7 @@ export const reportCards: ReportCard[] = [
     createdById: 1,
     sentToOwner: true,
     sentAt: "2024-01-25T12:30:00Z",
+    theme: "valentines",
   },
   {
     id: "report-005",
@@ -561,6 +568,7 @@ export const reportCards: ReportCard[] = [
     createdById: 2,
     sentToOwner: true,
     sentAt: "2024-02-01T18:00:00Z",
+    theme: "easter",
   },
 ];
 
