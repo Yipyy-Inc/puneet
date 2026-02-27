@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { useSettings } from "@/hooks/use-settings";
-import { petCams, type PetCam } from "@/data/additional-features";
+import { petCams, type PetCam, mobileAppSettings } from "@/data/additional-features";
+import { bookings } from "@/data/bookings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,22 +18,45 @@ import {
   Move,
 } from "lucide-react";
 import { facilityConfig } from "@/data/facility-config";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Mock customer ID - TODO: Get from auth context
+const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerCamerasPage() {
   const { selectedFacility } = useCustomerFacility();
-  const { bookingFlow } = useSettings();
   const [selectedCamera, setSelectedCamera] = useState<PetCam | null>(null);
 
-  // Check if cameras are enabled for customers
-  // TODO: Get from facility settings API - for now, check if any customer-accessible cameras exist
+  // Check if customer has an active stay (today within a confirmed booking at this facility)
+  const hasActiveStay = useMemo(() => {
+    if (!selectedFacility) return false;
+    const today = new Date().toISOString().split("T")[0];
+    return bookings.some(
+      (b) =>
+        b.clientId === MOCK_CUSTOMER_ID &&
+        b.facilityId === selectedFacility.id &&
+        b.status === "confirmed" &&
+        b.startDate <= today &&
+        b.endDate >= today,
+    );
+  }, [selectedFacility]);
+
+  // TODO: Replace with real membership logic when membership data is available
+  const hasCameraMembership = false;
+
+  const hasCameraAccess = hasActiveStay || hasCameraMembership;
+
+  // Check if cameras are enabled for this facility and customer
   const camerasEnabled = useMemo(() => {
+    if (!mobileAppSettings.enableLiveCamera) return false;
+    if (!hasCameraAccess) return false;
+
     // Check if facility has any cameras accessible to customers
     const customerAccessibleCameras = petCams.filter(
-      (cam) =>
-        cam.accessLevel === "public" || cam.accessLevel === "customers_only"
+      (cam) => cam.accessLevel === "public" || cam.accessLevel === "customers_only",
     );
     return customerAccessibleCameras.length > 0;
-  }, []);
+  }, [hasCameraAccess]);
 
   // Get allowed access times from facility config
   const allowedAccessTimes = useMemo(() => {
@@ -80,7 +103,8 @@ export default function CustomerCamerasPage() {
               <Camera className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h2 className="text-2xl font-bold mb-2">Live Cameras Not Available</h2>
               <p className="text-muted-foreground">
-                This facility does not currently offer live camera access.
+                Live camera access is only available for active stays or memberships at facilities
+                that have cameras enabled.
               </p>
             </CardContent>
           </Card>
@@ -142,6 +166,24 @@ export default function CustomerCamerasPage() {
           </p>
         </div>
 
+        {/* Privacy Notice */}
+        <Alert>
+          <AlertDescription className="text-sm space-y-1">
+            <p>
+              Cameras are provided for your convenience while your pet is staying with us. Access is
+              limited to active stays and may be unavailable outside of operating hours.
+            </p>
+            <p>
+              We do not record audio on customer-facing cameras, and live streams are only visible
+              to authorized customers and staff.
+            </p>
+            <p>
+              Video quality automatically adjusts based on your network connection. On slower
+              networks, the stream may appear lower resolution or pause briefly.
+            </p>
+          </AlertDescription>
+        </Alert>
+
         {customerCameras.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -153,7 +195,8 @@ export default function CustomerCamerasPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          // One camera per row on mobile, multiple per row on larger screens
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {customerCameras.map((camera) => (
               <Card
                 key={camera.id}
