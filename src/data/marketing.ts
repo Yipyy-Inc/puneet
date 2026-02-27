@@ -328,6 +328,115 @@ export interface CustomerLoyalty {
   }[];
 }
 
+export interface LoyaltyReward {
+  id: string;
+  name: string;
+  description: string;
+  requiredPoints: number;
+  rewardType: "discount_code" | "credit_balance" | "auto_apply" | "free_service";
+  rewardValue: number | string; // Dollar amount or service name
+  applicableServices?: string[]; // Service types this reward applies to
+  expiryDays?: number; // Days until reward expires (if applicable)
+  terms?: string; // Additional terms and conditions
+  isActive: boolean;
+  facilityId?: number; // Facility-specific reward
+}
+
+export interface PointsEarningRule {
+  type: "per_dollar" | "per_visit" | "per_referral" | "bonus" | "holiday";
+  description: string;
+  points: number | { base: number; multiplier?: number }; // Can be fixed or calculated
+  applicableServices?: string[]; // Which services this applies to
+  conditions?: string; // Additional conditions
+}
+
+// Points earning rules - dynamically generated based on facility config
+export const pointsEarningRules: PointsEarningRule[] = [
+  {
+    type: "per_dollar",
+    description: "Earn 1 point per $1 spent",
+    points: 1,
+  },
+  {
+    type: "per_visit",
+    description: "Earn 50 points per daycare visit",
+    points: 50,
+    applicableServices: ["daycare"],
+  },
+  {
+    type: "per_referral",
+    description: "Earn 200 points for referrals",
+    points: 200,
+  },
+  {
+    type: "bonus",
+    description: "Earn bonus points during holidays",
+    points: { base: 50, multiplier: 2 },
+    conditions: "Holiday periods only",
+  },
+];
+
+// Available rewards configured by facility
+export const loyaltyRewards: LoyaltyReward[] = [
+  {
+    id: "reward-001",
+    name: "$10 Credit",
+    description: "Redeem points for account credit",
+    requiredPoints: 500,
+    rewardType: "credit_balance",
+    rewardValue: 10,
+    expiryDays: 90,
+    terms: "Credit expires 90 days after redemption. Applies to all services.",
+    isActive: true,
+  },
+  {
+    id: "reward-002",
+    name: "Free Daycare Day",
+    description: "One free full-day daycare visit",
+    requiredPoints: 1000,
+    rewardType: "free_service",
+    rewardValue: "daycare",
+    applicableServices: ["daycare"],
+    expiryDays: 60,
+    terms: "Valid for one full-day daycare visit. Must be used within 60 days.",
+    isActive: true,
+  },
+  {
+    id: "reward-003",
+    name: "10 Visits = 1 Free",
+    description: "After 10 daycare visits, get 1 free",
+    requiredPoints: 0, // This is tracked by visit count, not points
+    rewardType: "auto_apply",
+    rewardValue: "daycare",
+    applicableServices: ["daycare"],
+    terms: "Automatically applied after 10th visit. Cannot be combined with other offers.",
+    isActive: true,
+  },
+  {
+    id: "reward-004",
+    name: "Free Nail Trim",
+    description: "Complimentary nail trimming service",
+    requiredPoints: 250,
+    rewardType: "discount_code",
+    rewardValue: "FREE_NAIL_TRIM",
+    applicableServices: ["grooming"],
+    expiryDays: 30,
+    terms: "Valid for nail trim service only. Expires 30 days after redemption.",
+    isActive: true,
+  },
+  {
+    id: "reward-005",
+    name: "$25 Discount Code",
+    description: "Get a $25 discount code",
+    requiredPoints: 1250,
+    rewardType: "discount_code",
+    rewardValue: 25,
+    expiryDays: 60,
+    terms: "Code valid for 60 days. Minimum purchase $50 required.",
+    isActive: true,
+  },
+];
+
 export const customerLoyaltyData: CustomerLoyalty[] = [
   {
     clientId: 1,
@@ -371,25 +480,37 @@ export const customerLoyaltyData: CustomerLoyalty[] = [
         date: "2026-02-20T10:00:00Z",
         points: 50,
         type: "earned",
-        description: "Daycare payment - $50.00",
+        description: "Daycare booking",
       },
       {
         date: "2026-02-15T10:00:00Z",
-        points: 60,
-        type: "earned",
-        description: "Grooming payment - $60.00",
+        points: -500,
+        type: "redeemed",
+        description: "Redeemed Free Daycare",
       },
       {
         date: "2026-02-10T10:00:00Z",
-        points: 135,
+        points: 300,
         type: "earned",
-        description: "Boarding payment - $135.00",
+        description: "Boarding stay",
       },
       {
         date: "2026-01-28T10:00:00Z",
         points: 50,
         type: "earned",
-        description: "Daycare payment - $50.00",
+        description: "Daycare booking",
+      },
+      {
+        date: "2026-01-25T10:00:00Z",
+        points: 300,
+        type: "earned",
+        description: "Boarding stay",
+      },
+      {
+        date: "2026-01-12T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare booking",
       },
     ],
   },

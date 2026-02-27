@@ -22,9 +22,29 @@ import {
   Sparkles,
   ArrowRight,
   ExternalLink,
+  Info,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { customerLoyaltyData, loyaltySettings, referralCodes, badges } from "@/data/marketing";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  customerLoyaltyData, 
+  loyaltySettings, 
+  referralCodes, 
+  badges,
+  loyaltyRewards,
+  pointsEarningRules,
+  type LoyaltyReward,
+  type PointsEarningRule,
+} from "@/data/marketing";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { payments } from "@/data/payments";
@@ -36,6 +56,9 @@ export default function CustomerRewardsPage() {
   const { selectedFacility } = useCustomerFacility();
   const [isMounted, setIsMounted] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<LoyaltyReward | null>(null);
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -119,13 +142,12 @@ export default function CustomerRewardsPage() {
     return earned;
   }, [customerBookings, totalSpent, customerReferralCodes]);
 
-  // Format date helper
+  // Format date helper (short format for table: "Jan 12")
   const formatDate = (dateString: string) => {
     if (!isMounted) return "";
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: "numeric",
     });
   };
 
@@ -182,55 +204,127 @@ export default function CustomerRewardsPage() {
           </p>
         </div>
 
-        {/* Loyalty Points Overview Card */}
+        {/* Points Summary Card */}
         {loyaltyData && (
           <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-6 flex-wrap">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-full bg-primary/20">
-                    <Star className="h-8 w-8 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-4xl font-bold">{loyaltyData.points}</div>
-                    <div className="text-sm text-muted-foreground">Points</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      ≈ ${pointsValue.toFixed(2)} value
+              <div className="space-y-4">
+                {/* Points Balance and Value */}
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 rounded-full bg-primary/20">
+                      <Star className="h-8 w-8 text-primary" />
                     </div>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-medium">
-                      {loyaltyData.currentTier?.name || "Bronze"} Tier
-                    </div>
-                    {loyaltyData.nextTier && (
-                      <div className="text-xs text-muted-foreground">
-                        {loyaltyData.pointsToNextTier} pts to {loyaltyData.nextTier.name}
+                    <div>
+                      <div className="text-4xl font-bold">
+                        {loyaltyData.points.toLocaleString()} Points
                       </div>
+                      {loyaltySettings.pointsValue > 0 && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          ≈ ${pointsValue.toFixed(2)} value
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Button asChild>
+                    <a href="#redeem">Redeem Points</a>
+                  </Button>
+                </div>
+
+                {/* Tier and Progress */}
+                {loyaltyData.currentTier && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant="default" 
+                          className="text-sm font-semibold"
+                          style={{
+                            backgroundColor: loyaltyData.currentTier.color || undefined,
+                            color: loyaltyData.currentTier.color ? "#fff" : undefined,
+                          }}
+                        >
+                          {loyaltyData.currentTier.name} Tier
+                        </Badge>
+                      </div>
+                      {loyaltyData.nextTier && (
+                        <div className="text-sm font-medium text-muted-foreground">
+                          {loyaltyData.pointsToNextTier.toLocaleString()} points away from {loyaltyData.nextTier.name} Tier
+                        </div>
+                      )}
+                      {!loyaltyData.nextTier && (
+                        <div className="text-sm font-medium text-muted-foreground">
+                          Highest tier achieved! 🎉
+                        </div>
+                      )}
+                    </div>
+                    
+                    {loyaltyData.nextTier && (
+                      <>
+                        <Progress value={loyaltyData.progressPercentage} className="h-3" />
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {loyaltyData.points.toLocaleString()} / {loyaltyData.nextTier.minPoints.toLocaleString()} points
+                          </span>
+                          <span>
+                            {Math.round(loyaltyData.progressPercentage)}% to {loyaltyData.nextTier.name}
+                          </span>
+                        </div>
+                      </>
                     )}
                   </div>
-                  {loyaltyData.nextTier && (
-                    <>
-                      <Progress value={loyaltyData.progressPercentage} className="h-2 mb-1" />
-                      <div className="text-xs text-muted-foreground">
-                        {loyaltyData.points}/{loyaltyData.nextTier.minPoints} pts to {loyaltyData.nextTier.name}
-                      </div>
-                    </>
-                  )}
-                  {!loyaltyData.nextTier && (
-                    <div className="text-xs text-muted-foreground mt-2">
-                      You've reached the highest tier! 🎉
-                    </div>
-                  )}
-                </div>
-                <Button asChild>
-                  <a href="#redeem">Redeem Points</a>
-                </Button>
+                )}
+
+                {/* Summary Text (Example Format) */}
+                {loyaltyData.nextTier && (
+                  <div className="pt-2 border-t">
+                    <p className="text-base font-medium">
+                      {loyaltyData.points.toLocaleString()} Points – {loyaltyData.pointsToNextTier.toLocaleString()} points away from {loyaltyData.nextTier.name} Tier
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* How Points Are Earned */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              How Points Are Earned
+            </CardTitle>
+            <CardDescription>
+              Ways to earn loyalty points at {selectedFacility?.name || "this facility"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pointsEarningRules.map((rule: PointsEarningRule, index: number) => (
+                <div key={index} className="flex items-start gap-3 p-3 rounded-lg border bg-background/60">
+                  <div className="p-2 rounded-full bg-primary/10 mt-0.5">
+                    <Star className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{rule.description}</div>
+                    {rule.applicableServices && rule.applicableServices.length > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Applies to: {rule.applicableServices.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}
+                      </div>
+                    )}
+                    {rule.conditions && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <Info className="h-3 w-3 inline mr-1" />
+                        {rule.conditions}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tier Benefits */}
         {loyaltyData?.currentTier && (
@@ -274,52 +368,75 @@ export default function CustomerRewardsPage() {
           <TabsContent value="points" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Points History</CardTitle>
+                <CardTitle>Loyalty History</CardTitle>
                 <CardDescription>
                   Track how you've earned and redeemed points
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {loyaltyData && loyaltyData.pointsHistory.length > 0 ? (
-                  <div className="space-y-3">
-                    {loyaltyData.pointsHistory.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-background/60"
-                      >
-                        <div className="flex items-center gap-3">
-                          {entry.type === "earned" ? (
-                            <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/20">
-                              <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            </div>
-                          ) : entry.type === "redeemed" ? (
-                            <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                              <GiftIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                          ) : (
-                            <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/20">
-                              <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-medium text-sm">{entry.description}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatDateTime(entry.date)}
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className={`font-semibold ${
-                            entry.points > 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {entry.points > 0 ? "+" : ""}
-                          {entry.points} pts
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Date</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Activity</th>
+                          <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loyaltyData.pointsHistory
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .map((entry, index) => {
+                            const isEarned = entry.type === "earned";
+                            const isRedeemed = entry.type === "redeemed";
+                            const isExpired = entry.type === "expired";
+                            
+                            return (
+                              <tr
+                                key={index}
+                                className="border-b hover:bg-muted/50 transition-colors"
+                              >
+                                <td className="py-3 px-4 text-sm font-medium">
+                                  {formatDate(entry.date)}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2">
+                                    {isEarned ? (
+                                      <div className="p-1.5 rounded-full bg-green-100 dark:bg-green-900/20">
+                                        <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                      </div>
+                                    ) : isRedeemed ? (
+                                      <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                                        <GiftIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                      </div>
+                                    ) : (
+                                      <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
+                                        <Clock className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                                      </div>
+                                    )}
+                                    <span className="text-sm">{entry.description}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <span
+                                    className={`font-semibold ${
+                                      isEarned
+                                        ? "text-green-600 dark:text-green-400"
+                                        : isExpired
+                                        ? "text-red-600 dark:text-red-400"
+                                        : "text-blue-600 dark:text-blue-400"
+                                    }`}
+                                  >
+                                    {entry.points > 0 ? "+" : ""}
+                                    {entry.points}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
@@ -360,84 +477,134 @@ export default function CustomerRewardsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Gift className="h-5 w-5" />
-                  Redeem Points
+                  Rewards Available
                 </CardTitle>
                 <CardDescription>
                   Use your points to get discounts and rewards
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loyaltyData && loyaltyData.points >= 100 ? (
+                {loyaltyData ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Points to Dollar Conversion */}
-                      <Card className="border-primary/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <div className="font-semibold">Discount Voucher</div>
-                              <div className="text-sm text-muted-foreground">
-                                100 pts = ${loyaltySettings.pointsValue}
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              disabled={loyaltyData.points < 100}
-                              onClick={() => {
-                                toast.success("Redeeming points...");
-                                // TODO: Implement redemption logic
-                              }}
-                            >
-                              Redeem
-                            </Button>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Minimum 100 points required
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Tier Discount Info */}
-                      {loyaltyData.currentTier && loyaltyData.currentTier.discountPercentage > 0 && (
-                        <Card className="border-primary/20">
+                    {/* Active Rewards */}
+                    {loyaltyRewards
+                      .filter((reward: LoyaltyReward) => reward.isActive && (reward.requiredPoints === 0 || loyaltyData.points >= reward.requiredPoints))
+                      .map((reward: LoyaltyReward) => (
+                        <Card key={reward.id} className="border-primary/20">
                           <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <div className="font-semibold">Tier Discount</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {loyaltyData.currentTier.discountPercentage}% off all services
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold">{reward.name}</h3>
+                                  {reward.requiredPoints === 0 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Visit-Based
+                                    </Badge>
+                                  )}
                                 </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {reward.description}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm">
+                                  {reward.requiredPoints > 0 && (
+                                    <div>
+                                      <span className="text-muted-foreground">Required: </span>
+                                      <span className="font-semibold">{reward.requiredPoints.toLocaleString()} points</span>
+                                    </div>
+                                  )}
+                                  {reward.expiryDays && (
+                                    <div>
+                                      <span className="text-muted-foreground">Expires: </span>
+                                      <span className="font-semibold">{reward.expiryDays} days</span>
+                                    </div>
+                                  )}
+                                  {reward.applicableServices && reward.applicableServices.length > 0 && (
+                                    <div>
+                                      <span className="text-muted-foreground">Services: </span>
+                                      <span className="font-semibold">
+                                        {reward.applicableServices.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                {reward.terms && (
+                                  <div className="mt-2 p-2 bg-muted rounded text-xs text-muted-foreground">
+                                    <Info className="h-3 w-3 inline mr-1" />
+                                    {reward.terms}
+                                  </div>
+                                )}
                               </div>
-                              <Badge variant="default">Active</Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-2">
-                              Automatically applied at checkout
+                              <div className="flex flex-col items-end gap-2">
+                                {reward.requiredPoints > 0 && (
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-primary">
+                                      {reward.requiredPoints.toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">points</div>
+                                  </div>
+                                )}
+                                <Button
+                                  size="sm"
+                                  disabled={
+                                    reward.requiredPoints > 0 && loyaltyData.points < reward.requiredPoints
+                                  }
+                                  onClick={() => {
+                                    setSelectedReward(reward);
+                                    setRedeemDialogOpen(true);
+                                  }}
+                                >
+                                  {reward.requiredPoints === 0 ? "View Details" : "Redeem"}
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
-                      )}
-                    </div>
+                      ))}
 
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="text-sm font-medium mb-2">How to Redeem:</div>
-                      <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>Select a reward option above</li>
-                        <li>Points will be deducted from your account</li>
-                        <li>Discount code or credit will be applied automatically</li>
-                        <li>Use it on your next booking or purchase</li>
-                      </ol>
-                    </div>
+                    {/* Rewards Not Yet Available */}
+                    {loyaltyRewards
+                      .filter((reward: LoyaltyReward) => reward.isActive && reward.requiredPoints > 0 && loyaltyData.points < reward.requiredPoints)
+                      .map((reward: LoyaltyReward) => (
+                        <Card key={reward.id} className="border-muted opacity-60">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-muted-foreground">{reward.name}</h3>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {reward.description}
+                                </p>
+                                <div className="text-sm text-muted-foreground">
+                                  Need {reward.requiredPoints.toLocaleString()} points • You have {loyaltyData.points.toLocaleString()} points
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-muted-foreground">
+                                  {reward.requiredPoints.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-muted-foreground">points</div>
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  {reward.requiredPoints - loyaltyData.points} more needed
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+
+                    {loyaltyRewards.filter((r: LoyaltyReward) => r.isActive).length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No rewards available at this time</p>
+                        <p className="text-xs mt-1">Check back later for new rewards!</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>You need at least 100 points to redeem rewards</p>
-                    <p className="text-xs mt-1">
-                      You currently have {loyaltyData?.points || 0} points
-                    </p>
-                    <Button variant="outline" className="mt-4" asChild>
-                      <a href="/customer/bookings">Book a Service to Earn Points</a>
-                    </Button>
+                    <p>No loyalty data available</p>
                   </div>
                 )}
               </CardContent>
@@ -602,6 +769,141 @@ export default function CustomerRewardsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Redemption Confirmation Dialog */}
+        <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Redeem Reward</DialogTitle>
+              <DialogDescription>
+                Confirm your reward redemption
+              </DialogDescription>
+            </DialogHeader>
+            {selectedReward && loyaltyData && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="font-semibold mb-2">{selectedReward.name}</div>
+                  <div className="text-sm text-muted-foreground mb-3">
+                    {selectedReward.description}
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Points Required:</span>
+                    <span className="font-semibold">{selectedReward.requiredPoints.toLocaleString()} points</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-muted-foreground">Your Points:</span>
+                    <span className="font-semibold">{loyaltyData.points.toLocaleString()} points</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-2 font-semibold">
+                    <span>Points After Redemption:</span>
+                    <span className="text-primary">
+                      {(loyaltyData.points - selectedReward.requiredPoints).toLocaleString()} points
+                    </span>
+                  </div>
+                </div>
+
+                {selectedReward.terms && (
+                  <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-warning-foreground">
+                        <div className="font-medium mb-1">Terms & Conditions:</div>
+                        {selectedReward.terms}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="text-sm font-medium mb-1">What happens next:</div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {selectedReward.rewardType === "discount_code" && (
+                      <p>• A discount code will be generated and added to your account</p>
+                    )}
+                    {selectedReward.rewardType === "credit_balance" && (
+                      <p>• ${selectedReward.rewardValue} will be added to your account credit balance</p>
+                    )}
+                    {selectedReward.rewardType === "auto_apply" && (
+                      <p>• This reward will automatically apply to your next eligible booking</p>
+                    )}
+                    {selectedReward.rewardType === "free_service" && (
+                      <p>• A free service voucher will be added to your account</p>
+                    )}
+                    <p>• Points will be deducted from your account</p>
+                    <p>• Transaction will be logged in your points history</p>
+                    {selectedReward.expiryDays && (
+                      <p>• Reward expires in {selectedReward.expiryDays} days</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRedeemDialogOpen(false);
+                  setSelectedReward(null);
+                }}
+                disabled={isRedeeming}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedReward || !loyaltyData) return;
+
+                  setIsRedeeming(true);
+                  try {
+                    // TODO: Replace with actual API call
+                    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+                    // Generate reward based on type
+                    let rewardDetails = "";
+                    if (selectedReward.rewardType === "discount_code") {
+                      const code = `LOYALTY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                      rewardDetails = `Discount code: ${code}`;
+                      toast.success(`Reward redeemed! ${rewardDetails}`);
+                    } else if (selectedReward.rewardType === "credit_balance") {
+                      rewardDetails = `$${selectedReward.rewardValue} credit added to your account`;
+                      toast.success(`Reward redeemed! ${rewardDetails}`);
+                    } else if (selectedReward.rewardType === "auto_apply") {
+                      rewardDetails = "Reward will be automatically applied to your next booking";
+                      toast.success(`Reward redeemed! ${rewardDetails}`);
+                    } else if (selectedReward.rewardType === "free_service") {
+                      rewardDetails = `Free ${selectedReward.rewardValue} service voucher added`;
+                      toast.success(`Reward redeemed! ${rewardDetails}`);
+                    }
+
+                    // TODO: In production, this would:
+                    // 1. Deduct points from customer account
+                    // 2. Create discount code / add credit / create voucher
+                    // 3. Link reward to customer account
+                    // 4. Log transaction in loyalty history
+                    // 5. Update invoice/booking system if auto-apply
+
+                    setRedeemDialogOpen(false);
+                    setSelectedReward(null);
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to redeem reward");
+                  } finally {
+                    setIsRedeeming(false);
+                  }
+                }}
+                disabled={isRedeeming || !selectedReward || !loyaltyData || loyaltyData.points < selectedReward.requiredPoints}
+              >
+                {isRedeeming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Redeeming...
+                  </>
+                ) : (
+                  "Confirm Redemption"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
