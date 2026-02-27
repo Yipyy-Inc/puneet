@@ -32,6 +32,9 @@ import {
   getReferralStats,
   type ReferralRelationship,
 } from "@/data/referral-tracking";
+import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
+import { ConditionalLoyaltyFeature } from "@/components/loyalty/ConditionalLoyaltyFeature";
+import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
 // QR Code will be generated using an external service or canvas
 
 // Mock customer ID - TODO: Get from auth context
@@ -50,6 +53,7 @@ interface ReferralTracking {
 
 export default function CustomerReferPage() {
   const { selectedFacility } = useCustomerFacility();
+  const { canViewReferrals } = useCustomerLoyaltyAccess();
   const [isMounted, setIsMounted] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -57,6 +61,22 @@ export default function CustomerReferPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Check if referrals are available
+  if (!canViewReferrals) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Referral Program Not Available</CardTitle>
+            <CardDescription>
+              The referral program is not enabled for this facility.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Get customer data
   const customer = useMemo(() => clients.find((c) => c.id === MOCK_CUSTOMER_ID), []);

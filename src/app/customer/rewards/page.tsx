@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
+import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

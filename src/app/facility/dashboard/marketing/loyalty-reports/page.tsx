@@ -44,6 +44,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
+import { useLoyaltyConfig } from "@/hooks/use-loyalty-config";
 
 // Mock facility ID - TODO: Get from context
 const MOCK_FACILITY_ID = 1;
@@ -52,12 +54,44 @@ const MOCK_FACILITY_ID = 1;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 export default function LoyaltyReportsPage() {
+  const { isEnabled, canViewReports } = useLoyaltyConfig();
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       .toISOString()
       .split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
   });
+
+  // Check if loyalty is enabled and user has permission
+  if (!isEnabled) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loyalty Program Not Enabled</CardTitle>
+            <CardDescription>
+              Enable the loyalty program in settings to view reports.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canViewReports) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You don't have permission to view loyalty reports.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Calculate loyalty statistics
   const loyaltyStats = useMemo(() => {
@@ -212,7 +246,8 @@ export default function LoyaltyReportsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <LoyaltyModuleGuard requirePermission="reports">
+      <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -748,6 +783,7 @@ export default function LoyaltyReportsPage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </LoyaltyModuleGuard>
   );
 }
