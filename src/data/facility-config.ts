@@ -188,4 +188,33 @@ export const facilityConfig = {
       behaviorNotes: true,
     },
   },
+  training: {
+    makeupSessions: {
+      enabled: true,
+      pricingRules: {
+        type: "fixed", // "fixed" | "percentage" | "per_session"
+        fixedPrice: 40, // If type is "fixed"
+        percentageOfSeries: null, // If type is "percentage" (e.g., 0.15 for 15%)
+        perSessionPrice: null, // If type is "per_session"
+      },
+      expirationRules: {
+        enabled: true,
+        mustScheduleWithinDays: 30, // Must schedule makeup within 30 days of missed session
+        expiresAfterDays: 60, // Makeup credit expires after 60 days if not used
+      },
+      cancellationPolicy: "Free cancellation up to 24 hours before makeup session",
+      refundPolicy: "Makeup sessions are non-refundable once scheduled",
+    },
+    courseDetails: {
+      defaultWhatToBring: [
+        "Your dog on a 6-foot leash",
+        "High-value treats (small, soft, easy to swallow)",
+        "Your dog's favorite toy (optional)",
+        "Water bottle for your dog",
+        "Waste bags",
+      ],
+      defaultCancellationPolicy: "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
+      defaultRefundPolicy: "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
+    },
+  },
 };

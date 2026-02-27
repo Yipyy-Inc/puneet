@@ -33,6 +33,9 @@ import {
   CheckCircle2,
   XCircle,
   GraduationCap,
+  Info,
+  Download,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { type TrainingSeries, getDayName, calculateSessionDates } from "@/lib/training-series";
 import { defaultTrainingCourseTypes } from "@/lib/training-config";
@@ -93,6 +96,12 @@ export default function CustomerTrainingPage() {
   const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [certificates] = useState<TrainingCertificate[]>([]); // Mock - would come from API
+  const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] = useState(false);
+  const [selectedCourseDetails, setSelectedCourseDetails] = useState<TrainingSeries | null>(null);
+  // Mock enrollments - in production, this would come from API
+  const [enrollments] = useState<Array<{ seriesId: string; petId: number; petName: string }>>([
+    // Example: { seriesId: "series-001", petId: 1, petName: "Buddy" }
+  ]);
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
@@ -184,6 +193,11 @@ export default function CustomerTrainingPage() {
     setIsEnrollmentModalOpen(true);
   };
 
+  const handleCourseDetailsClick = (seriesItem: TrainingSeries) => {
+    setSelectedCourseDetails(seriesItem);
+    setIsCourseDetailsModalOpen(true);
+  };
+
   const handleWaitlistClick = (seriesItem: TrainingSeries) => {
     setSelectedSeries(seriesItem);
     setWaitlistPosition(2); // Mock position
@@ -231,7 +245,7 @@ export default function CustomerTrainingPage() {
       // TODO: API call to enroll
       await new Promise((resolve) => setTimeout(resolve, 1500));
       
-      // Generate session dates for confirmation
+      // Generate session dates for confirmation and calendar
       const sessionDates = calculateSessionDates(
         selectedSeries.startDate,
         selectedSeries.dayOfWeek,
@@ -239,7 +253,24 @@ export default function CustomerTrainingPage() {
       );
 
       toast.success(
-        `Successfully enrolled ${pet.name} in ${selectedSeries.seriesName}! Confirmation email sent with all session dates.`
+        `Successfully enrolled ${pet.name} in ${selectedSeries.seriesName}! Confirmation email sent with all session dates.`,
+        {
+          duration: 5000,
+          action: {
+            label: "Add All Sessions to Calendar",
+            onClick: () => {
+              // Generate .ics file for all sessions
+              const icsContent = generateICSForSessions(
+                selectedSeries,
+                sessionDates,
+                pet.name,
+                selectedFacility?.name || "Facility"
+              );
+              downloadICSFile(icsContent, `${selectedSeries.seriesName.replace(/\s+/g, "-")}-sessions.ics`);
+              toast.success("Calendar file downloaded");
+            },
+          },
+        }
       );
       
       setIsEnrollmentModalOpen(false);
@@ -284,19 +315,67 @@ export default function CustomerTrainingPage() {
   }, [selectedPetId, customer]);
 
   const selectedCourseType = useMemo(() => {
-    if (!selectedSeries) return null;
+    if (!selectedSeries && !selectedCourseDetails) return null;
+    const series = selectedSeries || selectedCourseDetails;
+    if (!series) return null;
     return defaultTrainingCourseTypes.find(
-      (ct) => ct.id === selectedSeries.courseTypeId
+      (ct) => ct.id === series.courseTypeId
     );
-  }, [selectedSeries]);
+  }, [selectedSeries, selectedCourseDetails]);
 
   const prerequisiteValidation = useMemo(() => {
     if (!selectedPet || !selectedCourseType) return null;
     return validatePrerequisites(selectedPet, selectedCourseType);
   }, [selectedPet, selectedCourseType]);
 
+  // Generate ICS file for training sessions
+  const generateICSForSessions = (
+    series: TrainingSeries,
+    sessionDates: string[],
+    petName: string,
+    facilityName: string
+  ): string => {
+    const formatICSDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    };
+
+    const events = sessionDates.map((date, index) => {
+      const startDateTime = new Date(`${date}T${series.startTime}`);
+      const endDateTime = new Date(`${date}T${series.endTime}`);
+      
+      return [
+        "BEGIN:VEVENT",
+        `UID:training-${series.id}-session-${index + 1}@yipyy.com`,
+        `DTSTART:${formatICSDate(startDateTime)}`,
+        `DTEND:${formatICSDate(endDateTime)}`,
+        `SUMMARY:${series.courseTypeName} - Session ${index + 1} - ${petName}`,
+        `DESCRIPTION:Training Session ${index + 1} of ${series.numberOfWeeks}\\nPet: ${petName}\\nCourse: ${series.courseTypeName}\\nInstructor: ${series.instructorName}\\nLocation: ${series.location}`,
+        `LOCATION:${series.location}`,
+        "END:VEVENT",
+      ].join("\r\n");
+    });
+
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Yipyy//Training Sessions//EN",
+      ...events,
+      "END:VCALENDAR",
+    ].join("\r\n");
+  };
+
+  const downloadICSFile = (icsContent: string, filename: string) => {
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Training Classes</h2>
         <p className="text-muted-foreground">
@@ -369,21 +448,41 @@ export default function CustomerTrainingPage() {
                     </Badge>
                   </div>
                   <Separator />
+                  {/* Show enrolled pet if any */}
+                  {enrollments.some((e) => e.seriesId === seriesItem.id) && (
+                    <div className="p-2 bg-primary/10 rounded-lg text-sm">
+                      <div className="flex items-center gap-2 text-primary font-medium">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Enrolled: {enrollments
+                          .filter((e) => e.seriesId === seriesItem.id)
+                          .map((e) => e.petName)
+                          .join(", ")}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleCourseDetailsClick(seriesItem)}
+                    >
+                      <Info className="h-4 w-4 mr-2" />
+                      Course Details
+                    </Button>
                     {isFull ? (
                       <Button
                         variant="outline"
-                        className="w-full"
+                        className="flex-1"
                         onClick={() => handleWaitlistClick(seriesItem)}
                       >
                         Join Waitlist
                       </Button>
                     ) : (
                       <Button
-                        className="w-full"
+                        className="flex-1"
                         onClick={() => handleEnrollClick(seriesItem)}
                       >
-                        Enroll in Series
+                        Enroll
                       </Button>
                     )}
                   </div>
@@ -565,6 +664,124 @@ export default function CustomerTrainingPage() {
             >
               {isEnrolling ? "Enrolling..." : "Enroll & Pay"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Course Details Modal */}
+      <Dialog open={isCourseDetailsModalOpen} onOpenChange={setIsCourseDetailsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Course Details</DialogTitle>
+            <DialogDescription>
+              {selectedCourseDetails?.courseTypeName}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCourseDetails && (
+            <div className="space-y-6 py-4">
+              {/* Description */}
+              <div className="space-y-2">
+                <h3 className="font-semibold">Description</h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCourseType?.description || "No description available."}
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* What to Bring */}
+              {selectedCourseType?.whatToBring && selectedCourseType.whatToBring.length > 0 && (
+                <>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">What to Bring</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                      {selectedCourseType.whatToBring.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Prerequisites */}
+              <div className="space-y-2">
+                <h3 className="font-semibold">Prerequisites</h3>
+                <div className="space-y-2">
+                  {selectedCourseType?.requiredVaccines && selectedCourseType.requiredVaccines.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-1">Required Vaccinations:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                        {selectedCourseType.requiredVaccines.map((vaccine, index) => (
+                          <li key={index}>{vaccine}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedCourseType?.prerequisites && selectedCourseType.prerequisites.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-1">Required Courses:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                        {selectedCourseType.prerequisites.map((prereqId, index) => {
+                          const prereqCourse = defaultTrainingCourseTypes.find((ct) => ct.id === prereqId);
+                          return <li key={index}>{prereqCourse?.name || prereqId}</li>;
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                  {(!selectedCourseType?.requiredVaccines || selectedCourseType.requiredVaccines.length === 0) &&
+                    (!selectedCourseType?.prerequisites || selectedCourseType.prerequisites.length === 0) && (
+                      <p className="text-sm text-muted-foreground">No prerequisites required.</p>
+                    )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Cancellation Policy */}
+              {selectedCourseType?.cancellationPolicy && (
+                <>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Cancellation Policy</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCourseType.cancellationPolicy}
+                    </p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Refund Policy */}
+              {selectedCourseType?.refundPolicy && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Refund Policy</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedCourseType.refundPolicy}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCourseDetailsModalOpen(false);
+                setSelectedCourseDetails(null);
+              }}
+            >
+              Close
+            </Button>
+            {selectedCourseDetails && getSpotsLeft(selectedCourseDetails) > 0 && (
+              <Button onClick={() => {
+                setIsCourseDetailsModalOpen(false);
+                handleEnrollClick(selectedCourseDetails);
+              }}>
+                Enroll Now
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

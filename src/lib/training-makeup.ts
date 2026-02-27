@@ -75,14 +75,35 @@ export function canScheduleMakeup(
 }
 
 /**
- * Calculate makeup price
+ * Calculate makeup price based on facility configuration
  */
 export function calculateMakeupPrice(
   series: TrainingSeries,
-  sessionNumber: number
+  sessionNumber: number,
+  facilityConfig?: any
 ): number {
-  // Default price, can be configured per facility
-  return 40;
+  // Get makeup pricing rules from facility config
+  const makeupConfig = facilityConfig?.training?.makeupSessions;
+  
+  if (!makeupConfig?.pricingRules) {
+    // Default price if no config
+    return 40;
+  }
+
+  const pricingRules = makeupConfig.pricingRules;
+
+  switch (pricingRules.type) {
+    case "fixed":
+      return pricingRules.fixedPrice || 40;
+    case "percentage":
+      // Calculate percentage of series price
+      const seriesPrice = series.enrollmentRules.fullPaymentAmount;
+      return Math.round(seriesPrice * (pricingRules.percentageOfSeries || 0.15));
+    case "per_session":
+      return pricingRules.perSessionPrice || 40;
+    default:
+      return 40;
+  }
 }
 
 /**
