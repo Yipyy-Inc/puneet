@@ -70,6 +70,14 @@ export const facilityConfig = {
       sunday: { open: "08:00", close: "18:00" },
     },
   },
+  messaging: {
+    officeHours: {
+      enabled: true,
+      responseTimeExpectation: "We typically respond within 24 hours during business days",
+      awayMessage: "We're currently away. We'll respond to your message as soon as we're back!",
+      autoReplyEnabled: true,
+    },
+  },
   vaccinationRequirements: {
     mandatoryRecords: true,
     requiredVaccinations: [
