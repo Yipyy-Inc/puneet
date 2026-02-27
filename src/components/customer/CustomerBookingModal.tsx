@@ -137,19 +137,38 @@ export function CustomerBookingModal({
 
   // Filter available services based on facility rules
   const availableServices = useMemo(() => {
-    return SERVICE_CATEGORIES.filter((service) => {
-      // Always show evaluation
-      if (service.id === "evaluation") return true;
+    // Check if mandatory evaluation is enabled
+    const isMandatoryEvaluationEnabled = 
+      bookingFlow.evaluationRequired && bookingFlow.hideServicesUntilEvaluationCompleted;
 
+    // If mandatory evaluation is enabled, check pet evaluation status
+    if (isMandatoryEvaluationEnabled) {
+      // If no pets selected yet, only show evaluation
+      if (selectedPetIds.length === 0) {
+        return SERVICE_CATEGORIES.filter((service) => service.id === "evaluation");
+      }
+
+      // Check if all selected pets have valid evaluations
+      const selectedPets = customerPets.filter((p) => selectedPetIds.includes(p.id));
+      const allPetsHaveValidEvaluation = selectedPets.every((pet) => hasValidEvaluation(pet));
+
+      if (allPetsHaveValidEvaluation) {
+        // All pets have valid evaluation - hide evaluation, show all other services
+        return SERVICE_CATEGORIES.filter((service) => {
+          if (service.id === "evaluation") return false; // Hide evaluation once completed
+          if (bookingFlow.hiddenServices.includes(service.id)) return false;
+          return true;
+        });
+      } else {
+        // At least one pet needs evaluation - show ONLY evaluation
+        return SERVICE_CATEGORIES.filter((service) => service.id === "evaluation");
+      }
+    }
+
+    // If mandatory evaluation is not enabled, use normal filtering
+    return SERVICE_CATEGORIES.filter((service) => {
       // Hide if facility has hidden this service
       if (bookingFlow.hiddenServices.includes(service.id)) return false;
-
-      // Check evaluation requirements
-      if (bookingFlow.evaluationRequired && bookingFlow.hideServicesUntilEvaluationCompleted) {
-        if (selectedPetIds.length === 0) return false;
-        const selectedPets = customerPets.filter((p) => selectedPetIds.includes(p.id));
-        return selectedPets.every((pet) => hasValidEvaluation(pet));
-      }
 
       // Check service-specific evaluation requirements
       const config = configs[service.id as keyof typeof configs];
@@ -180,6 +199,13 @@ export function CustomerBookingModal({
     () => customerPets.filter((p) => selectedPetIds.includes(p.id)),
     [customerPets, selectedPetIds]
   );
+
+  // Reset selected service if it's no longer available after pet selection changes
+  useEffect(() => {
+    if (selectedService && !availableServices.find((s) => s.id === selectedService)) {
+      setSelectedService("");
+    }
+  }, [availableServices, selectedService]);
 
   // Check vaccination status for a pet
   const getPetVaccinationStatus = useCallback((pet: Pet) => {
@@ -580,6 +606,41 @@ export function CustomerBookingModal({
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <Label className="text-base">Select a service</Label>
+                  
+                  {/* Mandatory Evaluation Alert */}
+                  {bookingFlow.evaluationRequired && 
+                   bookingFlow.hideServicesUntilEvaluationCompleted && 
+                   selectedPetIds.length > 0 && (
+                    (() => {
+                      const selectedPets = customerPets.filter((p) => selectedPetIds.includes(p.id));
+                      const petsNeedingEvaluation = selectedPets.filter((pet) => !hasValidEvaluation(pet));
+                      
+                      if (petsNeedingEvaluation.length > 0) {
+                        return (
+                          <Alert className="border-warning bg-warning/10">
+                            <AlertCircle className="h-4 w-4 text-warning" />
+                            <AlertDescription>
+                              <div className="space-y-1">
+                                <p className="font-semibold text-warning">
+                                  Evaluation Required
+                                </p>
+                                <p className="text-sm">
+                                  {petsNeedingEvaluation.length === 1
+                                    ? `${petsNeedingEvaluation[0].name} needs to complete an evaluation before booking other services.`
+                                    : `The following pets need to complete an evaluation before booking other services: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}`}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Please book an evaluation first. Once completed and approved by the facility, you'll be able to book other services.
+                                </p>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        );
+                      }
+                      return null;
+                    })()
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     {availableServices.map((service) => {
                       const Icon = service.icon;

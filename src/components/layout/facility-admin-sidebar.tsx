@@ -225,11 +225,18 @@ export function FacilitySidebar() {
         ],
       },
       {
+        label: "Marketing",
         items: [
           {
             title: "Marketing",
             url: "/facility/dashboard/marketing",
             icon: Megaphone,
+            disabled: false,
+          },
+          {
+            title: "Loyalty Reports",
+            url: "/facility/dashboard/marketing/loyalty-reports",
+            icon: BarChart3,
             disabled: false,
           },
         ],
