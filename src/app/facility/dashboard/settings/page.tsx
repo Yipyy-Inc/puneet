@@ -12,6 +12,8 @@ import { SettingsBlock } from "@/components/ui/settings-block";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
+import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,7 @@ import {
   Plus,
   Timer,
   Trash2,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -2149,7 +2152,7 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="business">
             <Building2 className="h-4 w-4 mr-2" />
             Business
@@ -2178,6 +2181,10 @@ export default function SettingsPage() {
           <TabsTrigger value="audit">
             <History className="h-4 w-4 mr-2" />
             Audit Log
+          </TabsTrigger>
+          <TabsTrigger value="yipyygo">
+            <FileText className="h-4 w-4 mr-2" />
+            YipyyGo
           </TabsTrigger>
         </TabsList>
 
@@ -2830,7 +2837,26 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* YipyyGo Tab */}
+        <TabsContent value="yipyygo" className="space-y-6">
+          <YipyyGoSettingsWrapper />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// YipyyGo Settings Wrapper Component
+function YipyyGoSettingsWrapper() {
+  const facilityId = 11; // TODO: Get from auth context
+  const [config, setConfig] = useState(() => getYipyyGoConfig(facilityId)!);
+
+  return (
+    <YipyyGoSettings
+      config={config}
+      onConfigChange={setConfig}
+      facilityId={facilityId}
+    />
   );
 }
