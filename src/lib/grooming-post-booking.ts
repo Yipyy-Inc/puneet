@@ -68,6 +68,7 @@ export async function handleImmediatePostBookingActions(
   clientConfirmation: ClientConfirmation;
   groomerNotifications: GroomerNotification[];
   recurringBookings?: GroomingBookingData[];
+  yipyyGoTriggered?: boolean;
 }> {
   // 1. Send client confirmation with "Manage Booking" link
   const manageBookingLink = `/customer/bookings/${bookingData.id}`;
@@ -76,7 +77,29 @@ export async function handleImmediatePostBookingActions(
   // 2. Send groomer notification
   const groomerNotifications = await sendGroomerNotification(bookingData);
 
-  // 3. If recurring, schedule next 3 occurrences tentatively
+  // 3. Trigger YipyyGo if applicable (booking is confirmed)
+  let yipyyGoTriggered = false;
+  try {
+    const { processBookingConfirmationForYipyyGo } = await import("@/lib/yipyygo-trigger");
+    const result = await processBookingConfirmationForYipyyGo({
+      id: bookingData.id,
+      clientId: bookingData.clientId,
+      petId: bookingData.petId,
+      petName: bookingData.petName,
+      facilityId: 11, // TODO: Get from bookingData or context
+      service: "grooming",
+      startDate: bookingData.appointmentDate.toISOString().split("T")[0],
+      checkInTime: bookingData.appointmentTime,
+      status: "confirmed",
+      createdAt: new Date().toISOString(),
+    });
+    yipyyGoTriggered = result.triggered;
+  } catch (error) {
+    console.error("Error triggering YipyyGo for grooming booking:", error);
+    // Don't block booking confirmation if YipyyGo fails
+  }
+
+  // 4. If recurring, schedule next 3 occurrences tentatively
   let recurringBookings: GroomingBookingData[] | undefined;
   if (bookingData.recurringEnabled && bookingData.recurringFrequency) {
     recurringBookings = await scheduleRecurringAppointments(bookingData, 3);
@@ -86,6 +109,7 @@ export async function handleImmediatePostBookingActions(
     clientConfirmation,
     groomerNotifications,
     recurringBookings,
+    yipyyGoTriggered,
   };
 }
 
