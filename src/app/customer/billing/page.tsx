@@ -5,9 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaymentMethodsTab } from "@/components/customer/billing/PaymentMethodsTab";
 import { InvoicesTab } from "@/components/customer/billing/InvoicesTab";
-import { PackagesTab } from "@/components/customer/billing/PackagesTab";
 import { BalancesTab } from "@/components/customer/billing/BalancesTab";
-import { CreditCard, FileText, Package, Wallet } from "lucide-react";
+import { CreditCard, FileText, Wallet } from "lucide-react";
 
 export default function CustomerBillingPage() {
   const [activeTab, setActiveTab] = useState("payment-methods");
@@ -23,7 +22,7 @@ export default function CustomerBillingPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="payment-methods" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Payment Methods</span>
@@ -33,11 +32,6 @@ export default function CustomerBillingPage() {
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Invoices & Receipts</span>
               <span className="sm:hidden">Invoices</span>
-            </TabsTrigger>
-            <TabsTrigger value="packages" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Packages & Memberships</span>
-              <span className="sm:hidden">Packages</span>
             </TabsTrigger>
             <TabsTrigger value="balances" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
@@ -52,10 +46,6 @@ export default function CustomerBillingPage() {
 
           <TabsContent value="invoices" className="space-y-4">
             <InvoicesTab />
-          </TabsContent>
-
-          <TabsContent value="packages" className="space-y-4">
-            <PackagesTab />
           </TabsContent>
 
           <TabsContent value="balances" className="space-y-4">
