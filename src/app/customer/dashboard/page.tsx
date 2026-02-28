@@ -466,29 +466,29 @@ export default function CustomerDashboardPage() {
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="bg-primary text-primary-foreground">
+          <Card className="bg-gradient-to-br from-blue-600 to-white border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-6 flex-wrap">
                 <div className="flex items-center gap-4">
-                  <div className="text-4xl font-bold">{loyaltyData.points} pts</div>
+                  <div className="text-4xl font-bold text-white drop-shadow-md">{loyaltyData.points} pts</div>
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                  <div className="text-xs uppercase tracking-wide mb-1">LOYALTY REWARDS</div>
-                  <div className="text-sm mb-2">
+                  <div className="text-xs uppercase tracking-wide mb-1 text-white drop-shadow-sm">LOYALTY REWARDS</div>
+                  <div className="text-sm mb-2 text-slate-900 font-medium">
                     {loyaltyData.currentTier?.name || "Bronze"}
                     {loyaltyData.nextTier && ` - ${loyaltyData.pointsToNextTier} pts to ${loyaltyData.nextTier.name}`}
                   </div>
                   {loyaltyData.nextTier && (
                     <>
                       <Progress value={loyaltyData.progressPercentage} className="h-2 mb-1" />
-                      <div className="text-xs opacity-90">
+                      <div className="text-xs text-slate-700">
                         {loyaltyData.points}/{loyaltyData.nextTier.minPoints} pts to {loyaltyData.nextTier.name}
                       </div>
                     </>
                   )}
                 </div>
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href="/customer/billing">Redeem Points</Link>
+                <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-white/90" asChild>
+                  <Link href="/customer/rewards">Redeem Points</Link>
                 </Button>
               </div>
             </CardContent>
