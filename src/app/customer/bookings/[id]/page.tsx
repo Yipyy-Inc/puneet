@@ -8,8 +8,9 @@ import { clients } from "@/data/clients";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, User, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, User, Phone, Mail, FileText } from "lucide-react";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import Link from "next/link";
 
 // Mock customer ID - TODO: Get from auth context
@@ -55,6 +56,20 @@ export default function BookingDetailPage({
   const isUpcoming = bookingDate >= new Date();
   const isGrooming = booking.service.toLowerCase() === "grooming";
   const isSalon = booking.serviceType === "salon" || !booking.serviceType; // Default to salon if not specified
+
+  // Check if YipyyGo is enabled for this booking
+  const yipyyGoConfig = useMemo(() => {
+    return getYipyyGoConfig(booking.facilityId);
+  }, [booking.facilityId]);
+
+  const isYipyyGoEnabled = useMemo(() => {
+    if (!yipyyGoConfig || !yipyyGoConfig.enabled) return false;
+    const serviceType = booking.service.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+    const serviceConfig = yipyyGoConfig.serviceConfigs.find(
+      (sc) => sc.serviceType === serviceType
+    );
+    return serviceConfig?.enabled || false;
+  }, [yipyyGoConfig, booking.service]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -254,6 +269,14 @@ export default function BookingDetailPage({
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/customer/bookings">View All Bookings</Link>
               </Button>
+              {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
+                <Button className="w-full" asChild>
+                  <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Complete YipyyGo Form
+                  </Link>
+                </Button>
+              )}
               {booking.status === "confirmed" && isUpcoming && (
                 <Button variant="outline" className="w-full">
                   Reschedule

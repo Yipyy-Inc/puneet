@@ -80,6 +80,9 @@ export default function YipyyGoFormPage({
   const [formData, setFormData] = useState<YipyyGoFormData | null>(null);
 
   // Check deadline
+  // For development/testing: always allow editing (bypass deadline check)
+  const DEV_MODE = process.env.NODE_ENV === "development";
+  
   const deadlineInfo = useMemo(() => {
     if (!booking || !yipyyGoConfig) return null;
     
@@ -91,6 +94,15 @@ export default function YipyyGoFormPage({
     
     const deadline = new Date(checkInDate);
     deadline.setHours(deadline.getHours() - yipyyGoConfig.timing.deadline);
+    
+    // In development mode, always allow editing
+    if (DEV_MODE) {
+      return {
+        isPastDeadline: false,
+        canEdit: true,
+        timeRemaining: "Unlimited (Dev Mode)",
+      };
+    }
     
     return checkFormDeadline(deadline.toISOString());
   }, [booking, yipyyGoConfig]);
@@ -129,9 +141,10 @@ export default function YipyyGoFormPage({
           medications: [],
           noMedications: false,
           addOns: [],
-          isLocked: deadlineInfo?.isPastDeadline || false,
+          // In development mode, always allow editing
+          isLocked: DEV_MODE ? false : (deadlineInfo?.isPastDeadline || false),
           deadline: deadline.toISOString(),
-          canEdit: deadlineInfo?.canEdit || false,
+          canEdit: DEV_MODE ? true : (deadlineInfo?.canEdit || false),
         };
         setFormData(newForm);
       }
@@ -324,8 +337,8 @@ export default function YipyyGoFormPage({
     );
   }
 
-  // Form locked after deadline
-  if (formData?.isLocked && !formData.submittedAt) {
+  // Form locked after deadline (skip in development mode)
+  if (!DEV_MODE && formData?.isLocked && !formData.submittedAt) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
