@@ -16,6 +16,7 @@ import {
   Users,
   Gift,
   UserPlus,
+  Package,
 } from "lucide-react";
 import {
   GenericSidebar,
@@ -93,6 +94,11 @@ export function CustomerSidebar() {
             title: "Bookings",
             url: "/customer/bookings",
             icon: Calendar,
+          },
+          {
+            title: "Packages & Memberships",
+            url: "/customer/packages",
+            icon: Package,
           },
           {
             title: "Training",

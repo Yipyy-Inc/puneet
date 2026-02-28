@@ -6,6 +6,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,9 @@ import {
   Scissors,
   Home,
   GraduationCap,
+  FileText,
 } from "lucide-react";
+import Link from "next/link";
 import { CustomerBookingModal } from "@/components/customer/CustomerBookingModal";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { toast } from "sonner";
@@ -285,31 +288,52 @@ export default function CustomerBookingsPage() {
     {
       key: "actions",
       label: "Actions",
-      render: (booking) => (
-        <div className="flex items-center gap-2">
-          {booking.status === "confirmed" || booking.status === "pending" ? (
-            <>
+      render: (booking) => {
+        // Check if YipyyGo is enabled for this booking
+        const yipyyGoConfig = getYipyyGoConfig(booking.facilityId);
+        const isYipyyGoEnabled = yipyyGoConfig?.enabled && yipyyGoConfig.serviceConfigs.some(
+          (sc) => sc.serviceType === booking.service.toLowerCase() && sc.enabled
+        );
+        const isUpcoming = new Date(booking.startDate) >= new Date();
+
+        return (
+          <div className="flex items-center gap-2">
+            {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
-                onClick={() => handleRescheduleBooking(booking)}
+                asChild
               >
-                <Edit className="h-4 w-4 mr-1" />
-                Reschedule
+                <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
+                  <FileText className="h-4 w-4 mr-1" />
+                  YipyyGo
+                </Link>
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCancelBooking(booking)}
-                className="text-destructive hover:text-destructive"
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
-            </>
-          ) : null}
-        </div>
-      ),
+            )}
+            {booking.status === "confirmed" || booking.status === "pending" ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRescheduleBooking(booking)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Reschedule
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCancelBooking(booking)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -331,7 +355,7 @@ export default function CustomerBookingsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
@@ -342,23 +366,6 @@ export default function CustomerBookingsPage() {
               <p className="text-xs text-muted-foreground">
                 Confirmed bookings
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                $
-                {pastBookings
-                  .filter((b) => b.paymentStatus === "paid")
-                  .reduce((sum, b) => sum + b.totalCost, 0)
-                  .toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">All time</p>
             </CardContent>
           </Card>
 

@@ -495,12 +495,49 @@ export default function FacilityBookingsPage() {
     );
   };
 
-  const handleConfirmBooking = (bookingId: number) => {
+  const handleConfirmBooking = async (bookingId: number) => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) return;
+
+    // Update booking status
     setBookings(
       bookings.map((b) =>
         b.id === bookingId ? { ...b, status: "confirmed" as const } : b,
       ),
     );
+
+    // Trigger YipyyGo if applicable
+    try {
+      const { processBookingConfirmationForYipyyGo } = await import("@/lib/yipyygo-trigger");
+      const { clients } = await import("@/data/clients");
+      const client = clients.find((c) => c.id === booking.clientId);
+      
+      // Handle single pet or multiple pets
+      const petIds = Array.isArray(booking.petId) ? booking.petId : [booking.petId];
+      
+      // Process YipyyGo for each pet in the booking
+      for (const petId of petIds) {
+        const pet = client?.pets?.find((p) => p.id === petId);
+        
+        if (pet) {
+          await processBookingConfirmationForYipyyGo({
+            id: booking.id,
+            clientId: booking.clientId,
+            petId: petId,
+            petName: pet.name,
+            facilityId: booking.facilityId,
+            service: booking.service,
+            startDate: booking.startDate,
+            checkInTime: booking.checkInTime,
+            status: "confirmed",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error triggering YipyyGo:", error);
+      // Don't block booking confirmation if YipyyGo fails
+    }
+
     alert(`Booking #${bookingId} has been confirmed.`);
   };
 
