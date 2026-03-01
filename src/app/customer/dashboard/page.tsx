@@ -466,7 +466,7 @@ export default function CustomerDashboardPage() {
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="bg-gradient-to-br from-blue-600 to-white border-0 shadow-lg">
+          <Card className="bg-gradient-to-br from-primary to-white border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-6 flex-wrap">
                 <div className="flex items-center gap-4">
@@ -487,7 +487,7 @@ export default function CustomerDashboardPage() {
                     </>
                   )}
                 </div>
-                <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-white/90" asChild>
+                <Button variant="secondary" size="sm" className="bg-white text-primary hover:bg-white/90" asChild>
                   <Link href="/customer/rewards">Redeem Points</Link>
                 </Button>
               </div>
