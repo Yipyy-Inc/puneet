@@ -73,6 +73,7 @@ const STEPS = [
   { id: "service", label: "Select Service" },
   { id: "details", label: "Details" },
   { id: "forms", label: "Complete Required Forms" },
+  { id: "tip", label: "Tip Your Care Team" },
   { id: "confirm", label: "Confirm" },
 ];
 
@@ -553,7 +554,9 @@ export function CustomerBookingModal({
       case 3: // Complete Required Forms
         if (allowBookingWithoutForms) return true;
         return requiredFormsStatus.allComplete;
-      case 4: // Confirm
+      case 4: // Tip (optional step; always can proceed)
+        return true;
+      case 5: // Confirm
         if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
           if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
             return false;
@@ -591,7 +594,7 @@ export function CustomerBookingModal({
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
       if (currentStep + 1 === 2) setCurrentDetailsSubStep(0);
-    if (currentStep + 1 === 3) setCurrentDetailsSubStep(0);
+      if (currentStep + 1 === 3) setCurrentDetailsSubStep(0);
     }
   };
 
@@ -673,13 +676,14 @@ export function CustomerBookingModal({
     }
   };
 
-  // Check if tips are enabled for this service
-  // TODO: Get from facility settings - for now, enable tips for grooming services
-  const tipsEnabled = useMemo(() => {
-    // In production, check facility settings
-    // For now, enable tips for grooming services
-    return selectedService === "grooming";
-  }, [selectedService]);
+  // Tipping: facility-configurable (enabled, mode, suggestions, recommended)
+  const tippingConfig = facilityConfig.bookingRules?.tipping ?? { enabled: false, mode: "percent" as const, percentSuggestions: [10, 15, 20], fixedSuggestions: [5, 10, 20], recommendedIndex: null as number | null };
+  const tipsEnabled = tippingConfig.enabled ?? false;
+  const tipSuggestions = useMemo(() => {
+    if (tippingConfig.mode === "fixed") return (tippingConfig.fixedSuggestions ?? [5, 10, 20]).map((a) => ({ type: "fixed" as const, value: a, label: `$${a}` }));
+    return (tippingConfig.percentSuggestions ?? [10, 15, 20]).map((p) => ({ type: "percent" as const, value: p, label: `${p}%` }));
+  }, [tippingConfig.mode, tippingConfig.percentSuggestions, tippingConfig.fixedSuggestions]);
+  const recommendedTipIndex = tippingConfig.recommendedIndex ?? null;
 
   // Add-ons total (daycare/boarding extra services)
   const extraServicesTotal = useMemo(() => {
@@ -741,13 +745,17 @@ export function CustomerBookingModal({
     return totalPrice * depositPercentage;
   }, [requiresDeposit, totalPrice]);
 
-  // Tip percentage options
-  const tipPercentages = [15, 18, 20, 25];
-  
   const handleTipPercentage = (percentage: number) => {
     setTipPercentage(percentage);
-    const tip = (calculatedPrice * percentage) / 100;
+    const maxPct = tippingConfig.maxTipPercent ?? 100;
+    const tip = Math.min((calculatedPrice * percentage) / 100, (calculatedPrice * maxPct) / 100);
     setTipAmount(tip);
+    setCustomTipAmount("");
+  };
+
+  const handleTipFixed = (amount: number) => {
+    setTipPercentage(null);
+    setTipAmount(amount);
     setCustomTipAmount("");
   };
 
@@ -755,7 +763,7 @@ export function CustomerBookingModal({
     setCustomTipAmount(value);
     setTipPercentage(null);
     const tip = parseFloat(value) || 0;
-    setTipAmount(tip);
+    setTipAmount(Math.min(tip, tippingConfig.maxTipAmount ?? 9999));
   };
 
   // Reset when modal closes
@@ -1838,8 +1846,94 @@ export function CustomerBookingModal({
                 </div>
               )}
 
-              {/* Step 5: Confirm — receipt-style review + tip + confirm */}
+              {/* Step 5: Tip Your Care Team — full-screen, conversion-focused */}
               {currentStep === 4 && (
+                <div className="space-y-6 py-4">
+                  {tipsEnabled ? (
+                    <>
+                      <div className="text-center space-y-2">
+                        <h3 className="text-2xl font-semibold">Tip Your Care Team</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          Your tip goes directly to the team who will care for your pet. Any amount is appreciated and helps support our staff.
+                        </p>
+                      </div>
+                      <Card className="max-w-lg mx-auto">
+                        <CardContent className="p-6 space-y-6">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-3">Select an amount</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              {tipSuggestions.map((s, idx) => {
+                                const isPercent = s.type === "percent";
+                                const isSelected = isPercent
+                                  ? tipPercentage === s.value
+                                  : tipAmount === s.value && tipPercentage === null;
+                                const isRecommended = recommendedTipIndex === idx;
+                                return (
+                                  <Button
+                                    key={s.label}
+                                    variant={isSelected ? "default" : "outline"}
+                                    size="lg"
+                                    className={`h-14 text-base font-semibold relative ${isRecommended && !isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+                                    onClick={() => (isPercent ? handleTipPercentage(s.value) : handleTipFixed(s.value))}
+                                  >
+                                    {s.label}
+                                    {isRecommended && (
+                                      <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[10px] font-normal bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                                        Recommended
+                                      </span>
+                                    )}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Or enter a custom amount</Label>
+                            <div className="flex gap-2">
+                              <span className="flex items-center px-3 rounded-md border bg-muted/50 text-muted-foreground text-sm">$</span>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={customTipAmount}
+                                onChange={(e) => handleCustomTip(e.target.value)}
+                                className="text-base"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                          </div>
+                          {tipAmount > 0 && (
+                            <p className="text-sm text-green-600 font-medium text-center">
+                              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the team.
+                            </p>
+                          )}
+                          <div className="pt-2 border-t">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTipAmount(0);
+                                setTipPercentage(null);
+                                setCustomTipAmount("");
+                              }}
+                              className="text-sm text-muted-foreground hover:text-foreground underline"
+                            >
+                              No tip
+                            </button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="font-medium">Tipping is not enabled for this facility.</p>
+                      <p className="text-sm mt-1">Continue to confirm your booking.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 6: Confirm — receipt-style review + confirm */}
+              {currentStep === 5 && (
                 <div className="space-y-4">
                   {allowBookingWithoutForms && !requiredFormsStatus.allComplete && requiredFormsStatus.missing.length > 0 && (
                     <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
@@ -2005,56 +2099,6 @@ export function CustomerBookingModal({
                           )}
                         </div>
                       </div>
-                      {tipsEnabled && (
-                        <div className="pt-4 space-y-3">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <span>💝</span> Add a Tip (Optional)
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Show your appreciation to the team who cares for your pet!
-                          </p>
-                          <div className="grid grid-cols-4 gap-2">
-                            {tipPercentages.map((percent) => (
-                              <Button
-                                key={percent}
-                                variant={tipPercentage === percent ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleTipPercentage(percent)}
-                                className="text-sm"
-                              >
-                                {percent}%
-                              </Button>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              placeholder="Custom amount"
-                              value={customTipAmount}
-                              onChange={(e) => handleCustomTip(e.target.value)}
-                              className="flex-1"
-                              min="0"
-                              step="0.01"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setTipAmount(0);
-                                setTipPercentage(null);
-                                setCustomTipAmount("");
-                              }}
-                            >
-                              No tip
-                            </Button>
-                          </div>
-                          {tipAmount > 0 && (
-                            <p className="text-sm text-green-600 font-medium">
-                              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the team.
-                            </p>
-                          )}
-                        </div>
-                      )}
                       {isRecurring && selectedService === "grooming" && (
                         <>
                           <Separator />

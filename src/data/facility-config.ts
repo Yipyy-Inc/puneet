@@ -55,7 +55,18 @@ export const facilityConfig = {
       autoConfirmAfterHours: null, // Auto-confirm after X hours if no response (null = no auto-confirm)
     },
     /** If true, customer can reach Confirm even with missing forms; booking is "pending until requirements completed". If false, customer must complete required forms before Confirm. */
-    allowBookingWithoutForms: false,
+    allowBookingWithoutForms: true,
+    tipping: {
+      enabled: true,
+      /** "percent" = suggest % of booking total; "fixed" = suggest fixed dollar amounts */
+      mode: "percent" as "percent" | "fixed",
+      percentSuggestions: [10, 15, 20],
+      fixedSuggestions: [5, 10, 20],
+      /** Index of suggestion to show as "Recommended" (0-based); null = none */
+      recommendedIndex: 1,
+      maxTipPercent: 50,
+      maxTipAmount: 500,
+    },
   },
   checkInOutTimes: {
     defaultSchedules: {
