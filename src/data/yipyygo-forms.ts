@@ -102,6 +102,9 @@ export interface YipyyGoFormData {
   internalEditReason?: string; // Required when staff edits internally
   manuallyCompletedAt?: string; // When staff marked complete without customer submission
   manuallyCompletedBy?: number;
+
+  /** QR Code Fast-Track Check-In: secure token (booking_id + pet_id + token, no PII) */
+  qrCheckInToken?: string;
 }
 
 // ============================================================================
@@ -159,6 +162,7 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     canEdit: true,
     submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     submittedBy: 16,
+    qrCheckInToken: "qr_demo_3",
   },
   // Needs review – corrections requested (shows in YipyyGo Pending)
   {
@@ -208,6 +212,7 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     reviewedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     reviewedBy: 1,
     requestChangesMessage: "Please upload a photo of the Apoquel label and confirm the 16mg dosage.",
+    qrCheckInToken: "qr_demo_4",
   },
   // Approved – already reviewed
   {
@@ -242,6 +247,7 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     staffStatus: "approved",
     reviewedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     reviewedBy: 1,
+    qrCheckInToken: "qr_demo_5",
   },
   // Incomplete – form started but not submitted
   {
@@ -263,6 +269,7 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     isLocked: false,
     deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     canEdit: true,
+    qrCheckInToken: "qr_demo_6",
   },
   // Sent – link sent, minimal/empty form (shows "Sent")
   {
@@ -281,6 +288,7 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     isLocked: false,
     deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     canEdit: true,
+    qrCheckInToken: "qr_demo_12",
   },
 ];
 

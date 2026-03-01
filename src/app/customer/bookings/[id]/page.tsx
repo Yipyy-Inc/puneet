@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, User, Phone, Mail, FileText } from "lucide-react";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { getYipyyGoForm } from "@/data/yipyygo-forms";
+import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
 import Link from "next/link";
+import { QrCode } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -70,6 +73,9 @@ export default function BookingDetailPage({
     );
     return serviceConfig?.enabled || false;
   }, [yipyyGoConfig, booking.service]);
+
+  const yipyyGoForm = useMemo(() => getYipyyGoForm(booking.id), [booking.id]);
+  const hasCheckInQR = Boolean(yipyyGoForm?.qrCheckInToken && (yipyyGoForm.submittedAt || yipyyGoForm.staffStatus === "approved"));
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -187,6 +193,31 @@ export default function BookingDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Show QR at drop-off (after YipyyGo submitted) */}
+          {hasCheckInQR && isUpcoming && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-primary" />
+                  Fast-track check-in QR
+                </CardTitle>
+                <CardDescription>
+                  Show this QR at drop-off so staff can open your reservation and check you in quickly.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center">
+                <div className="p-4 bg-white rounded-xl shadow-sm">
+                  <CheckInQRCode token={yipyyGoForm!.qrCheckInToken!} size={200} />
+                </div>
+                <Button variant="outline" size="sm" className="mt-4" asChild>
+                  <Link href={`/customer/bookings/${booking.id}/check-in-qr`}>
+                    Full-screen QR page
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Check-in Section (Day of appointment, Salon only) */}
           {isGrooming && isSalon && isToday && isUpcoming && booking.status === "confirmed" && (

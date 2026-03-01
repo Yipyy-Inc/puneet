@@ -410,146 +410,155 @@ export default function CustomerBookingsPage() {
                       const PetIcon = pet?.type === "Cat" ? Cat : Dog;
                       
                       return (
-                        <Card key={booking.id} className="hover:shadow-lg transition-shadow">
-                          <CardContent className="p-6">
-                            <div className="flex items-start gap-4">
-                              {/* Pet Photo */}
-                              <div className="flex-shrink-0">
-                                {pet?.imageUrl ? (
-                                  <img
-                                    src={pet.imageUrl}
-                                    alt={pet.name}
-                                    className="w-16 h-16 rounded-lg object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <PetIcon className="h-8 w-8 text-primary" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Booking Details */}
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <ServiceIcon className="h-5 w-5 text-muted-foreground" />
-                                      <h3 className="font-semibold text-lg capitalize">
-                                        {booking.service}
-                                        {booking.serviceType && (
-                                          <span className="text-muted-foreground font-normal ml-2">
-                                            • {booking.serviceType.replace(/_/g, " ")}
-                                          </span>
-                                        )}
-                                      </h3>
+                        <Link key={booking.id} href={`/customer/bookings/${booking.id}`} className="block">
+                          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                            <CardContent className="p-6">
+                              <div className="flex items-start gap-4">
+                                {/* Pet Photo */}
+                                <div className="flex-shrink-0">
+                                  {pet?.imageUrl ? (
+                                    <img
+                                      src={pet.imageUrl}
+                                      alt={pet.name}
+                                      className="w-16 h-16 rounded-lg object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                                      <PetIcon className="h-8 w-8 text-primary" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
-                                      {pet?.name || "Pet"}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {getStatusBadge(booking.status)}
-                                    {booking.status === "request_submitted" && (
-                                      <Badge variant="outline" className="text-xs">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        Response in ~24h
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  )}
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                {/* Booking Details */}
+                                <div className="flex-1 space-y-3">
+                                  <div className="flex items-start justify-between">
                                     <div>
-                                      <p className="text-muted-foreground">Date</p>
-                                      <p className="font-medium">{formatDate(booking.startDate)}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-muted-foreground">Time</p>
-                                      <p className="font-medium">
-                                        {booking.checkInTime || "—"}
-                                        {booking.checkOutTime && ` - ${booking.checkOutTime}`}
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <ServiceIcon className="h-5 w-5 text-muted-foreground" />
+                                        <h3 className="font-semibold text-lg capitalize">
+                                          {booking.service}
+                                          {booking.serviceType && (
+                                            <span className="text-muted-foreground font-normal ml-2">
+                                              • {booking.serviceType.replace(/_/g, " ")}
+                                            </span>
+                                          )}
+                                        </h3>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground">
+                                        {pet?.name || "Pet"}
                                       </p>
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-muted-foreground">Location</p>
-                                      <p className="font-medium">{selectedFacility?.name || "—"}</p>
+                                    <div className="flex items-center gap-2">
+                                      {getStatusBadge(booking.status)}
+                                      {booking.status === "request_submitted" && (
+                                        <Badge variant="outline" className="text-xs">
+                                          <Clock className="h-3 w-3 mr-1" />
+                                          Response in ~24h
+                                        </Badge>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                    <div>
-                                      <p className="text-muted-foreground">Total</p>
-                                      <p className="font-medium">${booking.totalCost.toFixed(2)}</p>
-                                    </div>
-                                  </div>
-                                </div>
 
-                                {/* Actions */}
-                                <div className="flex items-center gap-2 pt-2 border-t">
-                                  {(booking.status === "confirmed" || booking.status === "pending") && (
-                                    <>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-muted-foreground">Date</p>
+                                        <p className="font-medium">{formatDate(booking.startDate)}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-muted-foreground">Time</p>
+                                        <p className="font-medium">
+                                          {booking.checkInTime || "—"}
+                                          {booking.checkOutTime && ` - ${booking.checkOutTime}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-muted-foreground">Location</p>
+                                        <p className="font-medium">{selectedFacility?.name || "—"}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-muted-foreground">Total</p>
+                                        <p className="font-medium">${booking.totalCost.toFixed(2)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Actions - stop propagation so clicking buttons doesn't navigate */}
+                                  <div className="flex items-center gap-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                                    {(booking.status === "confirmed" || booking.status === "pending") && (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            handleRescheduleBooking(booking);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Reschedule
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            handleCancelBooking(booking);
+                                          }}
+                                          className="text-destructive hover:text-destructive"
+                                        >
+                                          <X className="h-4 w-4 mr-2" />
+                                          Cancel
+                                        </Button>
+                                      </>
+                                    )}
+                                    {booking.status === "request_submitted" && (
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleRescheduleBooking(booking)}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          window.location.href = "/customer/messages";
+                                        }}
                                       >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Reschedule
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleCancelBooking(booking)}
-                                        className="text-destructive hover:text-destructive"
-                                      >
-                                        <X className="h-4 w-4 mr-2" />
-                                        Cancel
-                                      </Button>
-                                    </>
-                                  )}
-                                  {booking.status === "request_submitted" && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        window.location.href = "/customer/messages";
-                                      }}
-                                    >
-                                      <MessageSquare className="h-4 w-4 mr-2" />
-                                      Message Facility
-                                    </Button>
-                                  )}
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <Download className="h-4 w-4 mr-2" />
-                                        More
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => handleAddNote(booking)}>
                                         <MessageSquare className="h-4 w-4 mr-2" />
-                                        Add Note/Message
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleAddToCalendar(booking)}>
-                                        <CalendarIcon className="h-4 w-4 mr-2" />
-                                        Add to Calendar
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                        Message Facility
+                                      </Button>
+                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm">
+                                          <Download className="h-4 w-4 mr-2" />
+                                          More
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleAddNote(booking)}>
+                                          <MessageSquare className="h-4 w-4 mr-2" />
+                                          Add Note/Message
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleAddToCalendar(booking)}>
+                                          <CalendarIcon className="h-4 w-4 mr-2" />
+                                          Add to Calendar
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                            </CardContent>
+                          </Card>
+                        </Link>
                       );
                     })}
                   </div>
@@ -576,47 +585,49 @@ export default function CustomerBookingsPage() {
                       const PetIcon = pet?.type === "Cat" ? Cat : Dog;
                       
                       return (
-                        <Card key={booking.id} className="opacity-75">
-                          <CardContent className="p-6">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-shrink-0">
-                                {pet?.imageUrl ? (
-                                  <img
-                                    src={pet.imageUrl}
-                                    alt={pet.name}
-                                    className="w-16 h-16 rounded-lg object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <PetIcon className="h-8 w-8 text-primary" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <ServiceIcon className="h-5 w-5 text-muted-foreground" />
-                                      <h3 className="font-semibold capitalize">
-                                        {booking.service}
-                                      </h3>
+                        <Link key={booking.id} href={`/customer/bookings/${booking.id}`} className="block">
+                          <Card className="opacity-75 hover:opacity-90 transition-opacity cursor-pointer">
+                            <CardContent className="p-6">
+                              <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0">
+                                  {pet?.imageUrl ? (
+                                    <img
+                                      src={pet.imageUrl}
+                                      alt={pet.name}
+                                      className="w-16 h-16 rounded-lg object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                                      <PetIcon className="h-8 w-8 text-primary" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
-                                      {pet?.name || "Pet"} • {formatDate(booking.startDate)}
-                                    </p>
-                                  </div>
-                                  {getStatusBadge(booking.status)}
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  <span>${booking.totalCost.toFixed(2)}</span>
-                                  {booking.checkInTime && (
-                                    <span>{booking.checkInTime}</span>
                                   )}
                                 </div>
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <ServiceIcon className="h-5 w-5 text-muted-foreground" />
+                                        <h3 className="font-semibold capitalize">
+                                          {booking.service}
+                                        </h3>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground">
+                                        {pet?.name || "Pet"} • {formatDate(booking.startDate)}
+                                      </p>
+                                    </div>
+                                    {getStatusBadge(booking.status)}
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <span>${booking.totalCost.toFixed(2)}</span>
+                                    {booking.checkInTime && (
+                                      <span>{booking.checkInTime}</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                            </CardContent>
+                          </Card>
+                        </Link>
                       );
                     })}
                   </div>

@@ -14,6 +14,7 @@ import {
   type YipyyGoFormData,
 } from "@/data/yipyygo-forms";
 import { notifyFacilityStaffYipyyGoSubmitted } from "@/data/facility-notifications";
+import { getOrCreateCheckInToken } from "@/lib/qr-checkin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,11 +192,18 @@ export default function YipyyGoFormPage({
     
     setIsSubmitting(true);
     try {
-      const saved = saveYipyyGoForm({
+      let saved = saveYipyyGoForm({
         ...formData,
         submittedAt: new Date().toISOString(),
         submittedBy: MOCK_CUSTOMER_ID,
       });
+
+      // Generate QR check-in token (booking_id + pet_id + token, no PII)
+      const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+      if (!saved.qrCheckInToken) {
+        const token = getOrCreateCheckInToken(booking!.id, petId, booking!.facilityId);
+        saved = saveYipyyGoForm({ ...saved, qrCheckInToken: token });
+      }
 
       // Notify facility staff (in-app + optional email)
       const arrivalTime = booking?.checkInTime
@@ -211,7 +219,7 @@ export default function YipyyGoFormPage({
       });
 
       toast.success("YipyyGo form submitted successfully! You're check-in ready!");
-      router.push(`/customer/bookings/${booking?.id}`);
+      router.push(`/customer/bookings/${booking?.id}/check-in-qr`);
     } catch (error) {
       toast.error("Failed to submit form. Please try again.");
       console.error("Error submitting YipyyGo form:", error);
