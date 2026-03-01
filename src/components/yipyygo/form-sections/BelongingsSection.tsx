@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Upload, X } from "lucide-react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { YipyyGoFormData, BelongingItem } from "@/data/yipyygo-forms";
 import type { YipyyGoConfig } from "@/data/yipyygo-config";
 
@@ -24,7 +24,7 @@ interface BelongingsSectionProps {
   isLastSection: boolean;
 }
 
-const BELONGING_TYPES = [
+const BELONGING_TYPES: { value: BelongingItem["type"]; label: string }[] = [
   { value: "food", label: "Food" },
   { value: "treats", label: "Treats" },
   { value: "bedding", label: "Bedding" },
@@ -33,7 +33,7 @@ const BELONGING_TYPES = [
   { value: "leash_collar", label: "Leash/Collar" },
   { value: "medication_bag", label: "Medication Bag" },
   { value: "other", label: "Other" },
-] as const;
+];
 
 export function BelongingsSection({
   formData,
@@ -43,45 +43,62 @@ export function BelongingsSection({
   onBack,
   isLastSection,
 }: BelongingsSectionProps) {
-  const [newItem, setNewItem] = useState<Partial<BelongingItem>>({
-    type: "food",
-  });
+  const [otherNote, setOtherNote] = useState("");
+  const [showOtherInput, setShowOtherInput] = useState(false);
 
-  const handleAddItem = () => {
-    if (!newItem.type) return;
-    
+  const selectedTypes = new Set(formData.belongings.map((b) => b.type));
+
+  const toggleBelonging = (type: BelongingItem["type"]) => {
+    if (type === "other") {
+      const hasOther = formData.belongings.some((b) => b.type === "other");
+      if (hasOther) {
+        updateFormData({
+          belongings: formData.belongings.filter((b) => b.type !== "other"),
+        });
+        setShowOtherInput(false);
+      } else {
+        setShowOtherInput(true);
+      }
+      return;
+    }
+    const existing = formData.belongings.find((b) => b.type === type);
+    if (existing) {
+      updateFormData({
+        belongings: formData.belongings.filter((b) => b.id !== existing.id),
+      });
+    } else {
+      const item: BelongingItem = {
+        id: `item-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type,
+      };
+      updateFormData({ belongings: [...formData.belongings, item] });
+    }
+  };
+
+  const handleAddOther = () => {
+    if (!otherNote.trim()) return;
     const item: BelongingItem = {
-      id: `item-${Date.now()}`,
-      type: newItem.type as BelongingItem["type"],
-      quantity: newItem.quantity,
-      notes: newItem.notes,
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      type: "other",
+      notes: otherNote.trim(),
     };
-    
-    updateFormData({
-      belongings: [...formData.belongings, item],
-    });
-    
-    setNewItem({ type: "food" });
+    updateFormData({ belongings: [...formData.belongings, item] });
+    setOtherNote("");
   };
 
   const handleRemoveItem = (id: string) => {
-    updateFormData({
-      belongings: formData.belongings.filter((item) => item.id !== id),
-    });
+    const item = formData.belongings.find((b) => b.id === id);
+    const otherCount = formData.belongings.filter((b) => b.type === "other").length;
+    updateFormData({ belongings: formData.belongings.filter((b) => b.id !== id) });
+    if (item?.type === "other" && otherCount <= 1) setShowOtherInput(false);
   };
 
-  const handleUpdateItem = (id: string, updates: Partial<BelongingItem>) => {
+  const handleUpdateQuantity = (id: string, quantity: number | undefined) => {
     updateFormData({
-      belongings: formData.belongings.map((item) =>
-        item.id === id ? { ...item, ...updates } : item
+      belongings: formData.belongings.map((b) =>
+        b.id === id ? { ...b, quantity: quantity && quantity > 0 ? quantity : undefined } : b
       ),
     });
-  };
-
-  const handlePhotoUpload = (id: string, file: File) => {
-    // In production, upload to storage and get URL
-    const photoUrl = URL.createObjectURL(file);
-    handleUpdateItem(id, { photoUrl });
   };
 
   return (
@@ -89,157 +106,132 @@ export function BelongingsSection({
       <CardHeader>
         <CardTitle>Belongings</CardTitle>
         <CardDescription>
-          Check off items you're bringing and optionally upload photos of labeled bags
+          Tap to add what you’re bringing — no typing needed
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Existing Items */}
-        {formData.belongings.length > 0 && (
-          <div className="space-y-3">
-            {formData.belongings.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-start gap-3 p-3 border rounded-lg"
+        {/* Chips: one-tap add/remove */}
+        <div className="flex flex-wrap gap-2">
+          {BELONGING_TYPES.map(({ value, label }) => {
+            const isSelected =
+              value === "other"
+                ? showOtherInput || formData.belongings.some((b) => b.type === "other")
+                : formData.belongings.some((b) => b.type === value);
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleBelonging(value)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                  isSelected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                )}
               >
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {BELONGING_TYPES.find((t) => t.value === item.type)?.label}
-                    </span>
-                    {item.quantity && (
-                      <span className="text-sm text-muted-foreground">
-                        (Qty: {item.quantity})
-                      </span>
-                    )}
-                  </div>
-                  {item.notes && (
-                    <p className="text-sm text-muted-foreground">{item.notes}</p>
-                  )}
-                  {item.photoUrl && (
-                    <div className="relative w-24 h-24 border rounded">
-                      <img
-                        src={item.photoUrl}
-                        alt="Belonging photo"
-                        className="w-full h-full object-cover rounded"
-                      />
-                    </div>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveItem(item.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                {label}
+                {value === "other" && formData.belongings.some((b) => b.type === "other") && (
+                  <span className="bg-background/20 rounded-full px-1.5 text-xs">
+                    {formData.belongings.filter((b) => b.type === "other").length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Other – optional short note */}
+        {(showOtherInput || formData.belongings.some((b) => b.type === "other")) && (
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Other (describe)</Label>
+            <div className="flex gap-2">
+              <Input
+                value={otherNote}
+                onChange={(e) => setOtherNote(e.target.value)}
+                placeholder="e.g., Blanket, special toy"
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddOther())}
+              />
+              <Button type="button" variant="outline" onClick={handleAddOther} disabled={!otherNote.trim()}>
+                Add
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Add New Item */}
-        <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>Item Type</Label>
-              <select
-                className="w-full h-10 px-3 border rounded-md"
-                value={newItem.type}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, type: e.target.value as any })
-                }
-              >
-                {BELONGING_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Quantity (optional)</Label>
-              <Input
-                type="number"
-                min="1"
-                value={newItem.quantity || ""}
-                onChange={(e) =>
-                  setNewItem({
-                    ...newItem,
-                    quantity: parseInt(e.target.value) || undefined,
-                  })
-                }
-                placeholder="e.g., 2"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Notes (optional)</Label>
-              <Input
-                value={newItem.notes || ""}
-                onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
-                placeholder="e.g., Blue bag"
-              />
-            </div>
+        {/* Selected items with optional qty */}
+        {formData.belongings.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Bringing</Label>
+            <ul className="space-y-2">
+              {formData.belongings.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium">
+                      {BELONGING_TYPES.find((t) => t.value === item.type)?.label ?? item.type}
+                    </span>
+                    {item.notes && item.type === "other" && (
+                      <span className="text-muted-foreground truncate">— {item.notes}</span>
+                    )}
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={item.quantity ?? ""}
+                      onChange={(e) =>
+                        handleUpdateQuantity(item.id, e.target.value ? parseInt(e.target.value, 10) : undefined)
+                      }
+                      placeholder="Qty"
+                      className="w-14 rounded border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => handleRemoveItem(item.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
-          
-          {config?.formTemplate.features.photoUploads && (
-            <div className="space-y-2">
-              <Label>Photo (optional)</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setNewItem({ ...newItem, photoUrl: URL.createObjectURL(file) });
-                  }
-                }}
-              />
-            </div>
-          )}
-          
-          <Button onClick={handleAddItem} variant="outline" className="w-full">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Item
-          </Button>
-        </div>
+        )}
 
-        {/* Photo Upload for All Belongings */}
         {config?.formTemplate.features.photoUploads && (
           <div className="space-y-2">
-            <Label>Upload Photo of All Belongings / Labeled Bags (optional)</Label>
+            <Label className="text-muted-foreground">Photo of labeled bags (optional)</Label>
             <Input
               type="file"
               accept="image/*"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) {
-                  updateFormData({
-                    belongingsPhotoUrl: URL.createObjectURL(file),
-                  });
-                }
+                if (file) updateFormData({ belongingsPhotoUrl: URL.createObjectURL(file) });
               }}
             />
             {formData.belongingsPhotoUrl && (
-              <div className="relative w-48 h-48 border rounded">
+              <div className="relative w-32 h-32 rounded-lg border overflow-hidden">
                 <img
                   src={formData.belongingsPhotoUrl}
-                  alt="Belongings photo"
-                  className="w-full h-full object-cover rounded"
+                  alt="Belongings"
+                  className="w-full h-full object-cover"
                 />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="icon"
-                  className="absolute top-2 right-2"
+                  className="absolute top-1 right-1 h-6 w-6"
                   onClick={() => updateFormData({ belongingsPhotoUrl: undefined })}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             )}
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
             Back

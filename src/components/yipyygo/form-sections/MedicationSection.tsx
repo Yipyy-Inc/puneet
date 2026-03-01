@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { YipyyGoFormData, MedicationItem } from "@/data/yipyygo-forms";
 import type { YipyyGoConfig } from "@/data/yipyygo-config";
 
@@ -32,6 +32,9 @@ const MEDICATION_METHODS = [
   { value: "topical", label: "Topical" },
   { value: "other", label: "Other" },
 ] as const;
+
+const FREQUENCY_CHIPS = ["Once daily", "Twice daily", "With meals", "As needed", "Other"] as const;
+const COMMON_MED_TIMES = ["08:00", "12:00", "18:00", "20:00"];
 
 export function MedicationSection({
   formData,
@@ -161,68 +164,96 @@ export function MedicationSection({
                     </div>
                     <div>
                       <Label>Frequency</Label>
-                      <Input
-                        value={medication.frequency}
-                        onChange={(e) =>
-                          handleUpdateMedication(medication.id, { frequency: e.target.value })
-                        }
-                        placeholder="e.g., twice daily"
-                      />
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {FREQUENCY_CHIPS.map((freq) => (
+                          <button
+                            key={freq}
+                            type="button"
+                            onClick={() => handleUpdateMedication(medication.id, { frequency: freq })}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-sm",
+                              medication.frequency === freq
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input hover:bg-accent"
+                            )}
+                          >
+                            {freq}
+                          </button>
+                        ))}
+                      </div>
+                      {(medication.frequency === "Other" || (medication.frequency && !FREQUENCY_CHIPS.includes(medication.frequency as any))) && (
+                        <Input
+                          value={medication.frequency === "Other" ? "" : medication.frequency}
+                          onChange={(e) => handleUpdateMedication(medication.id, { frequency: e.target.value.trim() || "Other" })}
+                          placeholder="e.g., Every 12 hours"
+                          className="mt-2 max-w-xs"
+                        />
+                      )}
                     </div>
                     <div>
                       <Label>Times</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {medication.times.map((time, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-1 px-2 py-1 bg-muted rounded"
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {COMMON_MED_TIMES.map((time) => (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => {
+                              if (!medication.times.includes(time))
+                                handleUpdateMedication(medication.id, { times: [...medication.times, time] });
+                            }}
+                            disabled={medication.times.includes(time)}
+                            className="rounded-full border border-input px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
                           >
-                            <span>{time}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                handleUpdateMedication(medication.id, {
-                                  times: medication.times.filter((_, i) => i !== index),
-                                });
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                            + {new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+                          </button>
                         ))}
                         <Input
                           type="time"
-                          className="w-32"
+                          className="w-28 h-8"
                           onBlur={(e) => {
                             if (e.target.value && !medication.times.includes(e.target.value)) {
                               handleAddTime(medication.id, e.target.value);
                               e.target.value = "";
                             }
                           }}
-                          placeholder="Add time"
                         />
                       </div>
+                      {medication.times.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {medication.times.map((time, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                            >
+                              {new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+                              <button type="button" onClick={() => handleUpdateMedication(medication.id, { times: medication.times.filter((_, i) => i !== index) })}>
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label>Method</Label>
-                      <select
-                        className="w-full h-10 px-3 border rounded-md"
-                        value={medication.method}
-                        onChange={(e) =>
-                          handleUpdateMedication(medication.id, {
-                            method: e.target.value as MedicationItem["method"],
-                          })
-                        }
-                      >
+                      <div className="flex flex-wrap gap-2 mt-1">
                         {MEDICATION_METHODS.map((method) => (
-                          <option key={method.value} value={method.value}>
+                          <button
+                            key={method.value}
+                            type="button"
+                            onClick={() => handleUpdateMedication(medication.id, { method: method.value })}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-sm",
+                              medication.method === method.value
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input hover:bg-accent"
+                            )}
+                          >
                             {method.label}
-                          </option>
+                          </button>
                         ))}
-                      </select>
-                    </div>
-                    {medication.method === "other" && (
+                      </div>
+                      {medication.method === "other" && (
                       <div>
                         <Label>Method Notes</Label>
                         <Input
@@ -234,8 +265,8 @@ export function MedicationSection({
                           }
                         />
                       </div>
-                    )}
-                    {config?.formTemplate.features.photoUploads && (
+                      )}
+                      {config?.formTemplate.features.photoUploads && (
                       <div>
                         <Label>Photo of Medication Label (optional)</Label>
                         <Input
@@ -258,7 +289,8 @@ export function MedicationSection({
                           />
                         )}
                       </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -298,13 +330,21 @@ export function MedicationSection({
               </div>
               <div>
                 <Label>Frequency</Label>
-                <Input
-                  value={newMedication.frequency || ""}
-                  onChange={(e) =>
-                    setNewMedication({ ...newMedication, frequency: e.target.value })
-                  }
-                  placeholder="e.g., twice daily"
-                />
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {FREQUENCY_CHIPS.map((freq) => (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => setNewMedication({ ...newMedication, frequency: freq })}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm",
+                        newMedication.frequency === freq ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"
+                      )}
+                    >
+                      {freq}
+                    </button>
+                  ))}
+                </div>
               </div>
               <Button onClick={handleAddMedication} variant="outline" className="w-full">
                 <Plus className="mr-2 h-4 w-4" />

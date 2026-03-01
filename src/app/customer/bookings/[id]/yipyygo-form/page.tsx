@@ -7,6 +7,7 @@ import { clients } from "@/data/clients";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import {
   getYipyyGoForm,
+  getLastStayFormForPet,
   saveYipyyGoForm,
   generateVerificationCode,
   verifyCode,
@@ -28,6 +29,8 @@ import {
   AlertCircle,
   Loader2,
   Clock,
+  RotateCcw,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BelongingsSection } from "@/components/yipyygo/form-sections/BelongingsSection";
@@ -245,6 +248,32 @@ export default function YipyyGoFormPage({
     setFormData({ ...formData, ...updates });
   };
 
+  // Last stay form for "Use same as last time" (plane check-in style, under 2–4 min)
+  const lastStayForm = useMemo(() => {
+    if (!booking || !pet) return null;
+    const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+    return getLastStayFormForPet(booking.clientId, petId, booking.facilityId, booking.id);
+  }, [booking, pet]);
+
+  const applyLastStayPreferences = () => {
+    if (!formData || !lastStayForm) return;
+    setFormData({
+      ...formData,
+      belongings: lastStayForm.belongings?.length ? lastStayForm.belongings.map((b) => ({ ...b, id: `item-${Date.now()}-${Math.random().toString(36).slice(2)}` })) : formData.belongings,
+      belongingsPhotoUrl: lastStayForm.belongingsPhotoUrl ?? formData.belongingsPhotoUrl,
+      feedingInstructions: lastStayForm.feedingInstructions ?? formData.feedingInstructions,
+      medications: lastStayForm.medications?.length
+        ? lastStayForm.medications.map((m) => ({ ...m, id: `med-${Date.now()}-${Math.random().toString(36).slice(2)}` }))
+        : formData.medications,
+      noMedications: lastStayForm.noMedications ?? formData.noMedications,
+      behaviorNotes: lastStayForm.behaviorNotes ?? formData.behaviorNotes,
+      addOns: lastStayForm.addOns?.length
+        ? lastStayForm.addOns.map((a) => ({ ...a, selected: a.selected }))
+        : formData.addOns,
+    });
+    toast.success("Last stay preferences applied. Review and edit if needed.");
+  };
+
   if (!booking || !customer || !pet) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -429,33 +458,65 @@ export default function YipyyGoFormPage({
 
   const CurrentSectionComponent = sections[currentSection]?.component;
 
+  const totalSections = sections.length;
+  const stepLabel = currentSection === totalSections - 1 ? "Review" : `Step ${currentSection + 1} of ${totalSections - 1}`;
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header – plane check-in style: fast, clear */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => router.push(`/customer/bookings/${booking.id}`)}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Booking
+              Back
             </Button>
-            <h1 className="text-3xl font-bold mt-2">YipyyGo Pre-Check-In Form</h1>
-            <p className="text-muted-foreground mt-1">
-              Complete this form to fast-track your check-in for {pet.name}'s {booking.service}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <h1 className="text-2xl font-bold">YipyyGo</h1>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                <Zap className="h-3 w-3" />
+                ~2 min
+              </span>
+            </div>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {pet.name} · {booking.service} · {stepLabel}
             </p>
           </div>
           {deadlineInfo && !deadlineInfo.isPastDeadline && (
-            <div className="text-right">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Time remaining: {deadlineInfo.timeRemaining}</span>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>{deadlineInfo.timeRemaining}</span>
             </div>
           )}
         </div>
+
+        {/* Use same as last time – one tap to pre-fill */}
+        {lastStayForm && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <RotateCcw className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Use same as last time</p>
+                    <p className="text-sm text-muted-foreground">
+                      Copy belongings, feeding, meds & behavior from your last stay
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={applyLastStayPreferences} variant="default">
+                  Apply
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Booking Summary */}
         <Card>

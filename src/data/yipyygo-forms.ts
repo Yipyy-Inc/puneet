@@ -5,6 +5,7 @@
  */
 
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { bookings } from "@/data/bookings";
 
 // ============================================================================
 // Form Data Types
@@ -322,6 +323,46 @@ export function getYipyyGoForm(bookingId: number | string, petId?: number): Yipy
 /** All forms for a booking (for multi-pet: one form per pet). */
 export function getYipyyGoFormsByBooking(bookingId: number | string): YipyyGoFormData[] {
   return mockYipyyGoForms.filter((f) => f.bookingId === bookingId);
+}
+
+/**
+ * Get the most recent submitted/approved form for this client + pet + facility (from a past stay).
+ * Used for "Use same as last time" to pre-fill the form and keep completion under 2–4 minutes.
+ */
+export function getLastStayFormForPet(
+  clientId: number,
+  petId: number,
+  facilityId: number,
+  excludeBookingId?: number | string
+): YipyyGoFormData | null {
+  const today = new Date().toISOString().split("T")[0];
+  const pastBookingIds = new Set(
+    bookings
+      .filter(
+        (b) =>
+          b.clientId === clientId &&
+          b.facilityId === facilityId &&
+          (b.endDate || b.startDate) < today &&
+          b.status !== "cancelled" &&
+          String(b.id) !== String(excludeBookingId)
+      )
+      .map((b) => b.id)
+  );
+  const completedForms = mockYipyyGoForms.filter(
+    (f) =>
+      f.clientId === clientId &&
+      f.petId === petId &&
+      f.facilityId === facilityId &&
+      pastBookingIds.has(Number(f.bookingId)) &&
+      (f.submittedAt || f.staffStatus === "approved" || f.manuallyCompletedAt)
+  );
+  if (completedForms.length === 0) return null;
+  completedForms.sort((a, b) => {
+    const aAt = a.submittedAt || a.reviewedAt || a.manuallyCompletedAt || "";
+    const bAt = b.submittedAt || b.reviewedAt || b.manuallyCompletedAt || "";
+    return bAt.localeCompare(aAt);
+  });
+  return completedForms[0] ?? null;
 }
 
 /** Derive display status for a booking (for staff lists and badges). Does not consider mandatory. */

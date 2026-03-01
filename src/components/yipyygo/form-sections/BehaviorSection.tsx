@@ -122,48 +122,48 @@ export function BehaviorSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Socialization with Dogs</Label>
-            <select
-              className="w-full h-10 px-3 border rounded-md"
-              value={behavior.socialization.withDogs}
-              onChange={(e) =>
-                handleUpdate({
-                  socialization: {
-                    ...behavior.socialization,
-                    withDogs: e.target.value as any,
-                  },
-                })
-              }
-            >
-              {SOCIALIZATION_OPTIONS.withDogs.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-3">
+          <Label>With other dogs</Label>
+          <div className="flex flex-wrap gap-2">
+            {SOCIALIZATION_OPTIONS.withDogs.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  handleUpdate({
+                    socialization: { ...behavior.socialization, withDogs: option.value },
+                  })
+                }
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  behavior.socialization.withDogs === option.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input hover:bg-accent"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
-          <div className="space-y-2">
-            <Label>Socialization with Humans</Label>
-            <select
-              className="w-full h-10 px-3 border rounded-md"
-              value={behavior.socialization.withHumans}
-              onChange={(e) =>
-                handleUpdate({
-                  socialization: {
-                    ...behavior.socialization,
-                    withHumans: e.target.value as any,
-                  },
-                })
-              }
-            >
-              {SOCIALIZATION_OPTIONS.withHumans.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+          <Label>With humans</Label>
+          <div className="flex flex-wrap gap-2">
+            {SOCIALIZATION_OPTIONS.withHumans.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  handleUpdate({
+                    socialization: { ...behavior.socialization, withHumans: option.value },
+                  })
+                }
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  behavior.socialization.withHumans === option.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input hover:bg-accent"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -219,12 +219,12 @@ export function BehaviorSection({
         </div>
 
         <div className="space-y-2">
-          <Label>Anything Staff Should Know</Label>
+          <Label className="text-muted-foreground">Anything else? (optional)</Label>
           <Textarea
             value={behavior.specialNotes || ""}
             onChange={(e) => handleUpdate({ specialNotes: e.target.value })}
-            placeholder="Any additional information that would help staff care for your pet..."
-            rows={4}
+            placeholder="e.g., Prefers quiet corner, loves belly rubs"
+            rows={2}
           />
         </div>
 
