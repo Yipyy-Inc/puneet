@@ -54,6 +54,7 @@ import { Booking, Pet } from "@/lib/types";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { facilityConfig } from "@/data/facility-config";
+import { clientDocuments } from "@/data/documents";
 import { vaccinationRules, evaluationConfig } from "@/data/settings";
 import { Syringe } from "lucide-react";
 
@@ -71,6 +72,7 @@ const STEPS = [
   { id: "pets", label: "Select Pet(s)" },
   { id: "service", label: "Select Service" },
   { id: "details", label: "Details" },
+  { id: "forms", label: "Complete Required Forms" },
   { id: "confirm", label: "Confirm" },
 ];
 
@@ -456,6 +458,68 @@ export function CustomerBookingModal({
     };
   }, [selectedPets, selectedService, getPetVaccinationStatus]);
 
+  // Required forms/agreements/vaccination for booking (used in "Complete Required Forms" step)
+  const facilityId = selectedFacility?.id ?? 11;
+  const requiredFormsStatus = useMemo(() => {
+    const missing: Array<{ type: "vaccination" | "agreement" | "intake"; label: string; petId?: number; petName?: string; link: string }> = [];
+    const templates = facilityConfig.waiversAndContracts.templates;
+    const requiredAgreementNames: string[] = [];
+    if (templates.liabilityWaiver.required) requiredAgreementNames.push(templates.liabilityWaiver.name);
+    if (selectedService === "daycare" && templates.daycareAgreement.required) requiredAgreementNames.push(templates.daycareAgreement.name);
+    if (selectedService === "boarding" && templates.boardingContract.required) requiredAgreementNames.push(templates.boardingContract.name);
+    if (selectedService === "grooming" || selectedService === "training" || selectedService === "evaluation") {
+      // Only liability if required
+    }
+
+    const clientDocs = clientDocuments.filter(
+      (d) => d.clientId === MOCK_CUSTOMER_ID && d.facilityId === facilityId && (d.type === "agreement" || d.type === "waiver") && d.signedAt
+    );
+    requiredAgreementNames.forEach((name) => {
+      const signed = clientDocs.some((d) => d.name.toLowerCase().includes(name.toLowerCase()));
+      if (!signed) {
+        missing.push({
+          type: "agreement",
+          label: name,
+          link: "/customer/documents",
+        });
+      }
+    });
+
+    if (facilityConfig.vaccinationRequirements.documentationRequired || facilityConfig.vaccinationRequirements.mandatoryRecords) {
+      selectedPets.forEach((pet) => {
+        const status = getPetVaccinationStatus(pet);
+        const hasIssue = status.missing.length > 0 || status.expired.length > 0;
+        if (hasIssue) {
+          const issues = [...status.missing.map((v) => `${v} missing`), ...status.expired.map((v) => `${v} expired`)];
+          missing.push({
+            type: "vaccination",
+            label: issues.join("; "),
+            petId: pet.id,
+            petName: pet.name,
+            link: `/customer/pets/${pet.id}`,
+          });
+        }
+      });
+    }
+
+    const totalRequirements =
+      requiredAgreementNames.length +
+      (facilityConfig.vaccinationRequirements.documentationRequired || facilityConfig.vaccinationRequirements.mandatoryRecords
+        ? selectedPets.length
+        : 0);
+    const completedCount = Math.max(0, totalRequirements - missing.length);
+    const totalCount = totalRequirements;
+
+    return {
+      missing,
+      completedCount,
+      totalCount,
+      allComplete: missing.length === 0,
+    };
+  }, [selectedService, selectedPets, facilityId, getPetVaccinationStatus]);
+
+  const allowBookingWithoutForms = facilityConfig.bookingRules.allowBookingWithoutForms ?? false;
+
   // Validation
   const canProceed = useMemo(() => {
     switch (currentStep) {
@@ -486,7 +550,10 @@ export function CustomerBookingModal({
           }
         }
         return true;
-      case 3: // Confirm
+      case 3: // Complete Required Forms
+        if (allowBookingWithoutForms) return true;
+        return requiredFormsStatus.allComplete;
+      case 4: // Confirm
         if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
           if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
             return false;
@@ -499,6 +566,8 @@ export function CustomerBookingModal({
   }, [
     currentStep,
     selectedService,
+    allowBookingWithoutForms,
+    requiredFormsStatus.allComplete,
     selectedPetIds,
     startDate,
     checkInTime,
@@ -522,6 +591,7 @@ export function CustomerBookingModal({
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
       if (currentStep + 1 === 2) setCurrentDetailsSubStep(0);
+    if (currentStep + 1 === 3) setCurrentDetailsSubStep(0);
     }
   };
 
@@ -543,10 +613,13 @@ export function CustomerBookingModal({
       // TODO: Replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // Check if facility requires approval
+      // Check if facility requires approval or if requirements are incomplete (allow booking without forms)
       const requiresApproval = facilityConfig.bookingRules.approvalWorkflow?.enabled ?? false;
-      
-      if (requiresApproval) {
+      const formsIncomplete = allowBookingWithoutForms && !requiredFormsStatus.allComplete && requiredFormsStatus.missing.length > 0;
+
+      if (formsIncomplete) {
+        toast.success("Booking request submitted. Approval pending until required forms and documents are completed.");
+      } else if (requiresApproval) {
         toast.success("Booking request submitted! The facility will review and respond within 24 hours.");
       } else {
         toast.success("Booking created successfully!");
@@ -1700,9 +1773,86 @@ export function CustomerBookingModal({
                 </div>
               )}
 
-              {/* Step 4: Confirm — receipt-style review + tip + confirm */}
+              {/* Step 4: Complete Required Forms */}
               {currentStep === 3 && (
                 <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-base mb-1">Complete Required Forms</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {requiredFormsStatus.allComplete
+                        ? "All requirements are complete. You can proceed to confirm your booking."
+                        : "The following items are required before you can confirm your booking."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">Progress:</span>
+                    <span className={requiredFormsStatus.allComplete ? "text-green-600 font-semibold" : "text-muted-foreground"}>
+                      {requiredFormsStatus.completedCount}/{requiredFormsStatus.totalCount} completed
+                    </span>
+                  </div>
+                  {requiredFormsStatus.missing.length > 0 && (
+                    <Card>
+                      <CardContent className="p-4 space-y-3">
+                        <p className="text-sm font-medium text-muted-foreground">Missing requirements</p>
+                        <ul className="space-y-2">
+                          {requiredFormsStatus.missing.map((item, idx) => (
+                            <li key={idx} className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-0">
+                              <div>
+                                {item.petName && <span className="font-medium">{item.petName}: </span>}
+                                <span className="text-muted-foreground">
+                                  {item.type === "vaccination" ? "Vaccination records — " : item.type === "agreement" ? "Agreement — " : ""}
+                                  {item.label}
+                                </span>
+                              </div>
+                              <a
+                                href={item.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary font-medium text-sm hover:underline shrink-0"
+                              >
+                                Fill now →
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                        {allowBookingWithoutForms && (
+                          <Alert className="mt-4 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription>
+                              <p className="font-medium text-amber-800 dark:text-amber-200">You can continue without completing these now.</p>
+                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                Your booking will be submitted as a request; approval may be pending until requirements are completed.
+                              </p>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                  {requiredFormsStatus.allComplete && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-medium">All set! Proceed to confirm your booking.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 5: Confirm — receipt-style review + tip + confirm */}
+              {currentStep === 4 && (
+                <div className="space-y-4">
+                  {allowBookingWithoutForms && !requiredFormsStatus.allComplete && requiredFormsStatus.missing.length > 0 && (
+                    <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription>
+                        <p className="font-semibold text-amber-800 dark:text-amber-200">Booking request submitted — approval pending until requirements are completed.</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                          Complete the required forms and vaccination records in your account to avoid delays in confirmation.
+                        </p>
+                        <a href="/customer/documents" className="text-sm font-medium text-amber-800 dark:text-amber-200 underline mt-2 inline-block">Go to Documents →</a>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <Card>
                     <CardContent className="p-6 space-y-4">
                       <div>

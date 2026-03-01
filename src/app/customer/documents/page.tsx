@@ -54,7 +54,7 @@ export default function CustomerDocumentsPage() {
 
   const formatDateTime = (iso: string) => {
     try {
-      return new Date(iso).toLocaleString(undefined, {
+      return new Date(iso).toLocaleString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",

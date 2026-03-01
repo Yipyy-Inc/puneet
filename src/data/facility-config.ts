@@ -54,6 +54,8 @@ export const facilityConfig = {
       estimatedResponseTime: 24, // hours
       autoConfirmAfterHours: null, // Auto-confirm after X hours if no response (null = no auto-confirm)
     },
+    /** If true, customer can reach Confirm even with missing forms; booking is "pending until requirements completed". If false, customer must complete required forms before Confirm. */
+    allowBookingWithoutForms: false,
   },
   checkInOutTimes: {
     defaultSchedules: {
