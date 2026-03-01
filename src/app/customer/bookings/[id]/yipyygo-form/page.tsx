@@ -15,6 +15,7 @@ import {
 } from "@/data/yipyygo-forms";
 import { notifyFacilityStaffYipyyGoSubmitted } from "@/data/facility-notifications";
 import { getOrCreateCheckInToken } from "@/lib/qr-checkin";
+import { logCustomerSubmission } from "@/lib/checkin-audit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,6 +205,16 @@ export default function YipyyGoFormPage({
         const token = getOrCreateCheckInToken(booking!.id, petId, booking!.facilityId);
         saved = saveYipyyGoForm({ ...saved, qrCheckInToken: token });
       }
+
+      // Audit: customer submission (original)
+      logCustomerSubmission({
+        facilityId: booking!.facilityId,
+        bookingId: Number(booking!.id),
+        petId: Array.isArray(booking!.petId) ? booking!.petId[0] : booking!.petId,
+        userId: MOCK_CUSTOMER_ID,
+        userName: customer?.name,
+        metadata: { submittedAt: saved.submittedAt },
+      });
 
       // Notify facility staff (in-app + optional email)
       const arrivalTime = booking?.checkInTime

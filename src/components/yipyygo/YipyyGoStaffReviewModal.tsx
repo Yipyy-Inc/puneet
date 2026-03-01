@@ -31,12 +31,15 @@ import {
   setYipyyGoManuallyCompleted,
   saveYipyyGoForm,
 } from "@/data/yipyygo-forms";
+import { logStaffEdit, logStaffManualComplete } from "@/lib/checkin-audit";
 
 interface YipyyGoStaffReviewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   form: YipyyGoFormData | null;
   bookingId: number | string;
+  /** For audit when form is null (manual complete) */
+  facilityId?: number;
   /** Staff user ID (mock) */
   staffUserId?: number;
   onApproved?: () => void;
@@ -47,9 +50,11 @@ export function YipyyGoStaffReviewModal({
   onOpenChange,
   form,
   bookingId,
+  facilityId: facilityIdProp,
   staffUserId = 1,
   onApproved,
 }: YipyyGoStaffReviewModalProps) {
+  const facilityId = form?.facilityId ?? facilityIdProp ?? 0;
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestChangesMessage, setRequestChangesMessage] = useState("");
   const [editReasonOpen, setEditReasonOpen] = useState(false);
@@ -62,6 +67,13 @@ export function YipyyGoStaffReviewModal({
       reviewedBy: staffUserId,
     });
     if (updated) {
+      logStaffEdit({
+        facilityId: form.facilityId,
+        bookingId: Number(bookingId),
+        petId: form.petId,
+        staffUserId,
+        details: "approved",
+      });
       toast.success("YipyyGo form approved");
       onApproved?.();
       onOpenChange(false);
@@ -79,6 +91,14 @@ export function YipyyGoStaffReviewModal({
       requestChangesMessage: requestChangesMessage.trim(),
     });
     if (updated) {
+      logStaffEdit({
+        facilityId: form.facilityId,
+        bookingId: Number(bookingId),
+        petId: form.petId,
+        staffUserId,
+        details: "corrections_requested",
+        metadata: { message: requestChangesMessage.trim() },
+      });
       toast.success("Change request sent to customer");
       setRequestChangesMessage("");
       setRequestChangesOpen(false);
@@ -100,6 +120,14 @@ export function YipyyGoStaffReviewModal({
       internalEditReason: internalEditReason.trim(),
     });
     if (updated) {
+      logStaffEdit({
+        facilityId: form.facilityId,
+        bookingId: Number(bookingId),
+        petId: form.petId,
+        staffUserId,
+        details: "internal_edit",
+        metadata: { reason: internalEditReason.trim() },
+      });
       toast.success("Form updated internally and approved");
       setInternalEditReason("");
       setEditReasonOpen(false);
@@ -111,6 +139,12 @@ export function YipyyGoStaffReviewModal({
   const handleManualComplete = () => {
     const updated = setYipyyGoManuallyCompleted(bookingId, staffUserId);
     if (updated) {
+      logStaffManualComplete({
+        facilityId,
+        bookingId: Number(bookingId),
+        petId: form?.petId,
+        staffUserId,
+      });
       toast.success("Marked as manually completed");
       setManualCompleteOpen(false);
       onApproved?.();

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { validateCheckInToken, recordQrCheckIn } from "@/lib/qr-checkin";
+import { runPostCheckInAutomation } from "@/lib/post-checkin-automation";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
@@ -79,9 +80,26 @@ function CheckInContent() {
     setCheckingIn(true);
     try {
       recordQrCheckIn(payload.bookingId, payload.facilityId);
+
+      // Post check-in automation: stay record, stay tasks, audit log
+      const serviceType = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+      const { tasksCreated } = runPostCheckInAutomation({
+        bookingId: payload.bookingId,
+        facilityId: payload.facilityId,
+        petId: payload.petId,
+        serviceType: serviceType || "daycare",
+        source: "qr",
+        staffUserId: 1,
+        staffUserName: "Staff",
+        assignToStaffId: 1,
+        assignToStaffName: "Staff",
+      });
+
       setCheckedIn(true);
       toast.success("Check-in complete");
-      // Apply add-ons/tips per facility rules (in production: update invoice)
+      if (tasksCreated > 0) {
+        toast.info(`${tasksCreated} stay task(s) created (feeding, meds, etc.).`);
+      }
       if (config?.addOnsApproval === "auto" && form?.addOns?.filter((a) => a.selected)?.length) {
         toast.info("Add-ons will be added to invoice per facility rules.");
       }

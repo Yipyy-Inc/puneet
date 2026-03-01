@@ -159,6 +159,7 @@ export default function FacilityBookingDetailPage({
         onOpenChange={setReviewModalOpen}
         form={yipyyGoForm}
         bookingId={bookingId}
+        facilityId={booking.facilityId}
         onApproved={() => {
           router.refresh();
         }}
