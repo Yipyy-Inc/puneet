@@ -91,6 +91,58 @@ export const BOARDING_TYPES = [
   { id: "vip", name: "VIP Suite", price: 100 },
 ];
 
+/** Customer-facing boarding room types: photo, inclusions, pet eligibility (type/size/weight), availability */
+export const CUSTOMER_BOARDING_ROOM_TYPES = [
+  {
+    id: "standard",
+    name: "Standard Room",
+    price: 45,
+    description: "Comfortable indoor kennel with bedding",
+    image: "/rooms/room-1.jpg",
+    included: ["Bedding", "Daily feeding", "Potty breaks", "Basic care"],
+    allowedPetTypes: ["Dog", "Cat"],
+    minWeightLbs: undefined,
+    maxWeightLbs: undefined,
+    totalRooms: 10,
+    bookedRooms: 7,
+  },
+  {
+    id: "deluxe",
+    name: "Deluxe Suite",
+    price: 75,
+    description: "Spacious suite with play area and webcam",
+    image: "/rooms/room-2.jpg",
+    included: ["Luxury bedding", "Play area", "Webcam access", "Daily feeding", "Extra playtime"],
+    allowedPetTypes: ["Dog", "Cat"],
+    minWeightLbs: undefined,
+    maxWeightLbs: undefined,
+    totalRooms: 5,
+    bookedRooms: 2,
+  },
+  {
+    id: "vip",
+    name: "VIP Suite",
+    price: 120,
+    description: "Luxury suite with private outdoor access",
+    image: "/rooms/room-3.jpg",
+    included: ["Premium bedding", "Private outdoor run", "Webcam", "Daily feeding", "One-on-one time"],
+    allowedPetTypes: ["Dog", "Cat"],
+    minWeightLbs: 20,
+    maxWeightLbs: undefined,
+    totalRooms: 3,
+    bookedRooms: 1,
+  },
+];
+
+/** Grooming packages for customer booking: duration, what's included, starting price */
+export const GROOMING_PACKAGES = [
+  { id: "bath_brush", name: "Bath & Brush", price: 40, durationMinutes: 45, included: ["Bath", "Brush-out", "Nail trim", "Ear check"], image: "/services/grooming-bath.jpg" },
+  { id: "full_groom", name: "Full Groom", price: 65, durationMinutes: 90, included: ["Bath", "Haircut/style", "Nail trim", "Ear cleaning", "Brush-out"], image: "/services/grooming-full.jpg" },
+  { id: "puppy_groom", name: "Puppy Groom", price: 35, durationMinutes: 30, included: ["Gentle bath", "Brush", "Nail trim", "Intro to grooming"], image: "/services/grooming-puppy.jpg" },
+  { id: "hand_stripping", name: "Hand Stripping", price: 95, durationMinutes: 120, included: ["Hand strip coat", "Bath", "Nail trim", "Ear cleaning"], image: "/services/grooming-strip.jpg" },
+  { id: "deshedding", name: "De-shedding Treatment", price: 55, durationMinutes: 60, included: ["De-shed bath", "Brush-out", "Nail trim", "Ear check"], image: "/services/grooming-deshed.jpg" },
+];
+
 export const STEPS: Step[] = [
   { id: "service", title: "Service", description: "Choose service" },
   { id: "client-pet", title: "Client & Pet", description: "Select or create" },

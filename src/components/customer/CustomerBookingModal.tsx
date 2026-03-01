@@ -4,7 +4,12 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { clients } from "@/data/clients";
-import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
+import {
+  SERVICE_CATEGORIES,
+  CUSTOMER_BOARDING_ROOM_TYPES,
+  GROOMING_PACKAGES,
+  GROOMING_ADDONS,
+} from "@/components/bookings/modals/constants";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +42,11 @@ import {
   CheckCircle,
   Loader2,
   X,
+  Dog,
+  Cat,
+  Scissors,
+  PawPrint,
+  Bed,
 } from "lucide-react";
 import { DateSelectionCalendar, type DateTimeInfo } from "@/components/ui/date-selection-calendar";
 import { Booking, Pet } from "@/lib/types";
@@ -129,6 +139,13 @@ export function CustomerBookingModal({
   const [boardingRangeStart, setBoardingRangeStart] = useState<Date | null>(null);
   const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(null);
   const [boardingDateTimes, setBoardingDateTimes] = useState<DateTimeInfo[]>([]);
+  // Boarding: room type per pet (or same for all if facility does not allow different)
+  const [roomAssignments, setRoomAssignments] = useState<Array<{ petId: number; roomId: string }>>([]);
+  /** If false, same room type is applied to all pets and we show one selector. */
+  const allowDifferentRoomPerPet = true;
+  // Grooming: package + add-ons
+  const [selectedGroomingPackage, setSelectedGroomingPackage] = useState("");
+  const [selectedGroomingAddons, setSelectedGroomingAddons] = useState<string[]>([]);
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
@@ -218,6 +235,26 @@ export function CustomerBookingModal({
     [customerPets, selectedPetIds]
   );
 
+  // Number of Details sub-steps for current service (1 = Schedule only; 2 = Schedule + Room Type; 3 = Schedule + Package + Add-ons)
+  const detailsSubStepCount = useMemo(() => {
+    if (selectedService === "boarding") return 2;
+    if (selectedService === "grooming") return 3;
+    return 1;
+  }, [selectedService]);
+
+  // Boarding: filter room types by pet eligibility (type, weight limits)
+  const eligibleBoardingRooms = useMemo(() => {
+    if (selectedService !== "boarding" || selectedPets.length === 0) return CUSTOMER_BOARDING_ROOM_TYPES;
+    return CUSTOMER_BOARDING_ROOM_TYPES.filter((room) => {
+      return selectedPets.every((pet) => {
+        if (!room.allowedPetTypes.includes(pet.type)) return false;
+        if (room.minWeightLbs != null && pet.weight < room.minWeightLbs) return false;
+        if (room.maxWeightLbs != null && pet.weight > room.maxWeightLbs) return false;
+        return true;
+      });
+    });
+  }, [selectedService, selectedPets]);
+
   // Derived date/time for display and submit (from daycare/boarding slider state or single date/time)
   const effectiveStartDate = useMemo(() => {
     if (selectedService === "daycare" && daycareDateTimes.length > 0)
@@ -252,6 +289,14 @@ export function CustomerBookingModal({
       setSelectedService("");
     }
   }, [availableServices, selectedService]);
+
+  // Reset Details sub-step and service-specific state when service changes
+  useEffect(() => {
+    setCurrentDetailsSubStep(0);
+    setRoomAssignments([]);
+    setSelectedGroomingPackage("");
+    setSelectedGroomingAddons([]);
+  }, [selectedService]);
 
   // Facility schedule props for DateSelectionCalendar (time slider)
   const scheduleOverridesForService = useMemo(() => {
@@ -404,19 +449,29 @@ export function CustomerBookingModal({
         return selectedPetIds.length > 0;
       case 1: // Service
         return selectedService !== "";
-      case 2: // Details (Schedule)
-        if (selectedService === "daycare") {
-          return daycareSelectedDates.length > 0 && daycareDateTimes.length > 0;
+      case 2: // Details (sub-steps)
+        if (currentDetailsSubStep === 0) {
+          if (selectedService === "daycare") {
+            return daycareSelectedDates.length > 0 && daycareDateTimes.length > 0;
+          }
+          if (selectedService === "boarding") {
+            return (
+              boardingRangeStart != null &&
+              boardingRangeEnd != null &&
+              boardingDateTimes.length > 0
+            );
+          }
+          return startDate !== "" && checkInTime !== "";
         }
-        if (selectedService === "boarding") {
-          return (
-            boardingRangeStart != null &&
-            boardingRangeEnd != null &&
-            boardingDateTimes.length > 0
-          );
+        if (currentDetailsSubStep === 1) {
+          if (selectedService === "boarding") {
+            return roomAssignments.length === selectedPetIds.length;
+          }
+          if (selectedService === "grooming") {
+            return selectedGroomingPackage !== "";
+          }
         }
-        // grooming, evaluation, training: single date + time
-        return startDate !== "" && checkInTime !== "";
+        return true;
       case 3: // Confirm
         if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
           if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
@@ -433,21 +488,34 @@ export function CustomerBookingModal({
     selectedPetIds,
     startDate,
     checkInTime,
+    currentDetailsSubStep,
     daycareSelectedDates.length,
     daycareDateTimes.length,
     boardingRangeStart,
     boardingRangeEnd,
     boardingDateTimes.length,
+    roomAssignments.length,
+    selectedGroomingPackage,
     vaccinationCompliance,
   ]);
 
   const handleNext = () => {
-    if (canProceed && currentStep < STEPS.length - 1) {
+    if (!canProceed) return;
+    if (currentStep === 2 && currentDetailsSubStep < detailsSubStepCount - 1) {
+      setCurrentDetailsSubStep(currentDetailsSubStep + 1);
+      return;
+    }
+    if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
+      if (currentStep + 1 === 2) setCurrentDetailsSubStep(0);
     }
   };
 
   const handleBack = () => {
+    if (currentStep === 2 && currentDetailsSubStep > 0) {
+      setCurrentDetailsSubStep(currentDetailsSubStep - 1);
+      return;
+    }
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
@@ -484,6 +552,9 @@ export function CustomerBookingModal({
       setBoardingRangeStart(null);
       setBoardingRangeEnd(null);
       setBoardingDateTimes([]);
+      setRoomAssignments([]);
+      setSelectedGroomingPackage("");
+      setSelectedGroomingAddons([]);
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -524,11 +595,29 @@ export function CustomerBookingModal({
   // Calculate price (simplified)
   const calculatedPrice = useMemo(() => {
     if (!selectedService) return 0;
+    if (selectedService === "grooming") {
+      const pkg = GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage);
+      const pkgPrice = pkg ? pkg.price : 0;
+      const addonsPrice = selectedGroomingAddons.reduce(
+        (sum, id) => sum + (GROOMING_ADDONS.find((a) => a.id === id)?.price ?? 0),
+        0
+      );
+      return (pkgPrice + addonsPrice) * selectedPetIds.length;
+    }
+    if (selectedService === "boarding" && roomAssignments.length > 0) {
+      const nights = effectiveEndDate && effectiveStartDate
+        ? Math.max(1, Math.ceil((new Date(effectiveEndDate).getTime() - new Date(effectiveStartDate).getTime()) / (24 * 60 * 60 * 1000)))
+        : 1;
+      const roomPrice = roomAssignments.reduce((sum, a) => {
+        const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
+        return sum + (room ? room.price * nights : 0);
+      }, 0);
+      return roomPrice;
+    }
     const service = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
     if (!service) return 0;
-    const basePrice = service.basePrice;
-    return basePrice * selectedPetIds.length;
-  }, [selectedService, selectedPetIds]);
+    return service.basePrice * selectedPetIds.length;
+  }, [selectedService, selectedPetIds, selectedGroomingPackage, selectedGroomingAddons, roomAssignments, effectiveStartDate, effectiveEndDate]);
 
   const totalPrice = useMemo(() => {
     return calculatedPrice + tipAmount;
@@ -578,6 +667,9 @@ export function CustomerBookingModal({
       setBoardingRangeStart(null);
       setBoardingRangeEnd(null);
       setBoardingDateTimes([]);
+      setRoomAssignments([]);
+      setSelectedGroomingPackage("");
+      setSelectedGroomingAddons([]);
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -890,15 +982,27 @@ export function CustomerBookingModal({
               )}
 
 
-              {/* Step 3: Details — Schedule (same time selector as facility: date + time slider) */}
+              {/* Step 3: Details — Schedule, then Room Type (boarding) or Package + Add-ons (grooming) */}
               {currentStep === 2 && (
                 <div className="space-y-4">
+                  {detailsSubStepCount > 1 && (
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Step {currentDetailsSubStep + 1} of {detailsSubStepCount}
+                    </p>
+                  )}
+
+                  {/* Sub-step 0: Schedule */}
+                  {currentDetailsSubStep === 0 && (
+                    <>
                   {selectedService === "daycare" && (
                     <Card>
                       <CardContent className="p-4 space-y-4">
                         <Label className="text-base">Select Daycare Days</Label>
                         <p className="text-xs text-muted-foreground">
                           Drop-off and pick-up times use the same time slider as the facility booking flow.
+                        </p>
+                        <p className="text-xs text-muted-foreground italic">
+                          Play area and group are assigned by the facility.
                         </p>
                         <DateSelectionCalendar
                           mode="multi"
@@ -1044,6 +1148,243 @@ export function CustomerBookingModal({
                       </CardContent>
                     </Card>
                   )}
+                    </>
+                  )}
+
+                  {/* Sub-step 1 (Boarding): Room Type */}
+                  {currentDetailsSubStep === 1 && selectedService === "boarding" && (
+                    <div className="space-y-4">
+                      <Label className="text-base">Choose room type</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {allowDifferentRoomPerPet
+                          ? "Select a room type for each pet. Only rooms that fit your pets are shown."
+                          : "One room type will apply to all pets."}
+                      </p>
+                      {eligibleBoardingRooms.length === 0 ? (
+                        <Alert>
+                          <AlertDescription>
+                            No room types match your selected pets (type or weight). Please contact the facility.
+                          </AlertDescription>
+                        </Alert>
+                      ) : allowDifferentRoomPerPet ? (
+                        <div className="space-y-4">
+                          {selectedPets.map((pet) => {
+                            const assigned = roomAssignments.find((a) => a.petId === pet.id);
+                            return (
+                              <Card key={pet.id}>
+                                <CardContent className="p-4">
+                                  <p className="font-medium mb-3">
+                                    <PawPrint className="inline h-4 w-4 mr-1" />
+                                    {pet.name} ({pet.type}, {pet.weight} lbs)
+                                  </p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {eligibleBoardingRooms.map((room) => {
+                                      const available = room.totalRooms - room.bookedRooms;
+                                      const isSelected = assigned?.roomId === room.id;
+                                      return (
+                                        <div
+                                          key={room.id}
+                                          onClick={() => {
+                                            if (available > 0) {
+                                              setRoomAssignments((prev) => [
+                                                ...prev.filter((a) => a.petId !== pet.id),
+                                                { petId: pet.id, roomId: room.id },
+                                              ]);
+                                            }
+                                          }}
+                                          className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                            isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                                          } ${available === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                                        >
+                                          <div className="h-28 bg-muted relative">
+                                            {room.image ? (
+                                              <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center">
+                                                <Bed className="h-8 w-8 text-muted-foreground" />
+                                              </div>
+                                            )}
+                                            {isSelected && (
+                                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                                <CheckCircle className="h-4 w-4" />
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="p-3">
+                                            <p className="font-semibold">{room.name}</p>
+                                            <p className="text-primary font-bold text-sm">${room.price}/night</p>
+                                            <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                              {room.included.slice(0, 2).map((item, i) => (
+                                                <li key={i}>• {item}</li>
+                                              ))}
+                                            </ul>
+                                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                              {room.allowedPetTypes.includes("Dog") && <Dog className="h-3.5 w-3.5" />}
+                                              {room.allowedPetTypes.includes("Cat") && <Cat className="h-3.5 w-3.5" />}
+                                              {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
+                                                <span>
+                                                  {room.minWeightLbs != null && `≥${room.minWeightLbs} lbs`}
+                                                  {room.maxWeightLbs != null && ` ≤${room.maxWeightLbs} lbs`}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <p className="text-xs mt-1">
+                                              {available <= 2 ? "Limited availability" : `${available} available`}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {eligibleBoardingRooms.map((room) => {
+                            const available = room.totalRooms - room.bookedRooms;
+                            const isSelected = selectedPets.length > 0 && roomAssignments.length === selectedPets.length && roomAssignments.every((a) => a.roomId === room.id);
+                            return (
+                              <Card
+                                key={room.id}
+                                className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : ""} ${available === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                                onClick={() => {
+                                  if (available > 0) {
+                                    setRoomAssignments(selectedPets.map((p) => ({ petId: p.id, roomId: room.id })));
+                                  }
+                                }}
+                              >
+                                <CardContent className="p-0">
+                                  <div className="h-36 relative">
+                                    {room.image ? (
+                                      <img src={room.image} alt={room.name} className="w-full h-full object-cover rounded-t-lg" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
+                                        <Bed className="h-10 w-10 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    {isSelected && (
+                                      <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                        <CheckCircle className="h-5 w-5" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="p-4">
+                                    <p className="font-semibold">{room.name}</p>
+                                    <p className="text-primary font-bold">${room.price}/night</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{room.description}</p>
+                                    <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                                      {room.included.map((item, i) => (
+                                        <li key={i}>• {item}</li>
+                                      ))}
+                                    </ul>
+                                    <div className="flex items-center gap-2 mt-2 text-xs">
+                                      {room.allowedPetTypes.includes("Dog") && <Dog className="h-4 w-4" />}
+                                      {room.allowedPetTypes.includes("Cat") && <Cat className="h-4 w-4" />}
+                                      {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
+                                        <span className="text-muted-foreground">
+                                          {room.minWeightLbs != null && `≥${room.minWeightLbs} lbs`}
+                                          {room.maxWeightLbs != null && ` ≤${room.maxWeightLbs} lbs`}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                      {available <= 2 ? "Limited availability" : `${available} available`}
+                                    </p>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-step 1 (Grooming): Package */}
+                  {currentDetailsSubStep === 1 && selectedService === "grooming" && (
+                    <div className="space-y-4">
+                      <Label className="text-base">Choose a grooming package</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Select one package. Add-ons (e.g. nail trim, teeth brushing) are on the next step.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {GROOMING_PACKAGES.map((pkg) => {
+                          const isSelected = selectedGroomingPackage === pkg.id;
+                          return (
+                            <Card
+                              key={pkg.id}
+                              className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/50"}`}
+                              onClick={() => setSelectedGroomingPackage(pkg.id)}
+                            >
+                              <CardContent className="p-0">
+                                <div className="h-32 relative">
+                                  {pkg.image ? (
+                                    <img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover rounded-t-lg" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
+                                      <Scissors className="h-10 w-10 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                      <CheckCircle className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-4">
+                                  <p className="font-semibold">{pkg.name}</p>
+                                  <p className="text-primary font-bold">From ${pkg.price}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">~{pkg.durationMinutes} min</p>
+                                  <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                                    {pkg.included.map((item, i) => (
+                                      <li key={i}>• {item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-step 2 (Grooming): Add-ons */}
+                  {currentDetailsSubStep === 2 && selectedService === "grooming" && (
+                    <div className="space-y-4">
+                      <Label className="text-base">Add-ons (optional)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Nail trim, teeth brushing, blueberry facial, and more.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {GROOMING_ADDONS.map((addon) => {
+                          const isSelected = selectedGroomingAddons.includes(addon.id);
+                          return (
+                            <Card
+                              key={addon.id}
+                              className={`cursor-pointer transition-all ${isSelected ? "border-primary bg-primary/5" : ""}`}
+                              onClick={() => {
+                                setSelectedGroomingAddons((prev) =>
+                                  prev.includes(addon.id) ? prev.filter((id) => id !== addon.id) : [...prev, addon.id]
+                                );
+                              }}
+                            >
+                              <CardContent className="p-4 flex flex-row items-center justify-between">
+                                <div>
+                                  <p className="font-medium">{addon.name}</p>
+                                  <p className="text-sm text-primary font-semibold">+${addon.price}</p>
+                                </div>
+                                {isSelected && <CheckCircle className="h-5 w-5 text-primary" />}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label>Special Requests or Notes (Optional)</Label>
@@ -1079,6 +1420,43 @@ export function CustomerBookingModal({
                           ))}
                         </div>
                       </div>
+                      {selectedService === "boarding" && roomAssignments.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="font-semibold mb-2">Room type(s)</h3>
+                            <div className="space-y-1 text-muted-foreground text-sm">
+                              {roomAssignments.map((a) => {
+                                const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
+                                const pet = selectedPets.find((p) => p.id === a.petId);
+                                return (
+                                  <p key={`${a.petId}-${a.roomId}`}>
+                                    {pet?.name}: {room?.name ?? a.roomId} (${room?.price}/night)
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {selectedService === "grooming" && (selectedGroomingPackage || selectedGroomingAddons.length > 0) && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="font-semibold mb-2">Grooming</h3>
+                            <div className="space-y-1 text-sm text-muted-foreground">
+                              {selectedGroomingPackage && (
+                                <p>
+                                  Package: {GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage)?.name ?? selectedGroomingPackage}
+                                </p>
+                              )}
+                              {selectedGroomingAddons.length > 0 && (
+                                <p>Add-ons: {selectedGroomingAddons.map((id) => GROOMING_ADDONS.find((a) => a.id === id)?.name ?? id).join(", ")}</p>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
                       <Separator />
                       <div>
                         <h3 className="font-semibold mb-2">Date & Time</h3>
