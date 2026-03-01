@@ -48,6 +48,7 @@ import {
   Scissors,
   PawPrint,
   Bed,
+  Receipt,
 } from "lucide-react";
 import { DateSelectionCalendar, type DateTimeInfo } from "@/components/ui/date-selection-calendar";
 import { Booking, Pet } from "@/lib/types";
@@ -1932,9 +1933,9 @@ export function CustomerBookingModal({
                 </div>
               )}
 
-              {/* Step 6: Confirm — receipt-style review + confirm */}
+              {/* Step 6: Confirm — facility receipt-style */}
               {currentStep === 5 && (
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-2xl mx-auto">
                   {allowBookingWithoutForms && !requiredFormsStatus.allComplete && requiredFormsStatus.missing.length > 0 && (
                     <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
                       <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -1947,178 +1948,189 @@ export function CustomerBookingModal({
                       </AlertDescription>
                     </Alert>
                   )}
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <div>
-                        <h3 className="font-semibold mb-2">Service</h3>
-                        <p className="text-muted-foreground capitalize">
-                          {SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.name}
-                        </p>
-                      </div>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2">Pets</h3>
-                        <div className="space-y-1">
-                          {selectedPets.map((pet) => (
-                            <p key={pet.id} className="text-muted-foreground">
-                              {pet.name} ({pet.breed})
-                            </p>
-                          ))}
+
+                  {/* Receipt card — same style as facility ConfirmStep */}
+                  <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 px-6 py-6">
+                      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTZzLTItNC0yLTYgMi00IDItNi0yLTQtMi02IDItNCAyLTYtMi00LTIgLTYgMi00IDItNiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+                      <div className="relative flex items-center gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                          {(() => {
+                            const ServiceIcon = SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.icon ?? Receipt;
+                            return <ServiceIcon className="h-7 w-7 text-white" />;
+                          })()}
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold text-white tracking-tight">Booking Receipt</h2>
+                          <p className="text-sm text-white/90">
+                            {SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.name ?? "Pet Care Services"}
+                          </p>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Client & Pets */}
+                    <div className="p-6">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">Client</p>
+                          <p className="font-semibold text-foreground">{customer?.name ?? "—"}</p>
+                          {customer?.email && <p className="mt-0.5 text-sm text-muted-foreground">{customer.email}</p>}
+                        </div>
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Pet{selectedPets.length !== 1 ? "s" : ""}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedPets.map((pet) => (
+                              <Badge key={pet.id} variant="secondary" className="gap-1.5 px-2.5 py-1 font-medium">
+                                <PawPrint className="h-3 w-3" />
+                                {pet.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Service summary */}
+                    <div className="p-6 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold">{SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.name}</p>
+                          {selectedService === "grooming" && selectedGroomingPackage && (
+                            <p className="text-sm text-muted-foreground">
+                              {GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage)?.name}
+                            </p>
+                          )}
+                        </div>
+                        <p className="font-semibold">${calculatedPrice.toFixed(2)}</p>
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="flex justify-between items-center text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Date & Time</p>
+                          {selectedService === "daycare" && daycareDateTimes.length > 0 ? (
+                            <p>{daycareDateTimes.length} day{daycareDateTimes.length !== 1 ? "s" : ""}</p>
+                          ) : effectiveStartDate ? (
+                            <p>
+                              {new Date(effectiveStartDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              {effectiveEndDate && effectiveEndDate !== effectiveStartDate && (
+                                <> → {new Date(effectiveEndDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>
+                              )}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="text-right">
+                          <p>{effectiveCheckInTime}{effectiveCheckOutTime ? ` - ${effectiveCheckOutTime}` : ""}</p>
+                        </div>
+                      </div>
+
+                      {/* Room type (boarding) */}
                       {selectedService === "boarding" && roomAssignments.length > 0 && (
-                        <>
-                          <Separator />
-                          <div>
-                            <h3 className="font-semibold mb-2">Room type(s)</h3>
-                            <div className="space-y-1 text-muted-foreground text-sm">
-                              {roomAssignments.map((a) => {
-                                const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
-                                const pet = selectedPets.find((p) => p.id === a.petId);
-                                return (
-                                  <p key={`${a.petId}-${a.roomId}`}>
-                                    {pet?.name}: {room?.name ?? a.roomId} (${room?.price}/night)
-                                  </p>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
+                        <div className="text-sm">
+                          <p className="text-muted-foreground mb-1">Room type</p>
+                          {roomAssignments.map((a) => {
+                            const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
+                            const pet = selectedPets.find((p) => p.id === a.petId);
+                            return (
+                              <p key={`${a.petId}-${a.roomId}`}>{pet?.name}: {room?.name ?? a.roomId}</p>
+                            );
+                          })}
+                        </div>
                       )}
+
+                      {/* Grooming package/add-ons */}
                       {selectedService === "grooming" && (selectedGroomingPackage || selectedGroomingAddons.length > 0) && (
-                        <>
-                          <Separator />
-                          <div>
-                            <h3 className="font-semibold mb-2">Grooming</h3>
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              {selectedGroomingPackage && (
-                                <p>
-                                  Package: {GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage)?.name ?? selectedGroomingPackage}
-                                </p>
-                              )}
-                              {selectedGroomingAddons.length > 0 && (
-                                <p>Add-ons: {selectedGroomingAddons.map((id) => GROOMING_ADDONS.find((a) => a.id === id)?.name ?? id).join(", ")}</p>
-                              )}
-                            </div>
-                          </div>
-                        </>
+                        <div className="text-sm">
+                          {selectedGroomingPackage && (
+                            <p><span className="text-muted-foreground">Package:</span> {GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage)?.name}</p>
+                          )}
+                          {selectedGroomingAddons.length > 0 && (
+                            <p><span className="text-muted-foreground">Add-ons:</span> {selectedGroomingAddons.map((id) => GROOMING_ADDONS.find((a) => a.id === id)?.name ?? id).join(", ")}</p>
+                          )}
+                        </div>
                       )}
+
+                      {/* Add-ons (daycare/boarding) */}
                       {extraServices.length > 0 && (selectedService === "daycare" || selectedService === "boarding") && (
-                        <>
-                          <Separator />
-                          <div>
-                            <h3 className="font-semibold mb-2">Add-ons</h3>
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              {extraServices.map((es, idx) => {
-                                const addon = CUSTOMER_ADDONS.find((a) => a.id === es.serviceId);
-                                const pet = selectedPets.find((p) => p.id === es.petId);
-                                return (
-                                  <p key={`${es.serviceId}-${es.petId}-${idx}`}>
-                                    {addon?.name ?? es.serviceId}: {es.quantity}
-                                    {addon?.hasUnits ? ` ${addon.unit}` : ""}
-                                    {pet ? ` (${pet.name})` : ""}
-                                  </p>
-                                );
-                              })}
-                            </div>
+                        <div className="text-sm">
+                          <p className="text-muted-foreground mb-1">Add-ons</p>
+                          <div className="space-y-0.5">
+                            {extraServices.map((es, idx) => {
+                              const addon = CUSTOMER_ADDONS.find((a) => a.id === es.serviceId);
+                              const pet = selectedPets.find((p) => p.id === es.petId);
+                              return (
+                                <p key={`${es.serviceId}-${es.petId}-${idx}`}>
+                                  {addon?.name ?? es.serviceId} × {es.quantity}{pet ? ` (${pet.name})` : ""}
+                                </p>
+                              );
+                            })}
                           </div>
-                        </>
+                        </div>
                       )}
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2">Date & Time</h3>
-                        <p className="text-muted-foreground">
-                          {effectiveStartDate &&
-                            new Date(effectiveStartDate + "T00:00:00").toLocaleDateString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          {effectiveCheckInTime && ` at ${effectiveCheckInTime}`}
-                        </p>
-                        {effectiveEndDate && effectiveEndDate !== effectiveStartDate && (
-                          <p className="text-muted-foreground">
-                            Until{" "}
-                            {new Date(effectiveEndDate + "T00:00:00").toLocaleDateString("en-US", {
-                              month: "long",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                            {effectiveCheckOutTime && ` at ${effectiveCheckOutTime}`}
-                          </p>
-                        )}
-                        {selectedService === "daycare" && daycareDateTimes.length > 1 && (
-                          <p className="text-sm text-muted-foreground">
-                            {daycareDateTimes.length} days selected
-                          </p>
-                        )}
-                        {isRecurring && (
-                          <p className="text-muted-foreground">
-                            Recurring: {recurringFrequency}
-                          </p>
-                        )}
-                      </div>
-                      <Separator />
-                      <div>
-                        <h3 className="font-semibold mb-2">Pricing Summary</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Service:</span>
-                            <span>${calculatedPrice.toFixed(2)}</span>
+
+                      {/* Feeding/medication summary — placeholder when customer flow collects these later */}
+                      {(selectedService === "daycare" || selectedService === "boarding") && (
+                        <div className="text-sm">
+                          <p className="text-muted-foreground">Feeding / medication</p>
+                          <p className="text-muted-foreground italic">None added</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pricing breakdown */}
+                    {(() => {
+                      const taxRate = facilityConfig.pricing?.taxSettings?.taxRate ?? 0;
+                      const taxIncluded = facilityConfig.pricing?.taxSettings?.taxIncluded ?? false;
+                      const taxAmount = taxRate > 0 && !taxIncluded ? calculatedPrice * taxRate : 0;
+                      const receiptTotal = calculatedPrice + taxAmount + tipAmount;
+                      return (
+                        <div className="p-4 border-t border-dashed">
+                          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Pricing breakdown</p>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span>${calculatedPrice.toFixed(2)}</span>
+                            </div>
+                            {taxAmount > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Taxes</span>
+                                <span>${taxAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {requiresDeposit && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Deposit</span>
+                                <span>${calculatedDeposit.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Tip</span>
+                              <span>{tipAmount > 0 ? `$${tipAmount.toFixed(2)}` : "—"}</span>
+                            </div>
                           </div>
-                          {tipsEnabled && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Tip:</span>
-                              <span className={tipAmount > 0 ? "text-green-600 font-semibold" : "text-muted-foreground"}>
-                                {tipAmount > 0 ? `$${tipAmount.toFixed(2)}` : "Optional"}
-                              </span>
-                            </div>
-                          )}
-                          {tipAmount > 0 && !tipsEnabled && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Tip:</span>
-                              <span className="text-green-600 font-semibold">${tipAmount.toFixed(2)}</span>
-                            </div>
-                          )}
-                          {requiresDeposit && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Deposit:</span>
-                              <span>${calculatedDeposit.toFixed(2)}</span>
-                            </div>
-                          )}
-                          <Separator />
-                          <div className="flex justify-between text-lg font-bold">
-                            <span>Total:</span>
-                            <span className="text-primary">${totalPrice.toFixed(2)}</span>
+                          <div className="border-t-2 border-dashed pt-3 mt-3 flex justify-between items-center text-lg font-bold">
+                            <span>Total</span>
+                            <span className="text-primary">${receiptTotal.toFixed(2)}</span>
                           </div>
                           {requiresDeposit && (
-                            <p className="text-xs text-muted-foreground">
-                              {calculatedDeposit.toFixed(2)} due now, {(totalPrice - calculatedDeposit).toFixed(2)} at service
+                            <p className="text-xs text-muted-foreground mt-2">
+                              ${calculatedDeposit.toFixed(2)} due now · ${(receiptTotal - calculatedDeposit).toFixed(2)} at service
                             </p>
                           )}
                         </div>
-                      </div>
-                      {isRecurring && selectedService === "grooming" && (
-                        <>
-                          <Separator />
-                          <div>
-                            <h3 className="font-semibold mb-2">Recurring Settings</h3>
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              <p>Frequency: {recurringFrequency}</p>
-                              {recurringPreferredDays.length > 0 && (
-                                <p>Preferred days: {recurringPreferredDays.join(", ")}</p>
-                              )}
-                              <p>Time window: {recurringPreferredTimeWindow.start} - {recurringPreferredTimeWindow.end}</p>
-                              {recurringAutoPay && (
-                                <p className="text-green-600 font-medium">✓ Auto-pay enabled</p>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
+                      );
+                    })()}
+
+                    {/* Footer */}
+                    <div className="bg-muted/50 p-3 text-center border-t">
+                      <p className="text-xs text-muted-foreground">Thank you for choosing our pet care services!</p>
+                      <p className="text-xs text-muted-foreground mt-1">Receipt generated on {new Date().toLocaleDateString("en-US")}</p>
+                    </div>
+                  </div>
                 </div>
               )}
               </div>
