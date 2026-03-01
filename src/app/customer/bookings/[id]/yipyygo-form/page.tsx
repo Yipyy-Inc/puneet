@@ -192,8 +192,8 @@ export default function YipyyGoFormPage({
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!formData) return;
-    
+    if (!formData || !booking) return;
+
     setIsSubmitting(true);
     try {
       let saved = saveYipyyGoForm({
@@ -205,15 +205,15 @@ export default function YipyyGoFormPage({
       // Generate QR check-in token (booking_id + pet_id + token, no PII)
       const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
       if (!saved.qrCheckInToken) {
-        const token = getOrCreateCheckInToken(booking!.id, petId, booking!.facilityId);
+        const token = getOrCreateCheckInToken(booking.id, petId, booking.facilityId);
         saved = saveYipyyGoForm({ ...saved, qrCheckInToken: token });
       }
 
       // Audit: customer submission (original)
       logCustomerSubmission({
-        facilityId: booking!.facilityId,
-        bookingId: Number(booking!.id),
-        petId: Array.isArray(booking!.petId) ? booking!.petId[0] : booking!.petId,
+        facilityId: booking.facilityId,
+        bookingId: Number(booking.id),
+        petId: Array.isArray(booking.petId) ? booking.petId[0] : booking.petId,
         userId: MOCK_CUSTOMER_ID,
         userName: customer?.name,
         metadata: { submittedAt: saved.submittedAt },
@@ -224,8 +224,8 @@ export default function YipyyGoFormPage({
         ? `${booking.startDate} ${booking.checkInTime}`
         : booking?.startDate;
       notifyFacilityStaffYipyyGoSubmitted({
-        facilityId: booking!.facilityId,
-        bookingId: Number(booking!.id),
+        facilityId: booking.facilityId,
+        bookingId: Number(booking.id),
         petName: pet?.name ?? "Pet",
         clientName: customer?.name,
         arrivalTime,
@@ -233,7 +233,7 @@ export default function YipyyGoFormPage({
       });
 
       toast.success("YipyyGo form submitted successfully! You're check-in ready!");
-      router.push(`/customer/bookings/${booking?.id}/check-in-qr`);
+      router.push(`/customer/bookings/${booking.id}/check-in-qr`);
     } catch (error) {
       toast.error("Failed to submit form. Please try again.");
       console.error("Error submitting YipyyGo form:", error);

@@ -69,9 +69,9 @@ export function YipyyGoStaffReviewModal({
     });
     if (updated) {
       logStaffEdit({
-        facilityId: form.facilityId,
+        facilityId,
         bookingId: Number(bookingId),
-        petId: form.petId,
+        petId: form?.petId,
         staffUserId,
         details: "approved",
       });
@@ -93,9 +93,9 @@ export function YipyyGoStaffReviewModal({
     });
     if (updated) {
       logStaffEdit({
-        facilityId: form.facilityId,
+        facilityId,
         bookingId: Number(bookingId),
-        petId: form.petId,
+        petId: form?.petId,
         staffUserId,
         details: "corrections_requested",
         metadata: { message: requestChangesMessage.trim() },
@@ -122,9 +122,9 @@ export function YipyyGoStaffReviewModal({
     });
     if (updated) {
       logStaffEdit({
-        facilityId: form.facilityId,
+        facilityId,
         bookingId: Number(bookingId),
-        petId: form.petId,
+        petId: form?.petId,
         staffUserId,
         details: "internal_edit",
         metadata: { reason: internalEditReason.trim() },

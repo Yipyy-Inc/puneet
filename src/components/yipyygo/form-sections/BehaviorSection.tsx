@@ -32,7 +32,10 @@ const ENERGY_LEVELS = [
   { value: "very_high", label: "Very High" },
 ] as const;
 
-const SOCIALIZATION_OPTIONS = {
+const SOCIALIZATION_OPTIONS: {
+  withDogs: { value: BehaviorNotes["socialization"]["withDogs"]; label: string }[];
+  withHumans: { value: BehaviorNotes["socialization"]["withHumans"]; label: string }[];
+} = {
   withDogs: [
     { value: "friendly", label: "Friendly" },
     { value: "selective", label: "Selective" },
