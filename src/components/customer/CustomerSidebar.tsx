@@ -17,6 +17,7 @@ import {
   Gift,
   UserPlus,
   Package,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   GenericSidebar,
@@ -94,6 +95,11 @@ export function CustomerSidebar() {
             title: "Bookings",
             url: "/customer/bookings",
             icon: Calendar,
+          },
+          {
+            title: "YipyyGo",
+            url: "/customer/yipyygo",
+            icon: ClipboardCheck,
           },
           {
             title: "Packages & Memberships",

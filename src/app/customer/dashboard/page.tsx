@@ -31,6 +31,8 @@ import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { getYipyyGoForm, getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { reportCards } from "@/data/pet-data";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
@@ -148,7 +150,7 @@ export default function CustomerDashboardPage() {
   // Check for urgent actions
   const urgentActions = useMemo(() => {
     const actions: Array<{
-      type: "vaccination_expired" | "vaccination_expiring" | "booking_pending" | "payment_failed" | "waiver_expiring";
+      type: "vaccination_expired" | "vaccination_expiring" | "booking_pending" | "payment_failed" | "waiver_expiring" | "yipyygo_needed";
       priority: "high" | "medium";
       title: string;
       message: string;
@@ -158,6 +160,33 @@ export default function CustomerDashboardPage() {
     }> = [];
 
     if (!customer) return actions;
+
+    // Check for YipyyGo forms needed (upcoming bookings with form not submitted/approved)
+    const yipyyGoConfig = selectedFacility ? getYipyyGoConfig(selectedFacility.id) : null;
+    if (yipyyGoConfig?.enabled) {
+      const now = new Date();
+      const upcomingNeedingForm = upcomingBookings.filter((b) => {
+        const svc = b.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+        const serviceConfig = yipyyGoConfig.serviceConfigs.find((s) => s.serviceType === svc);
+        if (!serviceConfig?.enabled) return false;
+        const status = getYipyyGoDisplayStatus(b.id);
+        return status !== "approved" && status !== "submitted";
+      });
+      upcomingNeedingForm.forEach((b) => {
+        const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
+        const pet = customer.pets?.find((p) => p.id === petId);
+        const petName = pet?.name ?? "Your pet";
+        actions.push({
+          type: "yipyygo_needed",
+          priority: "medium",
+          title: `Action needed: complete YipyyGo for ${petName}'s stay`,
+          message: `Pre-check-in form for ${b.service} on ${new Date(b.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          actionLabel: "Complete form",
+          actionLink: `/customer/bookings/${b.id}/yipyygo-form`,
+          petName: pet?.name,
+        });
+      });
+    }
 
     // Check for expired vaccinations
     customerPets.forEach((pet) => {
@@ -265,7 +294,7 @@ export default function CustomerDashboardPage() {
       if (a.priority !== "high" && b.priority === "high") return 1;
       return 0;
     });
-  }, [customer, customerPets, customerBookings, selectedFacility]);
+  }, [customer, customerPets, customerBookings, upcomingBookings, selectedFacility]);
 
   // Format date/time helper
   const formatDateTime = (dateString: string, timeString?: string) => {
@@ -466,7 +495,7 @@ export default function CustomerDashboardPage() {
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="bg-gradient-to-br from-blue-600 to-white border-0 shadow-lg">
+          <Card className="bg-gradient-to-br from-primary to-white border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-6 flex-wrap">
                 <div className="flex items-center gap-4">
@@ -487,7 +516,7 @@ export default function CustomerDashboardPage() {
                     </>
                   )}
                 </div>
-                <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-white/90" asChild>
+                <Button variant="secondary" size="sm" className="bg-white text-primary hover:bg-white/90" asChild>
                   <Link href="/customer/rewards">Redeem Points</Link>
                 </Button>
               </div>

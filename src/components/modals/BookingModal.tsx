@@ -28,7 +28,11 @@ import {
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { useState } from "react";
+import Link from "next/link";
 import type { Evaluation } from "@/lib/types";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
 interface BookingModalProps {
   booking: (typeof bookings)[number];
@@ -257,6 +261,36 @@ export function BookingModal({ booking }: BookingModalProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* YipyyGo Pre-Check-In (when enabled for this service) */}
+          {(() => {
+            const yipyyGoConfig = getYipyyGoConfig(booking.facilityId);
+            const serviceType = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+            const enabled = yipyyGoConfig?.enabled && yipyyGoConfig?.serviceConfigs?.find((s) => s.serviceType === serviceType)?.enabled;
+            if (!enabled) return null;
+            const yipyyGoStatus = getYipyyGoDisplayStatus(booking.id);
+            const canReview = yipyyGoStatus === "submitted" || yipyyGoStatus === "needs_review";
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FileText className="h-4 w-4 text-primary" />
+                    YipyyGo Pre-Check-In
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-center gap-2">
+                  <YipyyGoStatusBadge status={yipyyGoStatus} showIcon />
+                  {canReview && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/facility/dashboard/bookings/${booking.id}#yipyygo`}>
+                        Review
+                      </Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Schedule Section */}
           <Card className="overflow-hidden">

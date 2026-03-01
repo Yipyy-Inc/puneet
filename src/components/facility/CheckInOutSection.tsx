@@ -38,6 +38,10 @@ import {
 import { boardingGuests, BoardingGuest } from "@/data/boarding";
 import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
 import { clients } from "@/data/clients";
+import { bookings } from "@/data/bookings";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { getYipyyGoDisplayStatusForBooking, type YipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -129,7 +133,12 @@ function normalizeToUnifiedCheckIn(
   return [...boardingItems, ...daycareItems];
 }
 
-export function CheckInOutSection() {
+interface CheckInOutSectionProps {
+  /** Facility ID for YipyyGo status (today's arrivals); omit to hide YipyyGo badges */
+  facilityId?: number;
+}
+
+export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [checkedInQuery, setCheckedInQuery] = useState("");
   const [scheduledQuery, setScheduledQuery] = useState("");
@@ -224,6 +233,31 @@ export function CheckInOutSection() {
     () => scheduledArrivals.filter((item) => matchesSearch(item, scheduledQuery)),
     [scheduledArrivals, scheduledQuery],
   );
+
+  // Resolve YipyyGo status for today's arrivals (by matching petId + date + service to booking)
+  const scheduledYipyyGoByItemId = useMemo(() => {
+    if (!facilityId || !isMounted) return new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
+    const today = new Date().toISOString().split("T")[0];
+    const config = getYipyyGoConfig(facilityId);
+    if (!config?.enabled) return new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
+    const facilityBookings = bookings.filter((b) => b.facilityId === facilityId && b.startDate === today);
+    const map = new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
+    for (const item of scheduledArrivals) {
+      const b = facilityBookings.find(
+        (booking) =>
+          (Array.isArray(booking.petId) ? booking.petId.includes(item.petId) : booking.petId === item.petId) &&
+          booking.service?.toLowerCase() === item.serviceType
+      );
+      if (!b) continue;
+      const enabled = config.serviceConfigs?.find((s) => s.serviceType === item.serviceType)?.enabled;
+      if (!enabled) continue;
+      map.set(item.id, {
+        bookingId: b.id,
+        status: getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service ?? item.serviceType }),
+      });
+    }
+    return map;
+  }, [facilityId, isMounted, scheduledArrivals]);
 
   const filteredCheckedOut = useMemo(
     () => checkedOutToday.filter((item) => matchesSearch(item, checkedOutQuery)),
@@ -836,17 +870,25 @@ export function CheckInOutSection() {
                               )}
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCheckIn(item);
-                          }}
-                          className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
-                        >
-                          <LogIn className="h-3 w-3" />
-                          Check In
-                        </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {scheduledYipyyGoByItemId.get(item.id) && (
+                            <YipyyGoStatusBadge
+                              status={scheduledYipyyGoByItemId.get(item.id)!.status}
+                              showIcon={false}
+                            />
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCheckIn(item);
+                            }}
+                            className="gap-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <LogIn className="h-3 w-3" />
+                            Check In
+                          </Button>
+                        </div>
                       </div>
                     );
                   })
