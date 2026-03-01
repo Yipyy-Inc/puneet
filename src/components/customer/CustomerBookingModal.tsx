@@ -38,12 +38,12 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
+import { DateSelectionCalendar, type DateTimeInfo } from "@/components/ui/date-selection-calendar";
 import { Booking, Pet } from "@/lib/types";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { facilityConfig } from "@/data/facility-config";
-import { vaccinationRules } from "@/data/settings";
+import { vaccinationRules, evaluationConfig } from "@/data/settings";
 import { Syringe } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
@@ -57,11 +57,9 @@ interface CustomerBookingModalProps {
 }
 
 const STEPS = [
-  { id: "pets", label: "Select Pet" },
+  { id: "pets", label: "Select Pet(s)" },
   { id: "service", label: "Select Service" },
-  { id: "date", label: "Date & Time" },
-  { id: "details", label: "Notes" },
-  { id: "payment", label: "Payment" },
+  { id: "details", label: "Details" },
   { id: "confirm", label: "Confirm" },
 ];
 
@@ -72,7 +70,18 @@ export function CustomerBookingModal({
   onBookingCreated,
 }: CustomerBookingModalProps) {
   const { selectedFacility } = useCustomerFacility();
-  const { daycare, boarding, grooming, training, bookingFlow } = useSettings();
+  const {
+    daycare,
+    boarding,
+    grooming,
+    training,
+    bookingFlow,
+    hours,
+    rules,
+    scheduleTimeOverrides,
+    dropOffPickUpOverrides,
+    serviceDateBlocks,
+  } = useSettings();
   const configs = { daycare, boarding, grooming, training };
 
   // Get customer and their pets
@@ -111,6 +120,15 @@ export function CustomerBookingModal({
   const [tipPercentage, setTipPercentage] = useState<number | null>(null);
   const [depositRequired, setDepositRequired] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
+  // Details sub-step (0 = Schedule; daycare/boarding may add Room, Add-ons, Feeding later)
+  const [currentDetailsSubStep, setCurrentDetailsSubStep] = useState(0);
+  // Daycare: multi-date + time slider
+  const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
+  const [daycareDateTimes, setDaycareDateTimes] = useState<DateTimeInfo[]>([]);
+  // Boarding: range + time slider
+  const [boardingRangeStart, setBoardingRangeStart] = useState<Date | null>(null);
+  const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(null);
+  const [boardingDateTimes, setBoardingDateTimes] = useState<DateTimeInfo[]>([]);
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
@@ -200,12 +218,92 @@ export function CustomerBookingModal({
     [customerPets, selectedPetIds]
   );
 
+  // Derived date/time for display and submit (from daycare/boarding slider state or single date/time)
+  const effectiveStartDate = useMemo(() => {
+    if (selectedService === "daycare" && daycareDateTimes.length > 0)
+      return daycareDateTimes[0].date;
+    if (selectedService === "boarding" && boardingRangeStart)
+      return boardingRangeStart.toISOString().slice(0, 10);
+    return startDate;
+  }, [selectedService, daycareDateTimes, boardingRangeStart, startDate]);
+  const effectiveEndDate = useMemo(() => {
+    if (selectedService === "boarding" && boardingRangeEnd)
+      return boardingRangeEnd.toISOString().slice(0, 10);
+    return endDate;
+  }, [selectedService, boardingRangeEnd, endDate]);
+  const effectiveCheckInTime = useMemo(() => {
+    if (selectedService === "daycare" && daycareDateTimes.length > 0)
+      return daycareDateTimes[0].checkInTime;
+    if (selectedService === "boarding" && boardingDateTimes.length > 0)
+      return boardingDateTimes[0].checkInTime;
+    return checkInTime;
+  }, [selectedService, daycareDateTimes, boardingDateTimes, checkInTime]);
+  const effectiveCheckOutTime = useMemo(() => {
+    if (selectedService === "daycare" && daycareDateTimes.length > 0)
+      return daycareDateTimes[daycareDateTimes.length - 1].checkOutTime;
+    if (selectedService === "boarding" && boardingDateTimes.length > 0)
+      return boardingDateTimes[boardingDateTimes.length - 1].checkOutTime;
+    return checkOutTime;
+  }, [selectedService, daycareDateTimes, boardingDateTimes, checkOutTime]);
+
   // Reset selected service if it's no longer available after pet selection changes
   useEffect(() => {
     if (selectedService && !availableServices.find((s) => s.id === selectedService)) {
       setSelectedService("");
     }
   }, [availableServices, selectedService]);
+
+  // Facility schedule props for DateSelectionCalendar (time slider)
+  const scheduleOverridesForService = useMemo(() => {
+    if (!selectedService) return [];
+    return scheduleTimeOverrides.filter(
+      (o) => !o.services?.length || o.services.includes(selectedService),
+    );
+  }, [selectedService, scheduleTimeOverrides]);
+
+  const dropOffPickUpWindowsByDate = useMemo(() => {
+    const map: Record<
+      string,
+      { dropOffStart: string; dropOffEnd: string; pickUpStart: string; pickUpEnd: string }
+    > = {};
+    dropOffPickUpOverrides
+      .filter((o) => o.services.includes(selectedService))
+      .forEach((o) => {
+        map[o.date] = {
+          dropOffStart: o.dropOffStart,
+          dropOffEnd: o.dropOffEnd,
+          pickUpStart: o.pickUpStart,
+          pickUpEnd: o.pickUpEnd,
+        };
+      });
+    return map;
+  }, [selectedService, dropOffPickUpOverrides]);
+
+  const { blockedDates, blockedStartDates, blockedEndDates, disabledDateMessages } = useMemo(() => {
+    const blocks = serviceDateBlocks.filter(
+      (b) => b.services.includes(selectedService),
+    );
+    const dates = blocks.filter((b) => b.closed).map((b) => {
+      const [y, m, d] = b.date.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+    const startDates: Date[] = [];
+    const endDates: Date[] = [];
+    const messages: Record<string, string> = {};
+    blocks.forEach((b) => {
+      const [y, m, d] = b.date.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      if (b.closed || b.blockCheckIn) startDates.push(date);
+      if (b.closed || b.blockCheckOut) endDates.push(date);
+      if (b.closureMessage) messages[b.date] = b.closureMessage;
+    });
+    return {
+      blockedDates: dates,
+      blockedStartDates: startDates,
+      blockedEndDates: endDates,
+      disabledDateMessages: messages,
+    };
+  }, [selectedService, serviceDateBlocks]);
 
   // Check vaccination status for a pet
   const getPetVaccinationStatus = useCallback((pet: Pet) => {
@@ -306,24 +404,42 @@ export function CustomerBookingModal({
         return selectedPetIds.length > 0;
       case 1: // Service
         return selectedService !== "";
-      case 2: // Date
-        return startDate !== "" && (selectedService !== "boarding" || endDate !== "");
-      case 3: // Notes
-        return true; // Optional
-      case 4: // Payment
-        return true; // Can always proceed
-      case 5: // Confirm
-        // Final check before confirmation
+      case 2: // Details (Schedule)
+        if (selectedService === "daycare") {
+          return daycareSelectedDates.length > 0 && daycareDateTimes.length > 0;
+        }
+        if (selectedService === "boarding") {
+          return (
+            boardingRangeStart != null &&
+            boardingRangeEnd != null &&
+            boardingDateTimes.length > 0
+          );
+        }
+        // grooming, evaluation, training: single date + time
+        return startDate !== "" && checkInTime !== "";
+      case 3: // Confirm
         if (vaccinationCompliance && !vaccinationCompliance.allCompliant) {
           if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
-            return false; // Block booking
+            return false;
           }
         }
         return true;
       default:
         return false;
     }
-  }, [currentStep, selectedService, selectedPetIds, startDate, endDate, vaccinationCompliance]);
+  }, [
+    currentStep,
+    selectedService,
+    selectedPetIds,
+    startDate,
+    checkInTime,
+    daycareSelectedDates.length,
+    daycareDateTimes.length,
+    boardingRangeStart,
+    boardingRangeEnd,
+    boardingDateTimes.length,
+    vaccinationCompliance,
+  ]);
 
   const handleNext = () => {
     if (canProceed && currentStep < STEPS.length - 1) {
@@ -362,6 +478,12 @@ export function CustomerBookingModal({
       setSelectedPetIds([]);
       setStartDate("");
       setEndDate("");
+      setCurrentDetailsSubStep(0);
+      setDaycareSelectedDates([]);
+      setDaycareDateTimes([]);
+      setBoardingRangeStart(null);
+      setBoardingRangeEnd(null);
+      setBoardingDateTimes([]);
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -450,6 +572,12 @@ export function CustomerBookingModal({
       setSelectedPetIds([]);
       setStartDate("");
       setEndDate("");
+      setCurrentDetailsSubStep(0);
+      setDaycareSelectedDates([]);
+      setDaycareDateTimes([]);
+      setBoardingRangeStart(null);
+      setBoardingRangeEnd(null);
+      setBoardingDateTimes([]);
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -467,7 +595,7 @@ export function CustomerBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="max-w-[1600px] w-[98vw] min-w-[90vw] h-[95vh] max-h-[95vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
           <DialogTitle>
             {existingBooking ? "Reschedule Booking" : "Book a Service"}
@@ -487,7 +615,7 @@ export function CustomerBookingModal({
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col">
-            <ScrollArea className="flex-1 pr-4 max-h-[calc(90vh-280px)]">
+            <ScrollArea className="flex-1 pr-4 max-h-[calc(95vh-280px)]">
               <div className="space-y-6 pb-4">
               {/* Step 1: Pet Selection */}
               {currentStep === 0 && (
@@ -568,7 +696,7 @@ export function CustomerBookingModal({
                               <div className="flex-1">
                                 <div className="flex items-center justify-between">
                                   <h3 className="font-semibold">{pet.name}</h3>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     {hasVaxIssues && (
                                       <Badge
                                         variant="destructive"
@@ -578,19 +706,39 @@ export function CustomerBookingModal({
                                         {petVaxStatus.missing.length > 0 ? "Missing Vax" : "Expired Vax"}
                                       </Badge>
                                     )}
+                                    {bookingFlow.evaluationRequired &&
+                                      bookingFlow.hideServicesUntilEvaluationCompleted &&
+                                      !hasValidEvaluation(pet) && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          Needs evaluation
+                                        </Badge>
+                                      )}
                                   </div>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                   {pet.breed} • {pet.age} years old
                                 </p>
-                                {hasVaxIssues && (
-                                  <p className="text-xs text-destructive mt-1">
-                                    {petVaxStatus.missing.length > 0 && `${petVaxStatus.missing.join(", ")} missing. `}
-                                    {petVaxStatus.expired.length > 0 && `${petVaxStatus.expired.join(", ")} expired.`}
-                                    {isBlocked && (
-                                      <span className="font-medium"> Update required before booking.</span>
+                                {(hasVaxIssues || (bookingFlow.evaluationRequired && !hasValidEvaluation(pet))) && (
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    {(hasVaxIssues || !hasValidEvaluation(pet)) && (
+                                      <a
+                                        href={`/customer/pets/${pet.id}`}
+                                        className="text-xs font-medium text-primary hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        Fix now →
+                                      </a>
                                     )}
-                                  </p>
+                                    {hasVaxIssues && (
+                                      <span className="text-xs text-destructive">
+                                        {petVaxStatus.missing.length > 0 && `${petVaxStatus.missing.join(", ")} missing. `}
+                                        {petVaxStatus.expired.length > 0 && `${petVaxStatus.expired.join(", ")} expired.`}
+                                        {isBlocked && (
+                                          <span className="font-medium"> Update required before booking.</span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -602,44 +750,54 @@ export function CustomerBookingModal({
                 </div>
               )}
 
-              {/* Step 2: Service Selection */}
+              {/* Step 2: Service Selection — same card layout as facility (image, description, from price) */}
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <Label className="text-base">Select a service</Label>
-                  
-                  {/* Mandatory Evaluation Alert */}
-                  {bookingFlow.evaluationRequired && 
-                   bookingFlow.hideServicesUntilEvaluationCompleted && 
-                   selectedPetIds.length > 0 && (
-                    (() => {
+
+                  {/* When mandatory evaluation and no pets selected: only show Evaluation + message */}
+                  {bookingFlow.evaluationRequired &&
+                    bookingFlow.hideServicesUntilEvaluationCompleted &&
+                    selectedPetIds.length === 0 && (
+                      <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription>
+                          <p className="font-semibold text-amber-800 dark:text-amber-200">
+                            Book an evaluation first
+                          </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                            You must book an evaluation before you can book any other services. Select your pet(s) above, then choose Evaluation below.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                  {/* When mandatory evaluation and some pets need evaluation: show only Evaluation + alert */}
+                  {bookingFlow.evaluationRequired &&
+                    bookingFlow.hideServicesUntilEvaluationCompleted &&
+                    selectedPetIds.length > 0 && (() => {
                       const selectedPets = customerPets.filter((p) => selectedPetIds.includes(p.id));
                       const petsNeedingEvaluation = selectedPets.filter((pet) => !hasValidEvaluation(pet));
-                      
                       if (petsNeedingEvaluation.length > 0) {
                         return (
                           <Alert className="border-warning bg-warning/10">
                             <AlertCircle className="h-4 w-4 text-warning" />
                             <AlertDescription>
-                              <div className="space-y-1">
-                                <p className="font-semibold text-warning">
-                                  Evaluation Required
-                                </p>
-                                <p className="text-sm">
-                                  {petsNeedingEvaluation.length === 1
-                                    ? `${petsNeedingEvaluation[0].name} needs to complete an evaluation before booking other services.`
-                                    : `The following pets need to complete an evaluation before booking other services: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}`}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Please book an evaluation first. Once completed and approved by the facility, you'll be able to book other services.
-                                </p>
-                              </div>
+                              <p className="font-semibold text-warning">Evaluation required</p>
+                              <p className="text-sm mt-1">
+                                {petsNeedingEvaluation.length === 1
+                                  ? `${petsNeedingEvaluation[0].name} needs to complete an evaluation before booking other services.`
+                                  : `The following pets need an evaluation first: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Book an evaluation below. Once completed and approved, you can book other services.
+                              </p>
                             </AlertDescription>
                           </Alert>
                         );
                       }
                       return null;
-                    })()
-                  )}
+                    })()}
 
                   <div className="grid grid-cols-2 gap-4">
                     {availableServices.map((service) => {
@@ -650,46 +808,81 @@ export function CustomerBookingModal({
                       const hasEvalForPets =
                         selectedPetIds.length === 0 ||
                         selectedPets.every((p) => hasValidEvaluation(p));
+                      const isEvaluation = service.id === "evaluation";
 
                       return (
-                        <Card
+                        <div
                           key={service.id}
-                          className={`cursor-pointer transition-all ${
-                            selectedService === service.id
-                              ? "ring-2 ring-primary"
-                              : "hover:border-primary/50"
-                          } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`relative border rounded-lg transition-colors overflow-hidden ${
+                            isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                          } ${
+                            selectedService === service.id && !isDisabled
+                              ? "border-primary bg-primary/5 ring-2 ring-primary"
+                              : !isDisabled
+                                ? "hover:border-primary/50"
+                                : ""
+                          }`}
                           onClick={() => !isDisabled && handleServiceSelect(service.id)}
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <Icon className="h-5 w-5 text-primary" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-1">
-                                  <h3 className="font-semibold">{service.name}</h3>
-                                  {selectedService === service.id && (
-                                    <CheckCircle className="h-5 w-5 text-primary" />
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  {service.description}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-primary">
-                                    From ${service.basePrice}
-                                  </span>
-                                  {requiresEval && !hasEvalForPets && (
-                                    <Badge variant="warning" className="text-xs">
-                                      Evaluation Required
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
+                          {requiresEval && !hasEvalForPets && !isEvaluation && (
+                            <div className="absolute top-2 left-2 z-10">
+                              <Badge variant="secondary" className="text-xs">
+                                Evaluation required
+                              </Badge>
                             </div>
-                          </CardContent>
-                        </Card>
+                          )}
+                          {config?.bannerImage ? (
+                            <div className="w-full h-32">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={config.bannerImage}
+                                alt={config.clientFacingName || service.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : service.image ? (
+                            <div className="w-full h-32">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={service.image}
+                                alt={service.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={`w-full h-32 flex items-center justify-center ${
+                                selectedService === service.id && !isDisabled
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              }`}
+                            >
+                              <Icon className="h-12 w-12" />
+                            </div>
+                          )}
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium">
+                                {isEvaluation
+                                  ? evaluationConfig.customerName
+                                  : config?.clientFacingName || service.name}
+                              </p>
+                              {selectedService === service.id && !isDisabled && (
+                                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {isEvaluation
+                                ? evaluationConfig.description
+                                : config?.slogan || service.description}
+                            </p>
+                            <p className="font-semibold text-primary">
+                              {isEvaluation
+                                ? `$${evaluationConfig.price}`
+                                : `From $${config?.basePrice ?? service.basePrice}`}
+                            </p>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -697,366 +890,175 @@ export function CustomerBookingModal({
               )}
 
 
-              {/* Step 3: Date & Time */}
+              {/* Step 3: Details — Schedule (same time selector as facility: date + time slider) */}
               {currentStep === 2 && (
                 <div className="space-y-4">
-                  {selectedService === "daycare" ? (
+                  {selectedService === "daycare" && (
                     <Card>
                       <CardContent className="p-4 space-y-4">
-                        <div>
-                          <Label className="text-base mb-3 block">Select Dates</Label>
-                          <DateSelectionCalendar
-                            mode="multi"
-                            selectedDates={startDate ? [new Date(startDate + "T00:00:00")] : []}
-                            onSelectionChange={(dates) => {
-                              if (dates.length > 0) {
-                                setStartDate(formatDateToISO(dates[0]));
-                              }
-                            }}
-                          />
-                        </div>
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Check-in Time</Label>
-                            <Input
-                              type="time"
-                              value={checkInTime}
-                              onChange={(e) => setCheckInTime(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Check-out Time</Label>
-                            <Input
-                              type="time"
-                              value={checkOutTime}
-                              onChange={(e) => setCheckOutTime(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : selectedService === "boarding" ? (
-                    <Card>
-                      <CardContent className="p-4 space-y-4">
-                        <div>
-                          <Label className="text-base mb-3 block">Select Date Range</Label>
-                          <DateSelectionCalendar
-                            mode="range"
-                            rangeStart={startDate ? new Date(startDate + "T00:00:00") : null}
-                            rangeEnd={endDate ? new Date(endDate + "T00:00:00") : null}
-                            onRangeChange={(start, end) => {
-                              if (start) setStartDate(formatDateToISO(start));
-                              if (end) setEndDate(formatDateToISO(end));
-                            }}
-                          />
-                        </div>
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Check-in Time</Label>
-                            <Input
-                              type="time"
-                              value={checkInTime}
-                              onChange={(e) => setCheckInTime(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Check-out Time</Label>
-                            <Input
-                              type="time"
-                              value={checkOutTime}
-                              onChange={(e) => setCheckOutTime(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : selectedService === "grooming" ? (
-                    <div className="space-y-4">
-                      <Card>
-                        <CardContent className="p-4 space-y-4">
-                          <div>
-                            <Label className="text-base mb-3 block">Select Date</Label>
-                            <DateSelectionCalendar
-                              mode="single"
-                              selectedDates={startDate ? [new Date(startDate + "T00:00:00")] : []}
-                              onSelectionChange={(dates) => {
-                                if (dates.length > 0) {
-                                  setStartDate(formatDateToISO(dates[0]));
-                                }
-                              }}
-                            />
-                          </div>
-                          <Separator />
-                          <div className="space-y-2">
-                            <Label>Appointment Time</Label>
-                            <Input
-                              type="time"
-                              value={checkInTime}
-                              onChange={(e) => setCheckInTime(e.target.value)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Separator />
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={isRecurring}
-                          onCheckedChange={(checked) => setIsRecurring(checked === true)}
+                        <Label className="text-base">Select Daycare Days</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Drop-off and pick-up times use the same time slider as the facility booking flow.
+                        </p>
+                        <DateSelectionCalendar
+                          mode="multi"
+                          selectedDates={daycareSelectedDates}
+                          onSelectionChange={setDaycareSelectedDates}
+                          showTimeSelection
+                          dateTimes={daycareDateTimes}
+                          onDateTimesChange={setDaycareDateTimes}
+                          facilityHours={hours}
+                          scheduleTimeOverrides={scheduleOverridesForService}
+                          dropOffPickUpWindowsByDate={dropOffPickUpWindowsByDate}
+                          bookingRules={{
+                            minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                            maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                          }}
+                          disabledDates={blockedDates}
+                          disabledDateMessages={disabledDateMessages}
                         />
-                        <Label>Make this a recurring appointment</Label>
-                      </div>
-                      {isRecurring && (
-                        <div className="grid grid-cols-2 gap-4 pl-6">
-                          <div className="space-y-2">
-                            <Label>Frequency</Label>
-                            <Select
-                              value={recurringFrequency}
-                              onValueChange={(value: "weekly" | "biweekly" | "monthly") =>
-                                setRecurringFrequency(value)
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>End Date (Optional)</Label>
-                            <Input
-                              type="date"
-                              value={recurringEndDate}
-                              onChange={(e) => setRecurringEndDate(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Card>
-                        <CardContent className="p-4 space-y-4">
-                          <div>
-                            <Label className="text-base mb-3 block">Select Date</Label>
-                            <DateSelectionCalendar
-                              mode="single"
-                              selectedDates={startDate ? [new Date(startDate + "T00:00:00")] : []}
-                              onSelectionChange={(dates) => {
-                                if (dates.length > 0) {
-                                  setStartDate(formatDateToISO(dates[0]));
-                                }
-                              }}
-                            />
-                          </div>
-                          <Separator />
-                          <div className="space-y-2">
-                            <Label>Time</Label>
-                            <Input
-                              type="time"
-                              value={checkInTime}
-                              onChange={(e) => setCheckInTime(e.target.value)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                      </CardContent>
+                    </Card>
                   )}
-                </div>
-              )}
+                  {selectedService === "boarding" && (
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <Label className="text-base">Select Boarding Dates</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Choose check-in and check-out dates, then set times with the slider (same as facility).
+                        </p>
+                        <DateSelectionCalendar
+                          mode="range"
+                          rangeStart={boardingRangeStart}
+                          rangeEnd={boardingRangeEnd}
+                          onRangeChange={(start, end) => {
+                            setBoardingRangeStart(start);
+                            setBoardingRangeEnd(end);
+                            if (start) setStartDate(formatDateToISO(start));
+                            if (end) setEndDate(formatDateToISO(end));
+                          }}
+                          showTimeSelection
+                          dateTimes={boardingDateTimes}
+                          onDateTimesChange={(times) => {
+                            setBoardingDateTimes(times);
+                            if (times.length > 0) {
+                              setCheckInTime(times[0].checkInTime);
+                              setCheckOutTime(times[times.length - 1].checkOutTime);
+                            }
+                          }}
+                          facilityHours={hours}
+                          scheduleTimeOverrides={scheduleOverridesForService}
+                          dropOffPickUpWindowsByDate={dropOffPickUpWindowsByDate}
+                          bookingRules={{
+                            minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                            maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                          }}
+                          disabledStartDates={blockedStartDates}
+                          disabledEndDates={blockedEndDates}
+                          disabledDateMessages={disabledDateMessages}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                  {(selectedService === "grooming" || selectedService === "evaluation" || selectedService === "training") && (
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <Label className="text-base">
+                          {selectedService === "grooming" ? "Appointment Date & Time" : "Select Date & Time"}
+                        </Label>
+                        <DateSelectionCalendar
+                          mode="single"
+                          selectedDates={startDate ? [new Date(startDate + "T00:00:00")] : []}
+                          onSelectionChange={(dates) => {
+                            if (dates.length > 0) setStartDate(formatDateToISO(dates[0]));
+                          }}
+                          showTimeSelection
+                          dateTimes={
+                            startDate
+                              ? [
+                                  {
+                                    date: startDate,
+                                    checkInTime: checkInTime,
+                                    checkOutTime: checkInTime,
+                                  },
+                                ]
+                              : []
+                          }
+                          onDateTimesChange={(times) => {
+                            if (times.length > 0) {
+                              setStartDate(times[0].date);
+                              setCheckInTime(times[0].checkInTime);
+                            }
+                          }}
+                          facilityHours={hours}
+                          scheduleTimeOverrides={scheduleOverridesForService}
+                          bookingRules={{
+                            minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                            maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                          }}
+                          disabledDates={blockedDates}
+                          disabledDateMessages={disabledDateMessages}
+                        />
+                        {selectedService === "grooming" && (
+                          <>
+                            <Separator />
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={isRecurring}
+                                onCheckedChange={(checked) => setIsRecurring(checked === true)}
+                              />
+                              <Label>Make this a recurring appointment</Label>
+                            </div>
+                            {isRecurring && (
+                              <div className="grid grid-cols-2 gap-4 pl-6">
+                                <div className="space-y-2">
+                                  <Label>Frequency</Label>
+                                  <Select
+                                    value={recurringFrequency}
+                                    onValueChange={(value: "weekly" | "biweekly" | "monthly") =>
+                                      setRecurringFrequency(value)
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="weekly">Weekly</SelectItem>
+                                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                                      <SelectItem value="monthly">Monthly</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>End Date (Optional)</Label>
+                                  <Input
+                                    type="date"
+                                    value={recurringEndDate}
+                                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
-              {/* Step 4: Notes */}
-              {currentStep === 3 && (
-                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Special Requests or Notes (Optional)</Label>
                     <Textarea
                       placeholder="Any special instructions or requests..."
                       value={specialRequests}
                       onChange={(e) => setSpecialRequests(e.target.value)}
-                      rows={4}
+                      rows={3}
                     />
                   </div>
                 </div>
               )}
 
-              {/* Step 5: Payment */}
-              {currentStep === 4 && (
-                <div className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-3">Pricing Summary</h3>
-                      <Card>
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Service:</span>
-                            <span>${calculatedPrice.toFixed(2)}</span>
-                          </div>
-                          {tipsEnabled && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Tip:</span>
-                              <span className={tipAmount > 0 ? "text-green-600 font-semibold" : "text-muted-foreground"}>
-                                {tipAmount > 0 ? `$${tipAmount.toFixed(2)}` : "Optional"}
-                              </span>
-                            </div>
-                          )}
-                          <Separator />
-                          <div className="flex justify-between text-lg font-bold">
-                            <span>Total:</span>
-                            <span className="text-primary">${totalPrice.toFixed(2)}</span>
-                          </div>
-                          {requiresDeposit && (
-                            <>
-                              <Separator />
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Deposit Required:</span>
-                                <span className="font-semibold">${calculatedDeposit.toFixed(2)}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {facilityConfig.bookingRules.deposits.refundable ? "Refundable" : "Non-refundable"} deposit
-                              </p>
-                            </>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {tipsEnabled && (
-                      <div>
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                          <span>💝</span>
-                          <span>Add a Tip (Optional)</span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Show your appreciation to the team who cares for your pet!
-                        </p>
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-4 gap-2">
-                            {tipPercentages.map((percent) => (
-                              <Button
-                                key={percent}
-                                variant={tipPercentage === percent ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleTipPercentage(percent)}
-                                className="text-sm"
-                              >
-                                {percent}%
-                              </Button>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              placeholder="Custom amount"
-                              value={customTipAmount}
-                              onChange={(e) => handleCustomTip(e.target.value)}
-                              className="flex-1"
-                              min="0"
-                              step="0.01"
-                            />
-                            <span className="text-sm text-muted-foreground">or</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setTipAmount(0);
-                                setTipPercentage(null);
-                                setCustomTipAmount("");
-                              }}
-                            >
-                              No tip
-                            </Button>
-                          </div>
-                          {tipAmount > 0 && (
-                            <p className="text-sm text-green-600 font-medium">
-                              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the team.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Recurring Options for Grooming */}
-                    {isRecurring && selectedService === "grooming" && (
-                      <div className="space-y-4 border-t pt-4">
-                        <div>
-                          <h3 className="font-semibold mb-3">Recurring Appointment Settings</h3>
-                          <Card>
-                            <CardContent className="p-4 space-y-4">
-                              <div className="space-y-2">
-                                <Label>Preferred Days</Label>
-                                <div className="grid grid-cols-7 gap-2">
-                                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
-                                    <Button
-                                      key={day}
-                                      variant={recurringPreferredDays.includes(day) ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => {
-                                        if (recurringPreferredDays.includes(day)) {
-                                          setRecurringPreferredDays(recurringPreferredDays.filter(d => d !== day));
-                                        } else {
-                                          setRecurringPreferredDays([...recurringPreferredDays, day]);
-                                        }
-                                      }}
-                                    >
-                                      {day}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label>Preferred Time Window Start</Label>
-                                  <Input
-                                    type="time"
-                                    value={recurringPreferredTimeWindow.start}
-                                    onChange={(e) => setRecurringPreferredTimeWindow({
-                                      ...recurringPreferredTimeWindow,
-                                      start: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Preferred Time Window End</Label>
-                                  <Input
-                                    type="time"
-                                    value={recurringPreferredTimeWindow.end}
-                                    onChange={(e) => setRecurringPreferredTimeWindow({
-                                      ...recurringPreferredTimeWindow,
-                                      end: e.target.value
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              <Separator />
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={recurringAutoPay}
-                                  onCheckedChange={(checked) => setRecurringAutoPay(checked === true)}
-                                />
-                                <div className="flex-1">
-                                  <Label className="cursor-pointer">Enable Auto-Pay</Label>
-                                  <p className="text-xs text-muted-foreground">
-                                    Automatically charge your saved card on file for each recurring appointment
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 6: Confirm */}
-              {currentStep === 5 && (
+              {/* Step 4: Confirm — receipt-style review + tip + confirm */}
+              {currentStep === 3 && (
                 <div className="space-y-4">
                   <Card>
                     <CardContent className="p-6 space-y-4">
@@ -1081,23 +1083,29 @@ export function CustomerBookingModal({
                       <div>
                         <h3 className="font-semibold mb-2">Date & Time</h3>
                         <p className="text-muted-foreground">
-                          {new Date(startDate).toLocaleDateString("en-US", {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                          {checkInTime && ` at ${checkInTime}`}
+                          {effectiveStartDate &&
+                            new Date(effectiveStartDate + "T00:00:00").toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          {effectiveCheckInTime && ` at ${effectiveCheckInTime}`}
                         </p>
-                        {endDate && (
+                        {effectiveEndDate && effectiveEndDate !== effectiveStartDate && (
                           <p className="text-muted-foreground">
                             Until{" "}
-                            {new Date(endDate).toLocaleDateString("en-US", {
+                            {new Date(effectiveEndDate + "T00:00:00").toLocaleDateString("en-US", {
                               month: "long",
                               day: "numeric",
                               year: "numeric",
                             })}
-                            {checkOutTime && ` at ${checkOutTime}`}
+                            {effectiveCheckOutTime && ` at ${effectiveCheckOutTime}`}
+                          </p>
+                        )}
+                        {selectedService === "daycare" && daycareDateTimes.length > 1 && (
+                          <p className="text-sm text-muted-foreground">
+                            {daycareDateTimes.length} days selected
                           </p>
                         )}
                         {isRecurring && (
@@ -1114,12 +1122,18 @@ export function CustomerBookingModal({
                             <span className="text-muted-foreground">Service:</span>
                             <span>${calculatedPrice.toFixed(2)}</span>
                           </div>
-                          {tipAmount > 0 && (
+                          {tipsEnabled && (
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Tip:</span>
-                              <span className="text-green-600 font-semibold">
-                                ${tipAmount.toFixed(2)}
+                              <span className={tipAmount > 0 ? "text-green-600 font-semibold" : "text-muted-foreground"}>
+                                {tipAmount > 0 ? `$${tipAmount.toFixed(2)}` : "Optional"}
                               </span>
+                            </div>
+                          )}
+                          {tipAmount > 0 && !tipsEnabled && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Tip:</span>
+                              <span className="text-green-600 font-semibold">${tipAmount.toFixed(2)}</span>
                             </div>
                           )}
                           {requiresDeposit && (
@@ -1135,12 +1149,62 @@ export function CustomerBookingModal({
                           </div>
                           {requiresDeposit && (
                             <p className="text-xs text-muted-foreground">
-                              {calculatedDeposit.toFixed(2)} due now, {((totalPrice - calculatedDeposit).toFixed(2))} at service
+                              {calculatedDeposit.toFixed(2)} due now, {(totalPrice - calculatedDeposit).toFixed(2)} at service
                             </p>
                           )}
                         </div>
                       </div>
-                      {isRecurring && (
+                      {tipsEnabled && (
+                        <div className="pt-4 space-y-3">
+                          <h3 className="font-semibold flex items-center gap-2">
+                            <span>💝</span> Add a Tip (Optional)
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Show your appreciation to the team who cares for your pet!
+                          </p>
+                          <div className="grid grid-cols-4 gap-2">
+                            {tipPercentages.map((percent) => (
+                              <Button
+                                key={percent}
+                                variant={tipPercentage === percent ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleTipPercentage(percent)}
+                                className="text-sm"
+                              >
+                                {percent}%
+                              </Button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Custom amount"
+                              value={customTipAmount}
+                              onChange={(e) => handleCustomTip(e.target.value)}
+                              className="flex-1"
+                              min="0"
+                              step="0.01"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setTipAmount(0);
+                                setTipPercentage(null);
+                                setCustomTipAmount("");
+                              }}
+                            >
+                              No tip
+                            </Button>
+                          </div>
+                          {tipAmount > 0 && (
+                            <p className="text-sm text-green-600 font-medium">
+                              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the team.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {isRecurring && selectedService === "grooming" && (
                         <>
                           <Separator />
                           <div>
