@@ -8,7 +8,7 @@ import { FileText, ChevronRight } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
 interface YipyyGoPendingWidgetProps {
@@ -25,8 +25,8 @@ export function YipyyGoPendingWidget({ facilityId, maxItems = 5 }: YipyyGoPendin
     const st = b.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
     const enabled = config.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
     if (!enabled) return false;
-    const status = getYipyyGoDisplayStatus(b.id);
-    return status === "submitted" || status === "needs_review";
+    const status = getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service });
+    return status === "submitted" || status === "needs_review" || status === "precheck_missing";
   });
 
   const displayList = pendingBookings.slice(0, maxItems);
@@ -49,7 +49,7 @@ export function YipyyGoPendingWidget({ facilityId, maxItems = 5 }: YipyyGoPendin
           const client = clients.find((c) => c.id === b.clientId);
           const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
           const pet = client?.pets?.find((p) => p.id === petId);
-          const status = getYipyyGoDisplayStatus(b.id);
+          const status = getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service });
           return (
             <Link
               key={b.id}

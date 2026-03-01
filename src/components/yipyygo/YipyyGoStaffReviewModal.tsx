@@ -30,6 +30,7 @@ import {
   updateYipyyGoStaffStatus,
   setYipyyGoManuallyCompleted,
   saveYipyyGoForm,
+  createStubYipyyGoFormManuallyCompleted,
 } from "@/data/yipyygo-forms";
 import { logStaffEdit, logStaffManualComplete } from "@/lib/checkin-audit";
 
@@ -152,19 +153,35 @@ export function YipyyGoStaffReviewModal({
     }
   };
 
+  const handleManualCompleteNoForm = () => {
+    createStubYipyyGoFormManuallyCompleted({
+      bookingId: Number(bookingId),
+      facilityId,
+      completedBy: staffUserId,
+    });
+    logStaffManualComplete({
+      facilityId,
+      bookingId: Number(bookingId),
+      staffUserId,
+    });
+    toast.success("Marked as manually completed (no form on file)");
+    onApproved?.();
+    onOpenChange(false);
+  };
+
   if (!form) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <p className="text-muted-foreground">No YipyyGo form found for this booking.</p>
           <p className="text-sm text-muted-foreground">
-            You can mark as manually completed if the customer did not submit.
+            You can mark as manually completed if the customer did not submit. This is logged for audit.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            <Button onClick={() => setManualCompleteOpen(true)}>Mark Manually Completed</Button>
+            <Button onClick={handleManualCompleteNoForm}>Mark Manually Completed</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

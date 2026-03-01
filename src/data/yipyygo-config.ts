@@ -109,6 +109,9 @@ export interface FormTemplateConfig {
   
   // Multi-pet behavior
   multiPetBehavior: MultiPetBehavior;
+
+  /** Shared add-ons: apply to whole booking vs per-pet (when multi-pet) */
+  addOnsScope: "booking" | "per_pet";
   
   // Custom questions (global, not section-specific)
   globalCustomQuestions: CustomQuestion[];
@@ -220,6 +223,7 @@ export const defaultFormTemplate: FormTemplateConfig = {
     tipSection: false,
   },
   multiPetBehavior: "one_form_per_pet",
+  addOnsScope: "booking",
   globalCustomQuestions: [],
 };
 

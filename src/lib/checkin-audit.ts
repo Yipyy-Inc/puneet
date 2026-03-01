@@ -7,6 +7,7 @@ export type CheckInAuditAction =
   | "customer_submission"   // Customer submitted YipyyGo form
   | "staff_edit"            // Staff edited/approved/requested changes
   | "staff_manual_complete" // Staff marked form complete without customer
+  | "staff_override"        // Staff checked in without pre-check; reason logged
   | "check_in_completed";   // Stay check-in completed (QR or manual)
 
 export interface CheckInAuditEntry {
@@ -105,6 +106,29 @@ export function logStaffManualComplete(params: {
     userName: params.staffUserName,
     actorType: "staff",
     details: "Form marked complete by staff",
+  });
+}
+
+/** Log when staff overrides mandatory pre-check and checks in (reason required). */
+export function logStaffOverride(params: {
+  facilityId: number;
+  bookingId: number;
+  petId?: number;
+  staffUserId: number;
+  staffUserName?: string;
+  reason: string;
+  metadata?: Record<string, unknown>;
+}): CheckInAuditEntry {
+  return logCheckInAudit({
+    action: "staff_override",
+    facilityId: params.facilityId,
+    bookingId: params.bookingId,
+    petId: params.petId,
+    userId: params.staffUserId,
+    userName: params.staffUserName,
+    actorType: "staff",
+    details: `Pre-check override: ${params.reason}`,
+    metadata: params.metadata,
   });
 }
 

@@ -19,6 +19,7 @@ const LABELS: Record<YipyyGoDisplayStatus, string> = {
   submitted: "Submitted",
   approved: "Approved",
   needs_review: "Needs Review",
+  precheck_missing: "PreCheck Missing",
 };
 
 const VARIANTS: Record<
@@ -31,6 +32,7 @@ const VARIANTS: Record<
   submitted: "default",
   approved: "default",
   needs_review: "destructive",
+  precheck_missing: "destructive",
 };
 
 const ICONS: Record<YipyyGoDisplayStatus, LucideIcon> = {
@@ -40,6 +42,7 @@ const ICONS: Record<YipyyGoDisplayStatus, LucideIcon> = {
   submitted: Clock,
   approved: CheckCircle2,
   needs_review: AlertCircle,
+  precheck_missing: AlertCircle,
 };
 
 interface YipyyGoStatusBadgeProps {

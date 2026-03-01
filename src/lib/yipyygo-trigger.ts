@@ -113,16 +113,24 @@ export function shouldTriggerYipyyGo(
   // Check if booking was created last-minute (inside initial send window)
   const isLastMinute = hoursUntilCheckIn <= config.timing.initialSendTime;
 
-  // Check if we're past the deadline (too late to send)
-  if (hoursUntilCheckIn <= config.timing.deadline) {
+  // Late booking: if inside send window, trigger immediately even if past form deadline.
+  // Deadline is still enforced on the form (checkFormDeadline) relative to check-in.
+  if (hoursUntilCheckIn <= 0) {
     return {
       shouldTrigger: false,
-      reason: `Check-in is within ${config.timing.deadline} hours - past deadline`,
+      reason: "Check-in time has passed",
+      sendImmediately: false,
+    };
+  }
+  if (hoursUntilCheckIn <= config.timing.deadline && !isLastMinute) {
+    return {
+      shouldTrigger: false,
+      reason: `Check-in is within ${config.timing.deadline} hours - past send window`,
       sendImmediately: false,
     };
   }
 
-  // Determine send time
+  // When inside send window (last-minute), trigger immediately so customer still gets the form
   const sendImmediately = isLastMinute;
   const scheduledSendTime = isLastMinute
     ? undefined

@@ -40,7 +40,7 @@ import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { getYipyyGoDisplayStatus, type YipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { getYipyyGoDisplayStatusForBooking, type YipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
 // Map pet IDs to dog images
@@ -251,7 +251,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
       if (!b) continue;
       const enabled = config.serviceConfigs?.find((s) => s.serviceType === item.serviceType)?.enabled;
       if (!enabled) continue;
-      map.set(item.id, { bookingId: b.id, status: getYipyyGoDisplayStatus(b.id) });
+      map.set(item.id, {
+        bookingId: b.id,
+        status: getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service ?? item.serviceType }),
+      });
     }
     return map;
   }, [facilityId, isMounted, scheduledArrivals]);

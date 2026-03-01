@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { getYipyyGoForm, getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { getYipyyGoForm, getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { YipyyGoStaffReviewModal } from "@/components/yipyygo/YipyyGoStaffReviewModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -45,8 +45,21 @@ export default function FacilityBookingDetailPage({
     [booking]
   );
 
-  const yipyyGoForm = useMemo(() => getYipyyGoForm(bookingId), [bookingId]);
-  const yipyyGoStatus = useMemo(() => getYipyyGoDisplayStatus(bookingId), [bookingId]);
+  const petIdForForm = useMemo(() => {
+    if (!booking) return undefined;
+    return Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+  }, [booking]);
+  const yipyyGoForm = useMemo(() => getYipyyGoForm(bookingId, petIdForForm), [bookingId, petIdForForm]);
+  const yipyyGoStatus = useMemo(
+    () =>
+      booking
+        ? getYipyyGoDisplayStatusForBooking(bookingId, {
+            facilityId: booking.facilityId,
+            service: booking.service,
+          })
+        : "not_sent",
+    [bookingId, booking]
+  );
 
   const serviceType = booking?.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
   const yipyyGoEnabled =

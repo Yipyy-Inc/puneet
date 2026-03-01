@@ -4,6 +4,8 @@
  * Defines the data structures for YipyyGo pre-check-in forms
  */
 
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
+
 // ============================================================================
 // Form Data Types
 // ============================================================================
@@ -298,29 +300,39 @@ const mockVerificationCodes: YipyyGoVerificationCode[] = [];
 // Utility Functions
 // ============================================================================
 
-/** Display status for staff UI: Not Sent / Sent / Incomplete / Submitted / Approved / Needs Review */
+/** Display status for staff UI: Not Sent / Sent / Incomplete / Submitted / Approved / Needs Review / PreCheck Missing */
 export type YipyyGoDisplayStatus =
   | "not_sent"
   | "sent"
   | "incomplete"
   | "submitted"
   | "approved"
-  | "needs_review";
+  | "needs_review"
+  | "precheck_missing";
 
-export function getYipyyGoForm(bookingId: number | string): YipyyGoFormData | null {
-  return mockYipyyGoForms.find((f) => f.bookingId === bookingId) || null;
+export function getYipyyGoForm(bookingId: number | string, petId?: number): YipyyGoFormData | null {
+  const list = mockYipyyGoForms.filter((f) => f.bookingId === bookingId);
+  if (petId != null) {
+    const byPet = list.find((f) => f.petId === petId);
+    return byPet ?? list[0] ?? null;
+  }
+  return list[0] ?? null;
 }
 
-/** Derive display status for a booking (for staff lists and badges) */
-export function getYipyyGoDisplayStatus(bookingId: number | string): YipyyGoDisplayStatus {
-  const form = getYipyyGoForm(bookingId);
+/** All forms for a booking (for multi-pet: one form per pet). */
+export function getYipyyGoFormsByBooking(bookingId: number | string): YipyyGoFormData[] {
+  return mockYipyyGoForms.filter((f) => f.bookingId === bookingId);
+}
+
+/** Derive display status for a booking (for staff lists and badges). Does not consider mandatory. */
+export function getYipyyGoDisplayStatus(bookingId: number | string, _petId?: number): YipyyGoDisplayStatus {
+  const form = getYipyyGoForm(bookingId, _petId);
   if (!form) return "not_sent";
   if (form.manuallyCompletedAt) return "approved";
   if (form.staffStatus === "approved") return "approved";
   if (form.staffStatus === "needs_review" || form.staffStatus === "corrections_requested")
     return "needs_review";
   if (form.submittedAt) return "submitted";
-  // Form exists but not submitted: consider "incomplete" if they have meaningful data, else "sent"
   const hasData =
     (form.belongings && form.belongings.length > 0) ||
     (form.feedingInstructions && (form.feedingInstructions.portionSize || form.feedingInstructions.foodType)) ||
@@ -328,6 +340,25 @@ export function getYipyyGoDisplayStatus(bookingId: number | string): YipyyGoDisp
     (form.behaviorNotes && form.behaviorNotes.energyLevel) ||
     (form.addOns && form.addOns.some((a) => a.selected));
   return hasData ? "incomplete" : "sent";
+}
+
+/**
+ * Display status for a booking in facility context: when YipyyGo is mandatory and not submitted/approved,
+ * returns "precheck_missing" so staff see "PreCheck Missing" and can complete manually or override.
+ */
+export function getYipyyGoDisplayStatusForBooking(
+  bookingId: number | string,
+  options: { facilityId: number; service?: string }
+): YipyyGoDisplayStatus {
+  const base = getYipyyGoDisplayStatus(bookingId);
+  if (base === "approved") return base;
+  const config = getYipyyGoConfig(options.facilityId);
+  if (!config?.enabled || !options.service) return base;
+  const svc = options.service.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+  const serviceConfig = config.serviceConfigs.find((s) => s.serviceType === svc);
+  const isMandatory = serviceConfig?.enabled && serviceConfig?.requirement === "mandatory";
+  if (isMandatory) return "precheck_missing";
+  return base;
 }
 
 export function saveYipyyGoForm(formData: YipyyGoFormData): YipyyGoFormData {
@@ -385,6 +416,39 @@ export function setYipyyGoManuallyCompleted(
     reviewedBy: completedBy,
   };
   return saveYipyyGoForm(updated);
+}
+
+/** Create a stub form when staff marks "manually completed" and no form existed (logged for audit). */
+export function createStubYipyyGoFormManuallyCompleted(params: {
+  bookingId: number | string;
+  facilityId: number;
+  completedBy: number;
+  clientId?: number;
+  petId?: number;
+  petName?: string;
+}): YipyyGoFormData {
+  const now = new Date().toISOString();
+  const stub: YipyyGoFormData = {
+    bookingId: params.bookingId,
+    clientId: params.clientId ?? 0,
+    petId: params.petId ?? 0,
+    petName: params.petName ?? "—",
+    facilityId: params.facilityId,
+    belongings: [],
+    medications: [],
+    noMedications: true,
+    addOns: [],
+    isLocked: false,
+    deadline: now,
+    canEdit: false,
+    manuallyCompletedAt: now,
+    manuallyCompletedBy: params.completedBy,
+    staffStatus: "approved",
+    reviewedAt: now,
+    reviewedBy: params.completedBy,
+  };
+  mockYipyyGoForms.push(stub);
+  return stub;
 }
 
 export function generateVerificationCode(
