@@ -13,6 +13,7 @@ import {
   checkFormDeadline,
   type YipyyGoFormData,
 } from "@/data/yipyygo-forms";
+import { notifyFacilityStaffYipyyGoSubmitted } from "@/data/facility-notifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,7 +196,20 @@ export default function YipyyGoFormPage({
         submittedAt: new Date().toISOString(),
         submittedBy: MOCK_CUSTOMER_ID,
       });
-      
+
+      // Notify facility staff (in-app + optional email)
+      const arrivalTime = booking?.checkInTime
+        ? `${booking.startDate} ${booking.checkInTime}`
+        : booking?.startDate;
+      notifyFacilityStaffYipyyGoSubmitted({
+        facilityId: booking!.facilityId,
+        bookingId: Number(booking!.id),
+        petName: pet?.name ?? "Pet",
+        clientName: customer?.name,
+        arrivalTime,
+        sendEmail: yipyyGoConfig?.notifyStaffEmailOnSubmit ?? false,
+      });
+
       toast.success("YipyyGo form submitted successfully! You're check-in ready!");
       router.push(`/customer/bookings/${booking?.id}`);
     } catch (error) {

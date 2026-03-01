@@ -9,6 +9,7 @@ import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigPro
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
+import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { CallingButton } from "@/components/layout/CallingButton";
 
 export default async function FacilityLayout({
@@ -41,6 +42,7 @@ export default async function FacilityLayout({
                   {/* Calling Button - Static on top bar */}
                   <CallingButton />
                   <TopBarIconsNext />
+                  <FacilityNotificationsDropdown facilityId={11} />
                   <BookingRequestsTopbarDropdown />
                 </div>
                 <FacilityHeader />

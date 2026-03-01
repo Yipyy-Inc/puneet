@@ -118,19 +118,28 @@ export interface FormTemplateConfig {
 // Complete YipyyGo Configuration
 // ============================================================================
 
+/** Add-ons approval: auto adds to invoice; staff_approval adds as pending until staff approves */
+export type YipyyGoAddOnsApproval = "auto" | "staff_approval";
+
 export interface YipyyGoConfig {
   facilityId: number;
   enabled: boolean;
-  
+
   // Service scope
   serviceConfigs: ServiceYipyyGoConfig[];
-  
+
   // Timing & reminders
   timing: TimingConfig;
-  
+
   // Form template
   formTemplate: FormTemplateConfig;
-  
+
+  /** Add-ons from YipyyGo form: auto-approve (add to invoice) or require staff approval (pending add-on) */
+  addOnsApproval: YipyyGoAddOnsApproval;
+
+  /** Notify staff via email when customer submits form (in-app notification always sent) */
+  notifyStaffEmailOnSubmit: boolean;
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -216,6 +225,8 @@ export const defaultFormTemplate: FormTemplateConfig = {
 
 export const defaultYipyyGoConfig: Omit<YipyyGoConfig, "facilityId" | "createdAt" | "updatedAt" | "updatedBy"> = {
   enabled: false,
+  addOnsApproval: "staff_approval",
+  notifyStaffEmailOnSubmit: false,
   serviceConfigs: [
     {
       serviceType: "daycare",
@@ -250,6 +261,8 @@ const mockYipyyGoConfigs: YipyyGoConfig[] = [
   {
     ...defaultYipyyGoConfig,
     facilityId: 1,
+    addOnsApproval: "staff_approval",
+    notifyStaffEmailOnSubmit: false,
     enabled: true,
     serviceConfigs: [
       {
@@ -298,6 +311,23 @@ const mockYipyyGoConfigs: YipyyGoConfig[] = [
     createdAt: "2024-01-15T10:00:00Z",
     updatedAt: "2024-01-20T14:30:00Z",
     updatedBy: 1,
+  },
+  // Facility 11 (main app facility) – YipyyGo enabled for daycare, boarding, grooming
+  {
+    ...defaultYipyyGoConfig,
+    facilityId: 11,
+    enabled: true,
+    addOnsApproval: "staff_approval",
+    notifyStaffEmailOnSubmit: false,
+    serviceConfigs: [
+      { serviceType: "daycare", enabled: true, requirement: "optional" },
+      { serviceType: "boarding", enabled: true, requirement: "optional" },
+      { serviceType: "grooming", enabled: true, requirement: "optional" },
+      { serviceType: "training", enabled: false, requirement: "optional" },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    updatedBy: 0,
   },
 ];
 

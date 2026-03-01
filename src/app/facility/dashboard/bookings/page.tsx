@@ -46,7 +46,11 @@ import {
   CalendarX,
   CheckSquare,
   Pencil,
+  FileText,
 } from "lucide-react";
+import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -362,6 +366,26 @@ export default function FacilityBookingsPage() {
           <StatusBadge type="status" value={booking.paymentStatus} />
         </div>
       ),
+    },
+    {
+      key: "yipyygo",
+      label: "YipyyGo",
+      icon: FileText,
+      defaultVisible: true,
+      sortValue: (booking) => {
+        const config = getYipyyGoConfig(booking.facilityId);
+        const st = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+        const enabled = config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
+        if (!enabled) return "—";
+        return getYipyyGoDisplayStatus(booking.id);
+      },
+      render: (booking) => {
+        const config = getYipyyGoConfig(booking.facilityId);
+        const st = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+        const enabled = config?.enabled && config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
+        if (!enabled) return <span className="text-muted-foreground text-xs">—</span>;
+        return <YipyyGoStatusBadge status={getYipyyGoDisplayStatus(booking.id)} showIcon />;
+      },
     },
     {
       key: "tasks",
