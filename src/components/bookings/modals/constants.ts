@@ -134,6 +134,98 @@ export const CUSTOMER_BOARDING_ROOM_TYPES = [
   },
 ];
 
+/** Add-ons for customer booking: service-dependent, shown as cards with image, description, price, quantity, apply to all or specific pet */
+export type CustomerAddonServiceType = "daycare" | "boarding";
+export interface CustomerAddon {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  /** Which service types show this add-on */
+  services: CustomerAddonServiceType[];
+  hasUnits: boolean;
+  pricePerUnit?: number;
+  unit?: string;
+  basePrice?: number;
+}
+export const CUSTOMER_ADDONS: CustomerAddon[] = [
+  {
+    id: "extended-walk",
+    name: "Extended Walk",
+    description: "Additional 30-minute walk session for your pet to burn extra energy and explore",
+    image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=300&fit=crop",
+    services: ["daycare", "boarding"],
+    hasUnits: true,
+    pricePerUnit: 15,
+    unit: "walk",
+  },
+  {
+    id: "playtime-plus",
+    name: "Playtime Plus",
+    description: "Extra supervised play session with interactive toys and games",
+    image: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop",
+    services: ["daycare", "boarding"],
+    hasUnits: true,
+    pricePerUnit: 12,
+    unit: "session",
+  },
+  {
+    id: "one-on-one",
+    name: "One-on-One Attention",
+    description: "Dedicated individual time with a staff member for personalized care",
+    image: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=300&fit=crop",
+    services: ["daycare", "boarding"],
+    hasUnits: true,
+    pricePerUnit: 20,
+    unit: "hour",
+  },
+  {
+    id: "mini-training",
+    name: "Mini Training Session",
+    description: "Quick 15-minute basic obedience training during their stay",
+    image: "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=400&h=300&fit=crop",
+    services: ["daycare"],
+    hasUnits: false,
+    basePrice: 25,
+  },
+  {
+    id: "spa-treatment",
+    name: "Quick Spa Treatment",
+    description: "Relaxing paw massage and aromatherapy session to help your pet unwind",
+    image: "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=400&h=300&fit=crop",
+    services: ["daycare", "boarding"],
+    hasUnits: false,
+    basePrice: 18,
+  },
+  {
+    id: "treat-time",
+    name: "Premium Treat Time",
+    description: "Special gourmet treats and enrichment activities throughout the day",
+    image: "https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?w=400&h=300&fit=crop",
+    services: ["daycare", "boarding"],
+    hasUnits: false,
+    basePrice: 10,
+  },
+  {
+    id: "bath-groom",
+    name: "Bath & Groom",
+    description: "Full bathing and grooming service before checkout to keep your pet fresh",
+    image: "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=300&fit=crop",
+    services: ["boarding"],
+    hasUnits: false,
+    basePrice: 35,
+  },
+  {
+    id: "video-call",
+    name: "Daily Video Call",
+    description: "Scheduled daily video call to check in on your pet during their stay",
+    image: "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=400&h=300&fit=crop",
+    services: ["boarding"],
+    hasUnits: false,
+    basePrice: 10,
+  },
+];
+
 /** Grooming packages for customer booking: duration, what's included, starting price */
 export const GROOMING_PACKAGES = [
   { id: "bath_brush", name: "Bath & Brush", price: 40, durationMinutes: 45, included: ["Bath", "Brush-out", "Nail trim", "Ear check"], image: "/services/grooming-bath.jpg" },

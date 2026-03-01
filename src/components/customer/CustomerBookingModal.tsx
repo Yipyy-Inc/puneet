@@ -9,6 +9,7 @@ import {
   CUSTOMER_BOARDING_ROOM_TYPES,
   GROOMING_PACKAGES,
   GROOMING_ADDONS,
+  CUSTOMER_ADDONS,
 } from "@/components/bookings/modals/constants";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,6 +147,10 @@ export function CustomerBookingModal({
   // Grooming: package + add-ons
   const [selectedGroomingPackage, setSelectedGroomingPackage] = useState("");
   const [selectedGroomingAddons, setSelectedGroomingAddons] = useState<string[]>([]);
+  // Add-ons (daycare/boarding): same shape as facility — serviceId, quantity, petId
+  const [extraServices, setExtraServices] = useState<Array<{ serviceId: string; quantity: number; petId: number }>>([]);
+  /** Per add-on: apply to "all" or a specific petId (for UI: All pets vs dropdown) */
+  const [addOnApplyTo, setAddOnApplyTo] = useState<Record<string, "all" | number>>({});
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
@@ -235,11 +240,18 @@ export function CustomerBookingModal({
     [customerPets, selectedPetIds]
   );
 
-  // Number of Details sub-steps for current service (1 = Schedule only; 2 = Schedule + Room Type; 3 = Schedule + Package + Add-ons)
+  // Number of Details sub-steps: daycare 2 (Schedule, Add-ons); boarding 3 (Schedule, Room Type, Add-ons); grooming 3 (Schedule, Package, Add-ons)
   const detailsSubStepCount = useMemo(() => {
-    if (selectedService === "boarding") return 2;
+    if (selectedService === "daycare") return 2;
+    if (selectedService === "boarding") return 3;
     if (selectedService === "grooming") return 3;
     return 1;
+  }, [selectedService]);
+
+  // Add-ons for current service (daycare or boarding only; grooming uses GROOMING_ADDONS)
+  const eligibleAddons = useMemo(() => {
+    if (selectedService !== "daycare" && selectedService !== "boarding") return [];
+    return CUSTOMER_ADDONS.filter((a) => a.services.includes(selectedService));
   }, [selectedService]);
 
   // Boarding: filter room types by pet eligibility (type, weight limits)
@@ -296,6 +308,8 @@ export function CustomerBookingModal({
     setRoomAssignments([]);
     setSelectedGroomingPackage("");
     setSelectedGroomingAddons([]);
+    setExtraServices([]);
+    setAddOnApplyTo({});
   }, [selectedService]);
 
   // Facility schedule props for DateSelectionCalendar (time slider)
@@ -555,6 +569,8 @@ export function CustomerBookingModal({
       setRoomAssignments([]);
       setSelectedGroomingPackage("");
       setSelectedGroomingAddons([]);
+      setExtraServices([]);
+      setAddOnApplyTo({});
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -592,6 +608,16 @@ export function CustomerBookingModal({
     return selectedService === "grooming";
   }, [selectedService]);
 
+  // Add-ons total (daycare/boarding extra services)
+  const extraServicesTotal = useMemo(() => {
+    return extraServices.reduce((sum, es) => {
+      const addon = CUSTOMER_ADDONS.find((a) => a.id === es.serviceId);
+      if (!addon) return sum;
+      if (addon.hasUnits && addon.pricePerUnit != null) return sum + addon.pricePerUnit * es.quantity;
+      return sum + (addon.basePrice ?? 0) * es.quantity;
+    }, 0);
+  }, [extraServices]);
+
   // Calculate price (simplified)
   const calculatedPrice = useMemo(() => {
     if (!selectedService) return 0;
@@ -604,20 +630,26 @@ export function CustomerBookingModal({
       );
       return (pkgPrice + addonsPrice) * selectedPetIds.length;
     }
-    if (selectedService === "boarding" && roomAssignments.length > 0) {
-      const nights = effectiveEndDate && effectiveStartDate
-        ? Math.max(1, Math.ceil((new Date(effectiveEndDate).getTime() - new Date(effectiveStartDate).getTime()) / (24 * 60 * 60 * 1000)))
-        : 1;
-      const roomPrice = roomAssignments.reduce((sum, a) => {
-        const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
-        return sum + (room ? room.price * nights : 0);
-      }, 0);
-      return roomPrice;
+    if (selectedService === "boarding") {
+      let base = 0;
+      if (roomAssignments.length > 0 && effectiveEndDate && effectiveStartDate) {
+        const nights = Math.max(1, Math.ceil((new Date(effectiveEndDate).getTime() - new Date(effectiveStartDate).getTime()) / (24 * 60 * 60 * 1000)));
+        base = roomAssignments.reduce((sum, a) => {
+          const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === a.roomId);
+          return sum + (room ? room.price * nights : 0);
+        }, 0);
+      }
+      return base + extraServicesTotal;
+    }
+    if (selectedService === "daycare") {
+      const service = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
+      const base = service ? service.basePrice * selectedPetIds.length : 0;
+      return base + extraServicesTotal;
     }
     const service = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
     if (!service) return 0;
     return service.basePrice * selectedPetIds.length;
-  }, [selectedService, selectedPetIds, selectedGroomingPackage, selectedGroomingAddons, roomAssignments, effectiveStartDate, effectiveEndDate]);
+  }, [selectedService, selectedPetIds, selectedGroomingPackage, selectedGroomingAddons, roomAssignments, effectiveStartDate, effectiveEndDate, extraServicesTotal]);
 
   const totalPrice = useMemo(() => {
     return calculatedPrice + tipAmount;
@@ -670,6 +702,8 @@ export function CustomerBookingModal({
       setRoomAssignments([]);
       setSelectedGroomingPackage("");
       setSelectedGroomingAddons([]);
+      setExtraServices([]);
+      setAddOnApplyTo({});
       setSpecialRequests("");
       setIsRecurring(false);
       setRecurringFrequency("monthly");
@@ -1151,6 +1185,140 @@ export function CustomerBookingModal({
                     </>
                   )}
 
+                  {/* Sub-step 1 (Daycare): Add-ons */}
+                  {currentDetailsSubStep === 1 && selectedService === "daycare" && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-semibold">Add-ons</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Add optional services to enhance your pet&apos;s daycare experience
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {eligibleAddons.map((addon) => {
+                          const applyTo = addOnApplyTo[addon.id] ?? "all";
+                          const isAll = applyTo === "all";
+                          const targetPetIds = isAll ? selectedPets.map((p) => p.id) : [applyTo as number];
+                          const currentQty = targetPetIds.length > 0
+                            ? (extraServices.find((es) => es.serviceId === addon.id && es.petId === targetPetIds[0])?.quantity ?? 0)
+                            : 0;
+                          const totalQty = extraServices.filter((es) => es.serviceId === addon.id).reduce((s, es) => s + es.quantity, 0);
+                          return (
+                            <Card key={addon.id} className={totalQty > 0 ? "ring-2 ring-primary" : ""}>
+                              <div className="h-32 w-full overflow-hidden">
+                                <img src={addon.image} alt={addon.name} className="w-full h-full object-cover" />
+                              </div>
+                              <CardContent className="p-4 space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-sm">{addon.name}</h4>
+                                  <p className="text-xs text-muted-foreground mt-1">{addon.description}</p>
+                                </div>
+                                <div className="text-sm font-medium">
+                                  {addon.hasUnits ? `$${addon.pricePerUnit} / ${addon.unit}` : `$${addon.basePrice}`}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Apply to:</span>
+                                  <Select
+                                    value={isAll ? "all" : String(applyTo)}
+                                    onValueChange={(v) => {
+                                      setAddOnApplyTo((prev) => ({ ...prev, [addon.id]: v === "all" ? "all" : Number(v) }));
+                                      if (v === "all") {
+                                        setExtraServices((prev) => [
+                                          ...prev.filter((es) => es.serviceId !== addon.id),
+                                          ...selectedPets.map((p) => ({ serviceId: addon.id, quantity: currentQty || 1, petId: p.id })),
+                                        ]);
+                                      } else {
+                                        const petId = Number(v);
+                                        setExtraServices((prev) => [
+                                          ...prev.filter((es) => es.serviceId !== addon.id),
+                                          { serviceId: addon.id, quantity: currentQty || 1, petId },
+                                        ]);
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 w-[140px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All pets</SelectItem>
+                                      {selectedPets.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {addon.hasUnits ? (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        disabled={currentQty === 0}
+                                        onClick={() => {
+                                          if (currentQty <= 0) return;
+                                          const newQty = currentQty - 1;
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
+                                            targetPetIds.forEach((petId) => {
+                                              if (newQty > 0) next.push({ serviceId: addon.id, quantity: newQty, petId });
+                                            });
+                                            return next;
+                                          });
+                                        }}
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="text-sm font-medium min-w-[2ch] text-center">{currentQty}</span>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          const newQty = currentQty + 1;
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
+                                            targetPetIds.forEach((petId) => {
+                                              next.push({ serviceId: addon.id, quantity: newQty, petId });
+                                            });
+                                            return next;
+                                          });
+                                        }}
+                                      >
+                                        +
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant={currentQty > 0 ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => {
+                                        if (currentQty > 0) {
+                                          setExtraServices((prev) => prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId))));
+                                        } else {
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => es.serviceId !== addon.id);
+                                            targetPetIds.forEach((petId) => next.push({ serviceId: addon.id, quantity: 1, petId }));
+                                            return next;
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {currentQty > 0 ? <><CheckCircle className="h-3 w-3 mr-1" /> Added</> : "Add"}
+                                    </Button>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Sub-step 1 (Boarding): Room Type */}
                   {currentDetailsSubStep === 1 && selectedService === "boarding" && (
                     <div className="space-y-4">
@@ -1300,6 +1468,140 @@ export function CustomerBookingModal({
                           })}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Sub-step 2 (Boarding): Add-ons */}
+                  {currentDetailsSubStep === 2 && selectedService === "boarding" && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-semibold">Add-ons</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Add optional services to enhance your pet&apos;s boarding experience
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {eligibleAddons.map((addon) => {
+                          const applyTo = addOnApplyTo[addon.id] ?? "all";
+                          const isAll = applyTo === "all";
+                          const targetPetIds = isAll ? selectedPets.map((p) => p.id) : [applyTo as number];
+                          const currentQty = targetPetIds.length > 0
+                            ? (extraServices.find((es) => es.serviceId === addon.id && es.petId === targetPetIds[0])?.quantity ?? 0)
+                            : 0;
+                          const totalQty = extraServices.filter((es) => es.serviceId === addon.id).reduce((s, es) => s + es.quantity, 0);
+                          return (
+                            <Card key={addon.id} className={totalQty > 0 ? "ring-2 ring-primary" : ""}>
+                              <div className="h-32 w-full overflow-hidden">
+                                <img src={addon.image} alt={addon.name} className="w-full h-full object-cover" />
+                              </div>
+                              <CardContent className="p-4 space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-sm">{addon.name}</h4>
+                                  <p className="text-xs text-muted-foreground mt-1">{addon.description}</p>
+                                </div>
+                                <div className="text-sm font-medium">
+                                  {addon.hasUnits ? `$${addon.pricePerUnit} / ${addon.unit}` : `$${addon.basePrice}`}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Apply to:</span>
+                                  <Select
+                                    value={isAll ? "all" : String(applyTo)}
+                                    onValueChange={(v) => {
+                                      setAddOnApplyTo((prev) => ({ ...prev, [addon.id]: v === "all" ? "all" : Number(v) }));
+                                      if (v === "all") {
+                                        setExtraServices((prev) => [
+                                          ...prev.filter((es) => es.serviceId !== addon.id),
+                                          ...selectedPets.map((p) => ({ serviceId: addon.id, quantity: currentQty || 1, petId: p.id })),
+                                        ]);
+                                      } else {
+                                        const petId = Number(v);
+                                        setExtraServices((prev) => [
+                                          ...prev.filter((es) => es.serviceId !== addon.id),
+                                          { serviceId: addon.id, quantity: currentQty || 1, petId },
+                                        ]);
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 w-[140px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All pets</SelectItem>
+                                      {selectedPets.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {addon.hasUnits ? (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        disabled={currentQty === 0}
+                                        onClick={() => {
+                                          if (currentQty <= 0) return;
+                                          const newQty = currentQty - 1;
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
+                                            targetPetIds.forEach((petId) => {
+                                              if (newQty > 0) next.push({ serviceId: addon.id, quantity: newQty, petId });
+                                            });
+                                            return next;
+                                          });
+                                        }}
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="text-sm font-medium min-w-[2ch] text-center">{currentQty}</span>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          const newQty = currentQty + 1;
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
+                                            targetPetIds.forEach((petId) => {
+                                              next.push({ serviceId: addon.id, quantity: newQty, petId });
+                                            });
+                                            return next;
+                                          });
+                                        }}
+                                      >
+                                        +
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant={currentQty > 0 ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => {
+                                        if (currentQty > 0) {
+                                          setExtraServices((prev) => prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId))));
+                                        } else {
+                                          setExtraServices((prev) => {
+                                            const next = prev.filter((es) => es.serviceId !== addon.id);
+                                            targetPetIds.forEach((petId) => next.push({ serviceId: addon.id, quantity: 1, petId }));
+                                            return next;
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {currentQty > 0 ? <><CheckCircle className="h-3 w-3 mr-1" /> Added</> : "Add"}
+                                    </Button>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -1453,6 +1755,27 @@ export function CustomerBookingModal({
                               {selectedGroomingAddons.length > 0 && (
                                 <p>Add-ons: {selectedGroomingAddons.map((id) => GROOMING_ADDONS.find((a) => a.id === id)?.name ?? id).join(", ")}</p>
                               )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {extraServices.length > 0 && (selectedService === "daycare" || selectedService === "boarding") && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="font-semibold mb-2">Add-ons</h3>
+                            <div className="space-y-1 text-sm text-muted-foreground">
+                              {extraServices.map((es, idx) => {
+                                const addon = CUSTOMER_ADDONS.find((a) => a.id === es.serviceId);
+                                const pet = selectedPets.find((p) => p.id === es.petId);
+                                return (
+                                  <p key={`${es.serviceId}-${es.petId}-${idx}`}>
+                                    {addon?.name ?? es.serviceId}: {es.quantity}
+                                    {addon?.hasUnits ? ` ${addon.unit}` : ""}
+                                    {pet ? ` (${pet.name})` : ""}
+                                  </p>
+                                );
+                              })}
                             </div>
                           </div>
                         </>
