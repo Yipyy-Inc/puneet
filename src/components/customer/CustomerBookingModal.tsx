@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { clients } from "@/data/clients";
@@ -49,6 +49,9 @@ import {
   PawPrint,
   Bed,
   Receipt,
+  Info,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { DateSelectionCalendar, type DateTimeInfo } from "@/components/ui/date-selection-calendar";
 import { Booking, Pet } from "@/lib/types";
@@ -63,8 +66,12 @@ import { Syringe } from "lucide-react";
 const MOCK_CUSTOMER_ID = 15;
 
 interface CustomerBookingModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** When true, render as a full page (no Dialog). Requires onCancel. */
+  asPage?: boolean;
+  /** Required when asPage: called when user clicks Cancel / Back from first step */
+  onCancel?: () => void;
   existingBooking?: Booking | null;
   onBookingCreated: () => void;
 }
@@ -78,9 +85,48 @@ const STEPS = [
   { id: "confirm", label: "Confirm" },
 ];
 
-export function CustomerBookingModal({
+function WizardWrapper({
+  asPage,
   open,
   onOpenChange,
+  existingBooking,
+  children,
+}: {
+  asPage: boolean;
+  open: boolean;
+  onOpenChange?: (open: boolean) => void;
+  existingBooking?: Booking | null;
+  children: ReactNode;
+}) {
+  if (asPage) {
+    return (
+      <div className="flex flex-col min-h-[85vh] w-full max-w-5xl mx-auto px-4 py-6">
+        {children}
+      </div>
+    );
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[1600px] w-[98vw] min-w-[90vw] h-[95vh] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+          <DialogTitle>
+            {existingBooking ? "Reschedule Booking" : "Book a Service"}
+          </DialogTitle>
+          <DialogDescription>
+            Select a service and book for your pets
+          </DialogDescription>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function CustomerBookingModal({
+  open = true,
+  onOpenChange,
+  asPage = false,
+  onCancel,
   existingBooking,
   onBookingCreated,
 }: CustomerBookingModalProps) {
@@ -155,6 +201,8 @@ export function CustomerBookingModal({
   const [extraServices, setExtraServices] = useState<Array<{ serviceId: string; quantity: number; petId: number }>>([]);
   /** Per add-on: apply to "all" or a specific petId (for UI: All pets vs dropdown) */
   const [addOnApplyTo, setAddOnApplyTo] = useState<Record<string, "all" | number>>({});
+  /** Details modal: room or grooming package (photos + notes) */
+  const [detailsOpen, setDetailsOpen] = useState<{ type: "room"; id: string } | { type: "package"; id: string } | null>(null);
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
@@ -630,7 +678,7 @@ export function CustomerBookingModal({
       }
       
       onBookingCreated();
-      onOpenChange(false);
+      if (!asPage) onOpenChange?.(false);
       // Reset form
       setCurrentStep(0);
       setSelectedService("");
@@ -802,18 +850,37 @@ export function CustomerBookingModal({
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1600px] w-[98vw] min-w-[90vw] h-[95vh] max-h-[95vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-          <DialogTitle>
-            {existingBooking ? "Reschedule Booking" : "Book a Service"}
-          </DialogTitle>
-          <DialogDescription>
-            Select a service and book for your pets
-          </DialogDescription>
-        </DialogHeader>
+    <WizardWrapper
+      asPage={asPage}
+      open={open}
+      onOpenChange={onOpenChange}
+      existingBooking={existingBooking}
+    >
+        <div className="relative flex-1 flex flex-col min-h-0 px-6">
+          {/* Back à gauche, Next à droite — cercles, légèrement plus petits, grossissent au hover */}
+          <div className="absolute -left-20 top-1/2 -translate-y-1/2 z-10">
+            <Button variant="outline" size="lg" className="h-[4rem] w-[4rem] rounded-full p-0 flex items-center justify-center gap-1 transition-transform duration-200 hover:scale-110 disabled:hover:scale-100" onClick={handleBack} disabled={currentStep === 0}>
+              <ChevronLeft className="h-5 w-5 shrink-0" />
+              <span className="text-xs">Back</span>
+            </Button>
+          </div>
+          <div className="absolute -right-20 top-1/2 -translate-y-1/2 z-10">
+            {currentStep < STEPS.length - 1 ? (
+              <Button size="lg" className="h-[4rem] w-[4rem] rounded-full p-0 flex items-center justify-center gap-1 transition-transform duration-200 hover:scale-110" onClick={handleNext} disabled={!canProceed}>
+                <span className="text-xs">Next</span>
+                <ChevronRight className="h-5 w-5 shrink-0" />
+              </Button>
+            ) : (
+              <Button size="lg" className="h-[4rem] w-[4rem] rounded-full p-0 flex items-center justify-center transition-transform duration-200 hover:scale-110" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "OK"
+                )}
+              </Button>
+            )}
+          </div>
 
-        <div className="flex-1 flex flex-col min-h-0 px-6">
           {/* Stepper */}
           <div className="mb-6 flex-shrink-0">
             <Stepper
@@ -960,7 +1027,7 @@ export function CustomerBookingModal({
 
               {/* Step 2: Service Selection — same card layout as facility (image, description, from price) */}
               {currentStep === 1 && (
-                <div className="space-y-4">
+                <div className="space-y-4 px-2 py-2">
                   <Label className="text-base">Select a service</Label>
 
                   {/* When mandatory evaluation and no pets selected: only show Evaluation + message */}
@@ -1007,7 +1074,7 @@ export function CustomerBookingModal({
                       return null;
                     })()}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-1 py-2">
                     {availableServices.map((service) => {
                       const Icon = service.icon;
                       const config = configs[service.id as keyof typeof configs];
@@ -1017,17 +1084,21 @@ export function CustomerBookingModal({
                         selectedPetIds.length === 0 ||
                         selectedPets.every((p) => hasValidEvaluation(p));
                       const isEvaluation = service.id === "evaluation";
+                      const displayName = isEvaluation ? evaluationConfig.customerName : (config?.clientFacingName || service.name);
+                      const displayDesc = isEvaluation ? evaluationConfig.description : (config?.slogan || (service as { description?: string }).description || "");
+                      const displayPrice = isEvaluation ? evaluationConfig.price : (config?.basePrice ?? (service as { basePrice?: number }).basePrice ?? 0);
+                      const included = (service as { included?: string[] }).included;
 
                       return (
                         <div
                           key={service.id}
-                          className={`relative border rounded-lg transition-colors overflow-hidden ${
+                          className={`relative flex flex-col min-h-[240px] border-2 rounded-lg transition-all overflow-hidden ${
                             isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                           } ${
                             selectedService === service.id && !isDisabled
-                              ? "border-primary bg-primary/5 ring-2 ring-primary"
+                              ? "border-primary bg-primary/5 ring-2 ring-primary shadow-sm"
                               : !isDisabled
-                                ? "hover:border-primary/50"
+                                ? "hover:border-primary/50 hover:shadow"
                                 : ""
                           }`}
                           onClick={() => !isDisabled && handleServiceSelect(service.id)}
@@ -1039,56 +1110,60 @@ export function CustomerBookingModal({
                               </Badge>
                             </div>
                           )}
-                          {config?.bannerImage ? (
-                            <div className="w-full h-32">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <div className="w-full h-28 shrink-0 bg-muted">
+                            {config?.bannerImage ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 src={config.bannerImage}
-                                alt={config.clientFacingName || service.name}
+                                alt={displayName}
                                 className="w-full h-full object-cover"
                               />
-                            </div>
-                          ) : service.image ? (
-                            <div className="w-full h-32">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                            ) : service.image ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 src={service.image}
-                                alt={service.name}
+                                alt={displayName}
                                 className="w-full h-full object-cover"
                               />
-                            </div>
-                          ) : (
-                            <div
-                              className={`w-full h-32 flex items-center justify-center ${
-                                selectedService === service.id && !isDisabled
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted"
-                              }`}
-                            >
-                              <Icon className="h-12 w-12" />
-                            </div>
-                          )}
-                          <div className="p-4 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium">
-                                {isEvaluation
-                                  ? evaluationConfig.customerName
-                                  : config?.clientFacingName || service.name}
-                              </p>
+                            ) : (
+                              <div
+                                className={`w-full h-full flex items-center justify-center ${
+                                  selectedService === service.id && !isDisabled
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                }`}
+                              >
+                                <Icon className="h-10 w-10" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3 flex flex-col flex-1 space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold text-base leading-tight">
+                                {displayName}
+                              </h3>
                               {selectedService === service.id && !isDisabled && (
-                                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                                <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {isEvaluation
-                                ? evaluationConfig.description
-                                : config?.slogan || service.description}
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {displayDesc}
                             </p>
-                            <p className="font-semibold text-primary">
-                              {isEvaluation
-                                ? `$${evaluationConfig.price}`
-                                : `From $${config?.basePrice ?? service.basePrice}`}
-                            </p>
+                            {included && included.length > 0 && (
+                              <ul className="text-xs text-muted-foreground space-y-0.5 mt-0.5">
+                                {included.slice(0, 3).map((item, i) => (
+                                  <li key={i} className="flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            <div className="mt-auto pt-1">
+                              <p className="font-bold text-primary text-sm">
+                                {isEvaluation ? `$${displayPrice}` : `From $${displayPrice}`}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1100,7 +1175,7 @@ export function CustomerBookingModal({
 
               {/* Step 3: Details — Schedule, then Room Type (boarding) or Package + Add-ons (grooming) */}
               {currentStep === 2 && (
-                <div className="space-y-4">
+                <div className="space-y-4 px-2 py-2">
                   {detailsSubStepCount > 1 && (
                     <p className="text-sm text-muted-foreground font-medium">
                       Step {currentDetailsSubStep + 1} of {detailsSubStepCount}
@@ -1269,7 +1344,7 @@ export function CustomerBookingModal({
 
                   {/* Sub-step 1 (Daycare): Add-ons */}
                   {currentDetailsSubStep === 1 && selectedService === "daycare" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-1 py-2">
                       <div>
                         <Label className="text-base font-semibold">Add-ons</Label>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1286,18 +1361,29 @@ export function CustomerBookingModal({
                             : 0;
                           const totalQty = extraServices.filter((es) => es.serviceId === addon.id).reduce((s, es) => s + es.quantity, 0);
                           return (
-                            <Card key={addon.id} className={totalQty > 0 ? "ring-2 ring-primary" : ""}>
-                              <div className="h-32 w-full overflow-hidden">
+                            <Card key={addon.id} className={`flex flex-col min-h-[240px] overflow-hidden ${totalQty > 0 ? "ring-2 ring-primary" : ""}`}>
+                              <div className="h-28 w-full shrink-0 bg-muted">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={addon.image} alt={addon.name} className="w-full h-full object-cover" />
                               </div>
-                              <CardContent className="p-4 space-y-3">
+                              <CardContent className="p-3 flex flex-col flex-1 space-y-2">
                                 <div>
                                   <h4 className="font-semibold text-sm">{addon.name}</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">{addon.description}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{addon.description}</p>
                                 </div>
-                                <div className="text-sm font-medium">
+                                {addon.included && addon.included.length > 0 && (
+                                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                                    {addon.included.slice(0, 2).map((item, i) => (
+                                      <li key={i} className="flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                <p className="font-semibold text-primary text-sm">
                                   {addon.hasUnits ? `$${addon.pricePerUnit} / ${addon.unit}` : `$${addon.basePrice}`}
-                                </div>
+                                </p>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-xs text-muted-foreground">Apply to:</span>
                                   <Select
@@ -1318,7 +1404,7 @@ export function CustomerBookingModal({
                                       }
                                     }}
                                   >
-                                    <SelectTrigger className="h-8 w-[140px]">
+                                    <SelectTrigger className="h-8 w-[120px]">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1329,14 +1415,14 @@ export function CustomerBookingModal({
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mt-auto pt-0.5">
                                   {addon.hasUnits ? (
                                     <>
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 w-8 p-0"
+                                        className="h-7 w-7 p-0 text-xs"
                                         disabled={currentQty === 0}
                                         onClick={() => {
                                           if (currentQty <= 0) return;
@@ -1352,12 +1438,12 @@ export function CustomerBookingModal({
                                       >
                                         -
                                       </Button>
-                                      <span className="text-sm font-medium min-w-[2ch] text-center">{currentQty}</span>
+                                      <span className="text-xs font-medium min-w-[2ch] text-center">{currentQty}</span>
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 w-8 p-0"
+                                        className="h-7 w-7 p-0 text-xs"
                                         onClick={() => {
                                           const newQty = currentQty + 1;
                                           setExtraServices((prev) => {
@@ -1377,6 +1463,7 @@ export function CustomerBookingModal({
                                       type="button"
                                       variant={currentQty > 0 ? "default" : "outline"}
                                       size="sm"
+                                      className="h-8 text-xs"
                                       onClick={() => {
                                         if (currentQty > 0) {
                                           setExtraServices((prev) => prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId))));
@@ -1403,7 +1490,7 @@ export function CustomerBookingModal({
 
                   {/* Sub-step 1 (Boarding): Room Type */}
                   {currentDetailsSubStep === 1 && selectedService === "boarding" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-1 py-2">
                       <Label className="text-base">Choose room type</Label>
                       <p className="text-sm text-muted-foreground">
                         {allowDifferentRoomPerPet
@@ -1442,12 +1529,13 @@ export function CustomerBookingModal({
                                               ]);
                                             }
                                           }}
-                                          className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                          className={`flex flex-col min-h-[220px] border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
                                             isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
                                           } ${available === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
                                         >
-                                          <div className="h-28 bg-muted relative">
+                                          <div className="h-28 bg-muted relative shrink-0">
                                             {room.image ? (
+                                              /* eslint-disable-next-line @next/next/no-img-element */
                                               <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
                                             ) : (
                                               <div className="w-full h-full flex items-center justify-center">
@@ -1460,12 +1548,16 @@ export function CustomerBookingModal({
                                               </div>
                                             )}
                                           </div>
-                                          <div className="p-3">
-                                            <p className="font-semibold">{room.name}</p>
-                                            <p className="text-primary font-bold text-sm">${room.price}/night</p>
+                                          <div className="p-2.5 flex flex-col flex-1">
+                                            <h4 className="font-semibold text-sm">{room.name}</h4>
+                                            <p className="text-primary font-bold text-xs mt-0.5">${room.price}/night</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{room.description}</p>
                                             <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                              {room.included.slice(0, 2).map((item, i) => (
-                                                <li key={i}>• {item}</li>
+                                              {room.included.slice(0, 3).map((item, i) => (
+                                                <li key={i} className="flex items-center gap-1">
+                                                  <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                                  {item}
+                                                </li>
                                               ))}
                                             </ul>
                                             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -1478,9 +1570,20 @@ export function CustomerBookingModal({
                                                 </span>
                                               )}
                                             </div>
-                                            <p className="text-xs mt-1">
-                                              {available <= 2 ? "Limited availability" : `${available} available`}
-                                            </p>
+                                            <p className="text-xs mt-0.5">{available <= 2 ? "Limited availability" : `${available} available`}</p>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              className="mt-auto w-full text-xs h-7"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDetailsOpen({ type: "room", id: room.id });
+                                              }}
+                                            >
+                                              <Info className="h-3.5 w-3.5 mr-1" />
+                                              View details
+                                            </Button>
                                           </div>
                                         </div>
                                       );
@@ -1497,55 +1600,72 @@ export function CustomerBookingModal({
                             const available = room.totalRooms - room.bookedRooms;
                             const isSelected = selectedPets.length > 0 && roomAssignments.length === selectedPets.length && roomAssignments.every((a) => a.roomId === room.id);
                             return (
-                              <Card
+                              <div
                                 key={room.id}
-                                className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : ""} ${available === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                                className={`flex flex-col min-h-[260px] border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                  isSelected ? "ring-2 ring-primary border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                                } ${available === 0 ? "opacity-60 cursor-not-allowed" : ""}`}
                                 onClick={() => {
                                   if (available > 0) {
                                     setRoomAssignments(selectedPets.map((p) => ({ petId: p.id, roomId: room.id })));
                                   }
                                 }}
                               >
-                                <CardContent className="p-0">
-                                  <div className="h-36 relative">
-                                    {room.image ? (
-                                      <img src={room.image} alt={room.name} className="w-full h-full object-cover rounded-t-lg" />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
-                                        <Bed className="h-10 w-10 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    {isSelected && (
-                                      <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                                        <CheckCircle className="h-5 w-5" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="p-4">
-                                    <p className="font-semibold">{room.name}</p>
-                                    <p className="text-primary font-bold">${room.price}/night</p>
-                                    <p className="text-sm text-muted-foreground mt-1">{room.description}</p>
-                                    <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                                      {room.included.map((item, i) => (
-                                        <li key={i}>• {item}</li>
-                                      ))}
-                                    </ul>
-                                    <div className="flex items-center gap-2 mt-2 text-xs">
-                                      {room.allowedPetTypes.includes("Dog") && <Dog className="h-4 w-4" />}
-                                      {room.allowedPetTypes.includes("Cat") && <Cat className="h-4 w-4" />}
-                                      {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
-                                        <span className="text-muted-foreground">
-                                          {room.minWeightLbs != null && `≥${room.minWeightLbs} lbs`}
-                                          {room.maxWeightLbs != null && ` ≤${room.maxWeightLbs} lbs`}
-                                        </span>
-                                      )}
+                                <div className="h-32 bg-muted relative shrink-0">
+                                  {room.image ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                                      <Bed className="h-10 w-10 text-muted-foreground" />
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                      {available <= 2 ? "Limited availability" : `${available} available`}
-                                    </p>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                      <CheckCircle className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-3 flex flex-col flex-1">
+                                  <h3 className="font-semibold text-base">{room.name}</h3>
+                                  <p className="text-primary font-bold text-sm mt-0.5">${room.price}/night</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{room.description}</p>
+                                  <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                    {room.included.slice(0, 4).map((item, i) => (
+                                      <li key={i} className="flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                    {room.allowedPetTypes.includes("Dog") && <Dog className="h-3.5 w-3.5" />}
+                                    {room.allowedPetTypes.includes("Cat") && <Cat className="h-3.5 w-3.5" />}
+                                    {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
+                                      <span>
+                                        {room.minWeightLbs != null && `≥${room.minWeightLbs} lbs`}
+                                        {room.maxWeightLbs != null && ` ≤${room.maxWeightLbs} lbs`}
+                                      </span>
+                                    )}
                                   </div>
-                                </CardContent>
-                              </Card>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {available <= 2 ? "Limited availability" : `${available} available`}
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-auto w-full text-xs h-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDetailsOpen({ type: "room", id: room.id });
+                                    }}
+                                  >
+                                    <Info className="h-3.5 w-3.5 mr-1" />
+                                    View details
+                                  </Button>
+                                </div>
+                              </div>
                             );
                           })}
                         </div>
@@ -1555,7 +1675,7 @@ export function CustomerBookingModal({
 
                   {/* Sub-step 2 (Boarding): Add-ons */}
                   {currentDetailsSubStep === 2 && selectedService === "boarding" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-1 py-2">
                       <div>
                         <Label className="text-base font-semibold">Add-ons</Label>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1572,18 +1692,29 @@ export function CustomerBookingModal({
                             : 0;
                           const totalQty = extraServices.filter((es) => es.serviceId === addon.id).reduce((s, es) => s + es.quantity, 0);
                           return (
-                            <Card key={addon.id} className={totalQty > 0 ? "ring-2 ring-primary" : ""}>
-                              <div className="h-32 w-full overflow-hidden">
+                            <Card key={addon.id} className={`flex flex-col min-h-[240px] overflow-hidden ${totalQty > 0 ? "ring-2 ring-primary" : ""}`}>
+                              <div className="h-28 w-full shrink-0 bg-muted">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={addon.image} alt={addon.name} className="w-full h-full object-cover" />
                               </div>
-                              <CardContent className="p-4 space-y-3">
+                              <CardContent className="p-3 flex flex-col flex-1 space-y-2">
                                 <div>
                                   <h4 className="font-semibold text-sm">{addon.name}</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">{addon.description}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{addon.description}</p>
                                 </div>
-                                <div className="text-sm font-medium">
+                                {addon.included && addon.included.length > 0 && (
+                                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                                    {addon.included.slice(0, 2).map((item, i) => (
+                                      <li key={i} className="flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                <p className="font-semibold text-primary text-sm">
                                   {addon.hasUnits ? `$${addon.pricePerUnit} / ${addon.unit}` : `$${addon.basePrice}`}
-                                </div>
+                                </p>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-xs text-muted-foreground">Apply to:</span>
                                   <Select
@@ -1604,7 +1735,7 @@ export function CustomerBookingModal({
                                       }
                                     }}
                                   >
-                                    <SelectTrigger className="h-8 w-[140px]">
+                                    <SelectTrigger className="h-8 w-[120px]">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1615,66 +1746,40 @@ export function CustomerBookingModal({
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mt-auto pt-0.5">
                                   {addon.hasUnits ? (
                                     <>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        disabled={currentQty === 0}
+                                      <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0 text-xs" disabled={currentQty === 0}
                                         onClick={() => {
                                           if (currentQty <= 0) return;
                                           const newQty = currentQty - 1;
                                           setExtraServices((prev) => {
                                             const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
-                                            targetPetIds.forEach((petId) => {
-                                              if (newQty > 0) next.push({ serviceId: addon.id, quantity: newQty, petId });
-                                            });
+                                            targetPetIds.forEach((petId) => { if (newQty > 0) next.push({ serviceId: addon.id, quantity: newQty, petId }); });
                                             return next;
                                           });
-                                        }}
-                                      >
-                                        -
-                                      </Button>
-                                      <span className="text-sm font-medium min-w-[2ch] text-center">{currentQty}</span>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
+                                        }}>−</Button>
+                                      <span className="text-xs font-medium min-w-[2ch] text-center">{currentQty}</span>
+                                      <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0 text-xs"
                                         onClick={() => {
                                           const newQty = currentQty + 1;
                                           setExtraServices((prev) => {
                                             const next = prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId)));
-                                            targetPetIds.forEach((petId) => {
-                                              next.push({ serviceId: addon.id, quantity: newQty, petId });
-                                            });
+                                            targetPetIds.forEach((petId) => { next.push({ serviceId: addon.id, quantity: newQty, petId }); });
                                             return next;
                                           });
-                                        }}
-                                      >
-                                        +
-                                      </Button>
+                                        }}>+</Button>
                                     </>
                                   ) : (
-                                    <Button
-                                      type="button"
-                                      variant={currentQty > 0 ? "default" : "outline"}
-                                      size="sm"
+                                    <Button type="button" variant={currentQty > 0 ? "default" : "outline"} size="sm" className="h-8 text-xs"
                                       onClick={() => {
-                                        if (currentQty > 0) {
-                                          setExtraServices((prev) => prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId))));
-                                        } else {
-                                          setExtraServices((prev) => {
-                                            const next = prev.filter((es) => es.serviceId !== addon.id);
-                                            targetPetIds.forEach((petId) => next.push({ serviceId: addon.id, quantity: 1, petId }));
-                                            return next;
-                                          });
-                                        }
-                                      }}
-                                    >
+                                        if (currentQty > 0) setExtraServices((prev) => prev.filter((es) => !(es.serviceId === addon.id && targetPetIds.includes(es.petId))));
+                                        else setExtraServices((prev) => {
+                                          const next = prev.filter((es) => es.serviceId !== addon.id);
+                                          targetPetIds.forEach((petId) => next.push({ serviceId: addon.id, quantity: 1, petId }));
+                                          return next;
+                                        });
+                                      }}>
                                       {currentQty > 0 ? <><CheckCircle className="h-3 w-3 mr-1" /> Added</> : "Add"}
                                     </Button>
                                   )}
@@ -1689,7 +1794,7 @@ export function CustomerBookingModal({
 
                   {/* Sub-step 1 (Grooming): Package */}
                   {currentDetailsSubStep === 1 && selectedService === "grooming" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-1 py-2">
                       <Label className="text-base">Choose a grooming package</Label>
                       <p className="text-sm text-muted-foreground">
                         Select one package. Add-ons (e.g. nail trim, teeth brushing) are on the next step.
@@ -1698,38 +1803,58 @@ export function CustomerBookingModal({
                         {GROOMING_PACKAGES.map((pkg) => {
                           const isSelected = selectedGroomingPackage === pkg.id;
                           return (
-                            <Card
+                            <div
                               key={pkg.id}
-                              className={`cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:border-primary/50"}`}
+                              className={`flex flex-col min-h-[260px] border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                isSelected ? "ring-2 ring-primary border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                              }`}
                               onClick={() => setSelectedGroomingPackage(pkg.id)}
                             >
-                              <CardContent className="p-0">
-                                <div className="h-32 relative">
-                                  {pkg.image ? (
-                                    <img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover rounded-t-lg" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
-                                      <Scissors className="h-10 w-10 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  {isSelected && (
-                                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                                      <CheckCircle className="h-5 w-5" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="p-4">
-                                  <p className="font-semibold">{pkg.name}</p>
-                                  <p className="text-primary font-bold">From ${pkg.price}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">~{pkg.durationMinutes} min</p>
-                                  <ul className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                                    {pkg.included.map((item, i) => (
-                                      <li key={i}>• {item}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </CardContent>
-                            </Card>
+                              <div className="h-32 bg-muted relative shrink-0">
+                                {pkg.image ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                                    <Scissors className="h-8 w-8 text-muted-foreground" />
+                                  </div>
+                                )}
+                                {isSelected && (
+                                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                    <CheckCircle className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-3 flex flex-col flex-1">
+                                <h3 className="font-semibold text-base">{pkg.name}</h3>
+                                <p className="text-primary font-bold text-sm mt-0.5">From ${pkg.price}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">~{pkg.durationMinutes} min</p>
+                                {pkg.notes && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{pkg.notes}</p>
+                                )}
+                                <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                  {pkg.included.slice(0, 4).map((item, i) => (
+                                    <li key={i} className="flex items-center gap-1">
+                                      <CheckCircle className="h-3 w-3 text-primary shrink-0" />
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-auto w-full text-xs h-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDetailsOpen({ type: "package", id: pkg.id });
+                                  }}
+                                >
+                                  <Info className="h-3.5 w-3.5 mr-1" />
+                                  View details
+                                </Button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1738,32 +1863,50 @@ export function CustomerBookingModal({
 
                   {/* Sub-step 2 (Grooming): Add-ons */}
                   {currentDetailsSubStep === 2 && selectedService === "grooming" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 px-1 py-2">
                       <Label className="text-base">Add-ons (optional)</Label>
                       <p className="text-sm text-muted-foreground">
-                        Nail trim, teeth brushing, blueberry facial, and more.
+                        Nail trim, teeth brushing, and more. Select any add-ons to include with your package.
                       </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {GROOMING_ADDONS.map((addon) => {
                           const isSelected = selectedGroomingAddons.includes(addon.id);
+                          const addonWithExtras = addon as { name: string; price: number; description?: string; image?: string };
                           return (
-                            <Card
+                            <div
                               key={addon.id}
-                              className={`cursor-pointer transition-all ${isSelected ? "border-primary bg-primary/5" : ""}`}
+                              className={`flex flex-col min-h-[200px] border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                isSelected ? "ring-2 ring-primary border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                              }`}
                               onClick={() => {
                                 setSelectedGroomingAddons((prev) =>
                                   prev.includes(addon.id) ? prev.filter((id) => id !== addon.id) : [...prev, addon.id]
                                 );
                               }}
                             >
-                              <CardContent className="p-4 flex flex-row items-center justify-between">
-                                <div>
-                                  <p className="font-medium">{addon.name}</p>
-                                  <p className="text-sm text-primary font-semibold">+${addon.price}</p>
-                                </div>
-                                {isSelected && <CheckCircle className="h-5 w-5 text-primary" />}
-                              </CardContent>
-                            </Card>
+                              <div className="h-24 shrink-0 bg-muted relative">
+                                {addonWithExtras.image ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img src={addonWithExtras.image} alt={addon.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Scissors className="h-6 w-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                                {isSelected && (
+                                  <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground rounded-full p-0.5">
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2.5 flex flex-col flex-1">
+                                <h4 className="font-semibold text-sm">{addon.name}</h4>
+                                {addonWithExtras.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{addonWithExtras.description}</p>
+                                )}
+                                <p className="font-semibold text-primary text-sm mt-auto pt-1">+${addon.price}</p>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1824,17 +1967,6 @@ export function CustomerBookingModal({
                             </li>
                           ))}
                         </ul>
-                        {allowBookingWithoutForms && (
-                          <Alert className="mt-4 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                            <AlertCircle className="h-4 w-4 text-amber-600" />
-                            <AlertDescription>
-                              <p className="font-medium text-amber-800 dark:text-amber-200">You can continue without completing these now.</p>
-                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                                Your booking will be submitted as a request; approval may be pending until requirements are completed.
-                              </p>
-                            </AlertDescription>
-                          </Alert>
-                        )}
                       </CardContent>
                     </Card>
                   )}
@@ -1936,19 +2068,6 @@ export function CustomerBookingModal({
               {/* Step 6: Confirm — facility receipt-style */}
               {currentStep === 5 && (
                 <div className="space-y-4 max-w-2xl mx-auto">
-                  {allowBookingWithoutForms && !requiredFormsStatus.allComplete && requiredFormsStatus.missing.length > 0 && (
-                    <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                      <AlertDescription>
-                        <p className="font-semibold text-amber-800 dark:text-amber-200">Booking request submitted — approval pending until requirements are completed.</p>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                          Complete the required forms and vaccination records in your account to avoid delays in confirmation.
-                        </p>
-                        <a href="/customer/documents" className="text-sm font-medium text-amber-800 dark:text-amber-200 underline mt-2 inline-block">Go to Documents →</a>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
                   {/* Receipt card — same style as facility ConfirmStep */}
                   <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
                     {/* Header */}
@@ -2137,35 +2256,80 @@ export function CustomerBookingModal({
             </ScrollArea>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between pt-4 pb-6 border-t mt-4 flex-shrink-0 bg-background">
-            <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              {currentStep < STEPS.length - 1 ? (
-                <Button onClick={handleNext} disabled={!canProceed}>
-                  Next
-                </Button>
-              ) : (
-                <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Booking...
-                    </>
-                  ) : (
-                    "Confirm Booking"
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
+          {/* Details modal: room or grooming package — photos + notes */}
+          <Dialog open={!!detailsOpen} onOpenChange={(open) => !open && setDetailsOpen(null)}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {detailsOpen?.type === "room" && CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === detailsOpen.id)?.name}
+                  {detailsOpen?.type === "package" && GROOMING_PACKAGES.find((p) => p.id === detailsOpen.id)?.name}
+                </DialogTitle>
+              </DialogHeader>
+              {detailsOpen?.type === "room" && (() => {
+                const room = CUSTOMER_BOARDING_ROOM_TYPES.find((r) => r.id === detailsOpen.id);
+                if (!room) return null;
+                const photos = (room.images && room.images.length > 0 ? room.images : [room.image]).slice(0, 5);
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      {photos.map((src, i) => (
+                        <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt={`${room.name} ${i + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                    {room.notes && (
+                      <div className="rounded-lg bg-muted/50 p-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
+                        <p className="text-sm">{room.notes}</p>
+                      </div>
+                    )}
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {room.included.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+              {detailsOpen?.type === "package" && (() => {
+                const pkg = GROOMING_PACKAGES.find((p) => p.id === detailsOpen.id);
+                if (!pkg) return null;
+                const photos = (pkg.images && pkg.images.length > 0 ? pkg.images : [pkg.image]).slice(0, 5);
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      {photos.map((src, i) => (
+                        <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt={`${pkg.name} ${i + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                    {pkg.notes && (
+                      <div className="rounded-lg bg-muted/50 p-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
+                        <p className="text-sm">{pkg.notes}</p>
+                      </div>
+                    )}
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {pkg.included.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
         </div>
-      </DialogContent>
-    </Dialog>
+    </WizardWrapper>
   );
 }

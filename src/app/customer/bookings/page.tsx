@@ -33,7 +33,6 @@ import {
   FileText,
 } from "lucide-react";
 import Link from "next/link";
-import { CustomerBookingModal } from "@/components/customer/CustomerBookingModal";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -49,7 +48,6 @@ export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const { bookingFlow, grooming } = useSettings();
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<typeof bookings[0] | null>(null);
@@ -66,12 +64,12 @@ export default function CustomerBookingsPage() {
     []
   );
 
-  // Check for service query parameter to auto-open booking modal
+  // Check for service query parameter to redirect to new booking page
   useEffect(() => {
     setIsMounted(true);
     const service = searchParams?.get("service");
-    if (service) {
-      setIsBookingModalOpen(true);
+    if (service && typeof window !== "undefined") {
+      window.location.href = `/customer/bookings/new${service ? `?service=${encodeURIComponent(service)}` : ""}`;
     }
   }, [searchParams]);
 
@@ -122,7 +120,7 @@ export default function CustomerBookingsPage() {
 
   const handleRescheduleBooking = (booking: typeof bookings[0]) => {
     setSelectedBooking(booking);
-    setIsBookingModalOpen(true);
+    window.location.href = "/customer/bookings/new";
   };
 
   const formatDate = (dateString: string) => {
@@ -348,9 +346,11 @@ export default function CustomerBookingsPage() {
               View and manage your service bookings
             </p>
           </div>
-          <Button onClick={() => setIsBookingModalOpen(true)} variant="default" size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            Book a Service
+          <Button asChild variant="default" size="lg">
+            <Link href="/customer/bookings/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Book a Service
+            </Link>
           </Button>
         </div>
 
@@ -569,9 +569,11 @@ export default function CustomerBookingsPage() {
                     <p className="text-muted-foreground mb-4">
                       Book your first service to get started
                     </p>
-                    <Button onClick={() => setIsBookingModalOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Book a Service
+                    <Button asChild>
+                      <Link href="/customer/bookings/new">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Book a Service
+                      </Link>
                     </Button>
                   </div>
                 )}
@@ -645,23 +647,6 @@ export default function CustomerBookingsPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Unified Booking Flow */}
-      <CustomerBookingModal
-        open={isBookingModalOpen}
-        onOpenChange={(open) => {
-          setIsBookingModalOpen(open);
-          if (!open) setSelectedBooking(null);
-        }}
-        existingBooking={selectedBooking}
-        onBookingCreated={() => {
-          setIsBookingModalOpen(false);
-          setSelectedBooking(null);
-          toast.success(
-            selectedBooking ? "Booking rescheduled successfully!" : "Booking created successfully!"
-          );
-        }}
-      />
 
       {/* Cancel Booking Dialog */}
       <CancelBookingDialog
