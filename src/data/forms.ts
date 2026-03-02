@@ -504,6 +504,11 @@ export function updateForm(
     formSections = formSections.filter((s) => s.formVersionId !== version.id);
     formOptions = formOptions.filter((o) => !removedFieldIds.includes(o.fieldId));
 
+    const questions = input.questions;
+    if (!questions) {
+      return formRecordToFlatForm(updatedRecord);
+    }
+
     const inputSections = input.sections?.length
       ? input.sections
       : [{ id: generateId("sec"), title: "Default", order: 0 }];
@@ -520,13 +525,13 @@ export function updateForm(
       });
     });
     const firstSectionId = formSections.find((s) => s.formVersionId === version.id)?.id ?? sectionIdToRecord.get(inputSections[0].id)!;
-    input.questions.forEach((q, i) => {
+    questions.forEach((q, i) => {
       const fieldId = q.id;
       const qq = q as FormQuestion & { visibility?: "customer" | "staff"; sectionId?: string };
       const resolvedSectionId = qq.sectionId && sectionIdToRecord.has(qq.sectionId)
         ? sectionIdToRecord.get(qq.sectionId)!
         : firstSectionId;
-      const fieldsInThisSection = input.questions.filter((oq) => {
+      const fieldsInThisSection = questions.filter((oq) => {
         const osid = (oq as FormQuestion & { sectionId?: string }).sectionId;
         const orid = osid && sectionIdToRecord.has(osid) ? sectionIdToRecord.get(osid)! : firstSectionId;
         return orid === resolvedSectionId;
