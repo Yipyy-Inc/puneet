@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, use, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, use, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { getFormsByFacility } from "@/data/forms";
+import { getSubmissionsForPet } from "@/data/form-submissions";
 import {
   petPhotos,
   vaccinationRecords,
@@ -41,6 +44,7 @@ import {
   Image as ImageIcon,
   Plus,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
@@ -76,9 +80,15 @@ export default function CustomerPetDetailPage({
 }) {
   const { petId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() =>
+    searchParams?.get("tab") === "forms" ? "forms" : "overview"
+  );
+  useEffect(() => {
+    if (searchParams?.get("tab") === "forms") setActiveTab("forms");
+  }, [searchParams]);
   const [isSaving, setIsSaving] = useState(false);
   const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
 
@@ -107,6 +117,25 @@ export default function CustomerPetDetailPage({
       </div>
     );
   }
+
+  const facilityId = selectedFacility?.id ?? 11;
+  const facilityForms = useMemo(
+    () =>
+      getFormsByFacility(facilityId).filter(
+        (f) => (f.type === "intake" || f.type === "pet") && !f.internal && f.status !== "archived"
+      ),
+    [facilityId]
+  );
+  const petSubmissions = useMemo(
+    () => getSubmissionsForPet(facilityId, pet.id),
+    [facilityId, pet.id]
+  );
+  const completedFormIds = useMemo(
+    () => new Set(petSubmissions.map((s) => s.formId)),
+    [petSubmissions]
+  );
+  const requiredForms = facilityForms.filter((f) => !completedFormIds.has(f.id));
+  const completedForms = facilityForms.filter((f) => completedFormIds.has(f.id));
 
   const photos = petPhotos.filter((p) => p.petId === pet.id);
   const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
@@ -802,6 +831,14 @@ export default function CustomerPetDetailPage({
             </TabsTrigger>
             <TabsTrigger value="bookings">Booking History</TabsTrigger>
             <TabsTrigger value="reports">Report Cards</TabsTrigger>
+            <TabsTrigger value="forms">
+              Forms
+              {requiredForms.length > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {requiredForms.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             {facilityConfig.careInstructions.enabled && (
               <TabsTrigger value="care-instructions">Care Instructions</TabsTrigger>
             )}
@@ -996,6 +1033,69 @@ export default function CustomerPetDetailPage({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Forms Tab */}
+          <TabsContent value="forms" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Forms for {pet.name}
+                </CardTitle>
+                <CardDescription>
+                  Required intake and pet profile forms. Complete required forms and view completed submissions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {requiredForms.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-destructive mb-2">Required (incomplete)</h4>
+                    <ul className="space-y-2">
+                      {requiredForms.map((form) => (
+                        <li key={form.id}>
+                          <Link
+                            href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
+                            className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50"
+                          >
+                            <span className="font-medium">{form.name}</span>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {completedForms.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-green-600 mb-2 flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Completed (view-only)
+                    </h4>
+                    <ul className="space-y-2">
+                      {completedForms.map((form) => {
+                        const sub = petSubmissions.find((s) => s.formId === form.id);
+                        return (
+                          <li key={form.id}>
+                            <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                              <span className="font-medium">{form.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Submitted {sub?.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ""}
+                              </span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+                {facilityForms.length === 0 && (
+                  <p className="text-sm text-muted-foreground py-4">
+                    No intake or pet forms for this facility.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Vaccinations Tab */}

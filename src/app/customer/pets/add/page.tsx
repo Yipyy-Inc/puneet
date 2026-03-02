@@ -104,9 +104,17 @@ export default function AddPetPage() {
         weight: Number(formData.weight),
       };
 
-      await createPet(petData);
-      toast.success("Pet added successfully!");
-      router.push("/customer/pets");
+      const newPet = await createPet(petData);
+      toast.success(
+        newPet?.id
+          ? "Pet added! Complete any required forms from the Forms tab on their profile."
+          : "Pet added successfully!"
+      );
+      if (newPet?.id) {
+        router.push(`/customer/pets/${newPet.id}?tab=forms`);
+      } else {
+        router.push("/customer/pets");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to add pet");
     } finally {
@@ -114,10 +122,13 @@ export default function AddPetPage() {
     }
   };
 
-  // Placeholder function - replace with actual API call
-  const createPet = async (petData: Omit<PetFormData, "age" | "weight"> & { age: number; weight: number }) => {
-    // TODO: API call to create pet
+  // Placeholder function - replace with actual API call. Return { id } to redirect to pet Forms tab.
+  const createPet = async (
+    petData: Omit<PetFormData, "age" | "weight"> & { age: number; weight: number }
+  ): Promise<{ id: number } | void> => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    // When API returns new pet: return { id: newPet.id };
+    return { id: Date.now() % 100000 }; // temporary: simulate new pet id for Forms redirect
   };
 
   const PetIcon = formData.type === "Cat" ? Cat : Dog;

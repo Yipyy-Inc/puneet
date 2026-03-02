@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { getFormBySlug, shouldShowQuestion, type Form, type FormQuestion } from "@/data/forms";
 import { createSubmission } from "@/data/form-submissions";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
+
+const DRAFT_PREFIX = "formDraft_";
+
+function draftKey(formId: string, petId?: number, customerId?: number): string {
+  if (petId != null) return `${DRAFT_PREFIX}${formId}_pet_${petId}`;
+  if (customerId != null) return `${DRAFT_PREFIX}${formId}_cust_${customerId}`;
+  return `${DRAFT_PREFIX}${formId}_anon`;
+}
 
 export default function PublicFormPage() {
   const params = useParams();
@@ -21,12 +29,17 @@ export default function PublicFormPage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const draftLoadedRef = useRef(false);
 
   const context = {
     petType: searchParams?.get("petType") ?? undefined,
     serviceType: searchParams?.get("service") ?? undefined,
     evaluationStatus: searchParams?.get("evaluationStatus") ?? undefined,
   };
+  const linkPetId = searchParams?.get("petId");
+  const linkCustomerId = searchParams?.get("customerId");
+  const petIds = linkPetId ? [parseInt(linkPetId, 10)].filter((n) => !Number.isNaN(n)) : undefined;
+  const customerId = linkCustomerId ? parseInt(linkCustomerId, 10) : undefined;
 
   const visibleQuestions = form
     ? form.questions.filter((q) => shouldShowQuestion(q, answers, context))
@@ -35,6 +48,40 @@ export default function PublicFormPage() {
   const setAnswer = useCallback((questionId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }, []);
+
+  // Load draft on mount (client-only)
+  useEffect(() => {
+    if (!form || typeof window === "undefined" || draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+    const key = draftKey(form.id, petIds?.[0], customerId);
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        if (parsed && typeof parsed === "object") setAnswers(parsed);
+      }
+    } catch {
+      // ignore invalid draft
+    }
+  }, [form?.id, petIds?.[0], customerId]);
+
+  // Autosave draft (debounced)
+  useEffect(() => {
+    if (!form || typeof window === "undefined" || submitted) return;
+    const key = draftKey(form.id, petIds?.[0], customerId);
+    const t = setTimeout(() => {
+      try {
+        if (Object.keys(answers).length > 0) {
+          localStorage.setItem(key, JSON.stringify(answers));
+        } else {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        // ignore quota etc
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [form?.id, answers, submitted, petIds?.[0], customerId]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -52,10 +99,17 @@ export default function PublicFormPage() {
         facilityId: form.facilityId,
         context: Object.keys(context).length ? context : undefined,
         answers,
+        ...(customerId && { customerId }),
+        ...(petIds?.length && { petIds }),
       });
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(draftKey(form.id, petIds?.[0], customerId));
+        }
+      } catch {}
       setSubmitted(true);
     },
-    [form, visibleQuestions, answers, context]
+    [form, visibleQuestions, answers, context, customerId, petIds]
   );
 
   if (!slug) {
@@ -103,13 +157,31 @@ export default function PublicFormPage() {
     );
   }
 
+  const isAnonymous = !customerId && !petIds?.length;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="max-w-lg w-full">
         <CardHeader>
           <CardTitle>{form.name}</CardTitle>
+          {form.settings?.welcomeMessage && (
+            <p className="text-sm text-muted-foreground mt-1">{form.settings.welcomeMessage}</p>
+          )}
         </CardHeader>
         <CardContent>
+          {isAnonymous && (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2 mb-4">
+              <a href="/customer/auth/login" className="underline hover:text-foreground">
+                Sign in
+              </a>{" "}
+              to link this response to your account and save progress.
+            </p>
+          )}
+          {form.repeatPerPet && (
+            <p className="text-xs text-muted-foreground mb-4">
+              This form can be completed once per pet. Use the link from your pet&apos;s Forms tab to fill for a specific pet.
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 p-2 rounded">{error}</p>

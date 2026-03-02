@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   getFormById,
   getTemplateById,
   type FieldMappingItem,
+  type FormSectionDTO,
 } from "@/data/forms";
 import {
   Plus,
@@ -33,6 +34,7 @@ import {
   ChevronUp,
   ChevronDown,
   Save,
+  FolderOpen,
 } from "lucide-react";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
@@ -51,15 +53,20 @@ const SERVICE_TYPES: { value: ServiceType; label: string }[] = [
 ];
 
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
+  { value: "yes_no", label: "Yes/No" },
   { value: "text", label: "Short text" },
   { value: "textarea", label: "Long text" },
   { value: "select", label: "Dropdown" },
-  { value: "multiselect", label: "Multi-select" },
+  { value: "radio", label: "Radio buttons" },
+  { value: "multiselect", label: "Checkboxes (multi-select)" },
   { value: "checkbox", label: "Checkbox" },
   { value: "date", label: "Date" },
   { value: "number", label: "Number" },
   { value: "file", label: "File upload" },
   { value: "signature", label: "Signature" },
+  { value: "phone", label: "Phone" },
+  { value: "email", label: "Email" },
+  { value: "address", label: "Address block" },
 ];
 
 const MAPPING_TARGETS: string[] = [
@@ -81,6 +88,10 @@ const MAPPING_TARGETS: string[] = [
 
 function generateQuestionId(): string {
   return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function generateSectionId(): string {
+  return `sec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 export interface FormBuilderEditorProps {
@@ -109,28 +120,95 @@ export function FormBuilderEditor({
   );
   const [internal, setInternal] = useState(existing?.internal ?? false);
   const [repeatPerPet, setRepeatPerPet] = useState(existing?.repeatPerPet ?? false);
-  const [questions, setQuestions] = useState<FormQuestion[]>(
-    existing?.questions ?? template?.questions ?? []
+  const defaultSectionIdRef = useRef<string>(generateSectionId());
+  const defaultSectionId = defaultSectionIdRef.current;
+  const [sections, setSections] = useState<FormSectionDTO[]>(() =>
+    (existing?.sections?.length ?? 0) > 0
+      ? existing!.sections!
+      : [{ id: defaultSectionId, title: "Section 1", order: 0 }]
   );
+  const [questions, setQuestions] = useState<FormQuestion[]>(() => {
+    const base = existing?.questions ?? template?.questions ?? [];
+    const firstId = (existing?.sections?.length ?? 0) > 0 ? existing!.sections![0].id : defaultSectionId;
+    return base.map((q) => ({ ...q, sectionId: q.sectionId ?? firstId }));
+  });
   const [fieldMapping, setFieldMapping] = useState<FieldMappingItem[]>(
     existing?.fieldMapping ?? []
   );
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(
-    questions[0]?.id ?? null
-  );
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(() => {
+    const base = existing?.questions ?? template?.questions ?? [];
+    return base[0]?.id ?? null;
+  });
+  const [welcomeMessage, setWelcomeMessage] = useState(existing?.settings?.welcomeMessage ?? "");
+  const [themeColor, setThemeColor] = useState(existing?.settings?.themeColor ?? "");
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
 
-  const addQuestion = useCallback(() => {
-    const q: FormQuestion = {
-      id: generateQuestionId(),
-      type: "text",
-      label: "New question",
-      required: false,
+  const sortedSections = [...sections].sort((a, b) => a.order - b.order);
+  const questionsBySection = sortedSections.map((sec) => ({
+    section: sec,
+    questions: questions.filter((q) => q.sectionId === sec.id),
+  }));
+
+  const addSection = useCallback(() => {
+    const newSec: FormSectionDTO = {
+      id: generateSectionId(),
+      title: `Section ${sections.length + 1}`,
+      order: sections.length,
     };
-    setQuestions((prev) => [...prev, q]);
-    setSelectedQuestionId(q.id);
+    setSections((prev) => [...prev, newSec]);
+  }, [sections.length]);
+
+  const updateSection = useCallback((sectionId: string, patch: Partial<FormSectionDTO>) => {
+    setSections((prev) =>
+      prev.map((s) => (s.id === sectionId ? { ...s, ...patch } : s))
+    );
   }, []);
+
+  const removeSection = useCallback((sectionId: string) => {
+    const remaining = sections.filter((s) => s.id !== sectionId).sort((a, b) => a.order - b.order);
+    const targetId = remaining[0]?.id;
+    setSections(remaining.map((s, i) => ({ ...s, order: i })));
+    if (targetId) {
+      setQuestions((prev) =>
+        prev.map((q) => (q.sectionId === sectionId ? { ...q, sectionId: targetId } : q))
+      );
+    } else {
+      setQuestions([]);
+      setSelectedQuestionId(null);
+    }
+  }, [sections]);
+
+  const insertIndexForSection = useCallback(
+    (sectionId: string) => {
+      const order = sections.find((s) => s.id === sectionId)?.order ?? 0;
+      const lastInSection = questions.reduce((max, q, i) => (q.sectionId === sectionId ? i : max), -1);
+      if (lastInSection >= 0) return lastInSection + 1;
+      const firstOfLater = questions.findIndex(
+        (q) => (sections.find((s) => s.id === q.sectionId)?.order ?? 0) >= order
+      );
+      return firstOfLater === -1 ? questions.length : firstOfLater;
+    },
+    [questions, sections]
+  );
+
+  const addQuestion = useCallback(
+    (sectionId?: string) => {
+      const secId = sectionId ?? sortedSections[0]?.id;
+      if (!secId) return;
+      const q: FormQuestion = {
+        id: generateQuestionId(),
+        type: "text",
+        label: "New question",
+        required: false,
+        sectionId: secId,
+      };
+      const at = insertIndexForSection(secId);
+      setQuestions((prev) => [...prev.slice(0, at), q, ...prev.slice(at)]);
+      setSelectedQuestionId(q.id);
+    },
+    [sortedSections, insertIndexForSection]
+  );
 
   const updateQuestion = useCallback((id: string, patch: Partial<FormQuestion>) => {
     setQuestions((prev) =>
@@ -151,8 +229,15 @@ export function FormBuilderEditor({
     setQuestions((prev) => {
       const i = prev.findIndex((q) => q.id === id);
       if (i === -1) return prev;
-      const j = dir === "up" ? i - 1 : i + 1;
-      if (j < 0 || j >= prev.length) return prev;
+      const sectionId = prev[i].sectionId;
+      const inSection = prev
+        .map((q, idx) => ({ q, idx }))
+        .filter(({ q }) => q.sectionId === sectionId);
+      const pos = inSection.findIndex(({ q }) => q.id === id);
+      if (pos === -1) return prev;
+      const targetPos = dir === "up" ? pos - 1 : pos + 1;
+      if (targetPos < 0 || targetPos >= inSection.length) return prev;
+      const j = inSection[targetPos].idx;
       const next = [...prev];
       [next[i], next[j]] = [next[j], next[i]];
       return next;
@@ -181,6 +266,8 @@ export function FormBuilderEditor({
 
   const handleSave = useCallback(() => {
     if (!name.trim()) return;
+    const settings = (welcomeMessage || themeColor) ? { welcomeMessage: welcomeMessage || undefined, themeColor: themeColor || undefined } : undefined;
+    const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
     if (existing) {
       const updated = updateForm(existing.id, {
         name: name.trim(),
@@ -189,8 +276,10 @@ export function FormBuilderEditor({
         serviceType: serviceType || undefined,
         internal,
         repeatPerPet,
-        questions,
+        sections,
+        questions: questionsWithSection,
         fieldMapping,
+        settings,
       });
       if (updated) onSave(updated);
     } else {
@@ -202,9 +291,11 @@ export function FormBuilderEditor({
         serviceType: serviceType || undefined,
         templateId: template?.id,
         internal,
-        questions,
+        sections,
+        questions: questionsWithSection,
         fieldMapping,
         repeatPerPet,
+        settings,
       });
       onSave(created);
     }
@@ -217,11 +308,35 @@ export function FormBuilderEditor({
     serviceType,
     internal,
     repeatPerPet,
+    sections,
     questions,
+    sortedSections,
     fieldMapping,
+    welcomeMessage,
+    themeColor,
     template?.id,
     onSave,
   ]);
+
+  const handlePublish = useCallback(() => {
+    if (!name.trim() || !existing) return;
+    const settings = (welcomeMessage || themeColor) ? { welcomeMessage: welcomeMessage || undefined, themeColor: themeColor || undefined } : undefined;
+    const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
+    const updated = updateForm(existing.id, {
+      name: name.trim(),
+      slug: slug.trim() || undefined,
+      type,
+      serviceType: serviceType || undefined,
+      internal,
+      repeatPerPet,
+      sections,
+      questions: questionsWithSection,
+      fieldMapping,
+      settings,
+      status: "published",
+    });
+    if (updated) onSave(updated);
+  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, sections, questions, sortedSections, fieldMapping, welcomeMessage, themeColor, onSave]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -229,10 +344,17 @@ export function FormBuilderEditor({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Form settings</CardTitle>
-            <Button onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleSave}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
+              {existing && (
+                <Button onClick={handlePublish} disabled={existing?.status === "published"}>
+                  Publish
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -252,6 +374,30 @@ export function FormBuilderEditor({
                   placeholder="auto from name if empty"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Welcome message (optional)</Label>
+              <textarea
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                placeholder="Brief intro shown at the top of the form"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Theme color (optional)</Label>
+              <Select value={themeColor || "default"} onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Default" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="#0ea5e9">Sky</SelectItem>
+                  <SelectItem value="#22c55e">Green</SelectItem>
+                  <SelectItem value="#8b5cf6">Violet</SelectItem>
+                  <SelectItem value="#f59e0b">Amber</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -309,60 +455,104 @@ export function FormBuilderEditor({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Questions</CardTitle>
-            <Button variant="outline" size="sm" onClick={addQuestion}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add question
-            </Button>
+            <CardTitle>Sections & questions</CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={addSection}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Add section
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => addQuestion()}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add question
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {questions.length === 0 ? (
+            {questionsBySection.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">
-                Add questions to build your form.
+                Add a section, then add questions.
               </p>
             ) : (
-              <div className="space-y-2">
-                {questions.map((q, idx) => (
-                  <div
-                    key={q.id}
-                    className={`flex items-center gap-2 rounded-md border p-2 ${
-                      selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""
-                    }`}
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <button
-                      type="button"
-                      className="flex-1 text-left text-sm truncate"
-                      onClick={() => setSelectedQuestionId(q.id)}
-                    >
-                      {q.label || "Untitled"}
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => moveQuestion(q.id, "up")}
-                      disabled={idx === 0}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => moveQuestion(q.id, "down")}
-                      disabled={idx === questions.length - 1}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => removeQuestion(q.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              <div className="space-y-4">
+                {questionsBySection.map(({ section, questions: secQuestions }) => (
+                  <div key={section.id} className="space-y-2 rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <Input
+                        value={section.title}
+                        onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                        className="h-8 font-medium border-0 shadow-none focus-visible:ring-0 px-0"
+                        placeholder="Section title"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-destructive"
+                        onClick={() => removeSection(section.id)}
+                        disabled={questionsBySection.length <= 1}
+                        title="Remove section"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => addQuestion(section.id)}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add question
+                      </Button>
+                    </div>
+                    {secQuestions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground pl-6">No questions yet.</p>
+                    ) : (
+                      <div className="space-y-2 pl-2">
+                        {secQuestions.map((q, idx) => (
+                          <div
+                            key={q.id}
+                            className={`flex items-center gap-2 rounded-md border p-2 ${
+                              selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""
+                            }`}
+                          >
+                            <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <button
+                              type="button"
+                              className="flex-1 text-left text-sm truncate"
+                              onClick={() => setSelectedQuestionId(q.id)}
+                            >
+                              {q.label || "Untitled"}
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => moveQuestion(q.id, "up")}
+                              disabled={idx === 0}
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => moveQuestion(q.id, "down")}
+                              disabled={idx === secQuestions.length - 1}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => removeQuestion(q.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -380,6 +570,8 @@ export function FormBuilderEditor({
                 question={selectedQuestion}
                 allQuestions={questions}
                 currentQuestionId={selectedQuestion.id}
+                mappingTarget={fieldMapping.find((m) => m.questionId === selectedQuestion.id)?.target}
+                onMappingChange={(t) => (t ? updateMapping(selectedQuestion.id, t) : removeMapping(selectedQuestion.id))}
                 onChange={(patch) => updateQuestion(selectedQuestion.id, patch)}
               />
             </CardContent>
@@ -465,15 +657,19 @@ function QuestionEditor({
   question,
   allQuestions,
   currentQuestionId,
+  mappingTarget,
+  onMappingChange,
   onChange,
 }: {
   question: FormQuestion;
   allQuestions: FormQuestion[];
   currentQuestionId: string;
+  mappingTarget?: string;
+  onMappingChange?: (target: string | null) => void;
   onChange: (patch: Partial<FormQuestion>) => void;
 }) {
   const needsOptions =
-    question.type === "select" || question.type === "multiselect";
+    question.type === "select" || question.type === "multiselect" || question.type === "yes_no" || question.type === "radio";
   const options = question.options ?? [];
   const [optionsText, setOptionsText] = useState(
     options.map((o) => `${o.value}:${o.label}`).join("\n")
@@ -490,6 +686,14 @@ function QuestionEditor({
     onChange({ options: next });
   };
 
+  const handleTypeChange = (v: QuestionType) => {
+    onChange({ type: v });
+    if (v === "yes_no" && (!question.options || question.options.length === 0)) {
+      onChange({ type: v, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] });
+      setOptionsText("yes:Yes\nno:No");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -504,7 +708,7 @@ function QuestionEditor({
         <Label>Type</Label>
         <Select
           value={question.type}
-          onValueChange={(v) => onChange({ type: v as QuestionType })}
+          onValueChange={(v) => handleTypeChange(v as QuestionType)}
         >
           <SelectTrigger>
             <SelectValue />
@@ -526,6 +730,50 @@ function QuestionEditor({
         />
         <Label htmlFor="required">Required</Label>
       </div>
+      <div className="space-y-2">
+        <Label>Visible to</Label>
+        <Select
+          value={question.visibility ?? "customer"}
+          onValueChange={(v) => onChange({ visibility: v as "customer" | "staff" })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="customer">Customer</SelectItem>
+            <SelectItem value="staff">Staff only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {onMappingChange && (
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="save-to-profile"
+              checked={!!mappingTarget}
+              onCheckedChange={(v) => onMappingChange(v ? "customer.name" : null)}
+            />
+            <Label htmlFor="save-to-profile">Save answer to profile</Label>
+          </div>
+          {mappingTarget && (
+            <Select
+              value={mappingTarget}
+              onValueChange={(v) => onMappingChange(v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MAPPING_TARGETS.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
       {needsOptions && (
         <div className="space-y-2">
           <Label>Options (one per line, optional label after colon)</Label>

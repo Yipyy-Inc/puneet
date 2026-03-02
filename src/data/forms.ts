@@ -157,7 +157,12 @@ export type QuestionType =
   | "date"
   | "number"
   | "file"
-  | "signature";
+  | "signature"
+  | "yes_no"
+  | "radio"
+  | "phone"
+  | "email"
+  | "address";
 
 export type ConditionOperator = "eq" | "neq" | "contains" | "in";
 
@@ -178,6 +183,18 @@ export interface FormQuestion {
   options?: { value: string; label: string }[];
   placeholder?: string;
   condition?: FormCondition;
+  /** Customer vs staff only (builder UX) */
+  visibility?: "customer" | "staff";
+  /** Section this question belongs to (builder; required when form has sections) */
+  sectionId?: string;
+}
+
+/** Section for builder and flat Form DTO */
+export interface FormSectionDTO {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
 }
 
 export interface FieldMappingItem {
@@ -197,6 +214,8 @@ export interface Form {
   internal: boolean;
   questions: FormQuestion[];
   fieldMapping: FieldMappingItem[];
+  /** Sections (builder); when present, each question should have sectionId */
+  sections?: FormSectionDTO[];
   repeatPerPet?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -235,19 +254,19 @@ function generateId(prefix: string): string {
 
 function fieldTypeToQuestionType(ft: FieldType): QuestionType {
   const map: Record<FieldType, QuestionType> = {
-    yes_no: "select",
+    yes_no: "yes_no",
     short_text: "text",
     long_text: "textarea",
     dropdown: "select",
-    radio: "select",
+    radio: "radio",
     checkbox: "checkbox",
     date: "date",
     number: "number",
     file_upload: "file",
     signature: "signature",
-    phone: "text",
-    email: "text",
-    address: "textarea",
+    phone: "phone",
+    email: "email",
+    address: "address",
   };
   return map[ft] ?? "text";
 }
@@ -257,12 +276,18 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
   const version = versionId
     ? formVersions.find((v) => v.id === versionId)
     : formVersions.filter((v) => v.formId === record.id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
-  const sectionIds = version
-    ? formSections.filter((s) => s.formVersionId === version.id).sort((a, b) => a.order - b.order).map((s) => s.id)
+  const sectionsOrdered = version
+    ? formSections.filter((s) => s.formVersionId === version.id).sort((a, b) => a.order - b.order)
     : [];
+  const sectionIds = sectionsOrdered.map((s) => s.id);
   const fields = formFields
     .filter((f) => sectionIds.includes(f.sectionId))
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => {
+      const aSec = sectionsOrdered.findIndex((s) => s.id === a.sectionId);
+      const bSec = sectionsOrdered.findIndex((s) => s.id === b.sectionId);
+      if (aSec !== bSec) return aSec - bSec;
+      return a.order - b.order;
+    });
   const questions: FormQuestion[] = fields.map((f) => {
     const opts = formOptions.filter((o) => o.fieldId === f.id).sort((a, b) => a.order - b.order);
     return {
@@ -272,11 +297,20 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
       required: f.required,
       options: opts.length ? opts.map((o) => ({ value: o.value, label: o.label })) : undefined,
       placeholder: f.helpText ?? undefined,
+      visibility: f.visibility,
+      sectionId: f.sectionId,
     };
   });
   const fieldMapping: FieldMappingItem[] = fields
     .filter((f) => f.mappingTarget)
     .map((f) => ({ questionId: f.id, target: f.mappingTarget! }));
+
+  const sections: FormSectionDTO[] = sectionsOrdered.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    order: s.order,
+  }));
 
   return {
     id: record.id,
@@ -287,6 +321,7 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
     internal: record.audience === "staff",
     questions,
     fieldMapping,
+    sections: sections.length ? sections : undefined,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     status: record.status,
@@ -381,26 +416,46 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
     versionNumber: 1,
     createdAt: now,
   });
-  const sectionId = generateId("sec");
-  formSections.push({
-    id: sectionId,
-    formVersionId: versionId,
-    title: "Default",
-    order: 0,
+  const inputSections = input.sections?.length
+    ? input.sections
+    : [{ id: generateId("sec"), title: "Default", order: 0 }];
+  const sectionIdToRecord = new Map<string, string>();
+  inputSections.forEach((s, idx) => {
+    const secId = s.id.startsWith("sec-") ? s.id : generateId("sec");
+    sectionIdToRecord.set(s.id, secId);
+    formSections.push({
+      id: secId,
+      formVersionId: versionId,
+      title: s.title,
+      description: s.description,
+      order: idx,
+    });
   });
+  const firstSectionId = formSections.find((s) => s.formVersionId === versionId)?.id ?? sectionIdToRecord.get(inputSections[0].id)!;
   input.questions.forEach((q, i) => {
     const fieldId = q.id.startsWith("q-") ? q.id : generateId("f");
+    const qq = q as FormQuestion & { visibility?: "customer" | "staff" };
+    const resolvedSectionId = qq.sectionId && sectionIdToRecord.has(qq.sectionId)
+      ? sectionIdToRecord.get(qq.sectionId)!
+      : firstSectionId;
+    const sectionOrder = formSections.findIndex((s) => s.id === resolvedSectionId);
+    const fieldsInSection = input.questions.filter((oq) => {
+      const osid = (oq as FormQuestion & { sectionId?: string }).sectionId;
+      const orid = osid && sectionIdToRecord.has(osid) ? sectionIdToRecord.get(osid)! : firstSectionId;
+      return orid === resolvedSectionId;
+    });
+    const orderInSection = fieldsInSection.indexOf(q);
     formFields.push({
       id: fieldId,
-      sectionId,
+      sectionId: resolvedSectionId,
       label: q.label,
       helpText: q.placeholder,
       fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
       required: q.required,
-      visibility: "customer",
+      visibility: qq.visibility ?? "customer",
       defaultValue: undefined,
       mappingTarget: input.fieldMapping.find((m) => m.questionId === q.id)?.target,
-      order: i,
+      order: orderInSection >= 0 ? orderInSection : i,
     });
     (q.options ?? []).forEach((o, j) => {
       formOptions.push({
@@ -439,28 +494,54 @@ export function updateForm(
   };
   formRecords[idx] = updatedRecord;
   const version = formVersions.filter((v) => v.formId === id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
+  if (input.status === "published" && version) {
+    version.publishedAt = new Date().toISOString();
+  }
   if (version && input.questions !== undefined) {
-    const sectionIds = formSections.filter((s) => s.formVersionId === version.id).map((s) => s.id);
-    const removedFieldIds = formFields.filter((f) => sectionIds.includes(f.sectionId)).map((f) => f.id);
-    formFields = formFields.filter((f) => !sectionIds.includes(f.sectionId));
+    const oldSectionIds = formSections.filter((s) => s.formVersionId === version.id).map((s) => s.id);
+    const removedFieldIds = formFields.filter((f) => oldSectionIds.includes(f.sectionId)).map((f) => f.id);
+    formFields = formFields.filter((f) => !oldSectionIds.includes(f.sectionId));
+    formSections = formSections.filter((s) => s.formVersionId !== version.id);
     formOptions = formOptions.filter((o) => !removedFieldIds.includes(o.fieldId));
-    const sectionId = sectionIds[0] ?? (() => {
-      const sid = generateId("sec");
-      formSections.push({ id: sid, formVersionId: version.id, title: "Default", order: 0 });
-      return sid;
-    })();
+
+    const inputSections = input.sections?.length
+      ? input.sections
+      : [{ id: generateId("sec"), title: "Default", order: 0 }];
+    const sectionIdToRecord = new Map<string, string>();
+    inputSections.forEach((s, idx) => {
+      const secId = s.id.startsWith("sec-") ? s.id : generateId("sec");
+      sectionIdToRecord.set(s.id, secId);
+      formSections.push({
+        id: secId,
+        formVersionId: version.id,
+        title: s.title,
+        description: s.description,
+        order: idx,
+      });
+    });
+    const firstSectionId = formSections.find((s) => s.formVersionId === version.id)?.id ?? sectionIdToRecord.get(inputSections[0].id)!;
     input.questions.forEach((q, i) => {
       const fieldId = q.id;
+      const qq = q as FormQuestion & { visibility?: "customer" | "staff"; sectionId?: string };
+      const resolvedSectionId = qq.sectionId && sectionIdToRecord.has(qq.sectionId)
+        ? sectionIdToRecord.get(qq.sectionId)!
+        : firstSectionId;
+      const fieldsInThisSection = input.questions.filter((oq) => {
+        const osid = (oq as FormQuestion & { sectionId?: string }).sectionId;
+        const orid = osid && sectionIdToRecord.has(osid) ? sectionIdToRecord.get(osid)! : firstSectionId;
+        return orid === resolvedSectionId;
+      });
+      const orderInSection = fieldsInThisSection.indexOf(q);
       formFields.push({
         id: fieldId,
-        sectionId,
+        sectionId: resolvedSectionId,
         label: q.label,
         helpText: q.placeholder,
         fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
         required: q.required,
-        visibility: "customer",
+        visibility: qq.visibility ?? "customer",
         mappingTarget: input.fieldMapping?.find((m) => m.questionId === q.id)?.target,
-        order: i,
+        order: orderInSection >= 0 ? orderInSection : i,
       });
       (q.options ?? []).forEach((o, j) => {
         formOptions.push({ id: generateId("opt"), fieldId, label: o.label, value: o.value, order: j });

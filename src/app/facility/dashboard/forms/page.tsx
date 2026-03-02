@@ -7,8 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CreateFormModal } from "@/components/forms/CreateFormModal";
 import { getFormsByFacility, duplicateForm, type Form, type FormType } from "@/data/forms";
-import { Plus, Lock, Pencil, Copy, ExternalLink } from "lucide-react";
+import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code } from "lucide-react";
+import { toast } from "sonner";
 
 const FORM_CATEGORIES: { value: FormType; label: string }[] = [
   { value: "intake", label: "Intake Forms" },
@@ -22,6 +36,7 @@ const FACILITY_ID = 11;
 
 export default function IntakeFormsPage() {
   const [category, setCategory] = useState<FormType>("intake");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const router = useRouter();
   const allForms = getFormsByFacility(FACILITY_ID);
   const formsInCategory = allForms.filter((f) => f.type === category);
@@ -36,16 +51,22 @@ export default function IntakeFormsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/facility/dashboard/forms/builder?new=1">
-              <Plus className="mr-2 h-4 w-4" />
-              New form
-            </Link>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create New
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/facility/dashboard/forms/builder?new=1">New from scratch</Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/facility/dashboard/forms/templates">From template</Link>
           </Button>
         </div>
+        <CreateFormModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          facilityId={FACILITY_ID}
+        />
       </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as FormType)}>
@@ -66,11 +87,9 @@ export default function IntakeFormsPage() {
                 <p className="text-muted-foreground mb-4">
                   No {FORM_CATEGORIES.find((c) => c.value === category)?.label.toLowerCase()} yet.
                 </p>
-                <Button asChild>
-                  <Link href="/facility/dashboard/forms/builder?new=1">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create form
-                  </Link>
+                <Button onClick={() => setCreateModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create form
                 </Button>
               </CardContent>
             </Card>
@@ -96,54 +115,109 @@ function FormCard({
   facilityId: number;
   router: ReturnType<typeof useRouter>;
 }) {
-  // Use relative URL to avoid hydration mismatch (server has no window.location)
-  const shareUrl = `/forms/${form.slug}`;
+  const sharePath = `/forms/${form.slug}`;
+  const [embedOpen, setEmbedOpen] = useState(false);
+
+  const copyLink = () => {
+    const url = typeof window !== "undefined" ? `${window.location.origin}${sharePath}` : sharePath;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard");
+  };
+
+  const embedSnippet =
+    typeof window !== "undefined"
+      ? `<iframe src="${window.location.origin}${sharePath}" width="100%" height="600" frameborder="0" title="${form.name}"></iframe>`
+      : `<iframe src="https://yoursite.com${sharePath}" width="100%" height="600" frameborder="0" title="${form.name}"></iframe>`;
+
+  const copyEmbed = () => {
+    navigator.clipboard.writeText(embedSnippet);
+    toast.success("Embed code copied to clipboard");
+  };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-base font-medium">{form.name}</CardTitle>
-        {form.internal && (
-          <Badge variant="secondary" className="text-xs">
-            Staff only
-          </Badge>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
-          {form.serviceType && ` · ${form.serviceType}`}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => router.push(`/facility/dashboard/forms/builder?id=${form.id}`)}
-          >
-            <Pencil className="h-3.5 w-3.5 mr-1" />
-            Edit
-          </Button>
-          {!form.internal && (
-            <Button size="sm" variant="ghost" asChild>
-              <a href={shareUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                Open link
-              </a>
-            </Button>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-medium">{form.name}</CardTitle>
+          {form.internal && (
+            <Badge variant="secondary" className="text-xs">
+              Staff only
+            </Badge>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              const copy = duplicateForm(form.id, facilityId);
-              if (copy) router.push(`/facility/dashboard/forms/builder?id=${copy.id}`);
-            }}
-          >
-            <Copy className="h-3.5 w-3.5 mr-1" />
-            Duplicate
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
+            {form.serviceType && ` · ${form.serviceType}`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/facility/dashboard/forms/builder?id=${form.id}`)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              Edit
+            </Button>
+            {!form.internal && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <Share2 className="h-3.5 w-3.5 mr-1" />
+                      Share
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={copyLink}>
+                      <Copy className="h-3.5 w-3.5 mr-2" />
+                      Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEmbedOpen(true)}>
+                      <Code className="h-3.5 w-3.5 mr-2" />
+                      Embed code
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="sm" variant="ghost" asChild>
+                  <a href={sharePath} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Open link
+                  </a>
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const copy = duplicateForm(form.id, facilityId);
+                if (copy) router.push(`/facility/dashboard/forms/builder?id=${copy.id}`);
+              }}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1" />
+              Duplicate
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Embed form</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Paste this code on your website to embed the form.
+          </p>
+          <pre className="rounded bg-muted p-3 text-xs overflow-x-auto max-h-32">
+            {embedSnippet}
+          </pre>
+          <Button onClick={copyEmbed} variant="outline" size="sm">
+            <Copy className="h-3.5 w-3.5 mr-2" />
+            Copy embed code
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

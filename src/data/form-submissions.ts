@@ -136,6 +136,17 @@ export function getSubmissionsByForm(formId: string): FormSubmission[] {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+/** Submissions linked to a specific pet (for customer portal Forms tab) */
+export function getSubmissionsForPet(facilityId: number, petId: number): FormSubmission[] {
+  return submissions
+    .filter(
+      (s) =>
+        s.facilityId === facilityId &&
+        (s.petIds?.includes(petId) || submissionRecords.find((r) => r.id === s.id)?.relatedPetId === petId)
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 export function updateSubmissionStatus(
   id: string,
   status: FormSubmission["status"],
