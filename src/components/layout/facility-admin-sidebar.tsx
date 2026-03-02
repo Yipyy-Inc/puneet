@@ -27,6 +27,9 @@ import {
   Lightbulb,
   FileText,
   GraduationCap,
+  ClipboardList,
+  Inbox,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -255,6 +258,30 @@ export function FacilitySidebar() {
             title: "Digital Waivers",
             url: "/facility/dashboard/waivers",
             icon: FileText,
+            disabled: false,
+          },
+          {
+            title: "Intake Forms",
+            url: "/facility/dashboard/forms",
+            icon: ClipboardList,
+            disabled: false,
+          },
+          {
+            title: "Form Builder",
+            url: "/facility/dashboard/forms/builder",
+            icon: ClipboardList,
+            disabled: false,
+          },
+          {
+            title: "Submissions Inbox",
+            url: "/facility/dashboard/forms/submissions",
+            icon: Inbox,
+            disabled: false,
+          },
+          {
+            title: "Templates",
+            url: "/facility/dashboard/forms/templates",
+            icon: LayoutTemplate,
             disabled: false,
           },
           {
