@@ -6,8 +6,10 @@
  * 6.1 Always Store: Full submission snapshot (submission + all answers) is stored
  * and treated as immutable for audit/compliance. No in-place edits to submitted data.
  *
- * Backward compat: createSubmission(formId, answers) and getSubmission returning answers record.
+ * Audit: submission timestamps + submission_received log entry; merge decisions stored on record.
  */
+
+import { logSubmissionReceived, logMergeDecision } from "@/lib/form-audit";
 
 export type FormSubmissionStatus = "new" | "processed" | "merged";
 
@@ -99,6 +101,15 @@ export function createSubmission(
   submissionRecords.push(record);
   Object.entries(input.answers).forEach(([fieldId, value]) => {
     answerRecords.push({ submissionId: id, fieldId, value });
+  });
+
+  logSubmissionReceived({
+    facilityId: input.facilityId,
+    formId: input.formId,
+    submissionId: id,
+    submittedAt: now,
+    customerId: input.customerId,
+    petIds: input.petIds,
   });
 
   return submission;
@@ -225,10 +236,22 @@ export function updateSubmissionRecordStatus(
   return rec;
 }
 
+export interface MergeOverride {
+  field: string;
+  submittedValue: string;
+  existingValue: string;
+}
+
 export function linkSubmissionToCustomer(
   id: string,
   customerId: number,
-  petIds?: number[]
+  petIds?: number[],
+  options?: {
+    mergeRule?: "submitted_wins" | "existing_wins" | "ask";
+    overrides?: MergeOverride[];
+    staffUserId?: string | number;
+    staffUserName?: string;
+  }
 ): FormSubmission | null {
   const sub = submissions.find((s) => s.id === id);
   if (!sub) return null;
@@ -238,6 +261,26 @@ export function linkSubmissionToCustomer(
   if (rec) {
     rec.relatedCustomerId = customerId;
     rec.relatedPetId = petIds?.[0];
+    const rule = options?.mergeRule ?? "ask";
+    const overrides = options?.overrides ?? [];
+    rec.mergeDecision = {
+      at: new Date().toISOString(),
+      rule,
+      overrides,
+      staffUserId: options?.staffUserId,
+      staffUserName: options?.staffUserName,
+    };
+    logMergeDecision({
+      facilityId: rec.facilityId,
+      submissionId: id,
+      formId: rec.formId,
+      staffUserId: options?.staffUserId,
+      staffUserName: options?.staffUserName,
+      relatedCustomerId: customerId,
+      relatedPetId: petIds?.[0],
+      mergeRule: rule,
+      overrides,
+    });
   }
   return sub;
 }

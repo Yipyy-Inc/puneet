@@ -4,6 +4,8 @@
  * LogicRule for conditional branching. Backward-compat: flat Form/FormQuestion for existing UI.
  */
 
+import { logFormVersionPublish } from "@/lib/form-audit";
+
 // ----- Form (root) -----
 export type FormType =
   | "intake"
@@ -469,7 +471,16 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
   });
   if (input.status === "published") {
     const v = formVersions.find((x) => x.id === versionId);
-    if (v) v.publishedAt = now;
+    if (v) {
+      v.publishedAt = now;
+      logFormVersionPublish({
+        facilityId: record.facilityId,
+        formId: id,
+        formName: record.name,
+        versionNumber: 1,
+        versionId,
+      });
+    }
   }
   return formRecordToFlatForm(record, versionId);
 }
@@ -495,7 +506,15 @@ export function updateForm(
   formRecords[idx] = updatedRecord;
   const version = formVersions.filter((v) => v.formId === id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
   if (input.status === "published" && version) {
-    version.publishedAt = new Date().toISOString();
+    const publishedAt = new Date().toISOString();
+    version.publishedAt = publishedAt;
+    logFormVersionPublish({
+      facilityId: updatedRecord.facilityId,
+      formId: id,
+      formName: updatedRecord.name,
+      versionNumber: version.versionNumber,
+      versionId: version.id,
+    });
   }
   if (version && input.questions !== undefined) {
     const oldSectionIds = formSections.filter((s) => s.formVersionId === version.id).map((s) => s.id);
