@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
 import { getFormsByFacility, duplicateForm, type Form, type FormType } from "@/data/forms";
+import { triggerFormEvent } from "@/lib/form-automation-events";
 import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code } from "lucide-react";
 import { toast } from "sonner";
 
@@ -121,6 +122,12 @@ function FormCard({
   const copyLink = () => {
     const url = typeof window !== "undefined" ? `${window.location.origin}${sharePath}` : sharePath;
     navigator.clipboard.writeText(url);
+    triggerFormEvent("form_link_sent", {
+      facilityId: form.facilityId,
+      formId: form.id,
+      formName: form.name,
+      sentVia: "copy",
+    });
     toast.success("Link copied to clipboard");
   };
 

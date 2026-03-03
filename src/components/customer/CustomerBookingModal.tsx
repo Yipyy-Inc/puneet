@@ -60,6 +60,8 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { facilityConfig } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
 import { vaccinationRules, evaluationConfig } from "@/data/settings";
+import { getFormById, getFormsByFacility } from "@/data/forms";
+import { getSubmissionsForPet } from "@/data/form-submissions";
 import { Syringe } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
@@ -508,10 +510,10 @@ export function CustomerBookingModal({
     };
   }, [selectedPets, selectedService, getPetVaccinationStatus]);
 
-  // Required forms/agreements/vaccination for booking (used in "Complete Required Forms" step)
+  // Required forms/agreements/vaccination for booking (used in "Complete Required Forms" step). 7.1 Includes formRequirements.beforeRequest per service.
   const facilityId = selectedFacility?.id ?? 11;
   const requiredFormsStatus = useMemo(() => {
-    const missing: Array<{ type: "vaccination" | "agreement" | "intake"; label: string; petId?: number; petName?: string; link: string }> = [];
+    const missing: Array<{ type: "vaccination" | "agreement" | "intake" | "form"; label: string; petId?: number; petName?: string; link: string }> = [];
     const templates = facilityConfig.waiversAndContracts.templates;
     const requiredAgreementNames: string[] = [];
     if (templates.liabilityWaiver.required) requiredAgreementNames.push(templates.liabilityWaiver.name);
@@ -552,11 +554,33 @@ export function CustomerBookingModal({
       });
     }
 
+    // 7.1 Required forms before booking (configurable per service)
+    const formReq = selectedService ? facilityConfig.formRequirements[selectedService as keyof typeof facilityConfig.formRequirements] : null;
+    const beforeRequestFormIds = formReq?.beforeRequest ?? [];
+    if (beforeRequestFormIds.length > 0 && selectedPets.length > 0) {
+      selectedPets.forEach((pet) => {
+        const petSubmissions = getSubmissionsForPet(facilityId, pet.id);
+        const completedFormIds = new Set(petSubmissions.map((s) => s.formId));
+        beforeRequestFormIds.forEach((formId) => {
+          if (completedFormIds.has(formId)) return;
+          const form = getFormById(formId);
+          missing.push({
+            type: "form",
+            label: form?.name ?? formId,
+            petId: pet.id,
+            petName: pet.name,
+            link: form?.slug ? `/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}` : `/customer/pets/${pet.id}`,
+          });
+        });
+      });
+    }
+
     const totalRequirements =
       requiredAgreementNames.length +
       (facilityConfig.vaccinationRequirements.documentationRequired || facilityConfig.vaccinationRequirements.mandatoryRecords
         ? selectedPets.length
-        : 0);
+        : 0) +
+      beforeRequestFormIds.length * selectedPets.length;
     const completedCount = Math.max(0, totalRequirements - missing.length);
     const totalCount = totalRequirements;
 
@@ -600,7 +624,9 @@ export function CustomerBookingModal({
           }
         }
         return true;
-      case 3: // Complete Required Forms
+      case 3: // Complete Required Forms. 7.1 If formRequirements.ifMissing === "block", block until forms complete.
+        const formReqBlock = selectedService ? facilityConfig.formRequirements[selectedService as keyof typeof facilityConfig.formRequirements] : null;
+        if (formReqBlock?.ifMissing === "block") return requiredFormsStatus.allComplete;
         if (allowBookingWithoutForms) return true;
         return requiredFormsStatus.allComplete;
       case 4: // Tip (optional step; always can proceed)
@@ -1952,7 +1978,7 @@ export function CustomerBookingModal({
                               <div>
                                 {item.petName && <span className="font-medium">{item.petName}: </span>}
                                 <span className="text-muted-foreground">
-                                  {item.type === "vaccination" ? "Vaccination records — " : item.type === "agreement" ? "Agreement — " : ""}
+                                  {item.type === "vaccination" ? "Vaccination records — " : item.type === "agreement" ? "Agreement — " : item.type === "form" ? "Form — " : ""}
                                   {item.label}
                                 </span>
                               </div>

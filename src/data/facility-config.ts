@@ -32,6 +32,33 @@ export const facilityConfig = {
       ],
     },
   },
+  /** 7.1 Required forms before booking/approve/check-in (configurable per service). Form IDs from Form Builder. */
+  formRequirements: {
+    boarding: {
+      beforeRequest: [] as string[], // Before customer can request a booking
+      beforeApprove: [] as string[], // Before staff can approve a booking
+      beforeCheckIn: [] as string[],
+      ifMissing: "banner" as "block" | "banner", // Block step vs allow with "incomplete requirements" banner
+    },
+    daycare: {
+      beforeRequest: [] as string[],
+      beforeApprove: [] as string[],
+      beforeCheckIn: [] as string[],
+      ifMissing: "banner" as "block" | "banner",
+    },
+    grooming: {
+      beforeRequest: [] as string[],
+      beforeApprove: [] as string[],
+      beforeCheckIn: [] as string[],
+      ifMissing: "banner" as "block" | "banner",
+    },
+    training: {
+      beforeRequest: [] as string[],
+      beforeApprove: [] as string[],
+      beforeCheckIn: [] as string[],
+      ifMissing: "banner" as "block" | "banner",
+    },
+  },
   bookingRules: {
     enforceOnAll: false,
     cutOffTimes: {

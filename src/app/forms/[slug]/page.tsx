@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getFormBySlug, shouldShowQuestion, type Form, type FormQuestion } from "@/data/forms";
 import { createSubmission } from "@/data/form-submissions";
+import { triggerFormEvent } from "@/lib/form-automation-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ export default function PublicFormPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const draftLoadedRef = useRef(false);
+  const formStartedEmittedRef = useRef(false);
 
   const context = {
     petType: searchParams?.get("petType") ?? undefined,
@@ -48,6 +50,19 @@ export default function PublicFormPage() {
   const setAnswer = useCallback((questionId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }, []);
+
+  // 7.2 Emit form_started for automation (once per load)
+  useEffect(() => {
+    if (!form || typeof window === "undefined" || formStartedEmittedRef.current) return;
+    formStartedEmittedRef.current = true;
+    triggerFormEvent("form_started", {
+      facilityId: form.facilityId,
+      formId: form.id,
+      formName: form.name,
+      customerId,
+      petIds,
+    });
+  }, [form?.id, form?.facilityId, form?.name, customerId, petIds]);
 
   // Load draft on mount (client-only)
   useEffect(() => {
@@ -94,13 +109,21 @@ export default function PublicFormPage() {
         return;
       }
       setError(null);
-      createSubmission({
+      const submission = createSubmission({
         formId: form.id,
         facilityId: form.facilityId,
         context: Object.keys(context).length ? context : undefined,
         answers,
         ...(customerId && { customerId }),
         ...(petIds?.length && { petIds }),
+      });
+      triggerFormEvent("form_submitted", {
+        facilityId: form.facilityId,
+        formId: form.id,
+        formName: form.name,
+        submissionId: submission.id,
+        customerId,
+        petIds,
       });
       try {
         if (typeof window !== "undefined") {
