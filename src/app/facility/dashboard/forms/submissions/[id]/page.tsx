@@ -21,6 +21,7 @@ import {
   updateSubmissionRecordStatus,
   linkSubmissionToCustomer,
 } from "@/data/form-submissions";
+import { notifyCustomerSubmissionConfirmed } from "@/lib/form-customer-notifications";
 import { getFormById, type FormQuestion } from "@/data/forms";
 import { clients } from "@/data/clients";
 import {
@@ -121,8 +122,15 @@ export default function SubmissionDetailPage({
   }, [emailFromAnswers, phoneFromAnswers]);
 
   const handleMarkProcessed = () => {
-    if (!id) return;
+    if (!id || !submission) return;
     updateSubmissionRecordStatus(id, "processed");
+    notifyCustomerSubmissionConfirmed({
+      facilityId: submission.facilityId,
+      formId: submission.formId,
+      formName: form?.name ?? submission.formId,
+      submissionId: submission.id,
+      customerId: submission.customerId ?? record?.relatedCustomerId,
+    });
     toast.success("Marked as processed");
     router.push("/facility/dashboard/forms/submissions");
   };

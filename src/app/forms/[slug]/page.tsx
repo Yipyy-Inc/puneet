@@ -3,7 +3,8 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getFormBySlug, shouldShowQuestion, type Form, type FormQuestion } from "@/data/forms";
-import { createSubmission } from "@/data/form-submissions";
+import { createSubmission, submissionHasFiles } from "@/data/form-submissions";
+import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
 import { triggerFormEvent } from "@/lib/form-automation-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +125,14 @@ export default function PublicFormPage() {
         submissionId: submission.id,
         customerId,
         petIds,
+      });
+      notifyStaffOnFormSubmission({
+        facilityId: form.facilityId,
+        submissionId: submission.id,
+        formId: form.id,
+        formName: form.name,
+        hasFiles: submissionHasFiles(submission.id),
+        hasRedFlag: false,
       });
       try {
         if (typeof window !== "undefined") {

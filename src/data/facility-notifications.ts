@@ -1,9 +1,17 @@
 /**
  * Facility in-app notifications (staff).
- * Used for YipyyGo submissions and other facility events.
+ * Used for YipyyGo submissions, form submissions, and other facility events.
  */
 
-export type FacilityNotificationType = "yipyygo_submitted" | "info" | "warning";
+import { facilityConfig } from "@/data/facility-config";
+
+export type FacilityNotificationType =
+  | "yipyygo_submitted"
+  | "form_submission_new"
+  | "form_submission_red_flag"
+  | "form_submission_has_files"
+  | "info"
+  | "warning";
 
 export interface FacilityNotification {
   id: string;
@@ -15,8 +23,19 @@ export interface FacilityNotification {
   /** For YipyyGo: link to booking review */
   bookingId?: number;
   facilityId?: number;
-  /** Optional: pet name, arrival time for display */
-  meta?: { petName?: string; arrivalTime?: string; bookingRef?: string };
+  /** For form submissions: link to submission detail */
+  submissionId?: string;
+  /** Optional: pet name, arrival time, form submission info */
+  meta?: {
+    petName?: string;
+    arrivalTime?: string;
+    bookingRef?: string;
+    submissionId?: string;
+    formName?: string;
+    formId?: string;
+    hasRedFlag?: boolean;
+    hasFiles?: boolean;
+  };
 }
 
 // Seed example notifications so staff see YipyyGo submissions on the dashboard
@@ -121,6 +140,52 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
       petName,
       clientName,
       arrivalTime,
+    });
+  }
+}
+
+const formsNotify = facilityConfig.notifications?.forms?.staff;
+
+/** Notify staff when a form submission is received. Respects config: newSubmission, redFlagAnswers, hasFileUpload. */
+export function notifyStaffOnFormSubmission(params: {
+  facilityId: number;
+  submissionId: string;
+  formId: string;
+  formName: string;
+  hasFiles: boolean;
+  hasRedFlag: boolean;
+}): void {
+  const { facilityId, submissionId, formId, formName, hasFiles, hasRedFlag } = params;
+  const baseMeta = { submissionId, formId, formName, hasRedFlag, hasFiles };
+
+  if (formsNotify?.newSubmission) {
+    addFacilityNotification({
+      type: "form_submission_new",
+      title: "New form submission",
+      message: `${formName} – new submission`,
+      facilityId,
+      submissionId,
+      meta: { ...baseMeta },
+    });
+  }
+  if (hasRedFlag && formsNotify?.redFlagAnswers) {
+    addFacilityNotification({
+      type: "form_submission_red_flag",
+      title: "Form has red-flag answers",
+      message: `${formName} – review submission`,
+      facilityId,
+      submissionId,
+      meta: { ...baseMeta, hasRedFlag: true },
+    });
+  }
+  if (hasFiles && formsNotify?.hasFileUpload) {
+    addFacilityNotification({
+      type: "form_submission_has_files",
+      title: "Form submission includes file upload",
+      message: `${formName} – attachment(s) to review`,
+      facilityId,
+      submissionId,
+      meta: { ...baseMeta, hasFiles: true },
     });
   }
 }

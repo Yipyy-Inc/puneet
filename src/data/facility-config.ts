@@ -32,6 +32,21 @@ export const facilityConfig = {
       ],
     },
   },
+  /** Form notification config: when to notify staff (in-app) and customer (email/SMS or in-app). */
+  notifications: {
+    forms: {
+      staff: {
+        newSubmission: true,
+        redFlagAnswers: true,
+        hasFileUpload: true,
+      },
+      customer: {
+        submissionConfirmed: true,
+        missingRequiredFormsReminder: true,
+        formRejectedNeedsCorrection: true,
+      },
+    },
+  },
   /** 7.1 Required forms before booking/approve/check-in (configurable per service). Form IDs from Form Builder. */
   formRequirements: {
     boarding: {
