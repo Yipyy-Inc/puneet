@@ -11,6 +11,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -69,22 +71,70 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: "address", label: "Address block" },
 ];
 
-const MAPPING_TARGETS: string[] = [
-  "customer.name",
-  "customer.email",
-  "customer.phone",
-  "customer.address.street",
-  "customer.address.city",
-  "pet.name",
-  "pet.type",
-  "pet.breed",
-  "pet.age",
-  "pet.weight",
-  "pet.allergies",
-  "pet.specialNeeds",
-  "pet.microchip",
-  "notes",
+/** Mapping targets by category (6.2: configurable per field in builder). Values are stored as target keys. */
+const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: string }[] }[] = [
+  {
+    group: "Customer profile",
+    targets: [
+      { value: "customer.name", label: "Name" },
+      { value: "customer.email", label: "Email" },
+      { value: "customer.phone", label: "Phone" },
+      { value: "customer.address.street", label: "Address (street)" },
+      { value: "customer.address.city", label: "Address (city)" },
+      { value: "customer.address.state", label: "Address (state)" },
+      { value: "customer.address.zip", label: "Address (zip)" },
+      { value: "customer.emergencyContact.name", label: "Emergency contact name" },
+      { value: "customer.emergencyContact.phone", label: "Emergency contact phone" },
+      { value: "customer.emergencyContact.email", label: "Emergency contact email" },
+    ],
+  },
+  {
+    group: "Pet profile",
+    targets: [
+      { value: "pet.name", label: "Name" },
+      { value: "pet.type", label: "Type" },
+      { value: "pet.breed", label: "Breed" },
+      { value: "pet.age", label: "Age" },
+      { value: "pet.weight", label: "Weight" },
+      { value: "pet.birthday", label: "Birthday" },
+      { value: "pet.color", label: "Color" },
+      { value: "pet.microchip", label: "Microchip" },
+      { value: "pet.allergies", label: "Allergies" },
+      { value: "pet.specialNeeds", label: "Special needs" },
+      { value: "pet.behaviorFlags", label: "Behavior flags" },
+      { value: "pet.vetName", label: "Vet name" },
+      { value: "pet.vetPhone", label: "Vet phone" },
+    ],
+  },
+  {
+    group: "Medical / vaccine",
+    targets: [
+      { value: "medical.vaccineRecord", label: "Vaccine record (file)" },
+      { value: "medical.healthNotes", label: "Health notes" },
+      { value: "medical.medications", label: "Medications" },
+    ],
+  },
+  {
+    group: "Notes",
+    targets: [
+      { value: "notes.customer", label: "Customer notes" },
+      { value: "notes.pet", label: "Pet notes" },
+      { value: "notes.booking", label: "Booking notes (if submission linked to booking)" },
+      { value: "notes", label: "General notes" },
+    ],
+  },
+  {
+    group: "Tags",
+    targets: [
+      { value: "tags.customer", label: "Apply tag to customer" },
+      { value: "tags.pet", label: "Apply tag to pet" },
+      { value: "tags.behaviorAlert", label: "Behavior alert tag" },
+      { value: "tags.medicalAlert", label: "Medical alert tag" },
+    ],
+  },
 ];
+
+const MAPPING_TARGETS_FLAT = MAPPING_TARGET_GROUPS.flatMap((g) => g.targets.map((t) => t.value));
 
 function generateQuestionId(): string {
   return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -589,7 +639,7 @@ export function FormBuilderEditor({
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground mb-3">
-              Map answers to customer/pet fields when processing submissions.
+              Map answers to customer/pet profile fields, notes, medical/vaccine, or tags. Configurable per question in the question editor (Save answer to profile) or here.
             </p>
             {fieldMapping.length === 0 ? (
               <p className="text-sm text-muted-foreground">No mappings yet.</p>
@@ -624,14 +674,25 @@ export function FormBuilderEditor({
                       onValueChange={(v) => updateMapping(m.questionId, v)}
                     >
                       <SelectTrigger className="flex-1 min-w-0">
-                        <SelectValue />
+                        <SelectValue placeholder="Map to..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {MAPPING_TARGETS.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
+                        {MAPPING_TARGET_GROUPS.map((grp) => (
+                          <SelectGroup key={grp.group}>
+                            <SelectLabel>{grp.group}</SelectLabel>
+                            {grp.targets.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         ))}
+                        {m.target && !MAPPING_TARGETS_FLAT.includes(m.target) && (
+                          <SelectGroup key="_other">
+                            <SelectLabel>Other</SelectLabel>
+                            <SelectItem value={m.target}>{m.target}</SelectItem>
+                          </SelectGroup>
+                        )}
                       </SelectContent>
                     </Select>
                     <Button
@@ -757,17 +818,22 @@ function QuestionEditor({
           </div>
           {mappingTarget && (
             <Select
-              value={mappingTarget}
+              value={MAPPING_TARGETS_FLAT.includes(mappingTarget) ? mappingTarget : MAPPING_TARGETS_FLAT[0]}
               onValueChange={(v) => onMappingChange(v)}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Choose field..." />
               </SelectTrigger>
               <SelectContent>
-                {MAPPING_TARGETS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
+                {MAPPING_TARGET_GROUPS.map((grp) => (
+                  <SelectGroup key={grp.group}>
+                    <SelectLabel>{grp.group}</SelectLabel>
+                    {grp.targets.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

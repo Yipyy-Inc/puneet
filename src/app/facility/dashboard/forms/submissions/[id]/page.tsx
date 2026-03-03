@@ -39,6 +39,18 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+/** Format date for display without locale so server and client match (avoids hydration error) */
+function formatSubmissionDate(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const min = String(d.getUTCMinutes()).padStart(2, "0");
+  const s = String(d.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${m}-${day} ${h}:${min}:${s}`;
+}
+
 function AnswerBlock({ question, value }: { question: FormQuestion; value: unknown }) {
   return (
     <div className="space-y-1">
@@ -150,7 +162,7 @@ export default function SubmissionDetailPage({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Submission</h2>
           <p className="text-sm text-muted-foreground">
-            {form?.name ?? submission.formId} · {new Date(submission.createdAt).toLocaleString()}
+            {form?.name ?? submission.formId} · {formatSubmissionDate(submission.createdAt)}
           </p>
         </div>
         <Badge variant={record.status === "unread" ? "default" : "secondary"} className="ml-auto">

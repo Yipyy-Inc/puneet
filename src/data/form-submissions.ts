@@ -2,6 +2,10 @@
  * Form submissions: core model per spec.
  * Submission (form_version_id, status, related_customer_id, related_pet_id, etc.)
  * Answer (submission_id, field_id, value, attachments)
+ *
+ * 6.1 Always Store: Full submission snapshot (submission + all answers) is stored
+ * and treated as immutable for audit/compliance. No in-place edits to submitted data.
+ *
  * Backward compat: createSubmission(formId, answers) and getSubmission returning answers record.
  */
 
