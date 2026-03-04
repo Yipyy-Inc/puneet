@@ -4,6 +4,8 @@
  * LogicRule for conditional branching. Backward-compat: flat Form/FormQuestion for existing UI.
  */
 
+import { logFormVersionPublish } from "@/lib/form-audit";
+
 // ----- Form (root) -----
 export type FormType =
   | "intake"
@@ -27,6 +29,8 @@ export interface FormSettings {
   themeColor?: string;
   welcomeMessage?: string;
   submitMessage?: string;
+  /** Phase 2: scoring for intake (approve/deny/needs review). See forms-phase2-types. */
+  scoring?: import("./forms-phase2-types").FormScoringConfig;
 }
 
 export interface FormRecord {
@@ -98,8 +102,12 @@ export interface FormFieldRecord {
   appliesToPetType?: string;
   defaultValue?: string;
   validation?: FieldValidation;
-  mappingTarget?: string; // e.g. "customer.name", "pet.breed"
+  mappingTarget?: string;
   order: number;
+  /** Phase 2: multi-language labels. See forms-phase2-types. */
+  labelI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
+  /** Phase 2: payment block (when tokenization supported). */
+  paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
 }
 
 // ----- Option (for dropdown/radio/checkbox) -----
@@ -139,6 +147,10 @@ export interface LogicRuleRecord {
   action: LogicRuleAction;
   targetFieldIds?: string[];
   targetSectionId?: string;
+  /** Phase 2: trigger from pet attribute, tag, service type, or evaluation status. See LogicRuleTriggerPhase2. */
+  triggerSource?: import("./forms-phase2-types").LogicRuleTriggerPhase2["triggerSource"];
+  petAttribute?: import("./forms-phase2-types").PetAttributeCondition;
+  tagId?: string;
 }
 
 // ----- Legacy / flat shape (backward compat for existing UI) -----
@@ -173,6 +185,10 @@ export interface FormCondition {
   contextField?: ContextField;
   operator: ConditionOperator;
   value: string | string[];
+  /** Phase 2: condition on pet attribute (e.g. pet.breed, pet.hasTag). See forms-phase2-types. */
+  sourceType?: import("./forms-phase2-types").ConditionSourceType;
+  petAttribute?: import("./forms-phase2-types").PetAttributeCondition;
+  tagId?: string;
 }
 
 export interface FormQuestion {
@@ -183,10 +199,13 @@ export interface FormQuestion {
   options?: { value: string; label: string }[];
   placeholder?: string;
   condition?: FormCondition;
-  /** Customer vs staff only (builder UX) */
   visibility?: "customer" | "staff";
-  /** Section this question belongs to (builder; required when form has sections) */
   sectionId?: string;
+  /** Phase 2: multi-language (EN/FR). See FormQuestionI18n in forms-phase2-types. */
+  labelI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
+  placeholderI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
+  /** Phase 2: payment block config (when payments module supports tokenization). */
+  paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
 }
 
 /** Section for builder and flat Form DTO */
@@ -469,7 +488,16 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
   });
   if (input.status === "published") {
     const v = formVersions.find((x) => x.id === versionId);
-    if (v) v.publishedAt = now;
+    if (v) {
+      v.publishedAt = now;
+      logFormVersionPublish({
+        facilityId: record.facilityId,
+        formId: id,
+        formName: record.name,
+        versionNumber: 1,
+        versionId,
+      });
+    }
   }
   return formRecordToFlatForm(record, versionId);
 }
@@ -495,7 +523,15 @@ export function updateForm(
   formRecords[idx] = updatedRecord;
   const version = formVersions.filter((v) => v.formId === id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
   if (input.status === "published" && version) {
-    version.publishedAt = new Date().toISOString();
+    const publishedAt = new Date().toISOString();
+    version.publishedAt = publishedAt;
+    logFormVersionPublish({
+      facilityId: updatedRecord.facilityId,
+      formId: id,
+      formName: updatedRecord.name,
+      versionNumber: version.versionNumber,
+      versionId: version.id,
+    });
   }
   if (version && input.questions !== undefined) {
     const oldSectionIds = formSections.filter((s) => s.formVersionId === version.id).map((s) => s.id);
@@ -579,6 +615,11 @@ export function duplicateForm(id: string, facilityId: number): Form | null {
 }
 
 // ----- Templates -----
+/** Starter templates (facilityId 0) – ship with app; facilities duplicate and edit. */
+export function getStarterTemplates(): FormTemplate[] {
+  return formTemplates.filter((t) => t.facilityId === 0);
+}
+
 export function getTemplatesByFacility(facilityId: number): FormTemplate[] {
   return formTemplates.filter((t) => t.facilityId === facilityId);
 }
@@ -618,6 +659,29 @@ export function deleteTemplate(id: string): boolean {
   return true;
 }
 
+/** Create a new form from a template (starter or facility). Duplicate and edit flow. */
+export function createFormFromTemplate(templateId: string, facilityId: number): Form | null {
+  const template = formTemplates.find((t) => t.id === templateId);
+  if (!template) return null;
+  const secId = generateId("sec");
+  const questions: FormQuestion[] = template.questions.map((q) => ({
+    ...q,
+    id: generateId("q"),
+    sectionId: secId,
+  }));
+  const slug = slugify(template.name);
+  return createForm({
+    facilityId,
+    name: template.name,
+    slug: formRecords.some((f) => f.slug === slug) ? `${slug}-${Date.now().toString(36)}` : slug,
+    type: template.formType,
+    internal: false,
+    sections: [{ id: secId, title: "Default", order: 0 }],
+    questions,
+    fieldMapping: [],
+  });
+}
+
 // ----- Seed (new model + legacy flat) -----
 const now = new Date().toISOString();
 const seedFormId = "form-intake-demo";
@@ -645,7 +709,52 @@ formFields = [
 ];
 formOptions = [];
 logicRules = [];
+// Starter templates (facilityId 0): ship with app; facilities duplicate and edit
+const starterTpl = (id: string, name: string, formType: FormType, questions: FormQuestion[]) => ({
+  id,
+  facilityId: 0,
+  name,
+  formType,
+  questions,
+  createdAt: now,
+  updatedAt: now,
+});
 formTemplates = [
+  starterTpl("tpl-starter-new-client", "New client intake", "intake", [
+    { id: "q1", type: "text", label: "Full name", required: true },
+    { id: "q2", type: "email", label: "Email", required: true },
+    { id: "q3", type: "phone", label: "Phone", required: false },
+    { id: "q4", type: "textarea", label: "How did you hear about us?", required: false },
+    { id: "q5", type: "textarea", label: "Anything else we should know?", required: false },
+  ]),
+  starterTpl("tpl-starter-pet-profile", "Pet profile basics", "pet", [
+    { id: "q1", type: "text", label: "Pet name", required: true },
+    { id: "q2", type: "text", label: "Species / type", required: true },
+    { id: "q3", type: "text", label: "Breed", required: false },
+    { id: "q4", type: "date", label: "Date of birth (approx. ok)", required: false },
+    { id: "q5", type: "yes_no", label: "Spayed or neutered?", required: false },
+    { id: "q6", type: "textarea", label: "Allergies or special needs", required: false },
+  ]),
+  starterTpl("tpl-starter-boarding", "Boarding intake", "service", [
+    { id: "q1", type: "text", label: "Emergency contact name", required: true },
+    { id: "q2", type: "phone", label: "Emergency contact phone", required: true },
+    { id: "q2b", type: "textarea", label: "Feeding instructions", required: false },
+    { id: "q3", type: "textarea", label: "Medication (if any)", required: false },
+    { id: "q4", type: "yes_no", label: "Can we share space with other dogs?", required: false },
+    { id: "q5", type: "textarea", label: "Behavior notes for staff", required: false },
+  ]),
+  starterTpl("tpl-starter-grooming", "Grooming consent", "service", [
+    { id: "q1", type: "yes_no", label: "I consent to standard grooming procedures", required: true },
+    { id: "q2", type: "textarea", label: "Sensitivities or areas to avoid", required: false },
+    { id: "q3", type: "yes_no", label: "May we use photos for portfolio/social?", required: false },
+  ]),
+  starterTpl("tpl-starter-behavior", "Behavior evaluation", "pet", [
+    { id: "q1", type: "yes_no", label: "Has your pet ever shown aggression to people?", required: true },
+    { id: "q2", type: "yes_no", label: "Has your pet ever shown aggression to other animals?", required: true },
+    { id: "q3", type: "textarea", label: "If yes, describe circumstances", required: false },
+    { id: "q4", type: "textarea", label: "What does your pet enjoy most?", required: false },
+    { id: "q5", type: "textarea", label: "Any triggers we should avoid?", required: false },
+  ]),
   {
     id: "tpl-intake-base",
     facilityId: 11,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, FileText, Info, AlertCircle } from "lucide-react";
+import { Bell, FileText, Info, AlertCircle, AlertTriangle, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,7 +37,12 @@ function formatTime(iso: string): string {
 function IconForType(type: FacilityNotificationType) {
   switch (type) {
     case "yipyygo_submitted":
+    case "form_submission_new":
       return <FileText className="h-4 w-4 text-primary" />;
+    case "form_submission_red_flag":
+      return <AlertTriangle className="h-4 w-4 text-destructive" />;
+    case "form_submission_has_files":
+      return <Paperclip className="h-4 w-4 text-muted-foreground" />;
     case "warning":
       return <AlertCircle className="h-4 w-4 text-warning" />;
     default:
@@ -110,6 +115,18 @@ export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotif
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{n.title}</p>
                   <p className="text-xs text-muted-foreground">{n.message}</p>
+                  {(n.type === "form_submission_new" || n.type === "form_submission_red_flag" || n.type === "form_submission_has_files") && n.submissionId && (
+                    <Link
+                      href={`/facility/dashboard/forms/submissions/${n.submissionId}`}
+                      className="text-xs text-primary hover:underline mt-1 inline-block"
+                      onClick={() => {
+                        markRead(n.id);
+                        setOpen(false);
+                      }}
+                    >
+                      View submission →
+                    </Link>
+                  )}
                   {n.type === "yipyygo_submitted" && n.bookingId != null && (
                     <Link
                       href={`/facility/dashboard/bookings/${n.bookingId}#yipyygo`}

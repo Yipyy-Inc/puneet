@@ -21,6 +21,8 @@ import {
   updateSubmissionRecordStatus,
   linkSubmissionToCustomer,
 } from "@/data/form-submissions";
+import { getFormAuditLog } from "@/lib/form-audit";
+import { notifyCustomerSubmissionConfirmed } from "@/lib/form-customer-notifications";
 import { getFormById, type FormQuestion } from "@/data/forms";
 import { clients } from "@/data/clients";
 import {
@@ -29,6 +31,7 @@ import {
   Link2,
   CheckCircle,
   FileText,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +40,18 @@ function formatValue(value: unknown): string {
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+/** Format date for display without locale so server and client match (avoids hydration error) */
+function formatSubmissionDate(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const min = String(d.getUTCMinutes()).padStart(2, "0");
+  const s = String(d.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${m}-${day} ${h}:${min}:${s}`;
 }
 
 function AnswerBlock({ question, value }: { question: FormQuestion; value: unknown }) {
@@ -92,6 +107,11 @@ export default function SubmissionDetailPage({
     return "";
   }, [answers]);
 
+  const submissionAuditEntries = useMemo(
+    () => (id ? getFormAuditLog({ submissionId: id }) : []),
+    [id]
+  );
+
   const matchingCustomers = useMemo(() => {
     const out: typeof clients = [];
     const email = emailFromAnswers.trim().toLowerCase();
@@ -109,15 +129,28 @@ export default function SubmissionDetailPage({
   }, [emailFromAnswers, phoneFromAnswers]);
 
   const handleMarkProcessed = () => {
-    if (!id) return;
+    if (!id || !submission) return;
     updateSubmissionRecordStatus(id, "processed");
+    notifyCustomerSubmissionConfirmed({
+      facilityId: submission.facilityId,
+      formId: submission.formId,
+      formName: form?.name ?? submission.formId,
+      submissionId: submission.id,
+      customerId: submission.customerId ?? record?.relatedCustomerId,
+    });
     toast.success("Marked as processed");
     router.push("/facility/dashboard/forms/submissions");
   };
 
   const handleMatchExisting = (customerId: number) => {
     if (!id) return;
-    linkSubmissionToCustomer(id, customerId);
+    // Audit: merge decision + overrides (overrides populated when we have diff; for now empty)
+    linkSubmissionToCustomer(id, customerId, undefined, {
+      mergeRule: mergeRule,
+      overrides: [], // TODO: compute from submission answers vs existing profile when applying mapping
+      staffUserId: "staff-demo",
+      staffUserName: "Staff",
+    });
     setSelectedCustomerId(customerId);
     toast.success("Linked to customer");
   };
@@ -150,7 +183,7 @@ export default function SubmissionDetailPage({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Submission</h2>
           <p className="text-sm text-muted-foreground">
-            {form?.name ?? submission.formId} · {new Date(submission.createdAt).toLocaleString()}
+            {form?.name ?? submission.formId} · {formatSubmissionDate(submission.createdAt)}
           </p>
         </div>
         <Badge variant={record.status === "unread" ? "default" : "secondary"} className="ml-auto">
@@ -255,6 +288,62 @@ export default function SubmissionDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Audit & compliance: timestamps, merge decision, audit trail */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Audit & compliance
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Submission timestamps and merge decisions are logged for compliance.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="text-muted-foreground text-xs">Received at</Label>
+              <p className="text-sm font-medium">{submission ? formatSubmissionDate(submission.createdAt) : "—"}</p>
+            </div>
+            {record?.submittedAt && (
+              <div>
+                <Label className="text-muted-foreground text-xs">Submitted at</Label>
+                <p className="text-sm font-medium">{formatSubmissionDate(record.submittedAt)}</p>
+              </div>
+            )}
+          </div>
+          {record?.mergeDecision && typeof record.mergeDecision === "object" && "rule" in record.mergeDecision && (
+            <div className="rounded-md border bg-muted/30 p-3 text-sm">
+              <p className="font-medium mb-1">Merge decision</p>
+              <p className="text-muted-foreground text-xs">
+                Rule: {(record.mergeDecision as { rule?: string }).rule ?? "—"} · at {(record.mergeDecision as { at?: string }).at ?? "—"}
+              </p>
+              {Array.isArray((record.mergeDecision as { overrides?: unknown[] }).overrides) &&
+                (record.mergeDecision as { overrides: { field: string; submittedValue: string; existingValue: string }[] }).overrides.length > 0 && (
+                  <ul className="mt-2 list-inside list-disc text-xs">
+                    {(record.mergeDecision as { overrides: { field: string; submittedValue: string; existingValue: string }[] }).overrides.map((o, i) => (
+                      <li key={i}>{o.field}: submitted &quot;{o.submittedValue}&quot; vs existing &quot;{o.existingValue}&quot;</li>
+                    ))}
+                  </ul>
+                )}
+            </div>
+          )}
+          {submissionAuditEntries.length > 0 && (
+            <div>
+              <Label className="text-muted-foreground text-xs">Audit log (this submission)</Label>
+              <ul className="mt-1 space-y-1 text-xs">
+                {submissionAuditEntries.slice(0, 10).map((e) => (
+                  <li key={e.id} className="flex gap-2">
+                    <span className="text-muted-foreground shrink-0">{e.timestamp.slice(0, 19).replace("T", " ")}</span>
+                    <span>{e.action}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -49,6 +49,18 @@ function getPetNames(petIds?: number[]): string {
   return names.join(", ");
 }
 
+/** Format date for display without locale so server and client match (avoids hydration error) */
+function formatSubmissionDate(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const min = String(d.getUTCMinutes()).padStart(2, "0");
+  const s = String(d.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${m}-${day} ${h}:${min}:${s}`;
+}
+
 export default function SubmissionsInboxPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">("all");
@@ -182,7 +194,7 @@ export default function SubmissionsInboxPage() {
                         className="border-b hover:bg-muted/50"
                       >
                         <td className="py-3 px-2 whitespace-nowrap">
-                          {new Date(submission.createdAt).toLocaleString()}
+                          {formatSubmissionDate(submission.createdAt)}
                         </td>
                         <td className="py-3 px-2">{form?.name ?? submission.formId}</td>
                         <td className="py-3 px-2">

@@ -267,12 +267,6 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Form Builder",
-            url: "/facility/dashboard/forms/builder",
-            icon: ClipboardList,
-            disabled: false,
-          },
-          {
             title: "Submissions Inbox",
             url: "/facility/dashboard/forms/submissions",
             icon: Inbox,

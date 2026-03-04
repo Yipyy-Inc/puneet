@@ -1,5 +1,7 @@
 // Tenant Activity & Audit Logs Data
 
+import { getFormAuditLog, formAuditEntryToTenantAuditLog } from "@/lib/form-audit";
+
 export interface TenantActivityLog {
   id: string;
   facilityId: number;
@@ -557,7 +559,11 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
     ],
   };
 
-  return facilityAuditLogs[facilityId] || generateDefaultAuditLogs(facilityId);
+  const baseLogs = facilityAuditLogs[facilityId] || generateDefaultAuditLogs(facilityId);
+  const formEntries = getFormAuditLog({ facilityId }).map(formAuditEntryToTenantAuditLog) as TenantAuditLog[];
+  return [...baseLogs, ...formEntries].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 }
 
 // Generate tenant-specific statistics

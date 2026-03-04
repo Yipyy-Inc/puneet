@@ -159,7 +159,12 @@ export interface AutomationRule {
     | "check_out"
     | "payment_received"
     | "vaccination_expiry"
-    | "appointment_reminder";
+    | "appointment_reminder"
+    | "form_link_sent"
+    | "form_started"
+    | "form_submitted"
+    | "form_incomplete_by_deadline"
+    | "form_red_flag_answer";
   enabled: boolean;
   messageType: "email" | "sms" | "both";
   templateId: string;
