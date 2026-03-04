@@ -106,7 +106,11 @@ export default function PublicFormPage() {
       const required = visibleQuestions.filter((q) => q.required);
       const missing = required.filter((q) => answers[q.id] === undefined || answers[q.id] === "");
       if (missing.length > 0) {
-        setError(`Please answer required questions: ${missing.map((q) => q.label).join(", ")}`);
+        setError(
+          missing.length === 1
+            ? `Please answer: "${missing[0].label}".`
+            : `A few required fields still need your input: ${missing.map((q) => `"${q.label}"`).join(", ")}.`
+        );
         return;
       }
       setError(null);
@@ -190,25 +194,46 @@ export default function PublicFormPage() {
   }
 
   const isAnonymous = !customerId && !petIds?.length;
+  const total = visibleQuestions.length;
+  const answered = visibleQuestions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== "").length;
+  const progressPct = total > 0 ? Math.round((answered / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="max-w-lg w-full">
-        <CardHeader>
-          <CardTitle>{form.name}</CardTitle>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl sm:text-2xl">{form.name}</CardTitle>
           {form.settings?.welcomeMessage && (
             <p className="text-sm text-muted-foreground mt-1">{form.settings.welcomeMessage}</p>
+          )}
+          {/* Progress indicator: mobile-first */}
+          {total > 0 && (
+            <div className="mt-4 space-y-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Progress</span>
+                <span>{answered} of {total} {total === 1 ? "question" : "questions"}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
           )}
         </CardHeader>
         <CardContent>
           {isAnonymous && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2 mb-4">
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 mb-4">
               <a href="/customer/auth/login" className="underline hover:text-foreground">
                 Sign in
               </a>{" "}
               to link this response to your account and save progress.
             </p>
           )}
+          <p className="text-xs text-muted-foreground mb-4">
+            Your progress is saved automatically. You can leave and come back anytime.
+          </p>
           {form.repeatPerPet && (
             <p className="text-xs text-muted-foreground mb-4">
               This form can be completed once per pet. Use the link from your pet&apos;s Forms tab to fill for a specific pet.
@@ -216,7 +241,10 @@ export default function PublicFormPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 p-2 rounded">{error}</p>
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+                <p className="font-medium">Please complete the required fields</p>
+                <p className="mt-1 opacity-90">{error}</p>
+              </div>
             )}
             {visibleQuestions.map((q) => (
               <QuestionInput
@@ -226,7 +254,7 @@ export default function PublicFormPage() {
                 onChange={(v) => setAnswer(q.id, v)}
               />
             ))}
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full min-h-12 text-base touch-manipulation">
               Submit
             </Button>
           </form>
@@ -258,7 +286,7 @@ function QuestionInput({
           </Label>
           <textarea
             id={id}
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
@@ -275,7 +303,7 @@ function QuestionInput({
           </Label>
           <select
             id={id}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+            className="flex min-h-12 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
@@ -305,9 +333,10 @@ function QuestionInput({
           </Label>
           <div className="flex flex-wrap gap-2">
             {opts.map((o) => (
-              <label key={o.value} className="flex items-center gap-2 text-sm">
+              <label key={o.value} className="flex items-center gap-2 text-base min-h-12 cursor-pointer touch-manipulation">
                 <input
                   type="checkbox"
+                  className="h-5 w-5"
                   checked={set.has(o.value)}
                   onChange={() => toggle(o.value)}
                 />
@@ -320,10 +349,11 @@ function QuestionInput({
     }
     case "checkbox":
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-h-12 touch-manipulation">
           <input
             id={id}
             type="checkbox"
+            className="h-5 w-5 shrink-0"
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
           />
@@ -343,6 +373,7 @@ function QuestionInput({
           <Input
             id={id}
             type="date"
+            className="text-base min-h-12"
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
@@ -359,6 +390,7 @@ function QuestionInput({
           <Input
             id={id}
             type="number"
+            className="text-base min-h-12"
             value={(value as number) ?? ""}
             onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
             placeholder={question.placeholder}
@@ -381,6 +413,7 @@ function QuestionInput({
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
             required={question.required}
+            className="text-base min-h-12 touch-manipulation"
           />
         </div>
       );

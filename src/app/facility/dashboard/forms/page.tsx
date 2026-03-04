@@ -22,7 +22,7 @@ import {
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
 import { getFormsByFacility, duplicateForm, type Form, type FormType } from "@/data/forms";
 import { triggerFormEvent } from "@/lib/form-automation-events";
-import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code } from "lucide-react";
+import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine } from "lucide-react";
 import { toast } from "sonner";
 
 const FORM_CATEGORIES: { value: FormType; label: string }[] = [
@@ -71,16 +71,24 @@ export default function IntakeFormsPage() {
       </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as FormType)}>
-        <TabsList className="flex flex-wrap h-auto gap-1">
-          {FORM_CATEGORIES.map((cat) => (
-            <TabsTrigger key={cat.value} value={cat.value}>
-              {cat.value === "internal" && (
-                <Lock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              {cat.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex flex-wrap items-center gap-2">
+          <TabsList className="flex flex-wrap h-auto gap-1">
+            {FORM_CATEGORIES.map((cat) => (
+              <TabsTrigger key={cat.value} value={cat.value}>
+                {cat.value === "internal" && (
+                  <Lock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                {cat.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <Button variant="outline" size="sm" asChild className="shrink-0">
+            <Link href="/facility/dashboard/forms/builder?new=1" className="gap-2">
+              <PenLine className="h-4 w-4" />
+              Form Builder
+            </Link>
+          </Button>
+        </div>
         <TabsContent value={category} className="mt-4">
           {formsInCategory.length === 0 ? (
             <Card>

@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,6 +146,61 @@ const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: s
 ];
 
 const MAPPING_TARGETS_FLAT = MAPPING_TARGET_GROUPS.flatMap((g) => g.targets.map((t) => t.value));
+
+function SortableQuestionRow({
+  q,
+  idx,
+  total,
+  selectedQuestionId,
+  onSelect,
+  onUpdateLabel,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+}: {
+  q: FormQuestion;
+  idx: number;
+  total: number;
+  selectedQuestionId: string | null;
+  onSelect: () => void;
+  onUpdateLabel: (v: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? "opacity-50 shadow-md" : ""} ${
+        selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""
+      }`}
+    >
+      <div {...attributes} {...listeners} className="shrink-0 cursor-grab active:cursor-grabbing touch-none">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <Input
+        value={q.label || ""}
+        onChange={(e) => onUpdateLabel(e.target.value)}
+        onFocus={onSelect}
+        onClick={onSelect}
+        className="flex-1 min-w-0 h-8 border-0 shadow-none focus-visible:ring-0 text-sm"
+        placeholder="Question text"
+      />
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMoveUp} disabled={idx === 0}>
+        <ChevronUp className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMoveDown} disabled={idx === total - 1}>
+        <ChevronDown className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onRemove}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
 function generateQuestionId(): string {
   return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -293,6 +359,37 @@ export function FormBuilderEditor({
       return next;
     });
   }, []);
+
+  const handleQuestionDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const activeId = String(active.id);
+      const overId = String(over.id);
+      setQuestions((prev) => {
+        const dragged = prev.find((q) => q.id === activeId);
+        if (!dragged?.sectionId) return prev;
+        const inSection = prev.filter((q) => q.sectionId === dragged.sectionId);
+        const oldIdx = inSection.findIndex((q) => q.id === activeId);
+        const newIdx = inSection.findIndex((q) => q.id === overId);
+        if (oldIdx === -1 || newIdx === -1) return prev;
+        const reordered = arrayMove(inSection, oldIdx, newIdx);
+        const sectionOrder = sortedSections.map((s) => s.id);
+        const merged: FormQuestion[] = [];
+        for (const secId of sectionOrder) {
+          if (secId === dragged.sectionId) merged.push(...reordered);
+          else merged.push(...prev.filter((q) => q.sectionId === secId));
+        }
+        return merged;
+      });
+    },
+    [sortedSections]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const addMapping = useCallback(() => {
     const firstId = questions[0]?.id;
@@ -523,6 +620,7 @@ export function FormBuilderEditor({
                 Add a section, then add questions.
               </p>
             ) : (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleQuestionDragEnd}>
               <div className="space-y-4">
                 {questionsBySection.map(({ section, questions: secQuestions }) => (
                   <div key={section.id} className="space-y-2 rounded-lg border p-3">
@@ -558,62 +656,40 @@ export function FormBuilderEditor({
                       <p className="text-xs text-muted-foreground pl-6">No questions yet.</p>
                     ) : (
                       <div className="space-y-2 pl-2">
-                        {secQuestions.map((q, idx) => (
-                          <div
-                            key={q.id}
-                            className={`flex items-center gap-2 rounded-md border p-2 ${
-                              selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""
-                            }`}
-                          >
-                            <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <button
-                              type="button"
-                              className="flex-1 text-left text-sm truncate"
-                              onClick={() => setSelectedQuestionId(q.id)}
-                            >
-                              {q.label || "Untitled"}
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => moveQuestion(q.id, "up")}
-                              disabled={idx === 0}
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => moveQuestion(q.id, "down")}
-                              disabled={idx === secQuestions.length - 1}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => removeQuestion(q.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+                        <SortableContext items={secQuestions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+                          {secQuestions.map((q, idx) => (
+                            <SortableQuestionRow
+                              key={q.id}
+                              q={q}
+                              idx={idx}
+                              total={secQuestions.length}
+                              selectedQuestionId={selectedQuestionId}
+                              onSelect={() => setSelectedQuestionId(q.id)}
+                              onUpdateLabel={(v) => updateQuestion(q.id, { label: v })}
+                              onMoveUp={() => moveQuestion(q.id, "up")}
+                              onMoveDown={() => moveQuestion(q.id, "down")}
+                              onRemove={() => removeQuestion(q.id)}
+                            />
+                          ))}
+                        </SortableContext>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
+              </DndContext>
             )}
           </CardContent>
         </Card>
 
+      </div>
+
+      {/* Right: settings panel */}
+      <div className="space-y-6">
         {selectedQuestion && (
           <Card>
             <CardHeader>
-              <CardTitle>Edit question</CardTitle>
+              <CardTitle className="text-base">Question settings</CardTitle>
             </CardHeader>
             <CardContent>
               <QuestionEditor
@@ -627,12 +703,9 @@ export function FormBuilderEditor({
             </CardContent>
           </Card>
         )}
-      </div>
-
-      <div className="space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Field mapping</CardTitle>
+            <CardTitle className="text-base">Field mapping</CardTitle>
             <Button variant="outline" size="sm" onClick={addMapping}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -859,9 +932,30 @@ function QuestionEditor({
           currentQuestionId={currentQuestionId}
           onChange={(c) => onChange({ condition: c })}
         />
+        {question.condition && (
+          <p className="text-xs text-muted-foreground rounded bg-muted/50 px-2 py-1.5 mt-1">
+            {formatConditionPlainLanguage(question.condition, allQuestions)}
+          </p>
+        )}
       </div>
     </div>
   );
+}
+
+function formatConditionPlainLanguage(
+  condition: FormCondition,
+  allQuestions: FormQuestion[]
+): string {
+  const opLabel: Record<string, string> = { eq: "=", neq: "≠", contains: "contains", in: "is one of" };
+  const op = opLabel[condition.operator] ?? condition.operator;
+  const val = Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
+  if (condition.questionId) {
+    const src = allQuestions.find((q) => q.id === condition.questionId);
+    const label = src?.label || "Question";
+    return `If "${label}" ${op} ${val || "…"} → Show this question`;
+  }
+  const ctx = condition.contextField === "petType" ? "Pet type" : condition.contextField === "serviceType" ? "Service type" : "Evaluation status";
+  return `If ${ctx} ${op} ${val || "…"} → Show this question`;
 }
 
 type ContextField = "petType" | "serviceType" | "evaluationStatus";

@@ -43,17 +43,21 @@ export interface FormSubmission {
 export interface SubmissionRecord {
   id: string;
   formVersionId: string;
-  formId: string; // denormalized for quick filter
+  formId: string;
   facilityId: number;
   locationId?: string;
   status: SubmissionStatus;
-  submittedBy?: string; // customer_user_id or staff_user_id
+  submittedBy?: string;
   relatedCustomerId?: number;
   relatedPetId?: number;
   relatedBookingId?: number;
   createdAt: string;
   submittedAt?: string;
   mergeDecision?: Record<string, unknown>;
+  /** Phase 2: scoring outcome (approve/deny/needs review). See forms-phase2-types. */
+  score?: number;
+  scoreOutcome?: import("./forms-phase2-types").ScoreOutcome;
+  scoreDetails?: import("./forms-phase2-types").SubmissionScore["details"];
 }
 
 /** New spec: Answer record */
@@ -62,6 +66,8 @@ export interface AnswerRecord {
   fieldId: string;
   value: unknown;
   attachments?: string[];
+  /** Phase 2: e-sign metadata when field is signature/agreement. See SignatureMetadata in forms-phase2-types. */
+  signatureMetadata?: import("./forms-phase2-types").SignatureMetadata;
 }
 
 let submissionRecords: SubmissionRecord[] = [];
@@ -299,7 +305,7 @@ const seedSubs: FormSubmission[] = [
       q2: "jamie.rivera@example.com",
       q3: "Google search",
     },
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    createdAt: "2026-03-04T09:00:00.000Z",
     customerId: undefined,
     petIds: undefined,
   },
@@ -313,7 +319,7 @@ const seedSubs: FormSubmission[] = [
       q2: "alice@example.com",
       q3: "Friend referral",
     },
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: "2026-03-03T10:00:00.000Z",
     customerId: 15,
     petIds: [1],
   },
@@ -327,8 +333,8 @@ const seedSubs: FormSubmission[] = [
       q2: "bob@example.com",
       q3: "Website",
     },
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    processedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: "2026-03-01T10:00:00.000Z",
+    processedAt: "2026-03-02T10:00:00.000Z",
     customerId: 16,
     petIds: [3],
   },
@@ -342,7 +348,7 @@ const seedSubs: FormSubmission[] = [
       q2: "sam@example.com",
       q3: "Vaccination record attached",
     },
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    createdAt: "2026-03-04T11:00:00.000Z",
   },
 ];
 const seedRecords: SubmissionRecord[] = [
