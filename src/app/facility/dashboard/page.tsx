@@ -6,11 +6,14 @@ import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
 import { YipyyGoPendingWidget } from "@/components/yipyygo/YipyyGoPendingWidget";
+import { CustomServiceDashboardSection } from "@/components/facility/CustomServiceDashboardSection";
+import { useCustomServices } from "@/hooks/use-custom-services";
 
 export default function FacilityDashboard() {
   // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
+  const { activeModules } = useCustomServices();
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -29,6 +32,13 @@ export default function FacilityDashboard() {
 
       {/* Training Section */}
       <TrainingSection />
+
+      {/* Custom Service Modules */}
+      {activeModules
+        .filter((m) => m.checkInOut.enabled)
+        .map((m) => (
+          <CustomServiceDashboardSection key={m.id} module={m} />
+        ))}
     </div>
   );
 }

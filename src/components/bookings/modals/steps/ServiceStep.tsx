@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
 import type { FacilityBookingFlowConfig, ModuleConfig, Pet } from "@/lib/types";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import { getAllServiceCategories } from "@/lib/service-registry";
 
 interface ServiceStepProps {
   selectedService: string;
@@ -24,6 +27,12 @@ export function ServiceStep({
   bookingFlow,
   selectedPets = [],
 }: ServiceStepProps) {
+  const { activeModules } = useCustomServices();
+  const allCategories = useMemo(
+    () => getAllServiceCategories(SERVICE_CATEGORIES, activeModules),
+    [activeModules],
+  );
+
   const getLatestEvaluation = (pet: Pet) => {
     const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
     if (evals.length === 0) return null;
@@ -92,7 +101,7 @@ export function ServiceStep({
     <div className="space-y-4">
       <Label className="text-base">Select a service</Label>
       <div className="grid grid-cols-2 gap-4">
-        {SERVICE_CATEGORIES.filter((service) => {
+        {allCategories.filter((service) => {
           if (service.id === "evaluation") return true;
           if (bookingFlow.hiddenServices.includes(service.id)) return false;
           if (

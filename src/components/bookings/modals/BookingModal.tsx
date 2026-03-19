@@ -30,7 +30,10 @@ import {
   DAYCARE_SUB_STEPS,
   BOARDING_SUB_STEPS,
   EVALUATION_SUB_STEPS,
+  CUSTOM_SERVICE_SUB_STEPS,
 } from "./constants";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import { isBuiltinService } from "@/lib/service-registry";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 
@@ -75,6 +78,7 @@ export function BookingModal({
 }: NewBookingModalProps) {
   const { daycare, boarding, grooming, training, bookingFlow } = useSettings();
   const configs = { daycare, boarding, grooming, training };
+  const { getModuleBySlug } = useCustomServices();
 
   // Staff options for assignment
   const staffOptions = [
@@ -185,6 +189,9 @@ export function BookingModal({
     if (selectedService === "daycare") return DAYCARE_SUB_STEPS;
     if (selectedService === "boarding") return BOARDING_SUB_STEPS;
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
+    if (selectedService && !isBuiltinService(selectedService)) {
+      return CUSTOM_SERVICE_SUB_STEPS;
+    }
     return [];
   }, [selectedService]);
 
@@ -356,6 +363,11 @@ export function BookingModal({
       }
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
+    } else if (selectedService && !isBuiltinService(selectedService)) {
+      const customModule = getModuleBySlug(selectedService);
+      if (customModule) {
+        basePrice = customModule.pricing.basePrice;
+      }
     }
 
     return {
@@ -370,6 +382,7 @@ export function BookingModal({
     daycareSelectedDates.length,
     boarding.basePrice,
     daycare.basePrice,
+    getModuleBySlug,
   ]);
 
   // Check if service requires evaluation

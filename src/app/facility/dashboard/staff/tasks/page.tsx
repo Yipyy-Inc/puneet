@@ -75,7 +75,7 @@ const statusColors = {
   skipped: "bg-gray-100 text-gray-800",
 };
 
-const categoryColors = {
+const categoryColors: Record<string, string> = {
   boarding: "bg-purple-100 text-purple-800",
   daycare: "bg-cyan-100 text-cyan-800",
   cleaning: "bg-emerald-100 text-emerald-800",

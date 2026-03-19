@@ -2,18 +2,25 @@
 export interface TaskTemplate {
   id: number;
   name: string;
-  category:
-    | "boarding"
-    | "daycare"
-    | "cleaning"
-    | "medication"
-    | "grooming"
-    | "general";
+  category: string;
   description: string;
   estimatedMinutes: number;
   requiresPhoto: boolean;
   priority: "low" | "medium" | "high" | "urgent";
   isActive: boolean;
+}
+
+const BUILTIN_CATEGORY_LABELS: Record<string, string> = {
+  boarding: "Boarding",
+  daycare: "Daycare",
+  cleaning: "Cleaning",
+  medication: "Medication",
+  grooming: "Grooming",
+  general: "General",
+};
+
+export function getTaskCategoryLabel(category: string): string {
+  return BUILTIN_CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " ");
 }
 
 export const taskTemplates: TaskTemplate[] = [

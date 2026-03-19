@@ -83,6 +83,8 @@ interface Kennel {
   checkIn?: string;
   checkOut?: string;
   dailyRate: number;
+  /** Custom service bookings for this pet/kennel (e.g., "Pool @ 2:00 PM") */
+  customServiceNotes?: string[];
 }
 
 const initialKennels: Kennel[] = [

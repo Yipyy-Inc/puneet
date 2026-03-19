@@ -59,7 +59,7 @@ const getPetImage = (petId: number): string | null => {
   return petImages[petId] || null;
 };
 
-type ServiceFilter = "all" | "daycare" | "boarding";
+type ServiceFilter = "all" | "daycare" | "boarding" | (string & {});
 
 interface UnifiedCheckIn {
   id: string;
@@ -68,7 +68,7 @@ interface UnifiedCheckIn {
   petBreed: string;
   ownerName: string;
   ownerPhone: string;
-  serviceType: "daycare" | "boarding";
+  serviceType: string;
   status: "checked-in" | "checked-out" | "scheduled";
   checkInTime: string;
   checkOutTime: string | null;
@@ -649,7 +649,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
 
   const formatExpectedDeparture = (
     dateStr: string,
-    serviceType: "daycare" | "boarding",
+    serviceType: string,
   ) => {
     const date = new Date(dateStr);
     if (serviceType === "daycare") {
@@ -665,7 +665,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     });
   };
 
-  const getServiceBadge = (serviceType: "daycare" | "boarding") => {
+  const getServiceBadge = (serviceType: string) => {
     if (serviceType === "daycare") {
       return (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -674,10 +674,19 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
         </Badge>
       );
     }
+    if (serviceType === "boarding") {
+      return (
+        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+          <Bed className="h-3 w-3 mr-1" />
+          Boarding
+        </Badge>
+      );
+    }
+    // Custom service badge
     return (
-      <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-        <Bed className="h-3 w-3 mr-1" />
-        Boarding
+      <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+        <PawPrint className="h-3 w-3 mr-1" />
+        {serviceType.charAt(0).toUpperCase() + serviceType.slice(1).replace(/-/g, " ")}
       </Badge>
     );
   };

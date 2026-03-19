@@ -11,6 +11,8 @@ import {
   GROOMING_ADDONS,
   CUSTOMER_ADDONS,
 } from "@/components/bookings/modals/constants";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import { getAllServiceCategories } from "@/lib/service-registry";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -146,6 +148,11 @@ export function CustomerBookingModal({
     serviceDateBlocks,
   } = useSettings();
   const configs = { daycare, boarding, grooming, training };
+  const { activeModules } = useCustomServices();
+  const allServices = useMemo(
+    () => getAllServiceCategories(SERVICE_CATEGORIES, activeModules),
+    [activeModules],
+  );
 
   // Get customer and their pets
   const customer = useMemo(
@@ -239,7 +246,7 @@ export function CustomerBookingModal({
     if (isMandatoryEvaluationEnabled) {
       // If no pets selected yet, only show evaluation
       if (selectedPetIds.length === 0) {
-        return SERVICE_CATEGORIES.filter((service) => service.id === "evaluation");
+        return allServices.filter((service) => service.id === "evaluation");
       }
 
       // Check if all selected pets have valid evaluations
@@ -248,19 +255,19 @@ export function CustomerBookingModal({
 
       if (allPetsHaveValidEvaluation) {
         // All pets have valid evaluation - hide evaluation, show all other services
-        return SERVICE_CATEGORIES.filter((service) => {
+        return allServices.filter((service) => {
           if (service.id === "evaluation") return false; // Hide evaluation once completed
           if (bookingFlow.hiddenServices.includes(service.id)) return false;
           return true;
         });
       } else {
         // At least one pet needs evaluation - show ONLY evaluation
-        return SERVICE_CATEGORIES.filter((service) => service.id === "evaluation");
+        return allServices.filter((service) => service.id === "evaluation");
       }
     }
 
     // If mandatory evaluation is not enabled, use normal filtering
-    return SERVICE_CATEGORIES.filter((service) => {
+    return allServices.filter((service) => {
       // Hide if facility has hidden this service
       if (bookingFlow.hiddenServices.includes(service.id)) return false;
 
@@ -794,11 +801,11 @@ export function CustomerBookingModal({
       return base + extraServicesTotal;
     }
     if (selectedService === "daycare") {
-      const service = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
+      const service = allServices.find((s) => s.id === selectedService);
       const base = service ? service.basePrice * selectedPetIds.length : 0;
       return base + extraServicesTotal;
     }
-    const service = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
+    const service = allServices.find((s) => s.id === selectedService);
     if (!service) return 0;
     return service.basePrice * selectedPetIds.length;
   }, [selectedService, selectedPetIds, selectedGroomingPackage, selectedGroomingAddons, roomAssignments, effectiveStartDate, effectiveEndDate, extraServicesTotal]);
@@ -2102,14 +2109,14 @@ export function CustomerBookingModal({
                       <div className="relative flex items-center gap-4">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                           {(() => {
-                            const ServiceIcon = SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.icon ?? Receipt;
+                            const ServiceIcon = allServices.find((s) => s.id === selectedService)?.icon ?? Receipt;
                             return <ServiceIcon className="h-7 w-7 text-white" />;
                           })()}
                         </div>
                         <div>
                           <h2 className="text-xl font-bold text-white tracking-tight">Booking Receipt</h2>
                           <p className="text-sm text-white/90">
-                            {SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.name ?? "Pet Care Services"}
+                            {allServices.find((s) => s.id === selectedService)?.name ?? "Pet Care Services"}
                           </p>
                         </div>
                       </div>
@@ -2143,7 +2150,7 @@ export function CustomerBookingModal({
                     <div className="p-6 space-y-3">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-semibold">{SERVICE_CATEGORIES.find((s) => s.id === selectedService)?.name}</p>
+                          <p className="font-semibold">{allServices.find((s) => s.id === selectedService)?.name}</p>
                           {selectedService === "grooming" && selectedGroomingPackage && (
                             <p className="text-sm text-muted-foreground">
                               {GROOMING_PACKAGES.find((p) => p.id === selectedGroomingPackage)?.name}

@@ -301,3 +301,7 @@ export const BOARDING_SUB_STEPS = [
 export const EVALUATION_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time slot" },
 ];
+
+export const CUSTOM_SERVICE_SUB_STEPS = [
+  { id: 0, title: "Schedule", description: "Select date and time" },
+];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import {
   REQUIREMENT_LABELS,
   type YipyyGoRequirement,
 } from "@/data/yipyygo-config";
+import { useCustomServices } from "@/hooks/use-custom-services";
 
 interface EnablementScopeSectionProps {
   config: YipyyGoConfig;
@@ -70,8 +72,31 @@ export function EnablementScopeSection({
     onConfigChange({ serviceConfigs: updated });
   };
 
+  const { activeModules } = useCustomServices();
+  const activeCustomModules = useMemo(
+    () => activeModules.filter(m => m.yipyyGoRequired),
+    [activeModules],
+  );
+
   const standardServices: ServiceType[] = ["daycare", "boarding", "grooming", "training"];
   const customServices = config.serviceConfigs.filter((sc) => sc.serviceType === "custom");
+
+  // Auto-populate custom services that require YipyyGo but aren't in config yet (idempotent)
+  useEffect(() => {
+    const missingModules = activeCustomModules.filter(
+      m => !config.serviceConfigs.some(cs => cs.serviceType === "custom" && cs.customServiceName === m.name)
+    );
+    if (missingModules.length === 0) return;
+    const newConfigs: ServiceYipyyGoConfig[] = missingModules.map(m => ({
+      serviceType: "custom" as ServiceType,
+      customServiceName: m.name,
+      enabled: true,
+      requirement: "optional" as YipyyGoRequirement,
+    }));
+    onConfigChange({
+      serviceConfigs: [...config.serviceConfigs, ...newConfigs],
+    });
+  }, [activeCustomModules, config.serviceConfigs, onConfigChange]);
 
   return (
     <div className="space-y-4">

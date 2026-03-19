@@ -30,15 +30,31 @@ import {
   ClipboardList,
   Inbox,
   LayoutTemplate,
+  PlusCircle,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import { resolveIcon } from "@/lib/service-registry";
 
 export function FacilitySidebar() {
   const [isMounted, setIsMounted] = useState(false);
+  const { activeModules } = useCustomServices();
+
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
+    // Build custom service sidebar items from active modules that have showInSidebar
+    const customServiceItems = activeModules
+      .filter((m) => m.showInSidebar)
+      .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
+      .map((m) => ({
+        title: m.name,
+        url: `/facility/dashboard/services/custom/${m.slug}`,
+        icon: resolveIcon(m.icon),
+        disabled: false,
+      }));
+
     const allMenuSections: MenuSection[] = [
       {
         label: "Overview",
@@ -153,6 +169,13 @@ export function FacilitySidebar() {
             title: "Retail / POS",
             url: "/facility/dashboard/services/retail",
             icon: ShoppingCart,
+            disabled: false,
+          },
+          ...customServiceItems,
+          {
+            title: "Custom Services",
+            url: "/facility/dashboard/services/custom",
+            icon: PlusCircle,
             disabled: false,
           },
         ],
@@ -290,7 +313,7 @@ export function FacilitySidebar() {
 
     // Since permission system is removed, always show all items
     return allMenuSections;
-  }, []);
+  }, [activeModules]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic

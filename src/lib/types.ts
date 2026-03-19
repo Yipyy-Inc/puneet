@@ -456,3 +456,118 @@ export interface ModuleConfig {
     reason?: string;
   };
 }
+
+// ========================================
+// CUSTOM SERVICE MODULE TYPES
+// ========================================
+
+export type CustomServiceCategory =
+  | "timed_session"
+  | "stay_based"
+  | "transport"
+  | "event_based"
+  | "addon_only"
+  | "one_time_appointment";
+
+export type CustomServiceStatus = "draft" | "active" | "disabled" | "archived";
+
+export type PricingModelType =
+  | "flat_rate"
+  | "duration_based"
+  | "per_pet"
+  | "per_booking"
+  | "per_route"
+  | "dynamic"
+  | "addon_only";
+
+export interface CustomServiceModule {
+  id: string;
+  facilityId: number;
+  // Basic Info
+  name: string;
+  slug: string;
+  icon: string;
+  iconColor: string;
+  iconColorTo: string;
+  category: CustomServiceCategory;
+  description: string;
+  internalNotes?: string;
+  // Calendar & Availability
+  calendar: {
+    enabled: boolean;
+    durationMode: "fixed" | "variable";
+    durationOptions: { minutes: number; label: string; price?: number }[];
+    bufferTimeMinutes: number;
+    maxSimultaneousBookings: number;
+    assignedTo: "room" | "resource" | "staff" | "combination";
+    assignedResourceIds: string[];
+  };
+  // Check-In/Check-Out
+  checkInOut: {
+    enabled: boolean;
+    checkInType: "manual" | "auto";
+    checkOutTimeTracking: boolean;
+    qrCodeSupport: boolean;
+  };
+  // Stay-Based
+  stayBased: {
+    enabled: boolean;
+    requiresRoomKennel: boolean;
+    affectsKennelView: boolean;
+    generatesDailyTasks: boolean;
+  };
+  // Online Booking
+  onlineBooking: {
+    enabled: boolean;
+    eligibleClients: "all" | "approved_only" | "active_members_only";
+    approvalRequired: boolean;
+    maxDogsPerSession: number;
+    cancellationPolicy: { hoursBeforeBooking: number; feePercentage: number };
+    depositRequired: boolean;
+    depositAmount?: number;
+  };
+  // Pricing
+  pricing: {
+    model: PricingModelType;
+    basePrice: number;
+    durationTiers?: { durationMinutes: number; price: number }[];
+    peakPricingRules?: {
+      id: string;
+      name: string;
+      adjustment: number;
+      adjustmentType: "percentage" | "flat";
+    }[];
+    parentServiceId?: string;
+    taxable: boolean;
+    tipAllowed: boolean;
+    membershipDiscountEligible: boolean;
+  };
+  // Staff Assignment
+  staffAssignment: {
+    autoAssign: boolean;
+    requiredRole: string;
+    customRoleName?: string;
+    taskGeneration: ("setup" | "execution" | "cleanup")[];
+  };
+  // Integration flags
+  yipyyGoRequired: boolean;
+  requiresEvaluation: boolean;
+  showInSidebar: boolean;
+  sidebarPosition: number;
+  dependencies: string[];
+  // Lifecycle
+  status: CustomServiceStatus;
+  disableReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FacilityResource {
+  id: string;
+  facilityId: number;
+  name: string;
+  type: "room" | "pool" | "van" | "equipment" | "yard" | "other";
+  capacity: number;
+  isAvailable: boolean;
+  description?: string;
+}

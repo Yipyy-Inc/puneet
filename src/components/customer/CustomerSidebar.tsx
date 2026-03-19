@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
 import { bookings } from "@/data/bookings";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import { resolveIcon } from "@/lib/service-registry";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -32,6 +34,7 @@ const MOCK_CUSTOMER_ID = 15;
 export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
   const [isMounted, setIsMounted] = useState(false);
+  const { activeModules } = useCustomServices();
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -135,6 +138,25 @@ export function CustomerSidebar() {
       },
       ];
 
+      // Add customer-visible custom service modules (only after mount to avoid hydration issues)
+      if (isMounted) {
+        const customModuleItems = activeModules
+          .filter((m) => m.onlineBooking.enabled && m.showInSidebar)
+          .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
+          .map((m) => ({
+            title: m.name,
+            url: `/customer/services/${m.slug}`,
+            icon: resolveIcon(m.icon),
+          }));
+
+        if (customModuleItems.length > 0) {
+          sections.push({
+            label: "Additional Services",
+            items: customModuleItems,
+          });
+        }
+      }
+
       // Only add cameras section if enabled (only after mount to avoid hydration issues)
       if (isMounted && camerasEnabled) {
         sections.push({
@@ -187,7 +209,7 @@ export function CustomerSidebar() {
 
       return sections;
       },
-    [camerasEnabled, isMounted],
+    [camerasEnabled, isMounted, activeModules],
   );
 
   const header = (

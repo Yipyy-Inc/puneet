@@ -2,6 +2,7 @@ import {
   DaycareDetails,
   BoardingDetails,
   EvaluationDetails,
+  CustomServiceDetails,
 } from "../service-details";
 import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
 import { Pet } from "@/lib/types";
@@ -78,6 +79,7 @@ export function DetailsStep({
   setBoardingDateTimes,
   startDate,
   setStartDate,
+  endDate,
   setEndDate,
   checkInTime,
   setCheckInTime,
@@ -154,6 +156,22 @@ export function DetailsStep({
           setCheckInTime={setCheckInTime}
           checkOutTime={checkOutTime}
           setCheckOutTime={setCheckOutTime}
+        />
+      )}
+
+      {!["daycare", "boarding", "evaluation"].includes(selectedService) && (
+        <CustomServiceDetails
+          serviceId={selectedService}
+          currentSubStep={currentSubStep}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          checkInTime={checkInTime}
+          setCheckInTime={setCheckInTime}
+          checkOutTime={checkOutTime}
+          setCheckOutTime={setCheckOutTime}
+          selectedPets={selectedPets}
         />
       )}
     </div>

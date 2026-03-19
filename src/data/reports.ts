@@ -1,6 +1,7 @@
 import { bookings } from "./bookings";
 import { clients } from "./clients";
 import { facilities } from "./facilities";
+import type { CustomServiceModule } from "@/lib/types";
 
 // Helper functions for report calculations
 export const calculateOccupancyRate = (
@@ -402,3 +403,107 @@ export const savedCustomReports: CustomReportConfig[] = [
     createdBy: "Mike Davis",
   },
 ];
+
+// ========================================
+// PER-SERVICE REVENUE & BREAKDOWN
+// ========================================
+
+export const calculateServiceRevenue = (
+  facilityId: number,
+  serviceId: string,
+  startDate: string,
+  endDate: string,
+) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const serviceBookings = bookings.filter(
+    (b) =>
+      b.facilityId === facilityId &&
+      b.service === serviceId &&
+      b.status !== "cancelled" &&
+      new Date(b.startDate) >= start &&
+      new Date(b.startDate) <= end,
+  );
+
+  const totalRevenue = serviceBookings.reduce(
+    (sum, b) => sum + (b.totalCost ?? 0),
+    0,
+  );
+  const orderCount = serviceBookings.length;
+
+  return {
+    serviceId,
+    totalRevenue,
+    orderCount,
+    aov: orderCount > 0 ? totalRevenue / orderCount : 0,
+  };
+};
+
+export interface ServiceBreakdownItem {
+  serviceId: string;
+  serviceName: string;
+  bookingCount: number;
+  revenue: number;
+  aov: number;
+  isCustom: boolean;
+}
+
+export const generateServiceBreakdownReport = (
+  facilityId: number,
+  startDate: string,
+  endDate: string,
+  customModules: CustomServiceModule[] = [],
+): ServiceBreakdownItem[] => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const facilityBookings = bookings.filter(
+    (b) =>
+      b.facilityId === facilityId &&
+      b.status !== "cancelled" &&
+      new Date(b.startDate) >= start &&
+      new Date(b.startDate) <= end,
+  );
+
+  // Group by service
+  const serviceMap = new Map<
+    string,
+    { count: number; revenue: number }
+  >();
+  for (const b of facilityBookings) {
+    const existing = serviceMap.get(b.service) ?? { count: 0, revenue: 0 };
+    existing.count += 1;
+    existing.revenue += b.totalCost ?? 0;
+    serviceMap.set(b.service, existing);
+  }
+
+  const builtinNames: Record<string, string> = {
+    daycare: "Daycare",
+    boarding: "Boarding",
+    grooming: "Grooming",
+    training: "Training",
+    evaluation: "Evaluation",
+  };
+
+  const customNameMap = new Map(
+    customModules.map((m) => [m.slug, m.name]),
+  );
+
+  const results: ServiceBreakdownItem[] = [];
+  for (const [serviceId, data] of serviceMap) {
+    results.push({
+      serviceId,
+      serviceName:
+        builtinNames[serviceId] ??
+        customNameMap.get(serviceId) ??
+        serviceId,
+      bookingCount: data.count,
+      revenue: data.revenue,
+      aov: data.count > 0 ? data.revenue / data.count : 0,
+      isCustom: !builtinNames[serviceId],
+    });
+  }
+
+  return results.sort((a, b) => b.revenue - a.revenue);
+};
