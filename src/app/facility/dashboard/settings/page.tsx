@@ -60,7 +60,15 @@ import {
   currencySettings,
   subscription,
   auditLog,
+  reportCardSectionMeta,
 } from "@/data/settings";
+import { useCustomServices } from "@/hooks/use-custom-services";
+import type {
+  ReportCardSectionId,
+  ReportCardServiceConfig,
+  ReportCardCustomQuestion,
+  CustomFeedbackType,
+} from "@/lib/types";
 
 // Business Profile Component
 function BusinessProfileCard() {
@@ -1599,6 +1607,14 @@ function EvaluationSettingsCard() {
 
 function ReportCardSettingsCard() {
   const { reportCards, updateReportCards } = useSettings();
+  const { activeModules: customServices } = useCustomServices();
+  const [sectionServiceId, setSectionServiceId] = useState("daycare");
+  const [newQuestionText, setNewQuestionText] = useState("");
+  const [newQuestionType, setNewQuestionType] = useState<CustomFeedbackType>("text");
+  const [newOptionText, setNewOptionText] = useState("");
+  const [newCategoryLabel, setNewCategoryLabel] = useState("");
+  const [newConditionOption, setNewConditionOption] = useState<Record<string, string>>({});
+  const [newFeedbackOption, setNewFeedbackOption] = useState("");
 
   const themeOptions = [
     { id: "everyday", label: "Everyday" },
@@ -1607,242 +1623,656 @@ function ReportCardSettingsCard() {
     { id: "easter", label: "Easter" },
     { id: "thanksgiving", label: "Thanksgiving" },
     { id: "new_year", label: "New Year" },
-    { id: "valentines", label: "Valentine's Day" },
+    { id: "valentines", label: "Valentine’s Day" },
   ] as const;
+
+  const standardServices = [
+    { id: "daycare", label: "Daycare" },
+    { id: "boarding", label: "Boarding" },
+    { id: "grooming", label: "Grooming" },
+    { id: "training", label: "Training" },
+  ];
+
+  const allServices = [
+    ...standardServices,
+    ...customServices.map((cs) => ({ id: cs.id, label: cs.name })),
+  ];
+
+  const allSectionIds: ReportCardSectionId[] = [
+    "todaysVibe", "friendsAndFun", "careMetrics", "holidaySparkle",
+    "closingNote", "overallFeedback", "customFeedback", "petCondition",
+    "nextAppointment", "reviewBooster", "photoShowcase",
+  ];
+
+  const getServiceConfig = (cfg: typeof reportCards, serviceId: string): ReportCardServiceConfig => {
+    return cfg.serviceConfigs?.find((s) => s.serviceId === serviceId) ?? {
+      serviceId,
+      enabled: false,
+      enabledSections: ["todaysVibe", "closingNote", "photoShowcase"] as ReportCardSectionId[],
+    };
+  };
+
+  const updateServiceConfig = (
+    cfg: typeof reportCards,
+    serviceId: string,
+    updates: Partial<ReportCardServiceConfig>,
+  ) => {
+    const configs = cfg.serviceConfigs ?? [];
+    const existing = configs.find((s) => s.serviceId === serviceId);
+    if (existing) {
+      return {
+        ...cfg,
+        serviceConfigs: configs.map((s) =>
+          s.serviceId === serviceId ? { ...s, ...updates } : s,
+        ),
+      };
+    }
+    return {
+      ...cfg,
+      serviceConfigs: [
+        ...configs,
+        { serviceId, enabled: false, enabledSections: ["todaysVibe", "closingNote", "photoShowcase"] as ReportCardSectionId[], ...updates },
+      ],
+    };
+  };
 
   return (
     <SettingsBlock
-      title="Report Card Templates"
-      description="Manage report card themes, wording templates, and auto-send timing."
+      title="Report Card Builder"
+      description="Configure report card themes, sections, feedback, and delivery for each service."
       data={reportCards}
       onSave={updateReportCards}
     >
-      {(isEditing, localConfig, setLocalConfig) => (
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label>Enabled Themes</Label>
-            <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-              {themeOptions.map((theme) => (
-                <div key={theme.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`theme-${theme.id}`}
-                    checked={localConfig.enabledThemes.includes(theme.id)}
+      {(isEditing, localConfig, setLocalConfig) => {
+        const brand = localConfig.brand ?? { reportTitle: "Daily Report Card", accentColor: "#6366f1", showFacilityLogo: true };
+        const overallFeedback = localConfig.overallFeedback ?? { title: "Overall Experience", responseOptions: ["Excellent", "Good", "Fair", "Needs Attention"] };
+        const customQuestions = localConfig.customQuestions ?? [];
+        const petCondition = localConfig.petCondition ?? { categories: [] };
+        const reviewBooster = localConfig.reviewBooster ?? { ratingThreshold: 4, reviewUrl: "", reviewPromptText: "" };
+
+        return (
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-4">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="sections">Sections</TabsTrigger>
+              <TabsTrigger value="feedback">Feedback</TabsTrigger>
+              <TabsTrigger value="condition">Condition</TabsTrigger>
+              <TabsTrigger value="delivery">Delivery</TabsTrigger>
+            </TabsList>
+
+            {/* ── General Tab ─────────────────────────────── */}
+            <TabsContent value="general" className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Brand Styling</Label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Report Title</Label>
+                    <Input
+                      value={brand.reportTitle}
+                      readOnly={!isEditing}
+                      onChange={(e) =>
+                        setLocalConfig({ ...localConfig, brand: { ...brand, reportTitle: e.target.value } })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Accent Color</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={brand.accentColor}
+                        disabled={!isEditing}
+                        className="h-9 w-12 rounded border cursor-pointer disabled:cursor-not-allowed"
+                        onChange={(e) =>
+                          setLocalConfig({ ...localConfig, brand: { ...brand, accentColor: e.target.value } })
+                        }
+                      />
+                      <Input
+                        value={brand.accentColor}
+                        readOnly={!isEditing}
+                        className="flex-1"
+                        onChange={(e) =>
+                          setLocalConfig({ ...localConfig, brand: { ...brand, accentColor: e.target.value } })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="rc-show-logo"
+                    checked={brand.showFacilityLogo}
                     disabled={!isEditing}
-                    onCheckedChange={(checked) => {
-                      const enabled = checked === true;
+                    onCheckedChange={(checked) =>
+                      setLocalConfig({ ...localConfig, brand: { ...brand, showFacilityLogo: checked } })
+                    }
+                  />
+                  <Label htmlFor="rc-show-logo">Show Facility Logo on Report Cards</Label>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Enabled Services</Label>
+                <p className="text-sm text-muted-foreground">Choose which services can have report cards.</p>
+                <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+                  {allServices.map((svc) => {
+                    const svcCfg = getServiceConfig(localConfig, svc.id);
+                    return (
+                      <div key={svc.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`rc-svc-${svc.id}`}
+                          checked={svcCfg.enabled}
+                          disabled={!isEditing}
+                          onCheckedChange={(checked) =>
+                            setLocalConfig(updateServiceConfig(localConfig, svc.id, { enabled: checked === true }))
+                          }
+                        />
+                        <Label htmlFor={`rc-svc-${svc.id}`}>{svc.label}</Label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">Enabled Themes</Label>
+                <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+                  {themeOptions.map((theme) => (
+                    <div key={theme.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`theme-${theme.id}`}
+                        checked={localConfig.enabledThemes.includes(theme.id)}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) => {
+                          const enabled = checked === true;
+                          setLocalConfig({
+                            ...localConfig,
+                            enabledThemes: enabled
+                              ? [...localConfig.enabledThemes, theme.id]
+                              : localConfig.enabledThemes.filter((t) => t !== theme.id),
+                          });
+                        }}
+                      />
+                      <Label htmlFor={`theme-${theme.id}`}>{theme.label}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ── Sections Tab ─────────────────────────────── */}
+            <TabsContent value="sections" className="space-y-6">
+              <div className="space-y-2">
+                <Label>Configure sections for</Label>
+                <Select value={sectionServiceId} onValueChange={setSectionServiceId}>
+                  <SelectTrigger className="w-60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allServices.map((svc) => (
+                      <SelectItem key={svc.id} value={svc.id}>{svc.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                {allSectionIds.map((sectionId) => {
+                  const meta = reportCardSectionMeta[sectionId];
+                  const svcCfg = getServiceConfig(localConfig, sectionServiceId);
+                  const isOn = svcCfg.enabledSections.includes(sectionId);
+                  return (
+                    <div
+                      key={sectionId}
+                      className="flex items-center justify-between rounded-lg border px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{meta?.label ?? sectionId}</p>
+                        <p className="text-xs text-muted-foreground">{meta?.description}</p>
+                      </div>
+                      <Switch
+                        checked={isOn}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) => {
+                          const newSections = (checked
+                            ? [...svcCfg.enabledSections, sectionId]
+                            : svcCfg.enabledSections.filter((s) => s !== sectionId)) as ReportCardSectionId[];
+                          setLocalConfig(
+                            updateServiceConfig(localConfig, sectionServiceId, { enabledSections: newSections }),
+                          );
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+
+            {/* ── Feedback Tab ─────────────────────────────── */}
+            <TabsContent value="feedback" className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Overall Feedback</Label>
+                <div className="space-y-2">
+                  <Label>Feedback Title</Label>
+                  <Input
+                    value={overallFeedback.title}
+                    readOnly={!isEditing}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, overallFeedback: { ...overallFeedback, title: e.target.value } })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Response Options</Label>
+                  <div className="space-y-1">
+                    {overallFeedback.responseOptions.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input
+                          value={opt}
+                          readOnly={!isEditing}
+                          className="flex-1"
+                          onChange={(e) => {
+                            const updated = [...overallFeedback.responseOptions];
+                            updated[idx] = e.target.value;
+                            setLocalConfig({ ...localConfig, overallFeedback: { ...overallFeedback, responseOptions: updated } });
+                          }}
+                        />
+                        {isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const updated = overallFeedback.responseOptions.filter((_, i) => i !== idx);
+                              setLocalConfig({ ...localConfig, overallFeedback: { ...overallFeedback, responseOptions: updated } });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {isEditing && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Input
+                          placeholder="New option..."
+                          value={newFeedbackOption}
+                          onChange={(e) => setNewFeedbackOption(e.target.value)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!newFeedbackOption.trim()}
+                          onClick={() => {
+                            setLocalConfig({
+                              ...localConfig,
+                              overallFeedback: {
+                                ...overallFeedback,
+                                responseOptions: [...overallFeedback.responseOptions, newFeedbackOption.trim()],
+                              },
+                            });
+                            setNewFeedbackOption("");
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Custom Questions</Label>
+                <p className="text-sm text-muted-foreground">
+                  Create your own feedback questions that staff fill out per report card.
+                </p>
+                <div className="space-y-2">
+                  {customQuestions.map((q) => (
+                    <div key={q.id} className="flex items-center justify-between rounded-lg border px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium">{q.question}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs capitalize">{q.type.replace("_", "/")}</Badge>
+                          {q.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
+                          {q.type === "select" && q.options && (
+                            <span className="text-xs text-muted-foreground">{q.options.length} options</span>
+                          )}
+                        </div>
+                      </div>
+                      {isEditing && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setLocalConfig({ ...localConfig, customQuestions: customQuestions.filter((cq) => cq.id !== q.id) })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {isEditing && (
+                  <Card>
+                    <CardContent className="p-4 space-y-3">
+                      <Label className="text-sm font-medium">Add New Question</Label>
+                      <Input
+                        placeholder="Question text..."
+                        value={newQuestionText}
+                        onChange={(e) => setNewQuestionText(e.target.value)}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Type</Label>
+                          <Select value={newQuestionType} onValueChange={(v) => setNewQuestionType(v as CustomFeedbackType)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="text">Text</SelectItem>
+                              <SelectItem value="rating">Rating (1-5)</SelectItem>
+                              <SelectItem value="select">Select</SelectItem>
+                              <SelectItem value="yes_no">Yes / No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {newQuestionType === "select" && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Options (comma-separated)</Label>
+                            <Input
+                              placeholder="Option A, Option B, ..."
+                              value={newOptionText}
+                              onChange={(e) => setNewOptionText(e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!newQuestionText.trim()}
+                        onClick={() => {
+                          const newQ: ReportCardCustomQuestion = {
+                            id: `q-${Date.now()}`,
+                            question: newQuestionText.trim(),
+                            type: newQuestionType,
+                            options: newQuestionType === "select" ? newOptionText.split(",").map((o) => o.trim()).filter(Boolean) : undefined,
+                            required: false,
+                          };
+                          setLocalConfig({ ...localConfig, customQuestions: [...customQuestions, newQ] });
+                          setNewQuestionText("");
+                          setNewOptionText("");
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Question
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── Condition Tab ─────────────────────────────── */}
+            <TabsContent value="condition" className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Pet Condition Categories</Label>
+                <p className="text-sm text-muted-foreground">
+                  Document health, coat, skin, and other observations on each report card.
+                </p>
+                {petCondition.categories.map((cat) => (
+                  <Card key={cat.id}>
+                    <CardHeader className="py-3 px-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">{cat.label}</CardTitle>
+                        {isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              setLocalConfig({
+                                ...localConfig,
+                                petCondition: {
+                                  categories: petCondition.categories.filter((c) => c.id !== cat.id),
+                                },
+                              })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 pt-0">
+                      <div className="flex flex-wrap gap-1.5">
+                        {cat.options.map((opt, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs gap-1">
+                            {opt}
+                            {isEditing && (
+                              <button
+                                className="ml-1 hover:text-destructive"
+                                onClick={() => {
+                                  const updatedCats = petCondition.categories.map((c) =>
+                                    c.id === cat.id ? { ...c, options: c.options.filter((_, i) => i !== idx) } : c,
+                                  );
+                                  setLocalConfig({ ...localConfig, petCondition: { categories: updatedCats } });
+                                }}
+                              >
+                                x
+                              </button>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
+                      {isEditing && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Input
+                            placeholder="New option..."
+                            className="h-8 text-sm"
+                            value={newConditionOption[cat.id] ?? ""}
+                            onChange={(e) => setNewConditionOption({ ...newConditionOption, [cat.id]: e.target.value })}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            disabled={!(newConditionOption[cat.id] ?? "").trim()}
+                            onClick={() => {
+                              const updatedCats = petCondition.categories.map((c) =>
+                                c.id === cat.id ? { ...c, options: [...c.options, (newConditionOption[cat.id] ?? "").trim()] } : c,
+                              );
+                              setLocalConfig({ ...localConfig, petCondition: { categories: updatedCats } });
+                              setNewConditionOption({ ...newConditionOption, [cat.id]: "" });
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+                {isEditing && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="New category label..."
+                      value={newCategoryLabel}
+                      onChange={(e) => setNewCategoryLabel(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      disabled={!newCategoryLabel.trim()}
+                      onClick={() => {
+                        setLocalConfig({
+                          ...localConfig,
+                          petCondition: {
+                            categories: [
+                              ...petCondition.categories,
+                              { id: `cat-${Date.now()}`, label: newCategoryLabel.trim(), options: ["Normal"] },
+                            ],
+                          },
+                        });
+                        setNewCategoryLabel("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Category
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ── Delivery Tab ─────────────────────────────── */}
+            <TabsContent value="delivery" className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Auto-send Timing</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <Select
+                    value={localConfig.autoSend.mode}
+                    disabled={!isEditing}
+                    onValueChange={(value: "immediate" | "scheduled") =>
                       setLocalConfig({
                         ...localConfig,
-                        enabledThemes: enabled
-                          ? [...localConfig.enabledThemes, theme.id]
-                          : localConfig.enabledThemes.filter((t) => t !== theme.id),
-                      });
-                    }}
+                        autoSend: { ...localConfig.autoSend, mode: value },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Send immediately</SelectItem>
+                      <SelectItem value="scheduled">Schedule for time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="time"
+                    value={localConfig.autoSend.sendTime ?? "18:00"}
+                    readOnly={!isEditing || localConfig.autoSend.mode !== "scheduled"}
+                    className={
+                      !isEditing || localConfig.autoSend.mode !== "scheduled"
+                        ? "bg-gray-100 cursor-not-allowed"
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setLocalConfig({
+                        ...localConfig,
+                        autoSend: { ...localConfig.autoSend, sendTime: e.target.value },
+                      })
+                    }
                   />
-                  <Label htmlFor={`theme-${theme.id}`}>{theme.label}</Label>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Auto-send Timing</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <Select
-                value={localConfig.autoSend.mode}
-                disabled={!isEditing}
-                onValueChange={(value: "immediate" | "scheduled") =>
-                  setLocalConfig({
-                    ...localConfig,
-                    autoSend: {
-                      ...localConfig.autoSend,
-                      mode: value,
-                    },
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="immediate">Send immediately</SelectItem>
-                  <SelectItem value="scheduled">Schedule for time</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="time"
-                value={localConfig.autoSend.sendTime ?? "18:00"}
-                readOnly={!isEditing || localConfig.autoSend.mode !== "scheduled"}
-                className={
-                  !isEditing || localConfig.autoSend.mode !== "scheduled"
-                    ? "bg-gray-100 cursor-not-allowed"
-                    : ""
-                }
-                onChange={(e) =>
-                  setLocalConfig({
-                    ...localConfig,
-                    autoSend: {
-                      ...localConfig.autoSend,
-                      sendTime: e.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
-            <div className="flex items-center gap-4 pt-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="rc-send-email"
-                  checked={localConfig.autoSend.channels.email}
-                  disabled={!isEditing}
-                  onCheckedChange={(checked) =>
-                    setLocalConfig({
-                      ...localConfig,
-                      autoSend: {
-                        ...localConfig.autoSend,
-                        channels: {
-                          ...localConfig.autoSend.channels,
-                          email: checked === true,
-                        },
-                      },
-                    })
-                  }
-                />
-                <Label htmlFor="rc-send-email">Send Email</Label>
+                <div className="flex items-center gap-4 pt-2">
+                  {(["email", "message", "sms"] as const).map((ch) => (
+                    <div key={ch} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`rc-send-${ch}`}
+                        checked={localConfig.autoSend.channels[ch]}
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) =>
+                          setLocalConfig({
+                            ...localConfig,
+                            autoSend: {
+                              ...localConfig.autoSend,
+                              channels: { ...localConfig.autoSend.channels, [ch]: checked === true },
+                            },
+                          })
+                        }
+                      />
+                      <Label htmlFor={`rc-send-${ch}`} className="capitalize">{ch}</Label>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="rc-send-message"
-                  checked={localConfig.autoSend.channels.message}
-                  disabled={!isEditing}
-                  onCheckedChange={(checked) =>
-                    setLocalConfig({
-                      ...localConfig,
-                      autoSend: {
-                        ...localConfig.autoSend,
-                        channels: {
-                          ...localConfig.autoSend.channels,
-                          message: checked === true,
-                        },
-                      },
-                    })
-                  }
-                />
-                <Label htmlFor="rc-send-message">Send Message</Label>
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            <Label>Template Wording (by Theme)</Label>
-            <div className="space-y-4">
-              {themeOptions.map((theme) => (
-                <Card key={theme.id}>
-                  <CardHeader>
-                    <CardTitle className="text-base">{theme.label}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-1">
-                      <Label>Today’s vibe</Label>
-                      <Textarea
-                        value={localConfig.templates[theme.id].todaysVibe}
-                        readOnly={!isEditing}
-                        onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            templates: {
-                              ...localConfig.templates,
-                              [theme.id]: {
-                                ...localConfig.templates[theme.id],
-                                todaysVibe: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Friends & fun</Label>
-                      <Textarea
-                        value={localConfig.templates[theme.id].friendsAndFun}
-                        readOnly={!isEditing}
-                        onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            templates: {
-                              ...localConfig.templates,
-                              [theme.id]: {
-                                ...localConfig.templates[theme.id],
-                                friendsAndFun: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Care metrics</Label>
-                      <Textarea
-                        value={localConfig.templates[theme.id].careMetrics}
-                        readOnly={!isEditing}
-                        onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            templates: {
-                              ...localConfig.templates,
-                              [theme.id]: {
-                                ...localConfig.templates[theme.id],
-                                careMetrics: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Holiday sparkle</Label>
-                      <Textarea
-                        value={localConfig.templates[theme.id].holidaySparkle}
-                        readOnly={!isEditing}
-                        onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            templates: {
-                              ...localConfig.templates,
-                              [theme.id]: {
-                                ...localConfig.templates[theme.id],
-                                holidaySparkle: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Closing note</Label>
-                      <Textarea
-                        value={localConfig.templates[theme.id].closingNote}
-                        readOnly={!isEditing}
-                        onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            templates: {
-                              ...localConfig.templates,
-                              [theme.id]: {
-                                ...localConfig.templates[theme.id],
-                                closingNote: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Review Booster</Label>
+                <p className="text-sm text-muted-foreground">
+                  Prompt happy customers to leave reviews on external platforms.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Min Rating to Show Prompt</Label>
+                    <Select
+                      value={String(reviewBooster.ratingThreshold)}
+                      disabled={!isEditing}
+                      onValueChange={(v) =>
+                        setLocalConfig({ ...localConfig, reviewBooster: { ...reviewBooster, ratingThreshold: Number(v) } })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n} star{n > 1 ? "s" : ""}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Review Site URL</Label>
+                    <Input
+                      placeholder="https://g.page/your-business/review"
+                      value={reviewBooster.reviewUrl}
+                      readOnly={!isEditing}
+                      onChange={(e) =>
+                        setLocalConfig({ ...localConfig, reviewBooster: { ...reviewBooster, reviewUrl: e.target.value } })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Review Prompt Text</Label>
+                  <Textarea
+                    value={reviewBooster.reviewPromptText}
+                    readOnly={!isEditing}
+                    onChange={(e) =>
+                      setLocalConfig({ ...localConfig, reviewBooster: { ...reviewBooster, reviewPromptText: e.target.value } })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Template Wording (by Theme)</Label>
+                <div className="space-y-4">
+                  {themeOptions.map((theme) => (
+                    <Card key={theme.id}>
+                      <CardHeader className="py-3 px-4 cursor-pointer">
+                        <CardTitle className="text-sm">{theme.label}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+                        {(["todaysVibe", "friendsAndFun", "careMetrics", "holidaySparkle", "closingNote"] as const).map((field) => (
+                          <div key={field} className="space-y-1">
+                            <Label className="text-xs capitalize">{field.replace(/([A-Z])/g, " $1").trim()}</Label>
+                            <Textarea
+                              value={localConfig.templates[theme.id][field]}
+                              readOnly={!isEditing}
+                              className="text-sm min-h-[60px]"
+                              onChange={(e) =>
+                                setLocalConfig({
+                                  ...localConfig,
+                                  templates: {
+                                    ...localConfig.templates,
+                                    [theme.id]: {
+                                      ...localConfig.templates[theme.id],
+                                      [field]: e.target.value,
+                                    },
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        );
+      }}
     </SettingsBlock>
   );
 }

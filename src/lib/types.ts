@@ -432,10 +432,74 @@ export interface ReportCardAutoSendConfig {
   };
 }
 
+export type ReportCardServiceId = "daycare" | "boarding" | "grooming" | "training" | (string & {});
+
+export type ReportCardSectionId =
+  | "todaysVibe"
+  | "friendsAndFun"
+  | "careMetrics"
+  | "holidaySparkle"
+  | "closingNote"
+  | "overallFeedback"
+  | "customFeedback"
+  | "petCondition"
+  | "nextAppointment"
+  | "reviewBooster"
+  | "photoShowcase";
+
+export interface ReportCardBrandConfig {
+  reportTitle: string;
+  accentColor: string;
+  showFacilityLogo: boolean;
+}
+
+export interface ReportCardOverallFeedbackConfig {
+  title: string;
+  responseOptions: string[];
+}
+
+export type CustomFeedbackType = "rating" | "text" | "select" | "yes_no";
+
+export interface ReportCardCustomQuestion {
+  id: string;
+  question: string;
+  type: CustomFeedbackType;
+  options?: string[];
+  required: boolean;
+}
+
+export interface ReportCardConditionCategory {
+  id: string;
+  label: string;
+  options: string[];
+}
+
+export interface ReportCardPetConditionConfig {
+  categories: ReportCardConditionCategory[];
+}
+
+export interface ReportCardReviewBoosterConfig {
+  ratingThreshold: number;
+  reviewUrl: string;
+  reviewPromptText: string;
+}
+
+export interface ReportCardServiceConfig {
+  serviceId: ReportCardServiceId;
+  enabled: boolean;
+  enabledSections: ReportCardSectionId[];
+}
+
 export interface ReportCardConfig {
   enabledThemes: ReportCardTheme[];
   templates: Record<ReportCardTheme, ReportCardTemplateSet>;
   autoSend: ReportCardAutoSendConfig;
+  brand?: ReportCardBrandConfig;
+  serviceConfigs?: ReportCardServiceConfig[];
+  overallFeedback?: ReportCardOverallFeedbackConfig;
+  customQuestions?: ReportCardCustomQuestion[];
+  petCondition?: ReportCardPetConditionConfig;
+  reviewBooster?: ReportCardReviewBoosterConfig;
 }
 
 export interface ModuleConfig {

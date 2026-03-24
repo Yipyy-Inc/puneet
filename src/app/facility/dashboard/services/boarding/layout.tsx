@@ -18,6 +18,7 @@ import {
   CreditCard,
   LayoutGrid,
   Settings,
+  FileText,
 } from "lucide-react";
 
 const tabs = [
@@ -50,6 +51,11 @@ const tabs = [
     name: "Operations",
     href: "/facility/dashboard/services/boarding/ops",
     icon: LayoutGrid,
+  },
+  {
+    name: "Report Cards",
+    href: "/facility/dashboard/services/boarding/report-cards",
+    icon: FileText,
   },
   {
     name: "Settings",

@@ -12,6 +12,7 @@ import {
   CalendarDays,
   LogIn,
   LogOut,
+  FileText,
 } from "lucide-react";
 
 const tabs = [
@@ -44,6 +45,11 @@ const tabs = [
     name: "Students",
     href: "/facility/dashboard/services/training/students",
     icon: Users,
+  },
+  {
+    name: "Report Cards",
+    href: "/facility/dashboard/services/training/report-cards",
+    icon: FileText,
   },
   {
     name: "Settings",

@@ -74,8 +74,11 @@ export interface ReportCard {
   sentToOwner: boolean;
   sentAt?: string;
   theme?: "everyday" | "halloween" | "christmas" | "valentines" | "easter" | "summer" | "winter";
-  replyMessage?: string; // Quick reply from customer
-  repliedAt?: string; // When customer replied
+  replyMessage?: string;
+  repliedAt?: string;
+  overallFeedback?: string;
+  customAnswers?: Record<string, string>;
+  petConditions?: Record<string, string>;
 }
 
 export interface PetRelationship {
@@ -434,6 +437,8 @@ export const reportCards: ReportCard[] = [
     sentToOwner: true,
     sentAt: "2024-01-15T17:00:00Z",
     theme: "everyday",
+    overallFeedback: "Excellent",
+    petConditions: { coat: "Normal", skin: "Normal", ears: "Normal", eyes: "Normal" },
   },
   {
     id: "report-002",
@@ -469,6 +474,8 @@ export const reportCards: ReportCard[] = [
     sentToOwner: true,
     sentAt: "2024-03-01T17:30:00Z",
     theme: "summer",
+    overallFeedback: "Good",
+    petConditions: { coat: "Normal", skin: "Dry", ears: "Normal", eyes: "Tearing" },
   },
   {
     id: "report-003",

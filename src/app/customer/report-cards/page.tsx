@@ -30,9 +30,30 @@ import {
   Filter,
   X,
   Sparkles,
+  Star,
+  Bell,
+  Ghost,
+  Egg,
+  PartyPopper,
+  Heart,
+  ClipboardCheck,
+  Stethoscope,
 } from "lucide-react";
 import { ReportCardPhotoGallery } from "@/components/customer/ReportCardPhotoGallery";
 import { ReportCardQuickReply } from "@/components/customer/ReportCardQuickReply";
+
+/* ── Report-card theme visuals ────────────────────────────────────── */
+const themeStyles: Record<string, { label: string; emoji: string; cardBg: string; accentBg: string; accentText: string; DecorativeIcon: React.ComponentType<{ className?: string }>; iconPos: string }> = {
+  everyday:     { label: "Everyday",     emoji: "✨", cardBg: "bg-slate-50",  accentBg: "bg-slate-600",  accentText: "text-white", DecorativeIcon: Star,        iconPos: "-top-1 -right-1" },
+  christmas:    { label: "Christmas",    emoji: "🎄", cardBg: "bg-red-50",    accentBg: "bg-red-600",    accentText: "text-white", DecorativeIcon: Bell,        iconPos: "-top-1 -right-1" },
+  halloween:    { label: "Halloween",    emoji: "🎃", cardBg: "bg-orange-50",  accentBg: "bg-violet-700", accentText: "text-white", DecorativeIcon: Ghost,       iconPos: "-top-1 -right-1" },
+  easter:       { label: "Easter",       emoji: "🐣", cardBg: "bg-pink-50",   accentBg: "bg-pink-500",   accentText: "text-white", DecorativeIcon: Egg,         iconPos: "-bottom-1 -right-1" },
+  thanksgiving: { label: "Thanksgiving", emoji: "🦃", cardBg: "bg-amber-50",  accentBg: "bg-amber-600",  accentText: "text-white", DecorativeIcon: Star,        iconPos: "-top-1 -right-1" },
+  new_year:     { label: "New Year",     emoji: "🎉", cardBg: "bg-indigo-50", accentBg: "bg-indigo-600", accentText: "text-white", DecorativeIcon: PartyPopper, iconPos: "-top-1 -right-1" },
+  valentines:   { label: "Valentine's",  emoji: "💘", cardBg: "bg-rose-50",   accentBg: "bg-rose-500",   accentText: "text-white", DecorativeIcon: Heart,       iconPos: "-top-1 -right-1" },
+  summer:       { label: "Summer",       emoji: "☀️", cardBg: "bg-sky-50",    accentBg: "bg-sky-500",    accentText: "text-white", DecorativeIcon: Star,        iconPos: "-top-1 -right-1" },
+  winter:       { label: "Winter",       emoji: "❄️", cardBg: "bg-blue-50",   accentBg: "bg-blue-600",   accentText: "text-white", DecorativeIcon: Star,        iconPos: "-top-1 -right-1" },
+};
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -147,6 +168,8 @@ export default function CustomerReportCardsPage() {
         facilityName: facility?.name ?? facilityName,
         timeLabel: card.sentAt ?? card.date,
         theme: card.theme,
+        overallFeedback: card.overallFeedback,
+        petConditions: card.petConditions,
         reportCard: card,
       };
     });
@@ -336,122 +359,170 @@ export default function CustomerReportCardsPage() {
                       )}
                     </div>
 
-                    {/* Card */}
-                    <Card className="flex-1 overflow-hidden">
-                      <CardHeader className="flex flex-row items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-                            <span>{item.petName}'s {item.serviceType} day</span>
-                            <Badge variant="outline" className="capitalize">
-                              {item.mood}
-                            </Badge>
-                            {getThemeBadge(item.theme)}
-                          </CardTitle>
-                          <CardDescription className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="h-3 w-3" /> {formatDate(item.date)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-muted-foreground">
-                              <Clock className="h-3 w-3" /> {formatTime(item.timeLabel)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-muted-foreground">
-                              <Dog className="h-3 w-3" /> {item.facilityName}
-                            </span>
-                          </CardDescription>
-                        </div>
-
-                        {item.petImage && (
-                          <div className="hidden sm:block h-14 w-14 rounded-full bg-muted overflow-hidden border">
-                            <img
-                              src={item.petImage}
-                              alt={item.petName}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        )}
-                      </CardHeader>
-
-                      <CardContent className="space-y-4">
-                        {item.photos.length > 0 && (
-                          <ReportCardPhotoGallery
-                            photos={item.photos}
-                            petName={item.petName}
-                            reportCardId={item.id}
-                            serviceType={item.serviceType}
-                            date={item.date}
+                    {/* Themed Card */}
+                    {(() => {
+                      const ts = themeStyles[item.theme || "everyday"] ?? themeStyles.everyday;
+                      const { DecorativeIcon } = ts;
+                      return (
+                        <div className={`flex-1 relative overflow-hidden rounded-xl border ${ts.cardBg}`}>
+                          {/* Decorative corner icon */}
+                          <DecorativeIcon
+                            className={`absolute h-20 w-20 opacity-[0.06] text-gray-900 ${ts.iconPos}`}
                           />
-                        )}
 
-                        {item.meals && item.meals.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium flex items-center gap-2">
-                              <Utensils className="h-4 w-4" /> Meals
-                            </p>
-                            <div className="space-y-1 text-xs md:text-sm text-muted-foreground">
-                              {item.meals.map((meal, idx) => (
-                                <div
-                                  key={`${item.id}-meal-${idx}`}
-                                  className="flex flex-wrap items-center gap-2 justify-between"
-                                >
-                                  <span className="font-medium">{meal.time}</span>
-                                  <span className="flex-1 min-w-[140px]">
-                                    {meal.food}
-                                  </span>
-                                  <span>{meal.amount}</span>
-                                  <span className="px-2 py-0.5 rounded-full bg-muted capitalize text-[0.7rem]">
-                                    Ate {meal.consumed}
-                                  </span>
+                          {/* Themed accent header */}
+                          <div className={`relative px-5 py-3 ${ts.accentBg} ${ts.accentText} flex items-start justify-between gap-4`}>
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-lg">{ts.emoji}</span>
+                                <p className="text-base font-bold">
+                                  {item.petName}&apos;s {item.serviceType} day
+                                </p>
+                                <Badge className="bg-white/20 text-white border-0 capitalize text-xs">
+                                  {item.mood}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3 text-xs opacity-80">
+                                <span className="inline-flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" /> {formatDate(item.date)}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="h-3 w-3" /> {formatTime(item.timeLabel)}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Dog className="h-3 w-3" /> {item.facilityName}
+                                </span>
+                              </div>
+                            </div>
+
+                            {item.petImage && (
+                              <div className="hidden sm:block h-14 w-14 rounded-full bg-white/20 overflow-hidden border-2 border-white/30 shrink-0">
+                                <img
+                                  src={item.petImage}
+                                  alt={item.petName}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card body */}
+                          <div className="relative p-4 space-y-4">
+                            {item.photos.length > 0 && (
+                              <ReportCardPhotoGallery
+                                photos={item.photos}
+                                petName={item.petName}
+                                reportCardId={item.id}
+                                serviceType={item.serviceType}
+                                date={item.date}
+                              />
+                            )}
+
+                            {item.meals && item.meals.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <Utensils className="h-4 w-4" /> Meals
+                                </p>
+                                <div className="space-y-1 text-xs md:text-sm text-muted-foreground">
+                                  {item.meals.map((meal, idx) => (
+                                    <div
+                                      key={`${item.id}-meal-${idx}`}
+                                      className="flex flex-wrap items-center gap-2 justify-between"
+                                    >
+                                      <span className="font-medium">{meal.time}</span>
+                                      <span className="flex-1 min-w-[140px]">
+                                        {meal.food}
+                                      </span>
+                                      <span>{meal.amount}</span>
+                                      <span className="px-2 py-0.5 rounded-full bg-white capitalize text-[0.7rem]">
+                                        Ate {meal.consumed}
+                                      </span>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                              </div>
+                            )}
 
-                        {item.pottyBreaks && item.pottyBreaks.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium flex items-center gap-2">
-                              <Droplets className="h-4 w-4" /> Potty breaks
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {item.pottyBreaks.map((pb, idx) => (
-                                <Badge
-                                  key={`${item.id}-potty-${idx}`}
-                                  variant={pb.type === "accident" ? "destructive" : "secondary"}
-                                  className="text-xs"
-                                >
-                                  {pb.time} •{" "}
-                                  {pb.type === "success" ? "Success" : "Accident"}
+                            {item.pottyBreaks && item.pottyBreaks.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <Droplets className="h-4 w-4" /> Potty breaks
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.pottyBreaks.map((pb, idx) => (
+                                    <Badge
+                                      key={`${item.id}-potty-${idx}`}
+                                      variant={pb.type === "accident" ? "destructive" : "secondary"}
+                                      className="text-xs"
+                                    >
+                                      {pb.time} •{" "}
+                                      {pb.type === "success" ? "Success" : "Accident"}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {item.activities.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium">Highlights from the day</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.activities.map((activity, idx) => (
+                                    <Badge key={`${item.id}-activity-${idx}`} variant="secondary">
+                                      {activity}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {item.overallFeedback && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <ClipboardCheck className="h-4 w-4" /> Overall Feedback
+                                </p>
+                                <Badge variant="outline" className="text-xs">
+                                  {item.overallFeedback}
                                 </Badge>
-                              ))}
+                              </div>
+                            )}
+
+                            {item.petConditions && Object.keys(item.petConditions).length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium flex items-center gap-2">
+                                  <Stethoscope className="h-4 w-4" /> Pet Condition
+                                </p>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  {Object.entries(item.petConditions).map(([category, value]) => (
+                                    <div key={`${item.id}-condition-${category}`} className="flex items-center justify-between rounded-md bg-white/60 px-2 py-1.5">
+                                      <span className="text-muted-foreground capitalize">{category}</span>
+                                      <span className="font-medium">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Quick Reply */}
+                            <ReportCardQuickReply
+                              reportCardId={item.id}
+                              petName={item.petName}
+                              serviceType={item.serviceType}
+                              onReplySent={(message) => {
+                                console.log("Reply sent:", message);
+                              }}
+                            />
+
+                            {/* Theme label */}
+                            <div className="flex justify-end pt-1">
+                              <span className="text-xs text-gray-400">
+                                {ts.emoji} {ts.label} Theme
+                              </span>
                             </div>
                           </div>
-                        )}
-
-                        {item.activities.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Highlights from the day</p>
-                            <div className="flex flex-wrap gap-2">
-                              {item.activities.map((activity, idx) => (
-                                <Badge key={`${item.id}-activity-${idx}`} variant="secondary">
-                                  {activity}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Quick Reply */}
-                        <ReportCardQuickReply
-                          reportCardId={item.id}
-                          petName={item.petName}
-                          serviceType={item.serviceType}
-                          onReplySent={(message) => {
-                            // Update the report card with reply
-                            console.log("Reply sent:", message);
-                          }}
-                        />
-                      </CardContent>
-                    </Card>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

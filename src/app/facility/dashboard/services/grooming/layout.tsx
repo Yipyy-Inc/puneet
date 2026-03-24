@@ -12,6 +12,7 @@ import {
   Settings,
   LogIn,
   LogOut,
+  FileText,
 } from "lucide-react";
 
 const tabs = [
@@ -44,6 +45,11 @@ const tabs = [
     name: "Inventory",
     href: "/facility/dashboard/services/grooming/inventory",
     icon: BoxesIcon,
+  },
+  {
+    name: "Report Cards",
+    href: "/facility/dashboard/services/grooming/report-cards",
+    icon: FileText,
   },
   {
     name: "Settings",

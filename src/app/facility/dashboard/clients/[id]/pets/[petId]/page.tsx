@@ -47,6 +47,11 @@ import {
   UserPlus,
   AlertTriangle,
   Users,
+  Star,
+  Bell,
+  Ghost,
+  Egg,
+  PartyPopper,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import type { Evaluation, NewBooking as BookingData, Client } from "@/lib/types";
@@ -54,6 +59,107 @@ import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluati
 import { DataTable } from "@/components/ui/DataTable";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission } from "@/lib/role-utils";
+
+/* ── Report-card theme visuals ────────────────────────────────────── */
+interface ThemeStyle {
+  label: string;
+  emoji: string;
+  cardBg: string;
+  accentBg: string;
+  accentText: string;
+  DecorativeIcon: React.ComponentType<{ className?: string }>;
+  iconPosition: "top-right" | "top-left" | "bottom-right" | "bottom-left";
+  patternClass?: string;
+}
+
+const reportCardThemes: Record<string, ThemeStyle> = {
+  everyday: {
+    label: "Everyday",
+    emoji: "✨",
+    cardBg: "bg-slate-50",
+    accentBg: "bg-slate-600",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+  },
+  christmas: {
+    label: "Christmas",
+    emoji: "🎄",
+    cardBg: "bg-red-50",
+    accentBg: "bg-red-600",
+    accentText: "text-white",
+    DecorativeIcon: Bell,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-snowflakes",
+  },
+  halloween: {
+    label: "Halloween",
+    emoji: "🎃",
+    cardBg: "bg-orange-50",
+    accentBg: "bg-violet-700",
+    accentText: "text-white",
+    DecorativeIcon: Ghost,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-spiderweb",
+  },
+  easter: {
+    label: "Easter",
+    emoji: "🐣",
+    cardBg: "bg-pink-50",
+    accentBg: "bg-pink-500",
+    accentText: "text-white",
+    DecorativeIcon: Egg,
+    iconPosition: "bottom-right",
+  },
+  thanksgiving: {
+    label: "Thanksgiving",
+    emoji: "🦃",
+    cardBg: "bg-amber-50",
+    accentBg: "bg-amber-600",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+  },
+  new_year: {
+    label: "New Year",
+    emoji: "🎉",
+    cardBg: "bg-indigo-50",
+    accentBg: "bg-indigo-600",
+    accentText: "text-white",
+    DecorativeIcon: PartyPopper,
+    iconPosition: "top-right",
+  },
+  valentines: {
+    label: "Valentine's",
+    emoji: "💘",
+    cardBg: "bg-rose-50",
+    accentBg: "bg-rose-500",
+    accentText: "text-white",
+    DecorativeIcon: Heart,
+    iconPosition: "top-right",
+  },
+  summer: {
+    label: "Summer",
+    emoji: "☀️",
+    cardBg: "bg-sky-50",
+    accentBg: "bg-sky-500",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+  },
+  winter: {
+    label: "Winter",
+    emoji: "❄️",
+    cardBg: "bg-blue-50",
+    accentBg: "bg-blue-600",
+    accentText: "text-white",
+    DecorativeIcon: Star,
+    iconPosition: "top-right",
+    patternClass: "report-card-pattern-snowflakes",
+  },
+};
+
+/* All card backgrounds are now light (-50 shades), so no dark detection needed */
 
 interface Pet {
   id: number;
@@ -986,144 +1092,200 @@ export default function PetDetailPage({
         </TabsContent>
 
         {/* Report Cards Tab */}
-        <TabsContent value="reports" className="space-y-4">
+        <TabsContent value="reports" className="space-y-6">
           {reports.length > 0 ? (
             reports
               .sort(
                 (a, b) =>
                   new Date(b.date).getTime() - new Date(a.date).getTime(),
               )
-              .map((report) => (
-                <Card key={report.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-sm font-semibold">
-                          {formatDate(report.date)}
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          By: {report.createdBy}
-                        </p>
+              .map((report) => {
+                const theme =
+                  reportCardThemes[report.theme || "everyday"] ??
+                  reportCardThemes.everyday;
+                const { DecorativeIcon } = theme;
+
+                return (
+                  <div
+                    key={report.id}
+                    className={`relative overflow-hidden rounded-xl border ${theme.cardBg}`}
+                  >
+                    {/* Decorative corner icon */}
+                    <DecorativeIcon
+                      className={`absolute h-20 w-20 opacity-[0.06] text-gray-900 ${
+                        theme.iconPosition === "top-right"
+                          ? "-top-1 -right-1"
+                          : theme.iconPosition === "top-left"
+                            ? "-top-1 -left-1"
+                            : theme.iconPosition === "bottom-right"
+                              ? "-bottom-1 -right-1"
+                              : "-bottom-1 -left-1"
+                      }`}
+                    />
+
+                    {/* Themed header banner */}
+                    <div
+                      className={`relative px-5 py-3 ${theme.accentBg} ${theme.accentText} flex items-center justify-between`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{theme.emoji}</span>
+                        <div>
+                          <p className="text-sm font-bold">
+                            {formatDate(report.date)}
+                          </p>
+                          <p className="text-xs opacity-80">
+                            By: {report.createdBy}
+                          </p>
+                        </div>
                       </div>
-                      <Badge className={getMoodColor(report.mood)}>
-                        {report.mood}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={`${getMoodColor(report.mood)} capitalize text-xs`}
+                        >
+                          {report.mood}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs capitalize border-white/40 text-white/90"
+                        >
+                          {report.serviceType}
+                        </Badge>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Activities */}
-                    {report.activities.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Activity className="h-4 w-4" />
-                          Activities
-                        </h4>
-                        <ul className="space-y-1">
-                          {report.activities.map((activity, idx) => (
-                            <li
-                              key={idx}
-                              className="text-sm text-muted-foreground flex items-start gap-2"
-                            >
-                              <span className="text-primary mt-1">•</span>
-                              {activity}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
 
-                    {/* Meals */}
-                    {report.meals.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Utensils className="h-4 w-4" />
-                          Meals
-                        </h4>
-                        <div className="space-y-2">
-                          {report.meals.map((meal, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-2 rounded bg-muted/50"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {meal.time} - {meal.food}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {meal.amount}
-                                </p>
-                              </div>
-                              <Badge variant="outline" className="capitalize">
-                                {meal.consumed}
+                    {/* Card body */}
+                    <div className="relative p-4 space-y-4">
+                      {/* Activities */}
+                      {report.activities.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Activity className="h-4 w-4" />
+                            Activities
+                          </h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {report.activities.map((activity, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {activity}
                               </Badge>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Potty Breaks */}
-                    {report.pottyBreaks.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4" />
-                          Potty Breaks
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {report.pottyBreaks.map((potty, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {potty.time} - {potty.type}
-                            </Badge>
-                          ))}
+                      {/* Meals */}
+                      {report.meals.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Utensils className="h-4 w-4" />
+                            Meals
+                          </h4>
+                          <div className="space-y-2">
+                            {report.meals.map((meal, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between p-2 rounded bg-gray-50"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {meal.time} - {meal.food}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {meal.amount}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className="capitalize"
+                                >
+                                  {meal.consumed}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Photos */}
-                    {report.photos.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Camera className="h-4 w-4" />
-                          Photos ({report.photos.length})
-                        </h4>
-                        <div className="grid grid-cols-4 gap-2">
-                          {report.photos.map((photo, idx) => (
-                            <div
-                              key={idx}
-                              className="aspect-square rounded-lg bg-muted flex items-center justify-center"
-                            >
-                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          ))}
+                      {/* Potty Breaks */}
+                      {report.pottyBreaks.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4" />
+                            Potty Breaks
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {report.pottyBreaks.map((potty, idx) => (
+                              <Badge
+                                key={idx}
+                                variant={
+                                  potty.type === "success"
+                                    ? "secondary"
+                                    : "destructive"
+                                }
+                                className="text-xs"
+                              >
+                                {potty.time} -{" "}
+                                {potty.type === "success"
+                                  ? "Success"
+                                  : "Accident"}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Staff Notes */}
-                    {report.staffNotes && (
-                      <div className="pt-3 border-t">
-                        <h4 className="text-sm font-semibold mb-1">
-                          Staff Notes
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {report.staffNotes}
-                        </p>
-                      </div>
-                    )}
+                      {/* Photos */}
+                      {report.photos.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Camera className="h-4 w-4" />
+                            Photos ({report.photos.length})
+                          </h4>
+                          <div className="grid grid-cols-4 gap-2">
+                            {report.photos.map((photo, idx) => (
+                              <div
+                                key={idx}
+                                className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center"
+                              >
+                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                    {report.sentToOwner && report.sentAt && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                        <CheckCircle className="h-3 w-3" />
-                        Sent to owner on {formatDateTime(report.sentAt)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                      {/* Staff Notes */}
+                      {report.staffNotes && (
+                        <div className="pt-3 border-t">
+                          <h4 className="text-sm font-semibold mb-1">
+                            Staff Notes
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {report.staffNotes}
+                          </p>
+                        </div>
+                      )}
+
+                      {report.sentToOwner && report.sentAt && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Sent to owner on {formatDateTime(report.sentAt)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Theme label footer */}
+                    <div className="px-5 pb-3 flex justify-end">
+                      <span className="text-xs font-medium text-gray-400">
+                        {theme.emoji} {theme.label} Theme
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
           ) : (
             <Card>
               <CardContent className="text-center py-8">

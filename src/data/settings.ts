@@ -235,6 +235,76 @@ export const reportCardConfig: ReportCardConfig = {
     sendTime: "18:00",
     channels: { email: true, message: true, sms: false },
   },
+  brand: {
+    reportTitle: "Daily Report Card",
+    accentColor: "#6366f1",
+    showFacilityLogo: true,
+  },
+  serviceConfigs: [
+    {
+      serviceId: "daycare",
+      enabled: true,
+      enabledSections: [
+        "todaysVibe", "friendsAndFun", "careMetrics", "holidaySparkle",
+        "closingNote", "overallFeedback", "photoShowcase",
+      ],
+    },
+    {
+      serviceId: "boarding",
+      enabled: true,
+      enabledSections: [
+        "todaysVibe", "friendsAndFun", "careMetrics", "closingNote",
+        "petCondition", "overallFeedback", "photoShowcase",
+      ],
+    },
+    {
+      serviceId: "grooming",
+      enabled: false,
+      enabledSections: [
+        "todaysVibe", "careMetrics", "closingNote", "petCondition",
+        "photoShowcase",
+      ],
+    },
+    {
+      serviceId: "training",
+      enabled: false,
+      enabledSections: [
+        "todaysVibe", "closingNote", "customFeedback", "overallFeedback",
+      ],
+    },
+  ],
+  overallFeedback: {
+    title: "Overall Experience",
+    responseOptions: ["Excellent", "Good", "Fair", "Needs Attention"],
+  },
+  customQuestions: [],
+  petCondition: {
+    categories: [
+      { id: "coat", label: "Coat Condition", options: ["Normal", "Dry", "Oily", "Matted", "Shedding"] },
+      { id: "skin", label: "Skin", options: ["Normal", "Dry", "Irritated", "Rash"] },
+      { id: "ears", label: "Ears", options: ["Normal", "Dirty", "Irritated", "Odor"] },
+      { id: "eyes", label: "Eyes", options: ["Normal", "Discharge", "Red", "Tearing"] },
+    ],
+  },
+  reviewBooster: {
+    ratingThreshold: 4,
+    reviewUrl: "",
+    reviewPromptText: "Loved your pet's experience? Leave us a review!",
+  },
+};
+
+export const reportCardSectionMeta: Record<string, { label: string; description: string }> = {
+  todaysVibe: { label: "Today's Vibe", description: "Mood and energy summary" },
+  friendsAndFun: { label: "Friends & Fun", description: "Social behavior and play notes" },
+  careMetrics: { label: "Care Metrics", description: "Meals, potty breaks, medications" },
+  holidaySparkle: { label: "Holiday Sparkle", description: "Seasonal themed content" },
+  closingNote: { label: "Closing Note", description: "Wrap-up message to the owner" },
+  overallFeedback: { label: "Overall Feedback", description: "Staff feedback with response options" },
+  customFeedback: { label: "Custom Feedback", description: "Facility-created questions" },
+  petCondition: { label: "Pet Condition", description: "Health and grooming observations" },
+  nextAppointment: { label: "Next Appointment", description: "Upcoming booking info or link" },
+  reviewBooster: { label: "Review Booster", description: "Prompt for external reviews" },
+  photoShowcase: { label: "Photo Showcase", description: "Photo and video highlights" },
 };
 
 export const kennelTypes: KennelType[] = [
