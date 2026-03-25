@@ -17,6 +17,8 @@ import {
   Award,
   Target,
   Settings,
+  Star,
+  Heart,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
@@ -30,12 +32,15 @@ import {
   referralCodes,
   badges,
   promoCodes,
+  type CustomerSegment,
 } from "@/data/marketing";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EmailTemplateModal } from "@/components/marketing/EmailTemplateModal";
 import { SegmentBuilderModal } from "@/components/marketing/SegmentBuilderModal";
 import { CampaignBuilderModal } from "@/components/marketing/CampaignBuilderModal";
 import { PromoCodeModal } from "@/components/marketing/PromoCodeModal";
+import { FacilityBrandingSection } from "@/components/marketing/FacilityBrandingSection";
+import { PlaydateAlertsTab } from "@/components/marketing/PlaydateAlertsTab";
 import { LoyaltyBuilderModal } from "@/components/marketing/LoyaltyBuilderModal";
 import { ReferralConfigModal } from "@/components/marketing/ReferralConfigModal";
 
@@ -52,6 +57,30 @@ export default function MarketingPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<
     (typeof campaigns)[0] | null
   >(null);
+  const [selectedSegment, setSelectedSegment] =
+    useState<CustomerSegment | null>(null);
+
+  // Campaign analytics
+  const sentCampaigns = campaigns.filter((c) => c.status === "sent");
+  const totalSent = sentCampaigns.reduce((sum, c) => sum + c.stats.sent, 0);
+  const avgOpenRate =
+    sentCampaigns.length > 0
+      ? sentCampaigns.reduce(
+          (sum, c) =>
+            sum +
+            (c.stats.sent > 0 ? (c.stats.opened / c.stats.sent) * 100 : 0),
+          0,
+        ) / sentCampaigns.length
+      : 0;
+  const avgClickRate =
+    sentCampaigns.length > 0
+      ? sentCampaigns.reduce(
+          (sum, c) =>
+            sum +
+            (c.stats.opened > 0 ? (c.stats.clicked / c.stats.opened) * 100 : 0),
+          0,
+        ) / sentCampaigns.length
+      : 0;
 
   // Email Template Columns
   const templateColumns: ColumnDef<(typeof emailTemplates)[0]>[] = [
@@ -75,6 +104,16 @@ export default function MarketingPage() {
           {row.original.category}
         </Badge>
       ),
+    },
+    {
+      accessorKey: "useCase",
+      header: "Use Case",
+      cell: ({ row }) =>
+        row.original.useCase ? (
+          <Badge variant="secondary" className="capitalize text-xs">
+            {row.original.useCase.replace(/_/g, " ")}
+          </Badge>
+        ) : null,
     },
     {
       accessorKey: "timesUsed",
@@ -114,8 +153,10 @@ export default function MarketingPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              alert(`Template "${row.original.name}" has been copied!`);
+              navigator.clipboard.writeText(row.original.body);
+              console.log(`Template "${row.original.name}" copied`);
             }}
+            aria-label={`Copy template ${row.original.name}`}
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -124,16 +165,28 @@ export default function MarketingPage() {
     },
   ];
 
-  // Segment Columns
-  const segmentColumns: ColumnDef<(typeof customerSegments)[0]>[] = [
+  // Segment Columns (updated for new data model)
+  const segmentColumns: ColumnDef<CustomerSegment>[] = [
     {
       accessorKey: "name",
       header: "Segment Name",
       cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground">
-            {row.original.description}
+        <div className="flex items-center gap-2">
+          {row.original.isFavorite && (
+            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+          )}
+          <div>
+            <div className="font-medium flex items-center gap-1.5">
+              {row.original.name}
+              {row.original.isBuiltIn && (
+                <Badge variant="outline" className="text-[10px] py-0 px-1">
+                  Built-in
+                </Badge>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {row.original.description}
+            </div>
           </div>
         </div>
       ),
@@ -148,9 +201,15 @@ export default function MarketingPage() {
       ),
     },
     {
-      accessorKey: "filters",
+      accessorKey: "filterGroups",
       header: "Filters",
-      cell: ({ row }) => `${row.original.filters.length} filters`,
+      cell: ({ row }) => {
+        const totalFilters = row.original.filterGroups.reduce(
+          (sum: number, g: { filters: unknown[] }) => sum + g.filters.length,
+          0,
+        );
+        return `${totalFilters} filter${totalFilters !== 1 ? "s" : ""} in ${row.original.filterGroups.length} group${row.original.filterGroups.length !== 1 ? "s" : ""}`;
+      },
     },
     {
       accessorKey: "updatedAt",
@@ -166,10 +225,8 @@ export default function MarketingPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
+              setSelectedSegment(row.original);
               setShowSegmentModal(true);
-              alert(
-                `Edit segment "${row.original.name}" - Opens segment editor`,
-              );
             }}
           >
             <Edit className="h-4 w-4" />
@@ -178,8 +235,9 @@ export default function MarketingPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              alert(`Segment "${row.original.name}" has been deleted!`);
+              console.log(`Delete segment "${row.original.name}"`);
             }}
+            aria-label={`Delete segment ${row.original.name}`}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -196,8 +254,16 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground capitalize">
+          <div className="text-sm text-muted-foreground capitalize flex items-center gap-1.5">
             {row.original.type} Campaign
+            {row.original.goal && (
+              <Badge
+                variant="outline"
+                className="text-[10px] py-0 px-1 capitalize"
+              >
+                {row.original.goal.replace(/_/g, " ")}
+              </Badge>
+            )}
           </div>
         </div>
       ),
@@ -228,6 +294,24 @@ export default function MarketingPage() {
       header: "Sent",
     },
     {
+      accessorKey: "stats.opened",
+      header: "Open Rate",
+      cell: ({ row }) => {
+        const { sent, opened } = row.original.stats;
+        if (sent === 0) return "-";
+        return `${((opened / sent) * 100).toFixed(1)}%`;
+      },
+    },
+    {
+      accessorKey: "stats.clicked",
+      header: "Click Rate",
+      cell: ({ row }) => {
+        const { opened, clicked } = row.original.stats;
+        if (opened === 0) return "-";
+        return `${((clicked / opened) * 100).toFixed(1)}%`;
+      },
+    },
+    {
       accessorKey: "actions",
       header: "Actions",
       cell: ({ row }) => (
@@ -247,7 +331,7 @@ export default function MarketingPage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                alert(`Campaign "${row.original.name}" has been sent!`);
+                console.log(`Send campaign "${row.original.name}"`);
               }}
             >
               <Send className="h-4 w-4" />
@@ -381,9 +465,6 @@ export default function MarketingPage() {
             size="sm"
             onClick={() => {
               setShowPromoModal(true);
-              alert(
-                `Edit promo code "${row.original.code}" - Opens promo editor`,
-              );
             }}
           >
             <Edit className="h-4 w-4" />
@@ -393,7 +474,7 @@ export default function MarketingPage() {
             size="sm"
             onClick={() => {
               navigator.clipboard.writeText(row.original.code);
-              alert(`Promo code "${row.original.code}" copied to clipboard!`);
+              console.log(`Promo code "${row.original.code}" copied`);
             }}
           >
             <Copy className="h-4 w-4" />
@@ -410,42 +491,111 @@ export default function MarketingPage() {
         <div>
           <h1 className="text-3xl font-bold">Marketing</h1>
           <p className="text-muted-foreground mt-1">
-            Email campaigns, loyalty programs, and promotions
+            Email campaigns, segments, playdate alerts, loyalty programs, and
+            promotions
           </p>
         </div>
       </div>
 
       {/* Marketing Tabs */}
       <Tabs defaultValue="campaigns" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="campaigns">
-            <Send className="h-4 w-4 mr-2" />
-            Campaigns
-          </TabsTrigger>
-          <TabsTrigger value="templates">
-            <Mail className="h-4 w-4 mr-2" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="segments">
-            <Users className="h-4 w-4 mr-2" />
-            Segments
-          </TabsTrigger>
-          <TabsTrigger value="loyalty">
-            <Award className="h-4 w-4 mr-2" />
-            Loyalty
-          </TabsTrigger>
-          <TabsTrigger value="referrals">
-            <Target className="h-4 w-4 mr-2" />
-            Referrals
-          </TabsTrigger>
-          <TabsTrigger value="promos">
-            <Tag className="h-4 w-4 mr-2" />
-            Promo Codes
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList>
+            <TabsTrigger value="campaigns">
+              <Send className="h-4 w-4 mr-2" />
+              Campaigns
+            </TabsTrigger>
+            <TabsTrigger value="templates">
+              <Mail className="h-4 w-4 mr-2" />
+              Templates
+            </TabsTrigger>
+            <TabsTrigger value="segments">
+              <Users className="h-4 w-4 mr-2" />
+              Segments
+            </TabsTrigger>
+            <TabsTrigger value="playdate-alerts">
+              <Heart className="h-4 w-4 mr-2" />
+              Playdate Alerts
+            </TabsTrigger>
+            <TabsTrigger value="loyalty">
+              <Award className="h-4 w-4 mr-2" />
+              Loyalty
+            </TabsTrigger>
+            <TabsTrigger value="referrals">
+              <Target className="h-4 w-4 mr-2" />
+              Referrals
+            </TabsTrigger>
+            <TabsTrigger value="promos">
+              <Tag className="h-4 w-4 mr-2" />
+              Promo Codes
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Campaigns Tab */}
         <TabsContent value="campaigns" className="space-y-4">
+          {/* Analytics Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Campaigns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{campaigns.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {sentCampaigns.length} sent
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Emails Sent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {totalSent.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across all campaigns
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Avg Open Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {avgOpenRate.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across sent campaigns
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Avg Click Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {avgClickRate.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Of opened emails
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -455,7 +605,12 @@ export default function MarketingPage() {
                     Create and manage marketing campaigns
                   </p>
                 </div>
-                <Button onClick={() => setShowCampaignModal(true)}>
+                <Button
+                  onClick={() => {
+                    setSelectedCampaign(null);
+                    setShowCampaignModal(true);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Campaign
                 </Button>
@@ -472,18 +627,26 @@ export default function MarketingPage() {
           </Card>
         </TabsContent>
 
-        {/* Templates Tab */}
+        {/* Templates Tab (with Branding section) */}
         <TabsContent value="templates" className="space-y-4">
+          {/* Branding Section */}
+          <FacilityBrandingSection />
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Email Templates</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Manage reusable email templates
+                    Manage reusable email templates with branded preview
                   </p>
                 </div>
-                <Button onClick={() => setShowTemplateModal(true)}>
+                <Button
+                  onClick={() => {
+                    setSelectedTemplate(null);
+                    setShowTemplateModal(true);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Template
                 </Button>
@@ -508,13 +671,43 @@ export default function MarketingPage() {
                 <div>
                   <CardTitle>Customer Segments</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Build targeted customer groups
+                    Build targeted customer groups with AND/OR filter logic
                   </p>
                 </div>
-                <Button onClick={() => setShowSegmentModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Segment
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const csv = customerSegments
+                        .map(
+                          (s) =>
+                            `${s.name},${s.customerCount},${s.description}`,
+                        )
+                        .join("\n");
+                      const blob = new Blob(
+                        [`Name,Customers,Description\n${csv}`],
+                        { type: "text/csv" },
+                      );
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "segments.csv";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedSegment(null);
+                      setShowSegmentModal(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Segment
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -526,6 +719,11 @@ export default function MarketingPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Playdate Alerts Tab */}
+        <TabsContent value="playdate-alerts" className="space-y-4">
+          <PlaydateAlertsTab />
         </TabsContent>
 
         {/* Loyalty Tab */}
@@ -776,7 +974,7 @@ export default function MarketingPage() {
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <EmailTemplateModal
-            template={selectedTemplate ?? undefined}
+            template={selectedTemplate}
             onClose={() => {
               setShowTemplateModal(false);
               setSelectedTemplate(null);
@@ -787,14 +985,20 @@ export default function MarketingPage() {
 
       <Dialog open={showSegmentModal} onOpenChange={setShowSegmentModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
-          <SegmentBuilderModal onClose={() => setShowSegmentModal(false)} />
+          <SegmentBuilderModal
+            segment={selectedSegment}
+            onClose={() => {
+              setShowSegmentModal(false);
+              setSelectedSegment(null);
+            }}
+          />
         </DialogContent>
       </Dialog>
 
       <Dialog open={showCampaignModal} onOpenChange={setShowCampaignModal}>
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <CampaignBuilderModal
-            campaign={selectedCampaign ?? undefined}
+            campaign={selectedCampaign}
             onClose={() => {
               setShowCampaignModal(false);
               setSelectedCampaign(null);
@@ -815,9 +1019,14 @@ export default function MarketingPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showReferralConfigModal} onOpenChange={setShowReferralConfigModal}>
+      <Dialog
+        open={showReferralConfigModal}
+        onOpenChange={setShowReferralConfigModal}
+      >
         <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
-          <ReferralConfigModal onClose={() => setShowReferralConfigModal(false)} />
+          <ReferralConfigModal
+            onClose={() => setShowReferralConfigModal(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

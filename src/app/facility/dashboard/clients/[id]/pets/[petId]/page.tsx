@@ -223,8 +223,8 @@ export default function PetDetailPage({
   const petBookings = bookings.filter((b) => b.petId === pet.id);
   const reports = reportCards.filter((r) => r.petId === pet.id);
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
-  const friends = relationships.filter((r) => r.relationshipType === "friend");
-  const enemies = relationships.filter((r) => r.relationshipType === "enemy");
+  const friends = relationships.filter((r) => r.relationshipType === "friend" || r.relationshipType === "best_friend");
+  const enemies = relationships.filter((r) => r.relationshipType === "keep_apart");
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
   const expiredVaccinations = vaccinations.filter(
     (v) => new Date(v.expiryDate) < new Date(),
@@ -785,9 +785,18 @@ export default function PetDetailPage({
                       <div className="flex items-center gap-3">
                         <Badge
                           variant="outline"
-                          className="bg-green-50 text-green-700 border-green-200"
+                          className={rel.relationshipType === "best_friend"
+                            ? "bg-pink-50 text-pink-700 border-pink-200"
+                            : "bg-green-50 text-green-700 border-green-200"}
                         >
-                          Friend
+                          {rel.relationshipType === "best_friend" ? "Best Friend" : "Friend"}
+                        </Badge>
+                        <Badge
+                          variant={rel.allowAlerts ? "default" : "secondary"}
+                          className="text-xs cursor-pointer"
+                          title={rel.allowAlerts ? "Playdate alerts enabled for this friend" : "Playdate alerts disabled for this friend"}
+                        >
+                          {rel.allowAlerts ? "Alerts On" : "Alerts Off"}
                         </Badge>
                       </div>
                     </div>

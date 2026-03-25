@@ -83,12 +83,14 @@ export interface ReportCard {
 
 export interface PetRelationship {
   id: string;
+  facilityId: string;
   petId: number;
   relatedPetId: number;
   relatedPetName: string;
   relatedPetType: string;
   relatedPetBreed: string;
-  relationshipType: "friend" | "enemy" | "neutral";
+  relationshipType: "friend" | "best_friend" | "keep_apart";
+  allowAlerts: boolean;
   notes?: string;
   createdAt: string;
   createdBy: string;
@@ -129,12 +131,14 @@ export interface BanRecord {
 export const petRelationships: PetRelationship[] = [
   {
     id: "rel-001",
+    facilityId: "facility-001",
     petId: 1, // Buddy
     relatedPetId: 3, // Max
     relatedPetName: "Max",
     relatedPetType: "Dog",
     relatedPetBreed: "Labrador",
-    relationshipType: "friend",
+    relationshipType: "best_friend",
+    allowAlerts: true,
     notes: "Best buddies! Love to play together during daycare.",
     createdAt: "2024-01-20T09:00:00Z",
     createdBy: "Sarah Johnson",
@@ -142,26 +146,29 @@ export const petRelationships: PetRelationship[] = [
   },
   {
     id: "rel-002",
+    facilityId: "facility-001",
     petId: 1, // Buddy
     relatedPetId: 5, // Rocky
     relatedPetName: "Rocky",
     relatedPetType: "Dog",
     relatedPetBreed: "German Shepherd",
-    relationshipType: "enemy",
-    notes:
-      "Keep separated - had a scuffle on 2024-01-15. Buddy gets anxious around Rocky.",
+    relationshipType: "keep_apart",
+    allowAlerts: false,
+    notes: "Keep separated - had a scuffle on 2024-01-15. Buddy gets anxious around Rocky.",
     createdAt: "2024-01-16T10:30:00Z",
     createdBy: "Mike Davis",
     createdById: 2,
   },
   {
     id: "rel-003",
+    facilityId: "facility-001",
     petId: 1, // Buddy
     relatedPetId: 2, // Whiskers
     relatedPetName: "Whiskers",
     relatedPetType: "Cat",
     relatedPetBreed: "Siamese",
-    relationshipType: "neutral",
+    relationshipType: "friend",
+    allowAlerts: true,
     notes: "Same household - tolerates each other but don't interact much.",
     createdAt: "2024-01-10T08:00:00Z",
     createdBy: "Sarah Johnson",
@@ -169,12 +176,14 @@ export const petRelationships: PetRelationship[] = [
   },
   {
     id: "rel-004",
+    facilityId: "facility-001",
     petId: 3, // Max
     relatedPetId: 1, // Buddy
     relatedPetName: "Buddy",
     relatedPetType: "Dog",
     relatedPetBreed: "Golden Retriever",
-    relationshipType: "friend",
+    relationshipType: "best_friend",
+    allowAlerts: true,
     notes: "Best buddies! Love to play together during daycare.",
     createdAt: "2024-01-20T09:00:00Z",
     createdBy: "Sarah Johnson",
@@ -182,12 +191,14 @@ export const petRelationships: PetRelationship[] = [
   },
   {
     id: "rel-005",
+    facilityId: "facility-001",
     petId: 3, // Max
     relatedPetId: 5, // Rocky
     relatedPetName: "Rocky",
     relatedPetType: "Dog",
     relatedPetBreed: "German Shepherd",
     relationshipType: "friend",
+    allowAlerts: true,
     notes: "Good playmates, enjoy fetch together.",
     createdAt: "2024-02-01T11:00:00Z",
     createdBy: "Sarah Johnson",
@@ -195,12 +206,14 @@ export const petRelationships: PetRelationship[] = [
   },
   {
     id: "rel-006",
+    facilityId: "facility-001",
     petId: 5, // Rocky
     relatedPetId: 1, // Buddy
     relatedPetName: "Buddy",
     relatedPetType: "Dog",
     relatedPetBreed: "Golden Retriever",
-    relationshipType: "enemy",
+    relationshipType: "keep_apart",
+    allowAlerts: false,
     notes: "Keep separated - had a scuffle on 2024-01-15.",
     createdAt: "2024-01-16T10:30:00Z",
     createdBy: "Mike Davis",

@@ -8,6 +8,7 @@ import { facilities } from "@/data/facilities";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { clientDocuments } from "@/data/documents";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
+import { playdateAlertLogs, getAlertStatusVariant, formatAlertChannel } from "@/data/marketing";
 import {
   petPhotos,
   vaccinationRecords,
@@ -87,6 +88,7 @@ import {
   Plus,
   ShoppingBag,
   Receipt,
+  Bell,
 } from "lucide-react";
 
 interface Pet {
@@ -166,6 +168,7 @@ export default function ClientDetailPage({
     (c) => c.clientId === client.id,
   );
   const clientCalls = clientCallHistory.filter((c) => c.clientId === client.id);
+  const clientPlaydateAlerts = playdateAlertLogs.filter((a) => a.recipientCustomerId === client.id);
 
   // Client billing data
   const clientPayments = payments.filter((p) => p.clientId === client.id);
@@ -861,6 +864,41 @@ export default function ClientDetailPage({
               </CardContent>
             </Card>
           </div>
+
+          {/* Communication Preferences */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Communication Preferences
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-3 rounded-lg border">
+                  <div>
+                    <div className="text-sm font-medium">Marketing Emails</div>
+                    <div className="text-xs text-muted-foreground">Campaigns, promos, newsletters</div>
+                  </div>
+                  <Badge variant="default" className="text-xs">Opted In</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border">
+                  <div>
+                    <div className="text-sm font-medium">Playdate Alerts</div>
+                    <div className="text-xs text-muted-foreground">Friend booking notifications</div>
+                  </div>
+                  <Badge variant="default" className="text-xs">Opted In</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border">
+                  <div>
+                    <div className="text-sm font-medium">Channel Preference</div>
+                    <div className="text-xs text-muted-foreground">How to reach this customer</div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">Email + SMS</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Pet Overview */}
           <Card>
@@ -1884,6 +1922,61 @@ export default function ClientDetailPage({
 
         {/* Communications Tab */}
         <TabsContent value="communications" className="space-y-4">
+          {/* Playdate Alerts for this client */}
+          {clientPlaydateAlerts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Heart className="h-4 w-4" />
+                  Playdate Alert History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {clientPlaydateAlerts
+                    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
+                    .slice(0, 5)
+                    .map((alert) => (
+                      <div key={alert.id} className="p-4 rounded-lg border bg-card space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <Heart className="h-4 w-4 text-pink-500" />
+                            <div>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {formatAlertChannel(alert.channel)}
+                              </Badge>
+                              <Badge
+                                variant={getAlertStatusVariant(alert.status)}
+                                className="text-xs ml-1"
+                              >
+                                {alert.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateTime(alert.sentAt)}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-sm">
+                            Playdate alert: {alert.triggerPetName} booked
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {alert.triggerPetName} is coming — alert sent for {alert.recipientPetName}
+                          </p>
+                        </div>
+                        {alert.reasonSuppressed && (
+                          <div className="text-xs text-muted-foreground pt-2 border-t">
+                            Suppressed: {alert.reasonSuppressed}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             {/* Call History */}
             <Card>

@@ -3,7 +3,9 @@
 import { use, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Heart, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { playdateAlertLogs, getAlertStatusVariant, formatAlertChannel } from "@/data/marketing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +97,16 @@ export default function FacilityBookingDetailPage({
     yipyyGoEnabled &&
     (yipyyGoStatus === "submitted" || yipyyGoStatus === "needs_review" || yipyyGoStatus === "approved");
 
+  const bookingAlerts = useMemo(() => {
+    const petId = pet?.id ?? -1;
+    const all = playdateAlertLogs.filter(
+      (a) => a.triggerBookingId === `bk-${bookingId}` || a.triggerPetId === petId
+    );
+    const sent = all.filter((a) => a.status === "sent");
+    const suppressed = all.filter((a) => a.status !== "sent");
+    return { all, sent, suppressed };
+  }, [bookingId, pet?.id]);
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <div className="flex items-center gap-4">
@@ -166,6 +178,52 @@ export default function FacilityBookingDetailPage({
           </Card>
         )}
       </div>
+
+      {/* Playdate Alerts Sent */}
+      {bookingAlerts.all.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Heart className="h-4 w-4" />
+              Playdate Alerts Sent: {bookingAlerts.sent.length} owner{bookingAlerts.sent.length !== 1 ? "s" : ""} notified
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between mb-2">
+                  <span>View {bookingAlerts.all.length} alert{bookingAlerts.all.length !== 1 ? "s" : ""}</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2">
+                  {bookingAlerts.all.map((alert) => (
+                    <div key={alert.id} className="flex items-center justify-between p-2.5 rounded-lg border text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{alert.recipientCustomerName}</span>
+                        <span className="text-muted-foreground">({alert.recipientPetName})</span>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {formatAlertChannel(alert.channel)}
+                        </Badge>
+                      </div>
+                      <Badge variant={getAlertStatusVariant(alert.status)}>
+                        {alert.status}
+                      </Badge>
+                    </div>
+                  ))}
+                  {bookingAlerts.suppressed.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {bookingAlerts.suppressed.length} alert{bookingAlerts.suppressed.length !== 1 ? "s" : ""} suppressed
+                      ({bookingAlerts.suppressed.map((a) => a.reasonSuppressed).filter(Boolean).join("; ")})
+                    </p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+        </Card>
+      )}
 
       <YipyyGoStaffReviewModal
         open={reviewModalOpen}
