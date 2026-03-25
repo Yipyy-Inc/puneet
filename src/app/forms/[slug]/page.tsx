@@ -2,7 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getFormBySlug, shouldShowQuestion, type Form, type FormQuestion } from "@/data/forms";
+import { getFormBySlug, shouldShowQuestion, evaluateLogicRules, type Form, type FormQuestion } from "@/data/forms";
 import { createSubmission, submissionHasFiles } from "@/data/form-submissions";
 import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
 import { triggerFormEvent } from "@/lib/form-automation-events";
@@ -44,8 +44,17 @@ export default function PublicFormPage() {
   const petIds = linkPetId ? [parseInt(linkPetId, 10)].filter((n) => !Number.isNaN(n)) : undefined;
   const customerId = linkCustomerId ? parseInt(linkCustomerId, 10) : undefined;
 
+  // Evaluate logic rules to determine hide/require/end effects
+  const logicEffects = form?.logicRules?.length
+    ? evaluateLogicRules(form.logicRules, answers)
+    : null;
+
   const visibleQuestions = form
-    ? form.questions.filter((q) => shouldShowQuestion(q, answers, context))
+    ? form.questions.filter((q) => {
+        if (!shouldShowQuestion(q, answers, context)) return false;
+        if (logicEffects?.hiddenQuestionIds.has(q.id)) return false;
+        return true;
+      })
     : [];
 
   const setAnswer = useCallback((questionId: string, value: unknown) => {
@@ -103,7 +112,7 @@ export default function PublicFormPage() {
     (e: React.FormEvent) => {
       e.preventDefault();
       if (!form) return;
-      const required = visibleQuestions.filter((q) => q.required);
+      const required = visibleQuestions.filter((q) => q.required || logicEffects?.requiredQuestionIds.has(q.id));
       const missing = required.filter((q) => answers[q.id] === undefined || answers[q.id] === "");
       if (missing.length > 0) {
         setError(
@@ -239,25 +248,34 @@ export default function PublicFormPage() {
               This form can be completed once per pet. Use the link from your pet&apos;s Forms tab to fill for a specific pet.
             </p>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
-                <p className="font-medium">Please complete the required fields</p>
-                <p className="mt-1 opacity-90">{error}</p>
-              </div>
-            )}
-            {visibleQuestions.map((q) => (
-              <QuestionInput
-                key={q.id}
-                question={q}
-                value={answers[q.id]}
-                onChange={(v) => setAnswer(q.id, v)}
-              />
-            ))}
-            <Button type="submit" className="w-full min-h-12 text-base touch-manipulation">
-              Submit
-            </Button>
-          </form>
+          {logicEffects?.endFormMessage ? (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-center">
+              <p className="text-sm font-medium text-amber-800">{logicEffects.endFormMessage}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+                  <p className="font-medium">Please complete the required fields</p>
+                  <p className="mt-1 opacity-90">{error}</p>
+                </div>
+              )}
+              {visibleQuestions.map((q) => (
+                <QuestionInput
+                  key={q.id}
+                  question={{
+                    ...q,
+                    required: q.required || (logicEffects?.requiredQuestionIds.has(q.id) ?? false),
+                  }}
+                  value={answers[q.id]}
+                  onChange={(v) => setAnswer(q.id, v)}
+                />
+              ))}
+              <Button type="submit" className="w-full min-h-12 text-base touch-manipulation">
+                Submit
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

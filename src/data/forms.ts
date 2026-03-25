@@ -225,6 +225,20 @@ export interface FieldMappingItem {
   target: string;
 }
 
+export type LogicActionType = "show" | "hide" | "require" | "skip_to_section" | "end_form" | "set_tag" | "alert_flag";
+
+export interface FormLogicRule {
+  id: string;
+  triggerQuestionId: string;
+  operator: ConditionOperator;
+  value?: string | string[];
+  action: LogicActionType;
+  targetQuestionIds?: string[];
+  targetSectionId?: string;
+  tagValue?: string;
+  endMessage?: string;
+}
+
 /** Flat Form DTO: used by list page, public fill, and builder when editing "current" version as flat list */
 export interface Form {
   id: string;
@@ -237,6 +251,8 @@ export interface Form {
   internal: boolean;
   questions: FormQuestion[];
   fieldMapping: FieldMappingItem[];
+  /** Logic rules (builder): IF trigger question answer THEN action on targets */
+  logicRules?: FormLogicRule[];
   /** Sections (builder); when present, each question should have sectionId */
   sections?: FormSectionDTO[];
   repeatPerPet?: boolean;
@@ -339,6 +355,21 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
     order: s.order,
   }));
 
+  // Convert LogicRuleRecords to flat FormLogicRules
+  const versionLogicRules = version
+    ? logicRules.filter((r) => r.formVersionId === version.id)
+    : [];
+  const flatLogicRules: FormLogicRule[] = versionLogicRules.map((r) => ({
+    id: r.id,
+    triggerQuestionId: r.triggerFieldId,
+    operator: r.operator as ConditionOperator,
+    value: r.value,
+    action: r.action as LogicActionType,
+    targetQuestionIds: r.targetFieldIds,
+    targetSectionId: r.targetSectionId,
+    tagValue: r.tagId,
+  }));
+
   return {
     id: record.id,
     facilityId: record.facilityId,
@@ -348,6 +379,7 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
     internal: record.audience === "staff",
     questions,
     fieldMapping,
+    logicRules: flatLogicRules.length ? flatLogicRules : undefined,
     sections: sections.length ? sections : undefined,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -396,6 +428,77 @@ export function shouldShowQuestion(
     default:
       return true;
   }
+}
+
+/** Evaluate all logic rules for a form against current answers.
+ *  Returns a map of effects: { hiddenQuestionIds, requiredQuestionIds, skipToSectionId, endFormMessage, tags, alertFlag } */
+export interface LogicRuleEffects {
+  hiddenQuestionIds: Set<string>;
+  requiredQuestionIds: Set<string>;
+  skipToSectionId?: string;
+  endFormMessage?: string;
+  tags: string[];
+  alertFlag: boolean;
+}
+
+export function evaluateLogicRules(
+  rules: FormLogicRule[],
+  answers: Record<string, unknown>,
+): LogicRuleEffects {
+  const effects: LogicRuleEffects = {
+    hiddenQuestionIds: new Set(),
+    requiredQuestionIds: new Set(),
+    tags: [],
+    alertFlag: false,
+  };
+  for (const rule of rules) {
+    const sourceValue = answers[rule.triggerQuestionId];
+    const target = rule.value;
+    let matches = false;
+    switch (rule.operator) {
+      case "eq": matches = sourceValue === target || String(sourceValue) === String(target); break;
+      case "neq": matches = sourceValue !== target && String(sourceValue) !== String(target); break;
+      case "contains": {
+        const s = Array.isArray(sourceValue) ? sourceValue.join(" ") : String(sourceValue ?? "");
+        matches = s.toLowerCase().includes(String(target).toLowerCase());
+        break;
+      }
+      case "in": {
+        const arr = Array.isArray(target) ? target : [target];
+        matches = arr.some((t) => sourceValue === t || String(sourceValue) === String(t));
+        break;
+      }
+      case "gt": matches = Number(sourceValue) > Number(target); break;
+      case "lt": matches = Number(sourceValue) < Number(target); break;
+      case "answered": matches = sourceValue !== undefined && sourceValue !== "" && sourceValue !== null; break;
+      case "not_answered": matches = sourceValue === undefined || sourceValue === "" || sourceValue === null; break;
+    }
+    if (!matches) continue;
+    switch (rule.action) {
+      case "show":
+        // Show is the default; no-op since questions are visible by default
+        break;
+      case "hide":
+        rule.targetQuestionIds?.forEach((id) => effects.hiddenQuestionIds.add(id));
+        break;
+      case "require":
+        rule.targetQuestionIds?.forEach((id) => effects.requiredQuestionIds.add(id));
+        break;
+      case "skip_to_section":
+        if (rule.targetSectionId) effects.skipToSectionId = rule.targetSectionId;
+        break;
+      case "end_form":
+        effects.endFormMessage = rule.endMessage || "This form has ended based on your responses.";
+        break;
+      case "set_tag":
+        if (rule.tagValue) effects.tags.push(rule.tagValue);
+        break;
+      case "alert_flag":
+        effects.alertFlag = true;
+        break;
+    }
+  }
+  return effects;
 }
 
 // ----- Public API (backward compat: flat Form) -----
@@ -504,6 +607,22 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
       });
     });
   });
+  // Persist logic rules
+  if (input.logicRules?.length) {
+    for (const rule of input.logicRules) {
+      logicRules.push({
+        id: rule.id || generateId("lr"),
+        formVersionId: versionId,
+        triggerFieldId: rule.triggerQuestionId,
+        operator: rule.operator as LogicRuleOperator,
+        value: rule.value,
+        action: rule.action as LogicRuleAction,
+        targetFieldIds: rule.targetQuestionIds,
+        targetSectionId: rule.targetSectionId,
+        tagId: rule.tagValue,
+      });
+    }
+  }
   if (input.status === "published") {
     const v = formVersions.find((x) => x.id === versionId);
     if (v) {
@@ -557,6 +676,24 @@ export function updateForm(
     formFields = formFields.filter((f) => !oldSectionIds.includes(f.sectionId));
     formSections = formSections.filter((s) => s.formVersionId !== version.id);
     formOptions = formOptions.filter((o) => !removedFieldIds.includes(o.fieldId));
+    // Clear old logic rules for this version
+    logicRules = logicRules.filter((r) => r.formVersionId !== version.id);
+    // Persist new logic rules
+    if (input.logicRules?.length) {
+      for (const rule of input.logicRules) {
+        logicRules.push({
+          id: rule.id || generateId("lr"),
+          formVersionId: version.id,
+          triggerFieldId: rule.triggerQuestionId,
+          operator: rule.operator as LogicRuleOperator,
+          value: rule.value,
+          action: rule.action as LogicRuleAction,
+          targetFieldIds: rule.targetQuestionIds,
+          targetSectionId: rule.targetSectionId,
+          tagId: rule.tagValue,
+        });
+      }
+    }
 
     const questions = input.questions;
     if (!questions) {
@@ -611,6 +748,34 @@ export function updateForm(
     });
   }
   return formRecordToFlatForm(updatedRecord);
+}
+
+/** Get version history for a form (newest first) */
+export interface FormVersionSummary {
+  versionId: string;
+  versionNumber: number;
+  publishedAt?: string;
+  createdAt: string;
+  createdBy?: string;
+  questionCount: number;
+}
+
+export function getFormVersionHistory(formId: string): FormVersionSummary[] {
+  return formVersions
+    .filter((v) => v.formId === formId)
+    .sort((a, b) => b.versionNumber - a.versionNumber)
+    .map((v) => {
+      const sectionIds = formSections.filter((s) => s.formVersionId === v.id).map((s) => s.id);
+      const fieldCount = formFields.filter((f) => sectionIds.includes(f.sectionId)).length;
+      return {
+        versionId: v.id,
+        versionNumber: v.versionNumber,
+        publishedAt: v.publishedAt,
+        createdAt: v.createdAt,
+        createdBy: v.createdBy,
+        questionCount: fieldCount,
+      };
+    });
 }
 
 export function archiveForm(id: string): Form | null {

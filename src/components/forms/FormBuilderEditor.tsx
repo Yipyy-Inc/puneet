@@ -37,10 +37,13 @@ import {
   updateForm,
   getFormById,
   getTemplateById,
+  getFormVersionHistory,
   type FieldMappingItem,
   type FormSectionDTO,
   type FormAudience,
   type FormAppliesTo,
+  type FormLogicRule,
+  type LogicActionType,
 } from "@/data/forms";
 import {
   Plus,
@@ -50,7 +53,15 @@ import {
   ChevronDown,
   Save,
   FolderOpen,
+  Zap,
+  Eye,
+  EyeOff,
+  Monitor,
+  Smartphone,
+  History,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
   { value: "intake", label: "Intake (new clients)" },
@@ -82,6 +93,27 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: "phone", label: "Phone" },
   { value: "email", label: "Email" },
   { value: "address", label: "Address block" },
+];
+
+const LOGIC_ACTIONS: { value: LogicActionType; label: string; description: string }[] = [
+  { value: "show", label: "Show question(s)", description: "Make target questions visible" },
+  { value: "hide", label: "Hide question(s)", description: "Hide target questions" },
+  { value: "require", label: "Make required", description: "Make target questions required" },
+  { value: "skip_to_section", label: "Jump to section", description: "Skip ahead to a section" },
+  { value: "end_form", label: "End form early", description: "End form with a message" },
+  { value: "set_tag", label: "Add tag", description: "Add a tag to pet/customer" },
+  { value: "alert_flag", label: "Alert flag", description: "Trigger internal alert on submission" },
+];
+
+const CONDITION_OPERATORS: { value: string; label: string }[] = [
+  { value: "eq", label: "equals" },
+  { value: "neq", label: "not equals" },
+  { value: "contains", label: "contains" },
+  { value: "gt", label: "greater than" },
+  { value: "lt", label: "less than" },
+  { value: "in", label: "in list" },
+  { value: "answered", label: "is answered" },
+  { value: "not_answered", label: "is not answered" },
 ];
 
 /** Mapping targets by category (6.2: configurable per field in builder). Values are stored as target keys. */
@@ -262,6 +294,10 @@ export function FormBuilderEditor({
   const [themeColor, setThemeColor] = useState(existing?.settings?.themeColor ?? "");
   const [audience, setAudience] = useState<FormAudience>(existing?.audience ?? "customer");
   const [appliesTo, setAppliesTo] = useState<FormAppliesTo>(existing?.appliesTo ?? {});
+  const [formLogicRules, setFormLogicRules] = useState<FormLogicRule[]>(existing?.logicRules ?? []);
+  const [previewMode, setPreviewMode] = useState<"none" | "desktop" | "mobile">("none");
+  const [previewAudience, setPreviewAudience] = useState<"customer" | "staff">("customer");
+  const versionHistory = existing ? getFormVersionHistory(existing.id) : [];
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
 
@@ -438,6 +474,7 @@ export function FormBuilderEditor({
         sections,
         questions: questionsWithSection,
         fieldMapping,
+        logicRules: formLogicRules.length ? formLogicRules : undefined,
         settings,
       });
       if (updated) onSave(updated);
@@ -455,6 +492,7 @@ export function FormBuilderEditor({
         sections,
         questions: questionsWithSection,
         fieldMapping,
+        logicRules: formLogicRules.length ? formLogicRules : undefined,
         repeatPerPet,
         settings,
       });
@@ -475,6 +513,7 @@ export function FormBuilderEditor({
     questions,
     sortedSections,
     fieldMapping,
+    formLogicRules,
     welcomeMessage,
     submitMessage,
     themeColor,
@@ -503,11 +542,12 @@ export function FormBuilderEditor({
       sections,
       questions: questionsWithSection,
       fieldMapping,
+      logicRules: formLogicRules.length ? formLogicRules : undefined,
       settings,
       status: "published",
     });
     if (updated) onSave(updated);
-  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, audience, appliesTo, sections, questions, sortedSections, fieldMapping, welcomeMessage, submitMessage, themeColor, onSave]);
+  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, audience, appliesTo, sections, questions, sortedSections, fieldMapping, formLogicRules, welcomeMessage, submitMessage, themeColor, onSave]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -881,7 +921,363 @@ export function FormBuilderEditor({
             )}
           </CardContent>
         </Card>
+
+        {/* Logic Rules */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Logic Rules
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFormLogicRules((prev) => [
+                  ...prev,
+                  {
+                    id: `lr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+                    triggerQuestionId: questions[0]?.id ?? "",
+                    operator: "eq" as const,
+                    value: "",
+                    action: "show" as const,
+                    targetQuestionIds: [],
+                  },
+                ]);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add rule
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              IF a question&apos;s answer matches a condition, THEN perform an action on other questions or sections.
+              {questions.length === 0 && " Add questions first, then create logic rules."}
+            </p>
+            {formLogicRules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No logic rules yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {formLogicRules.map((rule) => (
+                  <LogicRuleEditor
+                    key={rule.id}
+                    rule={rule}
+                    allQuestions={questions}
+                    allSections={sortedSections}
+                    onChange={(updated) =>
+                      setFormLogicRules((prev) =>
+                        prev.map((r) => (r.id === rule.id ? updated : r))
+                      )
+                    }
+                    onRemove={() =>
+                      setFormLogicRules((prev) => prev.filter((r) => r.id !== rule.id))
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <Button
+                variant={previewMode === "desktop" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPreviewMode(previewMode === "desktop" ? "none" : "desktop")}
+              >
+                <Monitor className="h-3.5 w-3.5 mr-1" />
+                Desktop
+              </Button>
+              <Button
+                variant={previewMode === "mobile" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPreviewMode(previewMode === "mobile" ? "none" : "mobile")}
+              >
+                <Smartphone className="h-3.5 w-3.5 mr-1" />
+                Mobile
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={previewAudience === "customer" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPreviewAudience("customer")}
+              >
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Customer view
+              </Button>
+              <Button
+                variant={previewAudience === "staff" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPreviewAudience("staff")}
+              >
+                <EyeOff className="h-3.5 w-3.5 mr-1" />
+                Staff view
+              </Button>
+            </div>
+            {previewMode !== "none" && (
+              <div
+                className={`border rounded-lg overflow-hidden bg-background ${
+                  previewMode === "mobile" ? "max-w-[375px] mx-auto" : "w-full"
+                }`}
+              >
+                <div className="p-4 space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">{name || "Untitled form"}</h3>
+                    {welcomeMessage && (
+                      <p className="text-sm text-muted-foreground mt-1">{welcomeMessage}</p>
+                    )}
+                  </div>
+                  {questions
+                    .filter((q) =>
+                      previewAudience === "customer"
+                        ? q.visibility !== "staff"
+                        : true
+                    )
+                    .map((q) => (
+                      <div key={q.id} className="space-y-1.5">
+                        <p className="text-sm font-medium">
+                          {q.label}
+                          {q.required && <span className="text-destructive"> *</span>}
+                        </p>
+                        {q.helpText && (
+                          <p className="text-xs text-muted-foreground">{q.helpText}</p>
+                        )}
+                        <div className="h-9 rounded-md border border-input bg-muted/30 px-3 flex items-center text-sm text-muted-foreground">
+                          {q.type === "yes_no" ? "Yes / No" :
+                           q.type === "textarea" ? "Long text..." :
+                           q.type === "select" ? "Select..." :
+                           q.type === "radio" ? "Radio buttons" :
+                           q.type === "multiselect" ? "Checkboxes" :
+                           q.type === "file" ? "File upload" :
+                           q.type === "signature" ? "Signature" :
+                           q.type === "address" ? "Address block" :
+                           q.placeholder || q.type}
+                        </div>
+                        {q.visibility === "staff" && (
+                          <Badge variant="secondary" className="text-[10px]">Staff only</Badge>
+                        )}
+                      </div>
+                    ))}
+                  <div className="h-10 rounded-md bg-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
+                    Submit
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Version History */}
+        {versionHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Version History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {versionHistory.map((v) => (
+                  <div
+                    key={v.versionId}
+                    className="flex items-center justify-between rounded-md border p-2.5 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">v{v.versionNumber}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {v.questionCount} question{v.questionCount !== 1 ? "s" : ""}
+                        {v.createdBy ? ` · by ${v.createdBy}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {v.publishedAt ? (
+                        <Badge className="text-[10px] bg-green-100 text-green-800 hover:bg-green-100 border-0">
+                          Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">Draft</Badge>
+                      )}
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {v.createdAt.slice(0, 10)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Logic Rule Editor — one rule row */
+function LogicRuleEditor({
+  rule,
+  allQuestions,
+  allSections,
+  onChange,
+  onRemove,
+}: {
+  rule: FormLogicRule;
+  allQuestions: FormQuestion[];
+  allSections: FormSectionDTO[];
+  onChange: (updated: FormLogicRule) => void;
+  onRemove: () => void;
+}) {
+  const needsValue = rule.operator !== "answered" && rule.operator !== "not_answered";
+  const needsTargetQuestions = rule.action === "show" || rule.action === "hide" || rule.action === "require";
+  const needsTargetSection = rule.action === "skip_to_section";
+  const needsMessage = rule.action === "end_form";
+  const needsTag = rule.action === "set_tag";
+
+  const triggerLabel = allQuestions.find((q) => q.id === rule.triggerQuestionId)?.label || "Question";
+  const actionLabel = LOGIC_ACTIONS.find((a) => a.value === rule.action)?.label || rule.action;
+
+  return (
+    <div className="rounded-lg border p-3 space-y-2.5 text-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground">
+          IF &ldquo;{triggerLabel}&rdquo; → {actionLabel}
+        </p>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {/* Trigger question */}
+      <Select
+        value={rule.triggerQuestionId}
+        onValueChange={(v) => onChange({ ...rule, triggerQuestionId: v })}
+      >
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue placeholder="Trigger question" />
+        </SelectTrigger>
+        <SelectContent>
+          {allQuestions.map((q) => (
+            <SelectItem key={q.id} value={q.id}>{q.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {/* Operator */}
+      <Select
+        value={rule.operator}
+        onValueChange={(v) => onChange({ ...rule, operator: v as FormLogicRule["operator"] })}
+      >
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {CONDITION_OPERATORS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {/* Value */}
+      {needsValue && (
+        <Input
+          value={Array.isArray(rule.value) ? rule.value.join(", ") : (rule.value ?? "")}
+          onChange={(e) => {
+            const val = e.target.value;
+            onChange({ ...rule, value: val.includes(",") ? val.split(",").map((s) => s.trim()).filter(Boolean) : val });
+          }}
+          placeholder="Value (or comma-separated for 'in list')"
+          className="h-8 text-xs"
+        />
+      )}
+      {/* Action */}
+      <Select
+        value={rule.action}
+        onValueChange={(v) => onChange({ ...rule, action: v as LogicActionType })}
+      >
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {LOGIC_ACTIONS.map((a) => (
+            <SelectItem key={a.value} value={a.value}>
+              <span className="flex flex-col">
+                <span>{a.label}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {/* Target questions (for show/hide/require) */}
+      {needsTargetQuestions && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Target questions</Label>
+          <div className="max-h-32 overflow-y-auto space-y-1 rounded border p-2">
+            {allQuestions
+              .filter((q) => q.id !== rule.triggerQuestionId)
+              .map((q) => (
+                <label key={q.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5"
+                    checked={rule.targetQuestionIds?.includes(q.id) ?? false}
+                    onChange={(e) => {
+                      const current = rule.targetQuestionIds ?? [];
+                      onChange({
+                        ...rule,
+                        targetQuestionIds: e.target.checked
+                          ? [...current, q.id]
+                          : current.filter((id) => id !== q.id),
+                      });
+                    }}
+                  />
+                  {q.label}
+                </label>
+              ))}
+          </div>
+        </div>
+      )}
+      {/* Target section (for skip_to_section) */}
+      {needsTargetSection && (
+        <Select
+          value={rule.targetSectionId ?? ""}
+          onValueChange={(v) => onChange({ ...rule, targetSectionId: v })}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Jump to section..." />
+          </SelectTrigger>
+          <SelectContent>
+            {allSections.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {/* End form message */}
+      {needsMessage && (
+        <Input
+          value={rule.endMessage ?? ""}
+          onChange={(e) => onChange({ ...rule, endMessage: e.target.value })}
+          placeholder="Message shown when form ends"
+          className="h-8 text-xs"
+        />
+      )}
+      {/* Tag value */}
+      {needsTag && (
+        <Input
+          value={rule.tagValue ?? ""}
+          onChange={(e) => onChange({ ...rule, tagValue: e.target.value })}
+          placeholder="Tag to apply (e.g. behavior-alert)"
+          className="h-8 text-xs"
+        />
+      )}
     </div>
   );
 }
