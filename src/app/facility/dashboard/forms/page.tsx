@@ -20,9 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
-import { getFormsByFacility, duplicateForm, type Form, type FormType } from "@/data/forms";
+import { getFormsByFacility, duplicateForm, archiveForm, deleteForm, type Form, type FormType } from "@/data/forms";
 import { triggerFormEvent } from "@/lib/form-automation-events";
-import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine } from "lucide-react";
+import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine, Archive, Trash2, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 
 const FORM_CATEGORIES: { value: FormType; label: string }[] = [
@@ -38,9 +38,12 @@ const FACILITY_ID = 11;
 export default function IntakeFormsPage() {
   const [category, setCategory] = useState<FormType>("intake");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const router = useRouter();
   const allForms = getFormsByFacility(FACILITY_ID);
   const formsInCategory = allForms.filter((f) => f.type === category);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _refresh = refreshKey; // force re-render on state change
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
@@ -105,7 +108,7 @@ export default function IntakeFormsPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {formsInCategory.map((form) => (
-                <FormCard key={form.id} form={form} facilityId={FACILITY_ID} router={router} />
+                <FormCard key={form.id} form={form} facilityId={FACILITY_ID} router={router} onRefresh={() => setRefreshKey((k) => k + 1)} />
               ))}
             </div>
           )}
@@ -115,14 +118,27 @@ export default function IntakeFormsPage() {
   );
 }
 
+function statusBadge(status?: string) {
+  switch (status) {
+    case "published":
+      return <Badge className="text-xs bg-green-100 text-green-800 hover:bg-green-100 border-0">Published</Badge>;
+    case "archived":
+      return <Badge variant="outline" className="text-xs text-muted-foreground">Archived</Badge>;
+    default:
+      return <Badge variant="secondary" className="text-xs">Draft</Badge>;
+  }
+}
+
 function FormCard({
   form,
   facilityId,
   router,
+  onRefresh,
 }: {
   form: Form;
   facilityId: number;
   router: ReturnType<typeof useRouter>;
+  onRefresh: () => void;
 }) {
   const sharePath = `/forms/${form.slug}`;
   const [embedOpen, setEmbedOpen] = useState(false);
@@ -149,21 +165,74 @@ function FormCard({
     toast.success("Embed code copied to clipboard");
   };
 
+  const handleArchive = () => {
+    archiveForm(form.id);
+    toast.success("Form archived");
+    onRefresh();
+  };
+
+  const handleDelete = () => {
+    if (!confirm(`Delete "${form.name}"? This cannot be undone.`)) return;
+    deleteForm(form.id);
+    toast.success("Form deleted");
+    onRefresh();
+  };
+
   return (
     <>
-      <Card>
+      <Card className={form.status === "archived" ? "opacity-60" : ""}>
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-          <CardTitle className="text-base font-medium">{form.name}</CardTitle>
-          {form.internal && (
-            <Badge variant="secondary" className="text-xs">
-              Staff only
-            </Badge>
-          )}
+          <div className="space-y-1 min-w-0 flex-1">
+            <CardTitle className="text-base font-medium">{form.name}</CardTitle>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {statusBadge(form.status)}
+              {form.internal && (
+                <Badge variant="secondary" className="text-xs">
+                  <Lock className="h-2.5 w-2.5 mr-0.5" />
+                  Staff only
+                </Badge>
+              )}
+              {form.audience === "both" && (
+                <Badge variant="secondary" className="text-xs">Both</Badge>
+              )}
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => router.push(`/facility/dashboard/forms/builder?id=${form.id}`)}>
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const copy = duplicateForm(form.id, facilityId);
+                if (copy) router.push(`/facility/dashboard/forms/builder?id=${copy.id}`);
+              }}>
+                <Copy className="h-3.5 w-3.5 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              {form.status !== "archived" && (
+                <DropdownMenuItem onClick={handleArchive}>
+                  <Archive className="h-3.5 w-3.5 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
             {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
             {form.serviceType && ` · ${form.serviceType}`}
+            {form.appliesTo?.petTypes?.length ? ` · ${form.appliesTo.petTypes.join(", ")}` : ""}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -202,17 +271,6 @@ function FormCard({
                 </Button>
               </>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                const copy = duplicateForm(form.id, facilityId);
-                if (copy) router.push(`/facility/dashboard/forms/builder?id=${copy.id}`);
-              }}
-            >
-              <Copy className="h-3.5 w-3.5 mr-1" />
-              Duplicate
-            </Button>
           </div>
         </CardContent>
       </Card>

@@ -176,7 +176,7 @@ export type QuestionType =
   | "email"
   | "address";
 
-export type ConditionOperator = "eq" | "neq" | "contains" | "in";
+export type ConditionOperator = "eq" | "neq" | "contains" | "in" | "gt" | "lt" | "answered" | "not_answered";
 
 export type ContextField = "petType" | "serviceType" | "evaluationStatus";
 
@@ -201,6 +201,10 @@ export interface FormQuestion {
   condition?: FormCondition;
   visibility?: "customer" | "staff";
   sectionId?: string;
+  helpText?: string;
+  defaultValue?: string;
+  appliesToPetType?: string;
+  validation?: FieldValidation;
   /** Phase 2: multi-language (EN/FR). See FormQuestionI18n in forms-phase2-types. */
   labelI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
   placeholderI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
@@ -316,6 +320,10 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
       required: f.required,
       options: opts.length ? opts.map((o) => ({ value: o.value, label: o.label })) : undefined,
       placeholder: f.helpText ?? undefined,
+      helpText: f.helpText,
+      defaultValue: f.defaultValue,
+      appliesToPetType: f.appliesToPetType,
+      validation: f.validation,
       visibility: f.visibility,
       sectionId: f.sectionId,
     };
@@ -377,6 +385,14 @@ export function shouldShowQuestion(
       const arr = Array.isArray(target) ? target : [target];
       return arr.some((t) => sourceValue === t || String(sourceValue) === String(t));
     }
+    case "gt":
+      return Number(sourceValue) > Number(target);
+    case "lt":
+      return Number(sourceValue) < Number(target);
+    case "answered":
+      return sourceValue !== undefined && sourceValue !== "" && sourceValue !== null;
+    case "not_answered":
+      return sourceValue === undefined || sourceValue === "" || sourceValue === null;
     default:
       return true;
   }
@@ -468,11 +484,13 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
       id: fieldId,
       sectionId: resolvedSectionId,
       label: q.label,
-      helpText: q.placeholder,
+      helpText: q.helpText ?? q.placeholder,
       fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
       required: q.required,
       visibility: qq.visibility ?? "customer",
-      defaultValue: undefined,
+      defaultValue: q.defaultValue,
+      appliesToPetType: q.appliesToPetType,
+      validation: q.validation,
       mappingTarget: input.fieldMapping.find((m) => m.questionId === q.id)?.target,
       order: orderInSection >= 0 ? orderInSection : i,
     });
@@ -577,10 +595,13 @@ export function updateForm(
         id: fieldId,
         sectionId: resolvedSectionId,
         label: q.label,
-        helpText: q.placeholder,
+        helpText: q.helpText ?? q.placeholder,
         fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
         required: q.required,
         visibility: qq.visibility ?? "customer",
+        defaultValue: q.defaultValue,
+        appliesToPetType: q.appliesToPetType,
+        validation: q.validation,
         mappingTarget: input.fieldMapping?.find((m) => m.questionId === q.id)?.target,
         order: orderInSection >= 0 ? orderInSection : i,
       });
@@ -590,6 +611,13 @@ export function updateForm(
     });
   }
   return formRecordToFlatForm(updatedRecord);
+}
+
+export function archiveForm(id: string): Form | null {
+  const idx = formRecords.findIndex((f) => f.id === id);
+  if (idx === -1) return null;
+  formRecords[idx] = { ...formRecords[idx], status: "archived", updatedAt: new Date().toISOString() };
+  return formRecordToFlatForm(formRecords[idx]);
 }
 
 export function deleteForm(id: string): boolean {

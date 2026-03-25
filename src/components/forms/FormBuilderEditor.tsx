@@ -39,6 +39,8 @@ import {
   getTemplateById,
   type FieldMappingItem,
   type FormSectionDTO,
+  type FormAudience,
+  type FormAppliesTo,
 } from "@/data/forms";
 import {
   Plus,
@@ -256,7 +258,10 @@ export function FormBuilderEditor({
     return base[0]?.id ?? null;
   });
   const [welcomeMessage, setWelcomeMessage] = useState(existing?.settings?.welcomeMessage ?? "");
+  const [submitMessage, setSubmitMessage] = useState(existing?.settings?.submitMessage ?? "");
   const [themeColor, setThemeColor] = useState(existing?.settings?.themeColor ?? "");
+  const [audience, setAudience] = useState<FormAudience>(existing?.audience ?? "customer");
+  const [appliesTo, setAppliesTo] = useState<FormAppliesTo>(existing?.appliesTo ?? {});
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
 
@@ -413,8 +418,13 @@ export function FormBuilderEditor({
 
   const handleSave = useCallback(() => {
     if (!name.trim()) return;
-    const settings = (welcomeMessage || themeColor) ? { welcomeMessage: welcomeMessage || undefined, themeColor: themeColor || undefined } : undefined;
+    const settings = (welcomeMessage || submitMessage || themeColor) ? {
+      welcomeMessage: welcomeMessage || undefined,
+      submitMessage: submitMessage || undefined,
+      themeColor: themeColor || undefined,
+    } : undefined;
     const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
+    const appliesData = (appliesTo.petTypes?.length || appliesTo.serviceTypes?.length || appliesTo.locationIds?.length) ? appliesTo : undefined;
     if (existing) {
       const updated = updateForm(existing.id, {
         name: name.trim(),
@@ -423,6 +433,8 @@ export function FormBuilderEditor({
         serviceType: serviceType || undefined,
         internal,
         repeatPerPet,
+        audience,
+        appliesTo: appliesData,
         sections,
         questions: questionsWithSection,
         fieldMapping,
@@ -438,6 +450,8 @@ export function FormBuilderEditor({
         serviceType: serviceType || undefined,
         templateId: template?.id,
         internal,
+        audience,
+        appliesTo: appliesData,
         sections,
         questions: questionsWithSection,
         fieldMapping,
@@ -455,11 +469,14 @@ export function FormBuilderEditor({
     serviceType,
     internal,
     repeatPerPet,
+    audience,
+    appliesTo,
     sections,
     questions,
     sortedSections,
     fieldMapping,
     welcomeMessage,
+    submitMessage,
     themeColor,
     template?.id,
     onSave,
@@ -467,8 +484,13 @@ export function FormBuilderEditor({
 
   const handlePublish = useCallback(() => {
     if (!name.trim() || !existing) return;
-    const settings = (welcomeMessage || themeColor) ? { welcomeMessage: welcomeMessage || undefined, themeColor: themeColor || undefined } : undefined;
+    const settings = (welcomeMessage || submitMessage || themeColor) ? {
+      welcomeMessage: welcomeMessage || undefined,
+      submitMessage: submitMessage || undefined,
+      themeColor: themeColor || undefined,
+    } : undefined;
     const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
+    const appliesData = (appliesTo.petTypes?.length || appliesTo.serviceTypes?.length || appliesTo.locationIds?.length) ? appliesTo : undefined;
     const updated = updateForm(existing.id, {
       name: name.trim(),
       slug: slug.trim() || undefined,
@@ -476,6 +498,8 @@ export function FormBuilderEditor({
       serviceType: serviceType || undefined,
       internal,
       repeatPerPet,
+      audience,
+      appliesTo: appliesData,
       sections,
       questions: questionsWithSection,
       fieldMapping,
@@ -483,7 +507,7 @@ export function FormBuilderEditor({
       status: "published",
     });
     if (updated) onSave(updated);
-  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, sections, questions, sortedSections, fieldMapping, welcomeMessage, themeColor, onSave]);
+  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, audience, appliesTo, sections, questions, sortedSections, fieldMapping, welcomeMessage, submitMessage, themeColor, onSave]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -532,19 +556,94 @@ export function FormBuilderEditor({
               />
             </div>
             <div className="space-y-2">
-              <Label>Theme color (optional)</Label>
-              <Select value={themeColor || "default"} onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Default" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default</SelectItem>
-                  <SelectItem value="#0ea5e9">Sky</SelectItem>
-                  <SelectItem value="#22c55e">Green</SelectItem>
-                  <SelectItem value="#8b5cf6">Violet</SelectItem>
-                  <SelectItem value="#f59e0b">Amber</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Submit confirmation message (optional)</Label>
+              <textarea
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                value={submitMessage}
+                onChange={(e) => setSubmitMessage(e.target.value)}
+                placeholder="Message shown after successful submission"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Theme color (optional)</Label>
+                <Select value={themeColor || "default"} onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="#0ea5e9">Sky</SelectItem>
+                    <SelectItem value="#22c55e">Green</SelectItem>
+                    <SelectItem value="#8b5cf6">Violet</SelectItem>
+                    <SelectItem value="#f59e0b">Amber</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Audience</Label>
+                <Select value={audience} onValueChange={(v) => setAudience(v as FormAudience)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="staff">Staff only</SelectItem>
+                    <SelectItem value="both">Both (customer &amp; staff)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-3 rounded-lg border p-3">
+              <Label className="text-sm font-medium">Applies to (targeting)</Label>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Pet types</Label>
+                <div className="flex flex-wrap gap-3">
+                  {["dog", "cat", "other"].map((pt) => (
+                    <label key={pt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={appliesTo.petTypes?.includes(pt) ?? false}
+                        onChange={(e) => {
+                          const current = appliesTo.petTypes ?? [];
+                          setAppliesTo({
+                            ...appliesTo,
+                            petTypes: e.target.checked
+                              ? [...current, pt]
+                              : current.filter((x) => x !== pt),
+                          });
+                        }}
+                      />
+                      {pt.charAt(0).toUpperCase() + pt.slice(1)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Service types</Label>
+                <div className="flex flex-wrap gap-3">
+                  {["boarding", "daycare", "grooming", "training"].map((st) => (
+                    <label key={st} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={appliesTo.serviceTypes?.includes(st) ?? false}
+                        onChange={(e) => {
+                          const current = appliesTo.serviceTypes ?? [];
+                          setAppliesTo({
+                            ...appliesTo,
+                            serviceTypes: e.target.checked
+                              ? [...current, st]
+                              : current.filter((x) => x !== st),
+                          });
+                        }}
+                      />
+                      {st.charAt(0).toUpperCase() + st.slice(1)}
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -865,19 +964,99 @@ function QuestionEditor({
         <Label htmlFor="required">Required</Label>
       </div>
       <div className="space-y-2">
-        <Label>Visible to</Label>
-        <Select
-          value={question.visibility ?? "customer"}
-          onValueChange={(v) => onChange({ visibility: v as "customer" | "staff" })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="customer">Customer</SelectItem>
-            <SelectItem value="staff">Staff only</SelectItem>
-          </SelectContent>
-        </Select>
+        <Label>Help text (optional)</Label>
+        <Input
+          value={question.helpText ?? ""}
+          onChange={(e) => onChange({ helpText: e.target.value || undefined })}
+          placeholder="Help text shown below the question"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Default value (optional)</Label>
+        <Input
+          value={question.defaultValue ?? ""}
+          onChange={(e) => onChange({ defaultValue: e.target.value || undefined })}
+          placeholder="Pre-filled answer"
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Visible to</Label>
+          <Select
+            value={question.visibility ?? "customer"}
+            onValueChange={(v) => onChange({ visibility: v as "customer" | "staff" })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="customer">Customer</SelectItem>
+              <SelectItem value="staff">Staff only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Applies to pet type</Label>
+          <Select
+            value={question.appliesToPetType ?? "all"}
+            onValueChange={(v) => onChange({ appliesToPetType: v === "all" ? undefined : v })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All pets</SelectItem>
+              <SelectItem value="dog">Dog only</SelectItem>
+              <SelectItem value="cat">Cat only</SelectItem>
+              <SelectItem value="other">Other only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2 rounded-lg border p-3">
+        <Label className="text-xs font-medium text-muted-foreground">Validation rules</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Min</Label>
+            <Input
+              type="number"
+              value={question.validation?.min ?? ""}
+              onChange={(e) => onChange({ validation: { ...question.validation, min: e.target.value ? Number(e.target.value) : undefined } })}
+              placeholder="Min value/length"
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Max</Label>
+            <Input
+              type="number"
+              value={question.validation?.max ?? ""}
+              onChange={(e) => onChange({ validation: { ...question.validation, max: e.target.value ? Number(e.target.value) : undefined } })}
+              placeholder="Max value/length"
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+        {question.type === "file" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Allowed file types (comma-separated)</Label>
+            <Input
+              value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
+              onChange={(e) => onChange({ validation: { ...question.validation, allowedFileTypes: e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : undefined } })}
+              placeholder=".pdf, .jpg, .png"
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+        <div className="space-y-1">
+          <Label className="text-xs">Regex pattern (advanced)</Label>
+          <Input
+            value={question.validation?.regex ?? ""}
+            onChange={(e) => onChange({ validation: { ...question.validation, regex: e.target.value || undefined } })}
+            placeholder="e.g. ^[a-zA-Z]+$"
+            className="h-8 text-xs"
+          />
+        </div>
       </div>
       {onMappingChange && (
         <div className="space-y-2">
@@ -946,7 +1125,7 @@ function formatConditionPlainLanguage(
   condition: FormCondition,
   allQuestions: FormQuestion[]
 ): string {
-  const opLabel: Record<string, string> = { eq: "=", neq: "≠", contains: "contains", in: "is one of" };
+  const opLabel: Record<string, string> = { eq: "=", neq: "≠", contains: "contains", in: "is one of", gt: ">", lt: "<", answered: "is answered", not_answered: "is not answered" };
   const op = opLabel[condition.operator] ?? condition.operator;
   const val = Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
   if (condition.questionId) {
@@ -1050,7 +1229,10 @@ function ConditionEditor({
             <SelectContent>
               <SelectItem value="eq">equals</SelectItem>
               <SelectItem value="neq">not equals</SelectItem>
+              <SelectItem value="contains">contains</SelectItem>
               <SelectItem value="in">in list</SelectItem>
+              <SelectItem value="answered">is answered</SelectItem>
+              <SelectItem value="not_answered">is not answered</SelectItem>
             </SelectContent>
           </Select>
           <Input
@@ -1093,7 +1275,11 @@ function ConditionEditor({
               <SelectItem value="eq">equals</SelectItem>
               <SelectItem value="neq">not equals</SelectItem>
               <SelectItem value="contains">contains</SelectItem>
+              <SelectItem value="gt">greater than</SelectItem>
+              <SelectItem value="lt">less than</SelectItem>
               <SelectItem value="in">in list</SelectItem>
+              <SelectItem value="answered">is answered</SelectItem>
+              <SelectItem value="not_answered">is not answered</SelectItem>
             </SelectContent>
           </Select>
           <Input

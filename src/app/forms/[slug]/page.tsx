@@ -185,7 +185,7 @@ export default function PublicFormPage() {
             <CheckCircle className="h-12 w-12 text-green-600 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Thank you</h2>
             <p className="text-muted-foreground">
-              Your response has been submitted successfully.
+              {form?.settings?.submitMessage || "Your response has been submitted successfully."}
             </p>
           </CardContent>
         </Card>
@@ -264,6 +264,18 @@ export default function PublicFormPage() {
   );
 }
 
+function QuestionLabel({ label, required, helpText }: { label: string; required: boolean; helpText?: string }) {
+  return (
+    <>
+      <Label>
+        {label}
+        {required && " *"}
+      </Label>
+      {helpText && <p className="text-xs text-muted-foreground -mt-1">{helpText}</p>}
+    </>
+  );
+}
+
 function QuestionInput({
   question,
   value,
@@ -275,19 +287,62 @@ function QuestionInput({
 }) {
   const id = `q-${question.id}`;
   const opts = question.options ?? [];
+  const help = question.helpText;
 
   switch (question.type) {
+    case "yes_no": {
+      const yesNoOpts = opts.length ? opts : [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <div className="flex gap-3">
+            {yesNoOpts.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className={`flex-1 min-h-12 rounded-lg border-2 text-base font-medium transition-colors touch-manipulation ${
+                  value === o.value
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-input hover:border-muted-foreground/30"
+                }`}
+                onClick={() => onChange(o.value)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case "radio":
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <div className="space-y-2">
+            {opts.map((o) => (
+              <label key={o.value} className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer touch-manipulation hover:bg-muted/50 transition-colors">
+                <input
+                  type="radio"
+                  name={id}
+                  className="h-5 w-5 shrink-0"
+                  value={o.value}
+                  checked={value === o.value}
+                  onChange={() => onChange(o.value)}
+                />
+                <span className="text-base">{o.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      );
     case "textarea":
       return (
         <div className="space-y-2">
-          <Label htmlFor={id}>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <textarea
             id={id}
             className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
-            value={(value as string) ?? ""}
+            value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
             required={question.required}
@@ -297,14 +352,11 @@ function QuestionInput({
     case "select":
       return (
         <div className="space-y-2">
-          <Label htmlFor={id}>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <select
             id={id}
             className="flex min-h-12 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
-            value={(value as string) ?? ""}
+            value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
           >
@@ -327,10 +379,7 @@ function QuestionInput({
       };
       return (
         <div className="space-y-2">
-          <Label>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="flex flex-wrap gap-2">
             {opts.map((o) => (
               <label key={o.value} className="flex items-center gap-2 text-base min-h-12 cursor-pointer touch-manipulation">
@@ -361,20 +410,18 @@ function QuestionInput({
             {question.label}
             {question.required && " *"}
           </Label>
+          {help && <span className="text-xs text-muted-foreground">{help}</span>}
         </div>
       );
     case "date":
       return (
         <div className="space-y-2">
-          <Label htmlFor={id}>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
             id={id}
             type="date"
             className="text-base min-h-12"
-            value={(value as string) ?? ""}
+            value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
           />
@@ -383,33 +430,152 @@ function QuestionInput({
     case "number":
       return (
         <div className="space-y-2">
-          <Label htmlFor={id}>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
             id={id}
             type="number"
             className="text-base min-h-12"
-            value={(value as number) ?? ""}
+            value={(value as number) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
             placeholder={question.placeholder}
             required={question.required}
           />
         </div>
       );
+    case "file":
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <div className="rounded-lg border-2 border-dashed border-input p-6 text-center">
+            <input
+              id={id}
+              type="file"
+              className="hidden"
+              accept={question.validation?.allowedFileTypes?.join(",") ?? undefined}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onChange(file.name);
+              }}
+            />
+            <label htmlFor={id} className="cursor-pointer touch-manipulation">
+              <div className="text-sm text-muted-foreground">
+                {value ? (
+                  <span className="text-foreground font-medium">{String(value)}</span>
+                ) : (
+                  <>Click to upload a file</>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {question.validation?.allowedFileTypes
+                  ? `Allowed: ${question.validation.allowedFileTypes.join(", ")}`
+                  : "PDF, JPG, PNG, DOC accepted"}
+              </p>
+            </label>
+          </div>
+        </div>
+      );
+    case "signature":
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <div className="rounded-lg border border-input p-4 space-y-3">
+            <div className="h-24 bg-muted/30 rounded flex items-center justify-center text-sm text-muted-foreground">
+              {value ? (
+                <p className="font-medium text-foreground italic text-lg">{String(value)}</p>
+              ) : (
+                "Signature area"
+              )}
+            </div>
+            <Input
+              placeholder="Type your full name as signature"
+              value={(value as string) ?? ""}
+              onChange={(e) => onChange(e.target.value)}
+              required={question.required}
+              className="text-base min-h-12"
+            />
+            <p className="text-xs text-muted-foreground">
+              By typing your name above, you agree this serves as your electronic signature.
+            </p>
+          </div>
+        </div>
+      );
+    case "phone":
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <Input
+            id={id}
+            type="tel"
+            className="text-base min-h-12 touch-manipulation"
+            value={(value as string) ?? question.defaultValue ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={question.placeholder ?? "(555) 123-4567"}
+            required={question.required}
+          />
+        </div>
+      );
+    case "email":
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <Input
+            id={id}
+            type="email"
+            className="text-base min-h-12 touch-manipulation"
+            value={(value as string) ?? question.defaultValue ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={question.placeholder ?? "name@example.com"}
+            required={question.required}
+          />
+        </div>
+      );
+    case "address": {
+      const addr = (value as { street?: string; city?: string; state?: string; zip?: string }) ?? {};
+      const update = (field: string, v: string) => onChange({ ...addr, [field]: v });
+      return (
+        <div className="space-y-2">
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <div className="space-y-2">
+            <Input
+              placeholder="Street address"
+              value={addr.street ?? ""}
+              onChange={(e) => update("street", e.target.value)}
+              className="text-base min-h-12"
+              required={question.required}
+            />
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                placeholder="City"
+                value={addr.city ?? ""}
+                onChange={(e) => update("city", e.target.value)}
+                className="text-base min-h-12 col-span-1"
+              />
+              <Input
+                placeholder="State"
+                value={addr.state ?? ""}
+                onChange={(e) => update("state", e.target.value)}
+                className="text-base min-h-12"
+              />
+              <Input
+                placeholder="ZIP"
+                value={addr.zip ?? ""}
+                onChange={(e) => update("zip", e.target.value)}
+                className="text-base min-h-12"
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
     case "text":
     default:
       return (
         <div className="space-y-2">
-          <Label htmlFor={id}>
-            {question.label}
-            {question.required && " *"}
-          </Label>
+          <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
             id={id}
             type="text"
-            value={(value as string) ?? ""}
+            value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
             required={question.required}

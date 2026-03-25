@@ -283,6 +283,17 @@ export function FacilitySidebar() {
             icon: FileText,
             disabled: false,
           },
+        ],
+      },
+      {
+        label: "Settings",
+        items: [
+          {
+            title: "Settings",
+            url: "/facility/dashboard/settings",
+            icon: Settings,
+            disabled: false,
+          },
           {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
@@ -299,12 +310,6 @@ export function FacilitySidebar() {
             title: "Templates",
             url: "/facility/dashboard/forms/templates",
             icon: LayoutTemplate,
-            disabled: false,
-          },
-          {
-            title: "Settings",
-            url: "/facility/dashboard/settings",
-            icon: Settings,
             disabled: false,
           },
         ],

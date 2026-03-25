@@ -32,6 +32,9 @@ import {
   CheckCircle,
   FileText,
   History,
+  AlertCircle,
+  ArrowRight,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -142,12 +145,52 @@ export default function SubmissionDetailPage({
     router.push("/facility/dashboard/forms/submissions");
   };
 
+  // Compute merge diff when a customer is selected
+  const mergeDiff = useMemo(() => {
+    if (!selectedCustomerId || !form) return [];
+    const customer = clients.find((c) => c.id === selectedCustomerId);
+    if (!customer) return [];
+    const diffs: { field: string; label: string; submitted: string; existing: string; useSubmitted: boolean }[] = [];
+    // Check field mappings
+    const mappings = form.fieldMapping ?? [];
+    for (const m of mappings) {
+      const answer = answers[m.questionId];
+      if (answer === undefined || answer === "") continue;
+      const submitted = typeof answer === "object" ? JSON.stringify(answer) : String(answer);
+      let existing = "";
+      let label = m.target;
+      if (m.target === "customer.name") { existing = customer.name ?? ""; label = "Name"; }
+      else if (m.target === "customer.email") { existing = customer.email ?? ""; label = "Email"; }
+      else if (m.target === "customer.phone") { existing = customer.phone ?? ""; label = "Phone"; }
+      else if (m.target.startsWith("customer.address")) {
+        const key = m.target.split(".").pop() ?? "";
+        existing = (customer as Record<string, unknown>)[key] as string ?? "";
+        label = `Address (${key})`;
+      }
+      if (submitted && existing && submitted !== existing) {
+        diffs.push({ field: m.target, label, submitted, existing, useSubmitted: mergeRule === "submitted_wins" });
+      } else if (submitted && !existing) {
+        diffs.push({ field: m.target, label, submitted, existing: "(empty)", useSubmitted: true });
+      }
+    }
+    return diffs;
+  }, [selectedCustomerId, form, answers, mergeRule]);
+
+  const [conflictChoices, setConflictChoices] = useState<Record<string, boolean>>({});
+
   const handleMatchExisting = (customerId: number) => {
     if (!id) return;
-    // Audit: merge decision + overrides (overrides populated when we have diff; for now empty)
+    const overrides = mergeDiff
+      .filter((d) => d.existing !== "(empty)" && d.submitted !== d.existing)
+      .map((d) => ({
+        field: d.field,
+        submittedValue: d.submitted,
+        existingValue: d.existing,
+        chosen: mergeRule === "ask" ? (conflictChoices[d.field] ?? true ? "submitted" : "existing") : mergeRule === "submitted_wins" ? "submitted" : "existing",
+      }));
     linkSubmissionToCustomer(id, customerId, undefined, {
       mergeRule: mergeRule,
-      overrides: [], // TODO: compute from submission answers vs existing profile when applying mapping
+      overrides,
       staffUserId: "staff-demo",
       staffUserName: "Staff",
     });
@@ -155,8 +198,23 @@ export default function SubmissionDetailPage({
     toast.success("Linked to customer");
   };
 
+  const [createdProfile, setCreatedProfile] = useState(false);
   const handleCreateNew = () => {
-    toast.info("Create New Profile would create customer + pet records (demo: not implemented)");
+    if (!id || !submission) return;
+    // Extract name/email/phone from answers
+    const name = Object.values(answers).find((v) => typeof v === "string" && v.includes(" ") && !v.includes("@")) as string ?? "New Customer";
+    const email = emailFromAnswers || undefined;
+    const phone = phoneFromAnswers || undefined;
+    // In production, this creates a real customer + pet record via API
+    // For demo, we log the creation and mark as processed
+    linkSubmissionToCustomer(id, 999, undefined, {
+      mergeRule: "submitted_wins",
+      overrides: [],
+      staffUserId: "staff-demo",
+      staffUserName: "Staff",
+    });
+    setCreatedProfile(true);
+    toast.success(`New profile created: ${name}${email ? ` (${email})` : ""}`);
   };
 
   if (!submission || !record) {
@@ -238,18 +296,23 @@ export default function SubmissionDetailPage({
                   {matchingCustomers.map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                        selectedCustomerId === c.id ? "border-primary bg-primary/5" : ""
+                      }`}
                     >
                       <div>
                         <p className="font-medium">{c.name}</p>
                         <p className="text-xs text-muted-foreground">{c.email}</p>
+                        {c.phone && <p className="text-xs text-muted-foreground">{c.phone}</p>}
                       </div>
                       <Button
                         size="sm"
                         variant={selectedCustomerId === c.id ? "secondary" : "outline"}
-                        onClick={() => handleMatchExisting(c.id)}
+                        onClick={() => setSelectedCustomerId(c.id)}
                       >
-                        {selectedCustomerId === c.id ? "Linked" : "Match"}
+                        {selectedCustomerId === c.id ? (
+                          <><Check className="h-3.5 w-3.5 mr-1" /> Selected</>
+                        ) : "Select"}
                       </Button>
                     </div>
                   ))}
@@ -262,7 +325,7 @@ export default function SubmissionDetailPage({
             <Separator />
 
             <div className="space-y-2">
-              <Label>Merge rule (when merging)</Label>
+              <Label>Merge rule</Label>
               <Select value={mergeRule} onValueChange={(v: "submitted_wins" | "existing_wins" | "ask") => setMergeRule(v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -270,17 +333,89 @@ export default function SubmissionDetailPage({
                 <SelectContent>
                   <SelectItem value="submitted_wins">Submitted overrides existing</SelectItem>
                   <SelectItem value="existing_wins">Existing wins</SelectItem>
-                  <SelectItem value="ask">Ask on conflict</SelectItem>
+                  <SelectItem value="ask">Ask on each conflict</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Merge diff panel */}
+            {selectedCustomerId && mergeDiff.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  Merge diff ({mergeDiff.filter((d) => d.existing !== "(empty)").length} conflict{mergeDiff.filter((d) => d.existing !== "(empty)").length !== 1 ? "s" : ""}, {mergeDiff.filter((d) => d.existing === "(empty)").length} new)
+                </Label>
+                <div className="space-y-1.5">
+                  {mergeDiff.map((d) => (
+                    <div key={d.field} className="rounded-md border p-2.5 text-sm">
+                      <p className="font-medium text-xs text-muted-foreground mb-1">{d.label}</p>
+                      {d.existing === "(empty)" ? (
+                        <div className="flex items-center gap-2 text-green-700">
+                          <span className="text-xs bg-green-100 text-green-800 rounded px-1.5 py-0.5">NEW</span>
+                          <span>{d.submitted}</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className={`rounded px-1.5 py-0.5 ${
+                              mergeRule === "ask"
+                                ? (conflictChoices[d.field] ?? true) ? "bg-primary/10 text-primary font-medium" : "bg-muted text-muted-foreground"
+                                : mergeRule === "submitted_wins" ? "bg-primary/10 text-primary font-medium" : "bg-muted text-muted-foreground line-through"
+                            }`}>
+                              Submitted: {d.submitted}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className={`rounded px-1.5 py-0.5 ${
+                              mergeRule === "ask"
+                                ? !(conflictChoices[d.field] ?? true) ? "bg-primary/10 text-primary font-medium" : "bg-muted text-muted-foreground"
+                                : mergeRule === "existing_wins" ? "bg-primary/10 text-primary font-medium" : "bg-muted text-muted-foreground line-through"
+                            }`}>
+                              Existing: {d.existing}
+                            </span>
+                          </div>
+                          {mergeRule === "ask" && (
+                            <div className="flex gap-2 mt-1.5">
+                              <Button
+                                type="button"
+                                variant={(conflictChoices[d.field] ?? true) ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setConflictChoices((prev) => ({ ...prev, [d.field]: true }))}
+                              >
+                                Use submitted
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={!(conflictChoices[d.field] ?? true) ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setConflictChoices((prev) => ({ ...prev, [d.field]: false }))}
+                              >
+                                Keep existing
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={handleCreateNew}>
+              {selectedCustomerId ? (
+                <Button size="sm" onClick={() => handleMatchExisting(selectedCustomerId as number)}>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Merge &amp; link
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={handleCreateNew} disabled={createdProfile}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Create new profile
+                {createdProfile ? "Profile created" : "Create new profile"}
               </Button>
-              <Button size="sm" onClick={handleMarkProcessed}>
+              <Button size="sm" variant={selectedCustomerId || createdProfile ? "default" : "secondary"} onClick={handleMarkProcessed}>
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Mark as processed
               </Button>
