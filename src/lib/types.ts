@@ -62,29 +62,76 @@ export interface Client {
   };
 }
 
+// ========================================
+// FEEDING TYPES — Modular Meal Builder
+// ========================================
+
+export type FoodComponentType = "kibble" | "wet_food" | "raw" | "supplement" | "toppers" | "prescription" | "other";
+export type FoodUnit = "cups" | "tbsp" | "grams" | "oz" | "scoop" | "other";
+export type FoodSource = "parent_brings" | "facility_provides" | "mix";
+export type PrepInstruction = "soak" | "microwave" | "mix_powder" | "serve_separately" | "warm_water" | "other";
+export type RefusalAction = "plain_kibble" | "warm_water" | "skip_notify" | "call_parent" | "try_again_1hr" | "add_toppers";
+export type FeedingFrequency = "daily" | "specific_days" | "every_other_day" | "custom_dates" | "day_before_checkout";
+
+export interface MealComponent {
+  id: string;
+  type: FoodComponentType;
+  name: string;
+  amount: string;
+  unit: FoodUnit;
+  mixWith?: string;
+}
+
+export interface FeedingOccasion {
+  id: string;
+  label: string;
+  time: string;
+  components: MealComponent[];
+}
+
 export interface FeedingScheduleItem {
   id: string;
   petId?: number;
-  name: string;
-  time: string;
-  amount: string;
-  unit: string;
-  type: string;
-  source: string;
-  instructions: string;
+  occasions: FeedingOccasion[];
+  source: FoodSource;
+  prepInstructions: PrepInstruction[];
+  prepNotes?: string;
+  ifRefuses: RefusalAction[];
+  refusalNotes?: string;
+  frequency: FeedingFrequency;
+  frequencyDays?: string[];
+  allergies: string[];
   notes: string;
 }
+
+// ========================================
+// MEDICATION TYPES — Per-Med Card Builder
+// ========================================
+
+export type MedForm = "pill" | "liquid" | "topical" | "injection" | "powder" | "ear_drops" | "eye_drops";
+export type MedFrequency = "once_daily" | "twice_daily" | "every_8hrs" | "every_other_day" | "specific_days" | "prn" | "other";
+export type MedAdminInstruction = "with_food" | "empty_stomach" | "hide_in_treat" | "crush_and_mix" | "give_whole" | "after_cleaning" | "refrigerate" | "other";
+export type MissedDoseAction = "skip_continue" | "give_when_remembered" | "call_parent" | "do_not_double";
 
 export interface MedicationItem {
   id: string;
   petId?: number;
   name: string;
-  time: string[];
+  purpose?: string;
   amount: string;
-  unit: string;
-  type: string;
-  source?: string;
-  instructions: string;
+  strength?: string;
+  form: MedForm;
+  frequency: MedFrequency;
+  frequencyNotes?: string;
+  times: string[];
+  specificDays?: string[];
+  prnMaxPerDay?: number;
+  prnTrigger?: string;
+  adminInstructions: MedAdminInstruction[];
+  adminNotes?: string;
+  ifMissed: MissedDoseAction;
+  isHighRisk?: boolean;
+  parentConfirmed?: boolean;
   notes: string;
 }
 

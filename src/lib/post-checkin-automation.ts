@@ -114,15 +114,44 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
   const facilityName = "Paws & Play Daycare"; // TODO: from facility config
 
   if (form) {
-    // Feeding tasks from form
-    if (form.feedingInstructions?.feedingSchedule?.length) {
-      form.feedingInstructions.feedingSchedule.forEach((slot, idx) => {
+    // Feeding tasks from form (V2 — occasion-based or V1 fallback)
+    const fi = form.feedingInstructions;
+    if (fi?.occasions?.length) {
+      // V2 — one task per occasion
+      fi.occasions.forEach((occ) => {
+        const componentsSummary = occ.components
+          .map((c) => `${c.amount} ${c.unit} ${c.name || c.type}`)
+          .join(", ");
+        const task: StaffTask = {
+          id: nextTaskId(),
+          templateId: occ.time <= "12:00" ? 1 : 2,
+          templateName: occ.label || (occ.time <= "12:00" ? "Morning Feeding" : "Evening Feeding"),
+          category: taskCategory,
+          description: `Feed ${petName} – ${occ.label}: ${componentsSummary || "see details"}`,
+          assignedTo: assignToStaffId ?? 0,
+          assignedToName: assignToStaffName ?? "Unassigned",
+          petId,
+          petName,
+          priority: "high",
+          requiresPhoto: false,
+          status: "pending",
+          dueDate: today,
+          dueTime: occ.time,
+          repeatPattern: "none",
+          facility: facilityName,
+        };
+        staffTasks.push(task);
+        tasksCreated++;
+      });
+    } else if (fi?.feedingSchedule?.length) {
+      // V1 fallback — simple time-based schedule
+      fi.feedingSchedule.forEach((slot) => {
         const task: StaffTask = {
           id: nextTaskId(),
           templateId: slot.time <= "12:00" ? 1 : 2,
           templateName: slot.time <= "12:00" ? "Morning Feeding" : "Evening Feeding",
           category: taskCategory,
-          description: `Feed ${petName} – ${form.feedingInstructions!.foodType} ${slot.amount}`,
+          description: `Feed ${petName} – ${fi.foodType} ${slot.amount}`,
           assignedTo: assignToStaffId ?? 0,
           assignedToName: assignToStaffName ?? "Unassigned",
           petId,
@@ -140,21 +169,25 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
       });
     }
 
-    // Medication tasks from form
+    // Medication tasks from form (V2 — includes strength + admin instructions)
     if (!form.noMedications && form.medications?.length) {
       form.medications.forEach((med) => {
         med.times.forEach((time) => {
+          const strengthInfo = med.strength ? ` ${med.strength}` : "";
+          const adminInfo = med.adminInstructions?.length
+            ? ` (${med.adminInstructions.map((a) => a.replace(/_/g, " ")).join(", ")})`
+            : "";
           const task: StaffTask = {
             id: nextTaskId(),
             templateId: 3,
             templateName: "Medication Administration",
             category: "medication",
-            description: `${med.name} – ${med.dosage}, ${med.frequency} (${petName})`,
+            description: `${med.name}${strengthInfo} – ${med.dosage}, ${med.frequency}${adminInfo} (${petName})`,
             assignedTo: assignToStaffId ?? 0,
             assignedToName: assignToStaffName ?? "Unassigned",
             petId,
             petName,
-            priority: "urgent",
+            priority: med.isHighRisk ? "urgent" : "urgent",
             requiresPhoto: true,
             status: "pending",
             dueDate: today,

@@ -6,10 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, X, Pill, Clock, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { YipyyGoFormData, MedicationItem } from "@/data/yipyygo-forms";
 import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { MedForm, MedFrequency, MedAdminInstruction, MissedDoseAction } from "@/lib/types";
 
 interface MedicationSectionProps {
   formData: YipyyGoFormData;
@@ -25,16 +35,69 @@ interface MedicationSectionProps {
   isLastSection: boolean;
 }
 
-const MEDICATION_METHODS = [
-  { value: "pill_pocket", label: "Pill Pocket" },
-  { value: "with_food", label: "With Food" },
-  { value: "syringe", label: "Syringe" },
-  { value: "topical", label: "Topical" },
-  { value: "other", label: "Other" },
-] as const;
+// ── Constants ──────────────────────────────────────────────────────────────────
 
-const FREQUENCY_CHIPS = ["Once daily", "Twice daily", "With meals", "As needed", "Other"] as const;
+const MED_FORMS: { value: MedForm; label: string }[] = [
+  { value: "pill", label: "Pill / Tablet" },
+  { value: "liquid", label: "Liquid" },
+  { value: "topical", label: "Topical" },
+  { value: "injection", label: "Injection" },
+  { value: "powder", label: "Powder" },
+  { value: "ear_drops", label: "Ear Drops" },
+  { value: "eye_drops", label: "Eye Drops" },
+];
+
+const MED_FREQUENCIES: { value: MedFrequency; label: string }[] = [
+  { value: "once_daily", label: "Once daily" },
+  { value: "twice_daily", label: "Twice daily" },
+  { value: "every_8hrs", label: "Every 8 hours" },
+  { value: "every_other_day", label: "Every other day" },
+  { value: "specific_days", label: "Specific days" },
+  { value: "prn", label: "As needed (PRN)" },
+  { value: "other", label: "Other" },
+];
+
+const ADMIN_INSTRUCTIONS: { value: MedAdminInstruction; label: string }[] = [
+  { value: "with_food", label: "With food" },
+  { value: "empty_stomach", label: "Empty stomach" },
+  { value: "hide_in_treat", label: "Hide in treat" },
+  { value: "crush_and_mix", label: "Crush and mix" },
+  { value: "give_whole", label: "Give whole" },
+  { value: "after_cleaning", label: "After cleaning ears" },
+  { value: "refrigerate", label: "Refrigerate after opening" },
+];
+
+const MISSED_DOSE_OPTIONS: { value: MissedDoseAction; label: string }[] = [
+  { value: "skip_continue", label: "Skip and continue next dose" },
+  { value: "give_when_remembered", label: "Give when remembered" },
+  { value: "call_parent", label: "Call me" },
+  { value: "do_not_double", label: "Do not double dose" },
+];
+
 const COMMON_MED_TIMES = ["08:00", "12:00", "18:00", "20:00"];
+
+const HIGH_RISK_KEYWORDS = ["insulin", "seizure", "phenobarbital", "prednisone", "thyroid", "heart", "blood pressure"];
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatTime(time: string) {
+  try {
+    return new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return time;
+  }
+}
+
+function isLikelyHighRisk(name: string): boolean {
+  const lower = name.toLowerCase();
+  return HIGH_RISK_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export function MedicationSection({
   formData,
@@ -44,13 +107,9 @@ export function MedicationSection({
   onBack,
   isLastSection,
 }: MedicationSectionProps) {
-  const [newMedication, setNewMedication] = useState<Partial<MedicationItem>>({
-    name: "",
-    dosage: "",
-    frequency: "",
-    method: "pill_pocket",
-    times: [],
-  });
+  const [expandedMed, setExpandedMed] = useState<string | null>(
+    formData.medications.length > 0 ? formData.medications[0].id : null
+  );
 
   const handleNoMedicationsToggle = (checked: boolean) => {
     updateFormData({
@@ -59,40 +118,33 @@ export function MedicationSection({
     });
   };
 
-  const handleAddMedication = () => {
-    if (!newMedication.name || !newMedication.dosage) return;
-
-    const medication: MedicationItem = {
+  const addMedication = () => {
+    const med: MedicationItem = {
       id: `med-${Date.now()}`,
-      name: newMedication.name,
-      dosage: newMedication.dosage,
-      frequency: newMedication.frequency || "",
-      times: newMedication.times || [],
-      method: newMedication.method || "pill_pocket",
-      methodNotes: newMedication.methodNotes,
-    };
-
-    updateFormData({
-      medications: [...formData.medications, medication],
-      noMedications: false,
-    });
-
-    setNewMedication({
       name: "",
       dosage: "",
-      frequency: "",
-      method: "pill_pocket",
+      frequency: "once_daily",
       times: [],
+      method: "with_food",
+      form: "pill",
+      adminInstructions: [],
+      ifMissed: "skip_continue",
+    };
+    updateFormData({
+      medications: [...formData.medications, med],
+      noMedications: false,
     });
+    setExpandedMed(med.id);
   };
 
-  const handleRemoveMedication = (id: string) => {
+  const removeMedication = (id: string) => {
     updateFormData({
       medications: formData.medications.filter((m) => m.id !== id),
     });
+    if (expandedMed === id) setExpandedMed(null);
   };
 
-  const handleUpdateMedication = (id: string, updates: Partial<MedicationItem>) => {
+  const updateMed = (id: string, updates: Partial<MedicationItem>) => {
     updateFormData({
       medications: formData.medications.map((m) =>
         m.id === id ? { ...m, ...updates } : m
@@ -100,29 +152,49 @@ export function MedicationSection({
     });
   };
 
-  const handleAddTime = (medicationId: string, time: string) => {
-    const medication = formData.medications.find((m) => m.id === medicationId);
-    if (!medication) return;
+  const toggleAdminInstruction = (medId: string, val: MedAdminInstruction) => {
+    const med = formData.medications.find((m) => m.id === medId);
+    if (!med) return;
+    const current = med.adminInstructions || [];
+    const updated = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
+    updateMed(medId, { adminInstructions: updated });
+  };
 
-    handleUpdateMedication(medicationId, {
-      times: [...medication.times, time],
-    });
+  const addTime = (medId: string, time: string) => {
+    const med = formData.medications.find((m) => m.id === medId);
+    if (!med || med.times.includes(time)) return;
+    updateMed(medId, { times: [...med.times, time] });
+  };
+
+  const removeTime = (medId: string, index: number) => {
+    const med = formData.medications.find((m) => m.id === medId);
+    if (!med) return;
+    updateMed(medId, { times: med.times.filter((_, i) => i !== index) });
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Medication Instructions</CardTitle>
-        <CardDescription>
-          List any medications {formData.petName} is currently taking
-        </CardDescription>
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+            <Pill className="h-4.5 w-4.5 text-red-600" />
+          </div>
+          <div>
+            <CardTitle>Medication Instructions</CardTitle>
+            <CardDescription>
+              List any medications {formData.petName} is currently taking
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
+
+        {/* ── No Medications Toggle ── */}
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div>
-            <Label className="text-base font-medium">No Medications</Label>
-            <p className="text-sm text-muted-foreground">
-              Check if {formData.petName} is not taking any medications
+            <Label className="text-sm font-medium">No Medications</Label>
+            <p className="text-xs text-muted-foreground">
+              {formData.petName} is not taking any medications
             </p>
           </div>
           <Switch
@@ -133,227 +205,386 @@ export function MedicationSection({
 
         {!formData.noMedications && (
           <>
-            {/* Existing Medications */}
-            {formData.medications.map((medication) => (
-              <div
-                key={medication.id}
-                className="p-4 border rounded-lg space-y-3"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Medication Name</Label>
-                        <Input
-                          value={medication.name}
-                          onChange={(e) =>
-                            handleUpdateMedication(medication.id, { name: e.target.value })
-                          }
-                        />
+            {/* ── Medication Cards ── */}
+            {formData.medications.map((med) => {
+              const isExpanded = expandedMed === med.id;
+              const autoHighRisk = isLikelyHighRisk(med.name);
+              const showHighRisk = med.isHighRisk || autoHighRisk;
+
+              return (
+                <div
+                  key={med.id}
+                  className={cn(
+                    "rounded-lg border transition-colors",
+                    showHighRisk ? "border-red-200 bg-red-50/30" : isExpanded ? "border-violet-200 bg-violet-50/20" : "border-input"
+                  )}
+                >
+                  {/* Card header */}
+                  <div
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                    onClick={() => setExpandedMed(isExpanded ? null : med.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        showHighRisk ? "bg-red-100" : "bg-violet-100"
+                      )}>
+                        <Pill className={cn("h-3.5 w-3.5", showHighRisk ? "text-red-600" : "text-violet-600")} />
                       </div>
                       <div>
-                        <Label>Dosage</Label>
-                        <Input
-                          value={medication.dosage}
-                          onChange={(e) =>
-                            handleUpdateMedication(medication.id, { dosage: e.target.value })
-                          }
-                          placeholder="e.g., 10mg"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Frequency</Label>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {FREQUENCY_CHIPS.map((freq) => (
-                          <button
-                            key={freq}
-                            type="button"
-                            onClick={() => handleUpdateMedication(medication.id, { frequency: freq })}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm",
-                              medication.frequency === freq
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-input hover:bg-accent"
-                            )}
-                          >
-                            {freq}
-                          </button>
-                        ))}
-                      </div>
-                      {(medication.frequency === "Other" || (medication.frequency && !FREQUENCY_CHIPS.includes(medication.frequency as any))) && (
-                        <Input
-                          value={medication.frequency === "Other" ? "" : medication.frequency}
-                          onChange={(e) => handleUpdateMedication(medication.id, { frequency: e.target.value.trim() || "Other" })}
-                          placeholder="e.g., Every 12 hours"
-                          className="mt-2 max-w-xs"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <Label>Times</Label>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {COMMON_MED_TIMES.map((time) => (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => {
-                              if (!medication.times.includes(time))
-                                handleUpdateMedication(medication.id, { times: [...medication.times, time] });
-                            }}
-                            disabled={medication.times.includes(time)}
-                            className="rounded-full border border-input px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
-                          >
-                            + {new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                          </button>
-                        ))}
-                        <Input
-                          type="time"
-                          className="w-28 h-8"
-                          onBlur={(e) => {
-                            if (e.target.value && !medication.times.includes(e.target.value)) {
-                              handleAddTime(medication.id, e.target.value);
-                              e.target.value = "";
-                            }
-                          }}
-                        />
-                      </div>
-                      {medication.times.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {medication.times.map((time, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
-                            >
-                              {new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                              <button type="button" onClick={() => handleUpdateMedication(medication.id, { times: medication.times.filter((_, i) => i !== index) })}>
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {med.name || "New Medication"}
+                          </span>
+                          {showHighRisk && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              <ShieldAlert className="h-3 w-3 mr-0.5" />
+                              High Risk
+                            </Badge>
+                          )}
                         </div>
-                      )}
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {med.dosage && <span>{med.dosage}</span>}
+                          {med.strength && <span>&middot; {med.strength}</span>}
+                          {med.frequency && (
+                            <span>&middot; {MED_FREQUENCIES.find((f) => f.value === med.frequency)?.label || med.frequency}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Method</Label>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {MEDICATION_METHODS.map((method) => (
-                          <button
-                            key={method.value}
-                            type="button"
-                            onClick={() => handleUpdateMedication(medication.id, { method: method.value })}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm",
-                              medication.method === method.value
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-input hover:bg-accent"
-                            )}
-                          >
-                            {method.label}
-                          </button>
-                        ))}
-                      </div>
-                      {medication.method === "other" && (
-                      <div>
-                        <Label>Method Notes</Label>
-                        <Input
-                          value={medication.methodNotes || ""}
-                          onChange={(e) =>
-                            handleUpdateMedication(medication.id, {
-                              methodNotes: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      )}
-                      {config?.formTemplate.features.photoUploads && (
-                      <div>
-                        <Label>Photo of Medication Label (optional)</Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleUpdateMedication(medication.id, {
-                                photoUrl: URL.createObjectURL(file),
-                              });
-                            }
-                          }}
-                        />
-                        {medication.photoUrl && (
-                          <img
-                            src={medication.photoUrl}
-                            alt="Medication label"
-                            className="mt-2 w-32 h-32 object-cover border rounded"
-                          />
-                        )}
-                      </div>
-                      )}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); removeMedication(med.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveMedication(medication.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
 
-            {/* Add New Medication */}
-            <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
-              <h4 className="font-medium">Add Medication</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Name *</Label>
-                  <Input
-                    value={newMedication.name || ""}
-                    onChange={(e) =>
-                      setNewMedication({ ...newMedication, name: e.target.value })
-                    }
-                    placeholder="e.g., Heartgard"
-                  />
-                </div>
-                <div>
-                  <Label>Dosage *</Label>
-                  <Input
-                    value={newMedication.dosage || ""}
-                    onChange={(e) =>
-                      setNewMedication({ ...newMedication, dosage: e.target.value })
-                    }
-                    placeholder="e.g., 10mg"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Frequency</Label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {FREQUENCY_CHIPS.map((freq) => (
-                    <button
-                      key={freq}
-                      type="button"
-                      onClick={() => setNewMedication({ ...newMedication, frequency: freq })}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm",
-                        newMedication.frequency === freq ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"
+                  {/* Expanded details */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 space-y-4 border-t border-violet-100">
+
+                      {/* Name + Purpose */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Medication Name *</Label>
+                          <Input
+                            value={med.name}
+                            onChange={(e) => updateMed(med.id, { name: e.target.value })}
+                            placeholder="e.g., Apoquel"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Purpose</Label>
+                          <Input
+                            value={med.purpose || ""}
+                            onChange={(e) => updateMed(med.id, { purpose: e.target.value })}
+                            placeholder="e.g., Allergy, Joint, Heart"
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Dosing section */}
+                      <div className="rounded-md border bg-white p-3 space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dosage</h5>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Amount *</Label>
+                            <Input
+                              value={med.dosage}
+                              onChange={(e) => updateMed(med.id, { dosage: e.target.value })}
+                              placeholder="e.g., 1 tablet"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Strength</Label>
+                            <Input
+                              value={med.strength || ""}
+                              onChange={(e) => updateMed(med.id, { strength: e.target.value })}
+                              placeholder="e.g., 16mg"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-xs">Form</Label>
+                            <Select
+                              value={med.form || "pill"}
+                              onValueChange={(v) => updateMed(med.id, { form: v as MedForm })}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MED_FORMS.map((f) => (
+                                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        {(med.form === "liquid") && (
+                          <p className="text-xs text-muted-foreground">Use ml for liquid dosage amount</p>
+                        )}
+                        {(med.form === "ear_drops" || med.form === "eye_drops") && (
+                          <p className="text-xs text-muted-foreground">Specify number of drops and per ear/eye in the amount field</p>
+                        )}
+                      </div>
+
+                      {/* Timing section */}
+                      <div className="rounded-md border bg-white p-3 space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Schedule</h5>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Frequency</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {MED_FREQUENCIES.map((freq) => (
+                              <button
+                                key={freq.value}
+                                type="button"
+                                onClick={() => updateMed(med.id, { frequency: freq.value })}
+                                className={cn(
+                                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                  med.frequency === freq.value
+                                    ? "border-violet-300 bg-violet-50 text-violet-700"
+                                    : "border-input hover:bg-muted/50 text-muted-foreground"
+                                )}
+                              >
+                                {freq.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {med.frequency === "other" && (
+                          <Input
+                            value={med.frequencyNotes || ""}
+                            onChange={(e) => updateMed(med.id, { frequencyNotes: e.target.value })}
+                            placeholder="Describe schedule..."
+                            className="h-8 text-xs"
+                          />
+                        )}
+
+                        {med.frequency === "prn" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Max times per day</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={med.prnMaxPerDay || ""}
+                                onChange={(e) => updateMed(med.id, { prnMaxPerDay: parseInt(e.target.value) || undefined })}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Trigger reason</Label>
+                              <Input
+                                value={med.prnTrigger || ""}
+                                onChange={(e) => updateMed(med.id, { prnTrigger: e.target.value })}
+                                placeholder="e.g., Itching, Anxiety"
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Times */}
+                        <div className="space-y-2">
+                          <Label className="text-xs">Administration Times</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {COMMON_MED_TIMES.map((time) => (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => addTime(med.id, time)}
+                                disabled={med.times.includes(time)}
+                                className="rounded-full border border-input px-3 py-1 text-xs hover:bg-muted/50 disabled:opacity-40 transition-colors"
+                              >
+                                + {formatTime(time)}
+                              </button>
+                            ))}
+                            <Input
+                              type="time"
+                              className="w-28 h-7 text-xs"
+                              onBlur={(e) => {
+                                if (e.target.value) {
+                                  addTime(med.id, e.target.value);
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </div>
+                          {med.times.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {med.times.map((time, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 px-2.5 py-0.5 text-xs"
+                                >
+                                  <Clock className="h-3 w-3" />
+                                  {formatTime(time)}
+                                  <button type="button" onClick={() => removeTime(med.id, idx)}>
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Administration instructions */}
+                      <div className="rounded-md border bg-white p-3 space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">How to Give</h5>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ADMIN_INSTRUCTIONS.map((inst) => {
+                            const active = (med.adminInstructions || []).includes(inst.value);
+                            return (
+                              <button
+                                key={inst.value}
+                                type="button"
+                                onClick={() => toggleAdminInstruction(med.id, inst.value)}
+                                className={cn(
+                                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                  active
+                                    ? "border-teal-300 bg-teal-50 text-teal-700"
+                                    : "border-input hover:bg-muted/50 text-muted-foreground"
+                                )}
+                              >
+                                {inst.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <Input
+                          value={med.adminNotes || ""}
+                          onChange={(e) => updateMed(med.id, { adminNotes: e.target.value })}
+                          placeholder="Other administration notes..."
+                          className="h-8 text-xs"
+                        />
+                      </div>
+
+                      {/* If dose is missed */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">If a dose is missed</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {MISSED_DOSE_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => updateMed(med.id, { ifMissed: opt.value })}
+                              className={cn(
+                                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                med.ifMissed === opt.value
+                                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                                  : "border-input hover:bg-muted/50 text-muted-foreground"
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Safety: high risk + confirmation */}
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                          <Label className="text-xs font-medium">High-risk medication</Label>
+                          <p className="text-[11px] text-muted-foreground">Mark if this requires extra caution (insulin, seizure meds, etc.)</p>
+                        </div>
+                        <Switch
+                          checked={med.isHighRisk || false}
+                          onCheckedChange={(checked) => updateMed(med.id, { isHighRisk: checked })}
+                        />
+                      </div>
+
+                      {/* Photo upload */}
+                      {config?.formTemplate.features.photoUploads && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Photo of Medication Label (optional)</Label>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            className="h-9 text-xs"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                updateMed(med.id, { photoUrl: URL.createObjectURL(file) });
+                              }
+                            }}
+                          />
+                          {med.photoUrl && (
+                            <img
+                              src={med.photoUrl}
+                              alt="Medication label"
+                              className="mt-2 w-28 h-28 object-cover border rounded"
+                            />
+                          )}
+                        </div>
                       )}
-                    >
-                      {freq}
-                    </button>
-                  ))}
+
+                      {/* Notes */}
+                      <Input
+                        value={med.methodNotes || ""}
+                        onChange={(e) => updateMed(med.id, { methodNotes: e.target.value })}
+                        placeholder="Additional notes for this medication..."
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Add medication button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addMedication}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Medication
+            </Button>
+
+            {/* Parent confirmation */}
+            {formData.medications.length > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+                <Checkbox
+                  id="med-confirm"
+                  checked={formData.medications.every((m) => m.parentConfirmed)}
+                  onCheckedChange={(checked) => {
+                    updateFormData({
+                      medications: formData.medications.map((m) => ({
+                        ...m,
+                        parentConfirmed: !!checked,
+                      })),
+                    });
+                  }}
+                />
+                <div>
+                  <Label htmlFor="med-confirm" className="text-sm font-medium cursor-pointer">
+                    I confirm all medication dosages are correct
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Please verify each medication name, dosage, and frequency before continuing
+                  </p>
                 </div>
               </div>
-              <Button onClick={handleAddMedication} variant="outline" className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Medication
-              </Button>
-            </div>
+            )}
           </>
         )}
 
+        {/* ── Navigation ── */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
             Back

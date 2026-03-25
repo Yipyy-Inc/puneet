@@ -679,9 +679,9 @@ export function BookingModal({
           bookingId: booking.id,
           petId,
           type: "feeding",
-          title: `Feed ${feed.name}`,
-          time: feed.time,
-          details: feed.instructions,
+          title: `Feed ${feed.occasions?.[0]?.label || "Feeding"}`,
+          time: feed.occasions?.[0]?.time || "",
+          details: feed.prepInstructions?.join(", ") || "",
           assignedStaff: taskAssignments[`feed-${feed.id}`] || undefined,
           completionStatus: "pending",
           assignable: isFutureBooking && !taskAssignments[`feed-${feed.id}`],
@@ -692,7 +692,7 @@ export function BookingModal({
     // Medication tasks
     if (booking.medications) {
       booking.medications.forEach((med) => {
-        med.time.forEach((time) => {
+        med.times.forEach((time) => {
           const petId = Array.isArray(booking.petId)
             ? booking.petId[0]
             : booking.petId;
@@ -703,7 +703,7 @@ export function BookingModal({
             type: "medication",
             title: `Give ${med.name}`,
             time,
-            details: med.instructions,
+            details: med.adminInstructions?.join(", ") || "",
             assignedStaff:
               taskAssignments[`med-${med.id}-${time}`] || undefined,
             completionStatus: "pending",

@@ -62,7 +62,7 @@ const calculateTaskCount = (booking: Booking): number => {
   // Medication tasks (each medication can have multiple times)
   if (booking.medications) {
     booking.medications.forEach((med) => {
-      count += med.time.length;
+      count += med.times.length;
     });
   }
 

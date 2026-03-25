@@ -87,9 +87,9 @@ export function BookingModal({ booking }: BookingModalProps) {
       tasks.push({
         id: `feed-${feed.id}`,
         type: "feeding",
-        title: `Feed ${feed.name}`,
-        time: feed.time,
-        details: feed.instructions,
+        title: `Feed ${feed.occasions?.[0]?.label || "Feeding"}`,
+        time: feed.occasions?.[0]?.time || "",
+        details: feed.prepInstructions?.join(", ") || "",
         icon: Utensils,
       });
     });
@@ -97,13 +97,13 @@ export function BookingModal({ booking }: BookingModalProps) {
 
   if (booking.medications) {
     booking.medications.forEach((med) => {
-      med.time.forEach((time) => {
+      med.times.forEach((time) => {
         tasks.push({
           id: `med-${med.id}-${time}`,
           type: "medication",
           title: `Give ${med.name}`,
           time,
-          details: med.instructions,
+          details: med.adminInstructions?.join(", ") || "",
           icon: Pill,
         });
       });

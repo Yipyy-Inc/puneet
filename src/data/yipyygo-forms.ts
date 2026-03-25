@@ -29,17 +29,37 @@ export interface FeedingInstruction {
   }>;
   prePortionedBagCount?: number;
   notes?: string;
+  /** V2 — structured feeding data from the new Meal Builder */
+  occasions?: import("@/lib/types").FeedingOccasion[];
+  source?: import("@/lib/types").FoodSource;
+  prepInstructions?: import("@/lib/types").PrepInstruction[];
+  prepNotes?: string;
+  ifRefuses?: import("@/lib/types").RefusalAction[];
+  refusalNotes?: string;
+  allergies?: string[];
 }
 
 export interface MedicationItem {
   id: string;
   name: string;
   dosage: string;
-  frequency: string; // e.g., "twice daily", "once daily"
-  times: string[]; // Array of times in HH:MM format
+  frequency: string;
+  frequencyNotes?: string;
+  times: string[];
   method: "pill_pocket" | "with_food" | "syringe" | "topical" | "other";
   methodNotes?: string;
-  photoUrl?: string; // Photo of medication label
+  photoUrl?: string;
+  /** V2 — structured medication data from the new Med Card Builder */
+  purpose?: string;
+  strength?: string;
+  form?: import("@/lib/types").MedForm;
+  adminInstructions?: import("@/lib/types").MedAdminInstruction[];
+  adminNotes?: string;
+  ifMissed?: import("@/lib/types").MissedDoseAction;
+  isHighRisk?: boolean;
+  parentConfirmed?: boolean;
+  prnMaxPerDay?: number;
+  prnTrigger?: string;
 }
 
 export interface BehaviorNotes {
