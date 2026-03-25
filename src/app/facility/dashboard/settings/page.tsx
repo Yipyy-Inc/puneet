@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
 import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSettings";
+import { Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2582,7 +2584,7 @@ export default function SettingsPage() {
 
       {/* Settings Tabs */}
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="business">
             <Building2 className="h-4 w-4 mr-2" />
             Business
@@ -2615,6 +2617,10 @@ export default function SettingsPage() {
           <TabsTrigger value="yipyygo">
             <FileText className="h-4 w-4 mr-2" />
             YipyyGo
+          </TabsTrigger>
+          <TabsTrigger value="form-requirements">
+            <Shield className="h-4 w-4 mr-2" />
+            Forms
           </TabsTrigger>
         </TabsList>
 
@@ -3271,6 +3277,11 @@ export default function SettingsPage() {
         {/* YipyyGo Tab */}
         <TabsContent value="yipyygo" className="space-y-6">
           <YipyyGoSettingsWrapper />
+        </TabsContent>
+
+        {/* Form Requirements Tab (7.1) */}
+        <TabsContent value="form-requirements" className="space-y-6">
+          <FormRequirementsSettings />
         </TabsContent>
       </Tabs>
     </div>

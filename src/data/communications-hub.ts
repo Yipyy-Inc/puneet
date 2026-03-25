@@ -325,6 +325,69 @@ export const automationRules: AutomationRule[] = [
       lastTriggered: "2024-02-20T10:00:00Z",
     },
   },
+  // ---- 7.2 Form Automation Rules ----
+  {
+    id: "auto-form-001",
+    name: "Form Link Sent Confirmation",
+    trigger: "form_link_sent" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-form-link",
+    stats: {
+      totalSent: 92,
+      lastTriggered: "2026-03-24T14:00:00Z",
+    },
+  },
+  {
+    id: "auto-form-002",
+    name: "Form Started Notification",
+    trigger: "form_started" as const,
+    enabled: false,
+    messageType: "email" as const,
+    templateId: "tmpl-form-started",
+    stats: {
+      totalSent: 0,
+    },
+  },
+  {
+    id: "auto-form-003",
+    name: "Form Submitted — Thank You",
+    trigger: "form_submitted" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-form-submitted",
+    stats: {
+      totalSent: 148,
+      lastTriggered: "2026-03-25T09:30:00Z",
+    },
+  },
+  {
+    id: "auto-form-004",
+    name: "Incomplete Form Reminder",
+    trigger: "form_incomplete_by_deadline" as const,
+    enabled: true,
+    messageType: "both" as const,
+    templateId: "tmpl-form-deadline",
+    schedule: {
+      hoursBefore: 24,
+    },
+    stats: {
+      totalSent: 34,
+      lastTriggered: "2026-03-23T08:00:00Z",
+    },
+  },
+  {
+    id: "auto-form-005",
+    name: "Red Flag Answer Alert (Staff)",
+    trigger: "form_red_flag_answer" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-form-redflag",
+    stats: {
+      totalSent: 7,
+      lastTriggered: "2026-03-20T11:45:00Z",
+    },
+  },
 ];
 
 // ========================================

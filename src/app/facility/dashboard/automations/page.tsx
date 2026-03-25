@@ -28,7 +28,7 @@ export default function AutomationsPage() {
     (typeof automationRules)[0] | null
   >(null);
   const [filterCategory, setFilterCategory] = useState<
-    "all" | "booking" | "reminder" | "payment" | "campaign"
+    "all" | "booking" | "reminder" | "payment" | "campaign" | "forms"
   >("all");
 
   // Format timestamp
@@ -43,6 +43,7 @@ export default function AutomationsPage() {
   };
 
   // Categorize automations
+  const formTriggers = ["form_link_sent", "form_started", "form_submitted", "form_incomplete_by_deadline", "form_red_flag_answer"];
   const categorizedAutomations = {
     booking: automationRules.filter(
       (r) => r.trigger === "booking_created" || r.trigger === "check_in" || r.trigger === "check_out"
@@ -51,6 +52,7 @@ export default function AutomationsPage() {
       (r) => r.trigger === "24h_before" || r.trigger === "appointment_reminder" || r.trigger === "vaccination_expiry"
     ),
     payment: automationRules.filter((r) => r.trigger === "payment_received"),
+    forms: automationRules.filter((r) => formTriggers.includes(r.trigger)),
     campaign: [] as typeof automationRules, // Placeholder for campaigns
   };
 
@@ -71,6 +73,9 @@ export default function AutomationsPage() {
     if (trigger === "payment_received") {
       return <DollarSign className="h-4 w-4" />;
     }
+    if (formTriggers.includes(trigger)) {
+      return <FileText className="h-4 w-4" />;
+    }
     return <Zap className="h-4 w-4" />;
   };
 
@@ -84,6 +89,9 @@ export default function AutomationsPage() {
     }
     if (trigger === "payment_received") {
       return "Payment";
+    }
+    if (formTriggers.includes(trigger)) {
+      return "Forms";
     }
     return "Other";
   };
@@ -197,6 +205,10 @@ export default function AutomationsPage() {
           <TabsTrigger value="payment" onClick={() => setFilterCategory("payment")}>
             <DollarSign className="h-4 w-4 mr-2" />
             Payment
+          </TabsTrigger>
+          <TabsTrigger value="forms" onClick={() => setFilterCategory("forms")}>
+            <FileText className="h-4 w-4 mr-2" />
+            Forms
           </TabsTrigger>
           <TabsTrigger value="campaign" onClick={() => setFilterCategory("campaign")}>
             <Megaphone className="h-4 w-4 mr-2" />
@@ -460,6 +472,106 @@ export default function AutomationsPage() {
                           <p className="text-xs text-muted-foreground mt-1">
                             Sent {rule.stats.totalSent} times
                           </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAutomationRule(rule);
+                            setShowAutomationModal(true);
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Forms Tab (7.2) */}
+        <TabsContent value="forms" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Form Automations
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Automated messages triggered by form lifecycle events — link sent, started, submitted, deadline missed, or red-flag answers
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {categorizedAutomations.forms.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No form automations configured</p>
+                  </div>
+                ) : (
+                  categorizedAutomations.forms.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="h-4 w-4" />
+                            <span className="font-semibold">{rule.name}</span>
+                            <Badge variant={rule.enabled ? "default" : "secondary"}>
+                              {rule.enabled ? (
+                                <>
+                                  <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+                                  Active
+                                </>
+                              ) : (
+                                "Inactive"
+                              )}
+                            </Badge>
+                            <Badge variant="outline" className="capitalize">
+                              Forms
+                            </Badge>
+                            <Badge variant="outline" className="capitalize">
+                              {rule.messageType === "both" ? (
+                                <>
+                                  <Mail className="h-3 w-3 mr-1 inline" />
+                                  <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                  Both
+                                </>
+                              ) : rule.messageType === "email" ? (
+                                <>
+                                  <Mail className="h-3 w-3 mr-1 inline" />
+                                  Email
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                  SMS
+                                </>
+                              )}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Trigger: <span className="font-medium">{rule.trigger.replace(/_/g, " ")}</span>
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>
+                              Total sent: <span className="font-medium">{rule.stats.totalSent}</span>
+                            </span>
+                            <span>•</span>
+                            <span>
+                              Last triggered:{" "}
+                              <span className="font-medium">
+                                {rule.stats.lastTriggered
+                                  ? formatTimestamp(rule.stats.lastTriggered)
+                                  : "Never"}
+                              </span>
+                            </span>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"

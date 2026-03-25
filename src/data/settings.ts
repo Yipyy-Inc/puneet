@@ -134,6 +134,128 @@ export const serviceDateBlocks: ServiceDateBlock[] = [];
 export const scheduleTimeOverrides: ScheduleTimeOverride[] = [];
 export const dropOffPickUpOverrides: DropOffPickUpOverride[] = [];
 
+// ========================================
+// 7.1 FORM REQUIREMENTS PER SERVICE
+// ========================================
+
+export interface FormRequirementGate {
+  /** Which stage this form is required at */
+  stage: "before_booking" | "before_approval" | "before_checkin";
+  /** What happens when the form is missing */
+  enforcement: "block" | "warn";
+}
+
+export interface ServiceFormRequirement {
+  /** Form ID from the forms system */
+  formId: string;
+  /** Human-readable form name (for display) */
+  formName: string;
+  /** Gates at which this form is required */
+  gates: FormRequirementGate[];
+  /** Only require for specific pet types (empty = all) */
+  petTypes?: string[];
+  /** Whether this requirement is currently active */
+  enabled: boolean;
+}
+
+export interface ServiceFormRequirementsConfig {
+  serviceType: string;
+  serviceLabel: string;
+  requirements: ServiceFormRequirement[];
+}
+
+export const formRequirements: ServiceFormRequirementsConfig[] = [
+  {
+    serviceType: "daycare",
+    serviceLabel: "Daycare",
+    requirements: [
+      {
+        formId: "form-intake-demo",
+        formName: "New Client Intake Form",
+        gates: [
+          { stage: "before_booking", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+      {
+        formId: "form-vaccine-upload",
+        formName: "Vaccination Records",
+        gates: [
+          { stage: "before_booking", enforcement: "warn" },
+          { stage: "before_checkin", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+    ],
+  },
+  {
+    serviceType: "boarding",
+    serviceLabel: "Boarding",
+    requirements: [
+      {
+        formId: "form-intake-demo",
+        formName: "New Client Intake Form",
+        gates: [
+          { stage: "before_booking", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+      {
+        formId: "form-vaccine-upload",
+        formName: "Vaccination Records",
+        gates: [
+          { stage: "before_checkin", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+      {
+        formId: "form-boarding-agreement",
+        formName: "Boarding Agreement & Liability Waiver",
+        gates: [
+          { stage: "before_approval", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+    ],
+  },
+  {
+    serviceType: "grooming",
+    serviceLabel: "Grooming",
+    requirements: [
+      {
+        formId: "form-intake-demo",
+        formName: "New Client Intake Form",
+        gates: [
+          { stage: "before_booking", enforcement: "warn" },
+        ],
+        enabled: true,
+      },
+    ],
+  },
+  {
+    serviceType: "training",
+    serviceLabel: "Training",
+    requirements: [
+      {
+        formId: "form-intake-demo",
+        formName: "New Client Intake Form",
+        gates: [
+          { stage: "before_booking", enforcement: "warn" },
+        ],
+        enabled: true,
+      },
+      {
+        formId: "form-training-questionnaire",
+        formName: "Training Goals & Behavior Questionnaire",
+        gates: [
+          { stage: "before_approval", enforcement: "block" },
+        ],
+        enabled: true,
+      },
+    ],
+  },
+];
+
 export const reportCardConfig: ReportCardConfig = {
   enabledThemes: [
     "everyday",

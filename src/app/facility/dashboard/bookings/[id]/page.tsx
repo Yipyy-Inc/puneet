@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Heart, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileText, Heart, ChevronDown, ShieldAlert, AlertTriangle, Ban, CheckCircle, Shield } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { playdateAlertLogs, getAlertStatusVariant, formatAlertChannel } from "@/data/marketing";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { getYipyyGoForm, getYipyyGoDisplayStatusForBooking } from "@/data/yipyyg
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { YipyyGoStaffReviewModal } from "@/components/yipyygo/YipyyGoStaffReviewModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { checkFormRequirements, getStageLabel, type RequirementStage } from "@/lib/form-requirements";
 
 export default function FacilityBookingDetailPage({
   params,
@@ -107,6 +108,28 @@ export default function FacilityBookingDetailPage({
     return { all, sent, suppressed };
   }, [bookingId, pet?.id]);
 
+  // 7.1 Form requirements check — determine which stage to check based on booking status
+  const formRequirementsCheck = useMemo(() => {
+    if (!booking) return null;
+    const svc = booking.service?.toLowerCase() ?? "";
+    const facilityId = booking.facilityId;
+    const customerId = booking.clientId;
+
+    // Determine relevant stage based on booking status
+    let stage: RequirementStage = "before_booking";
+    if (booking.status === "request_submitted" || booking.status === "waitlisted") {
+      stage = "before_approval";
+    } else if (booking.status === "confirmed") {
+      stage = "before_checkin";
+    } else if (booking.status === "completed" || booking.status === "cancelled") {
+      return null; // No requirement checks for completed/cancelled
+    }
+
+    const check = checkFormRequirements(facilityId, svc, stage, customerId);
+    if (check.complete) return null; // All good
+    return { ...check, stage };
+  }, [booking]);
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <div className="flex items-center gap-4">
@@ -122,6 +145,63 @@ export default function FacilityBookingDetailPage({
           </p>
         </div>
       </div>
+
+      {/* 7.1 Form Requirements Banner */}
+      {formRequirementsCheck && (
+        <Card className={formRequirementsCheck.hasBlocker ? "border-red-300 bg-red-50/50" : "border-amber-300 bg-amber-50/50"}>
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              {formRequirementsCheck.hasBlocker ? (
+                <ShieldAlert className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className={`text-sm font-semibold ${formRequirementsCheck.hasBlocker ? "text-red-800" : "text-amber-800"}`}>
+                  {formRequirementsCheck.hasBlocker ? "Incomplete Requirements" : "Missing Recommended Forms"}
+                </h3>
+                <p className={`text-xs mt-0.5 ${formRequirementsCheck.hasBlocker ? "text-red-700" : "text-amber-700"}`}>
+                  {formRequirementsCheck.missing.length} form{formRequirementsCheck.missing.length !== 1 ? "s" : ""} required{" "}
+                  <span className="font-medium lowercase">{getStageLabel(formRequirementsCheck.stage)}</span>
+                  {" "}· {formRequirementsCheck.totalCompleted}/{formRequirementsCheck.totalRequired} completed
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {formRequirementsCheck.missing.map((m) => (
+                    <div key={m.formId} className="flex items-center gap-2 text-sm">
+                      {m.enforcement === "block" ? (
+                        <Ban className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      )}
+                      <span className={m.enforcement === "block" ? "text-red-800" : "text-amber-800"}>
+                        {m.formName}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] h-4 px-1.5 ${
+                          m.enforcement === "block"
+                            ? "bg-red-100 text-red-700 border-red-200"
+                            : "bg-amber-100 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {m.enforcement === "block" ? "Required" : "Recommended"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                {formRequirementsCheck.hasBlocker && (
+                  <p className="text-xs text-red-600 mt-2 font-medium">
+                    This booking cannot proceed until all required forms are submitted.
+                  </p>
+                )}
+              </div>
+              <Badge variant="outline" className="shrink-0 text-xs capitalize">
+                {getStageLabel(formRequirementsCheck.stage)}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
