@@ -20,6 +20,9 @@ import {
   UserPlus,
   ExternalLink,
   Info,
+  Mail,
+  MessageSquare,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { referralCodes, type ReferralCode } from "@/data/marketing";
@@ -41,6 +44,7 @@ import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
 const MOCK_CUSTOMER_ID = 15;
 
 interface ReferralTracking {
+  id: number;
   friendName: string;
   friendEmail?: string;
   status: "signed_up" | "booked" | "completed" | "pending";
@@ -57,26 +61,11 @@ export default function CustomerReferPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [dismissedRewardNotifications, setDismissedRewardNotifications] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Check if referrals are available
-  if (!canViewReferrals) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Referral Program Not Available</CardTitle>
-            <CardDescription>
-              The referral program is not enabled for this facility.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
 
   // Get customer data
   const customer = useMemo(() => clients.find((c) => c.id === MOCK_CUSTOMER_ID), []);
@@ -140,6 +129,7 @@ export default function CustomerReferPage() {
       }
 
       return {
+        id: rel.referredCustomerId,
         friendName: friend?.name || `Customer #${rel.referredCustomerId}`,
         friendEmail: friend?.email,
         status,
@@ -208,6 +198,64 @@ export default function CustomerReferPage() {
     }
   };
 
+  // Share via SMS
+  const handleShareSMS = () => {
+    if (!referralUrl) {
+      toast.error("Referral link not available");
+      return;
+    }
+    const smsBody = encodeURIComponent(
+      `Hey! I love ${selectedFacility?.name || "this pet care place"} and thought you would too. ` +
+      `Use my referral link to get ${referralProgram?.refereeReward.description || "a special reward"}: ${referralUrl}`
+    );
+    window.location.href = `sms:?body=${smsBody}`;
+    toast.success("Opening SMS app...");
+  };
+
+  // Share via Email
+  const handleShareEmail = () => {
+    if (!referralUrl) {
+      toast.error("Referral link not available");
+      return;
+    }
+    const subject = encodeURIComponent(
+      `Join me at ${selectedFacility?.name || "this great pet care place"}!`
+    );
+    const body = encodeURIComponent(
+      `Hi!\n\n` +
+      `I've been using ${selectedFacility?.name || "this pet care facility"} for my pets and I think you'd love it too!\n\n` +
+      `Sign up using my referral link and you'll get ${referralProgram?.refereeReward.description || "a special reward"}:\n` +
+      `${referralUrl}\n\n` +
+      `See you there!`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    toast.success("Opening email app...");
+  };
+
+  // Earned reward notifications
+  const earnedRewardNotifications = useMemo(() => {
+    return referralTracking
+      .filter(
+        (r) =>
+          r.rewardStatus === "earned" &&
+          !dismissedRewardNotifications.has(r.id)
+      )
+      .map((r) => ({
+        id: r.id,
+        friendName: r.friendName,
+        rewardAmount: r.rewardAmount,
+        rewardType: referralProgram?.referrerReward.type || "credit",
+      }));
+  }, [referralTracking, dismissedRewardNotifications, referralProgram]);
+
+  const handleDismissRewardNotification = (id: number) => {
+    setDismissedRewardNotifications((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
   // Format date helper
   const formatDate = (dateString?: string) => {
     if (!dateString || !isMounted) return "";
@@ -244,6 +292,21 @@ export default function CustomerReferPage() {
     }
   };
 
+  if (!canViewReferrals) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Referral Program Not Available</CardTitle>
+            <CardDescription>
+              The referral program is not enabled for this facility.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isMounted) {
     return (
       <div className="container mx-auto p-6">
@@ -263,6 +326,39 @@ export default function CustomerReferPage() {
           Share your referral link and earn rewards when your friends book!
         </p>
       </div>
+
+      {/* Reward Notification Banners */}
+      {earnedRewardNotifications.map((notification) => (
+        <div
+          key={notification.id}
+          className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20"
+        >
+          <div className="flex items-center gap-3">
+            <Gift className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm text-green-700 dark:text-green-300">
+                Reward Earned!
+              </p>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                You earned{" "}
+                {typeof notification.rewardAmount === "number"
+                  ? `$${notification.rewardAmount}`
+                  : notification.rewardAmount}{" "}
+                {notification.rewardType === "free_service" ? "free service" : notification.rewardType === "gift_card" ? "gift card" : notification.rewardType === "free_add_on" ? "free add-on" : notification.rewardType === "discount_code" ? "discount code" : notification.rewardType} for referring {notification.friendName}!
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Dismiss notification"
+            className="shrink-0 text-green-600 dark:text-green-400 hover:text-green-700 hover:bg-green-500/20"
+            onClick={() => handleDismissRewardNotification(notification.id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5">
@@ -357,18 +453,25 @@ export default function CustomerReferPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button onClick={handleShare} className="flex-1" variant="default">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={handleShare} variant="default">
                     <Share2 className="h-4 w-4 mr-2" />
-                    Share Link
+                    Share
+                  </Button>
+                  <Button onClick={handleShareSMS} variant="outline">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    SMS
+                  </Button>
+                  <Button onClick={handleShareEmail} variant="outline">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email
                   </Button>
                   <Button
                     onClick={() => setShowQRCode(!showQRCode)}
                     variant="outline"
-                    className="flex-1"
                   >
                     <QrCode className="h-4 w-4 mr-2" />
-                    {showQRCode ? "Hide" : "Show"} QR Code
+                    QR Code
                   </Button>
                 </div>
 

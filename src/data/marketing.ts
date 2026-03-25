@@ -738,3 +738,54 @@ export const promoCodes: PromoCode[] = [
     createdAt: "2024-01-05T09:00:00Z",
   },
 ];
+
+// ============================================================================
+// Referral Notification Templates
+// ============================================================================
+
+export interface ReferralNotificationTemplate {
+  id: string;
+  type: "referrer_reward_earned" | "referee_welcome" | "referral_milestone";
+  channel: "in_app" | "email" | "sms";
+  subject?: string;
+  titleTemplate: string;
+  bodyTemplate: string;
+  variables: string[];
+}
+
+export const referralNotificationTemplates: ReferralNotificationTemplate[] = [
+  {
+    id: "notif-ref-001",
+    type: "referrer_reward_earned",
+    channel: "in_app",
+    titleTemplate: "Reward Earned!",
+    bodyTemplate: "You earned {{reward_amount}} {{reward_type}} for referring {{friend_name}}!",
+    variables: ["reward_amount", "reward_type", "friend_name"],
+  },
+  {
+    id: "notif-ref-002",
+    type: "referrer_reward_earned",
+    channel: "email",
+    subject: "You've earned a referral reward from {{facility_name}}!",
+    titleTemplate: "Your Referral Reward is Here!",
+    bodyTemplate:
+      "Great news! Your friend {{friend_name}} completed their first booking at {{facility_name}}. You've earned {{reward_amount}} {{reward_type}} as a thank you for the referral.",
+    variables: ["reward_amount", "reward_type", "friend_name", "facility_name"],
+  },
+  {
+    id: "notif-ref-003",
+    type: "referee_welcome",
+    channel: "in_app",
+    titleTemplate: "Welcome Reward!",
+    bodyTemplate: "Welcome! You received {{reward_amount}} {{reward_type}} from {{referrer_name}}'s referral!",
+    variables: ["reward_amount", "reward_type", "referrer_name"],
+  },
+  {
+    id: "notif-ref-004",
+    type: "referral_milestone",
+    channel: "in_app",
+    titleTemplate: "Referral Milestone!",
+    bodyTemplate: "You've referred {{referral_count}} friends! Keep sharing to earn more rewards.",
+    variables: ["referral_count"],
+  },
+];

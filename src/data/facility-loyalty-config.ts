@@ -258,32 +258,55 @@ export interface DiscountStackingConfig {
 }
 
 /**
+ * Bookable service types used across loyalty and referral configuration UIs
+ */
+export const BOOKABLE_SERVICE_TYPES = ["grooming", "daycare", "boarding", "training", "spa", "walking"] as const;
+
+/**
+ * Referral Reward Types
+ */
+export type ReferralRewardType = "points" | "credit" | "discount" | "free_service" | "gift_card" | "free_add_on" | "discount_code";
+
+/**
+ * Referral Trigger Condition Types
+ */
+export type ReferralTriggerType = "after_first_booking" | "after_first_payment" | "after_total_reaches" | "after_n_visits";
+
+/**
  * Referral Program Configuration
  */
 export interface ReferralProgramConfig {
   enabled: boolean;
-  
+
   // Referrer rewards
   referrerReward: {
-    type: "points" | "credit" | "discount";
-    value: number;
+    type: ReferralRewardType;
+    value: number | string;
     description: string;
   };
-  
+
   // Referee rewards
   refereeReward: {
-    type: "points" | "credit" | "discount";
-    value: number;
+    type: ReferralRewardType;
+    value: number | string;
     description: string;
   };
-  
+
+  // Trigger condition — when the referral reward is issued
+  triggerCondition?: {
+    type: ReferralTriggerType;
+    threshold?: number;              // Dollar amount for after_total_reaches, visit count for after_n_visits
+    serviceTypes?: string[];         // Which services count toward triggers
+    description?: string;            // Human-readable description
+  };
+
   // Referral requirements
   requirements?: {
     minimumPurchase?: number;        // Referee must make minimum purchase
     firstBookingOnly?: boolean;       // Reward only on first booking
     serviceTypes?: string[];         // Only certain service types count
   };
-  
+
   // Referral tracking
   tracking?: {
     referralCodeLength: number;
@@ -756,6 +779,161 @@ export const exampleHybridWithMilestonesConfig: FacilityLoyaltyConfig = {
 };
 
 // ============================================================================
+// Example: Doggieville MTL (facilityId: 4)
+// Visit-based daycare + points for grooming + $25/$10% referral
+// ============================================================================
+
+export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
+  facilityId: 4,
+  enabled: true,
+  pointsEarning: {
+    id: "doggieville-hybrid",
+    method: "hybrid",
+    hybrid: {
+      enabled: true,
+      combinationMethod: "add",
+      rules: [
+        {
+          id: "doggieville-visit-milestones",
+          method: "per_visit_count",
+          perVisitCount: {
+            enabled: true,
+            milestones: [
+              { visitCount: 10, bonusPoints: 0, description: "10th Daycare Visit = 1 Free Daycare" },
+            ],
+            serviceType: ["daycare"],
+          },
+        },
+        {
+          id: "doggieville-grooming-points",
+          method: "per_service_type",
+          perServiceType: {
+            enabled: true,
+            servicePoints: [
+              { serviceType: "grooming", points: 10 },
+            ],
+          },
+        },
+      ],
+    },
+  },
+  pointsExpiration: { enabled: false, expirationType: "none" },
+  tiers: [],
+  rewardTypes: [
+    { type: "free_service", enabled: true, defaultExpiryDays: 60, applicableTo: ["services"] },
+    { type: "credit_balance", enabled: true, defaultExpiryDays: 90, applicableTo: ["services", "retail"] },
+  ],
+  pointsScope: {
+    enabled: true,
+    scope: "services_only",
+    services: { enabled: true, serviceTypes: ["daycare", "grooming"] },
+  },
+  discountStacking: { enabled: false, stackingBehavior: "no_stacking" },
+  referralProgram: {
+    enabled: true,
+    referrerReward: { type: "credit", value: 25, description: "$25 credit for referring a friend" },
+    refereeReward: { type: "discount", value: 10, description: "10% off first booking" },
+    triggerCondition: { type: "after_first_booking", description: "Reward issued after referee completes first booking" },
+    tracking: { referralCodeLength: 8, customCodePrefix: "DGV", expirationDays: 90 },
+  },
+  settings: {
+    pointsName: "Paw Points",
+    pointsValue: 0,
+    showPointsOnReceipt: true,
+    showPointsInPortal: true,
+  },
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-03-15T00:00:00Z",
+};
+
+// ============================================================================
+// Example: Luxury Boarding Facility (facilityId: 5)
+// Per-dollar points + spa/suite upgrades + gift card referral
+// ============================================================================
+
+export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
+  facilityId: 5,
+  enabled: true,
+  pointsEarning: {
+    id: "luxury-per-dollar",
+    method: "per_dollar",
+    perDollar: { enabled: true, basePoints: 2, minimumPurchase: 0 },
+  },
+  pointsExpiration: {
+    enabled: true,
+    expirationType: "time_based",
+    timeBased: { expirationMonths: 18, expirationPolicy: "fifo" },
+    warnings: { enabled: true, warnDaysBefore: [30, 14], sendEmail: true, sendSms: false, showInPortal: true },
+  },
+  tiers: [
+    {
+      id: "luxury-silver",
+      name: "Silver",
+      displayName: "Silver Guest",
+      minPoints: 0,
+      color: "#C0C0C0",
+      benefits: [{ type: "bonus_points", value: 1, description: "2 pts per $1 spent" }],
+    },
+    {
+      id: "luxury-gold",
+      name: "Gold",
+      displayName: "Gold Guest",
+      minPoints: 1000,
+      color: "#FFD700",
+      earningMultiplier: 1.5,
+      discountPercentage: 10,
+      benefits: [
+        { type: "bonus_points", value: 1.5, description: "3 pts per $1 spent" },
+        { type: "free_service", value: "spa_treatment", description: "Complimentary spa treatment" },
+      ],
+    },
+    {
+      id: "luxury-platinum",
+      name: "Platinum",
+      displayName: "Platinum VIP",
+      minPoints: 3000,
+      color: "#E5E4E2",
+      earningMultiplier: 2,
+      discountPercentage: 15,
+      benefits: [
+        { type: "bonus_points", value: 2, description: "4 pts per $1 spent" },
+        { type: "free_service", value: "suite_upgrade", description: "Free suite upgrade" },
+        { type: "free_service", value: "spa_treatment", description: "Complimentary spa treatment" },
+      ],
+    },
+  ],
+  rewardTypes: [
+    { type: "free_service", enabled: true, defaultExpiryDays: 90, applicableTo: ["services"] },
+    { type: "credit_balance", enabled: true, defaultExpiryDays: 120, applicableTo: ["services", "retail"] },
+  ],
+  pointsScope: {
+    enabled: true,
+    scope: "both",
+    services: { enabled: true, serviceTypes: ["boarding", "grooming", "spa"] },
+    retail: { enabled: true },
+  },
+  discountStacking: { enabled: true, stackingBehavior: "best_discount_only" },
+  referralProgram: {
+    enabled: true,
+    referrerReward: { type: "gift_card", value: 50, description: "$50 gift card for referring a friend" },
+    refereeReward: { type: "gift_card", value: 25, description: "$25 gift card on first stay" },
+    triggerCondition: { type: "after_first_payment", description: "Reward issued after referee's first invoice payment" },
+    requirements: { minimumPurchase: 100 },
+    tracking: { referralCodeLength: 6, customCodePrefix: "LUX", expirationDays: 180 },
+  },
+  settings: {
+    pointsName: "Luxury Points",
+    pointsValue: 10,
+    minimumRedemptionPoints: 200,
+    showPointsOnReceipt: true,
+    showPointsInPortal: true,
+    allowPartialRedemption: true,
+  },
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-03-20T00:00:00Z",
+};
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
@@ -769,8 +947,10 @@ export function getFacilityLoyaltyConfig(facilityId: number): FacilityLoyaltyCon
     1: exampleSimplePerDollarConfig,
     2: examplePerBookingConfig,
     3: exampleHybridWithMilestonesConfig,
+    4: exampleDoggievilleMTLConfig,
+    5: exampleLuxuryBoardingConfig,
   };
-  
+
   return configs[facilityId] || null;
 }
 

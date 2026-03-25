@@ -1,9 +1,11 @@
 /**
  * Referral Tracking System
- * 
+ *
  * Tracks referral relationships, booking events, and reward issuance
  * to prevent abuse and ensure accurate reward distribution.
  */
+
+import type { ReferralRewardType } from "./facility-loyalty-config";
 
 // ============================================================================
 // Data Structures
@@ -32,12 +34,12 @@ export interface ReferralRelationship {
   referrerRewardStatus: "pending" | "eligible" | "issued" | "cancelled";
   referrerRewardIssuedAt?: string;
   referrerRewardValue?: number | string;
-  referrerRewardType?: "points" | "credit" | "discount";
-  
+  referrerRewardType?: ReferralRewardType;
+
   refereeRewardStatus: "pending" | "eligible" | "issued" | "cancelled";
   refereeRewardIssuedAt?: string;
   refereeRewardValue?: number | string;
-  refereeRewardType?: "points" | "credit" | "discount";
+  refereeRewardType?: ReferralRewardType;
   
   // Validation flags
   isSelfReferral: boolean;          // Prevent self-referrals
@@ -56,7 +58,7 @@ export interface ReferralEvent {
   bookingId?: string;
   bookingValue?: number;
   rewardValue?: number | string;
-  rewardType?: "points" | "credit" | "discount";
+  rewardType?: ReferralRewardType;
   timestamp: string;
   notes?: string;
 }
@@ -442,11 +444,11 @@ export function processBookingForReferral(
   },
   referralProgramConfig?: {
     referrerReward: {
-      type: "points" | "credit" | "discount";
+      type: ReferralRewardType;
       value: number | string;
     };
     refereeReward: {
-      type: "points" | "credit" | "discount";
+      type: ReferralRewardType;
       value: number | string;
     };
     requirements?: {
