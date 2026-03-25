@@ -92,7 +92,16 @@ export type Permission =
   | "send_marketing"
   | "manage_incidents"
   | "delete_records"
-  | "manage_permissions";
+  | "manage_permissions"
+  // Forms (Section 8)
+  | "forms_create"
+  | "forms_edit"
+  | "forms_publish"
+  | "forms_configure_mapping"
+  | "forms_configure_logic"
+  | "forms_view_submissions"
+  | "forms_process_submissions"
+  | "forms_staff_assisted_intake";
 
 // Permission display labels
 export const PERMISSION_LABELS: Record<Permission, string> = {
@@ -143,6 +152,14 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_incidents: "Manage Incidents",
   delete_records: "Delete Records",
   manage_permissions: "Manage Permissions",
+  forms_create: "Create Forms",
+  forms_edit: "Edit Forms",
+  forms_publish: "Publish Forms",
+  forms_configure_mapping: "Configure Field Mapping",
+  forms_configure_logic: "Configure Logic Rules",
+  forms_view_submissions: "View Submissions",
+  forms_process_submissions: "Process Submissions",
+  forms_staff_assisted_intake: "Staff-Assisted Intake",
 };
 
 // Permission categories for grouping in UI
@@ -199,6 +216,16 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
   ],
   "Pet Care": ["add_pet_notes", "add_grooming_notes", "add_training_notes"],
   "Reports & Marketing": ["export_reports", "send_marketing"],
+  Forms: [
+    "forms_create",
+    "forms_edit",
+    "forms_publish",
+    "forms_configure_mapping",
+    "forms_configure_logic",
+    "forms_view_submissions",
+    "forms_process_submissions",
+    "forms_staff_assisted_intake",
+  ],
 };
 
 // Default permissions for each facility role (used as baseline)
@@ -250,6 +277,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "manage_incidents",
     "delete_records",
     "manage_permissions",
+    // Forms — full access
+    "forms_create",
+    "forms_edit",
+    "forms_publish",
+    "forms_configure_mapping",
+    "forms_configure_logic",
+    "forms_view_submissions",
+    "forms_process_submissions",
+    "forms_staff_assisted_intake",
   ],
   manager: [
     // Operational oversight, limited financial visibility
@@ -295,6 +331,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "send_marketing",
     "manage_incidents",
     // No manage_pricing, manage_settings, manage_services, delete_records
+    // Forms — full access (same as owner)
+    "forms_create",
+    "forms_edit",
+    "forms_publish",
+    "forms_configure_mapping",
+    "forms_configure_logic",
+    "forms_view_submissions",
+    "forms_process_submissions",
+    "forms_staff_assisted_intake",
   ],
   front_desk: [
     // Client-facing operations
@@ -321,6 +366,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     // No apply_discount
     "add_pet_notes",
     // No view_revenue, view_financials
+    // Forms — view, process, staff-assisted (no create/edit/publish/configure)
+    "forms_view_submissions",
+    "forms_process_submissions",
+    "forms_staff_assisted_intake",
   ],
   groomer: [
     // Grooming only
@@ -332,6 +381,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "add_grooming_notes",
     "add_pet_notes",
     "check_in_out",
+    // Forms — view only
+    "forms_view_submissions",
   ],
   trainer: [
     // Training only
@@ -343,6 +394,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "add_training_notes",
     "add_pet_notes",
     "check_in_out",
+    // Forms — view only
+    "forms_view_submissions",
   ],
   kennel_tech: [
     // Daily pet care
@@ -355,6 +408,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
     "view_scheduling",
     "add_pet_notes",
     "check_in_out",
+    // Forms — view only
+    "forms_view_submissions",
   ],
 };
 
@@ -508,6 +563,9 @@ const NAV_PERMISSIONS: Record<string, Permission> = {
   "/facility/dashboard/incidents": "view_incidents",
   "/facility/dashboard/waivers": "view_waivers",
   "/facility/dashboard/settings": "view_settings",
+  "/facility/dashboard/forms": "forms_view_submissions",
+  "/facility/dashboard/forms/builder": "forms_create",
+  "/facility/dashboard/forms/submissions": "forms_view_submissions",
 };
 
 // Get platform-level role

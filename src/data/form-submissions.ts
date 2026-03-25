@@ -37,6 +37,10 @@ export interface FormSubmission {
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
+  /** 8) Staff-assisted intake: true when a staff member fills the form on behalf of a customer */
+  staffAssisted?: boolean;
+  staffAssistantId?: string | number;
+  staffAssistantName?: string;
 }
 
 /** New spec: Submission record */
@@ -54,6 +58,10 @@ export interface SubmissionRecord {
   createdAt: string;
   submittedAt?: string;
   mergeDecision?: Record<string, unknown>;
+  /** 8) Staff-assisted intake tracking */
+  staffAssisted?: boolean;
+  staffAssistantId?: string | number;
+  staffAssistantName?: string;
   /** Phase 2: scoring outcome (approve/deny/needs review). See forms-phase2-types. */
   score?: number;
   scoreOutcome?: import("./forms-phase2-types").ScoreOutcome;

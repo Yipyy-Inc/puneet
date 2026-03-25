@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
+import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { getFormsByFacility, duplicateForm, archiveForm, deleteForm, type Form, type FormType } from "@/data/forms";
 import { triggerFormEvent } from "@/lib/form-automation-events";
 import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine, Archive, Trash2, MoreVertical } from "lucide-react";
@@ -274,6 +275,10 @@ function FormCard({
           </div>
         </CardContent>
       </Card>
+
+      {/* Permissions & Access overview (Section 8) */}
+      <FormPermissionsPanel />
+
       <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
