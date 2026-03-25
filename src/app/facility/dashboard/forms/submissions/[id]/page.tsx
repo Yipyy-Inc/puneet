@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,13 @@ import {
   AlertCircle,
   ArrowRight,
   Check,
+  X,
+  File,
+  PenLine,
+  AlertTriangle,
+  CalendarPlus,
+  PawPrint,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,7 +65,100 @@ function formatSubmissionDate(iso: string): string {
   return `${y}-${m}-${day} ${h}:${min}:${s}`;
 }
 
+/** Check if a value looks like an address object */
+function isAddressObject(value: unknown): value is { street?: string; city?: string; state?: string; zip?: string } {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  return ("street" in v || "city" in v || "state" in v || "zip" in v);
+}
+
+/** Format address object to a single line */
+function formatAddress(value: { street?: string; city?: string; state?: string; zip?: string }): string {
+  const parts: string[] = [];
+  if (value.street) parts.push(value.street);
+  const cityStateZip: string[] = [];
+  if (value.city) cityStateZip.push(value.city);
+  if (value.state) cityStateZip.push(value.state);
+  if (value.zip) cityStateZip.push(value.zip);
+  if (cityStateZip.length > 0) {
+    if (value.city && value.state) {
+      parts.push(`${value.city}, ${value.state}${value.zip ? " " + value.zip : ""}`);
+    } else {
+      parts.push(cityStateZip.join(", "));
+    }
+  }
+  return parts.join(", ") || "—";
+}
+
 function AnswerBlock({ question, value }: { question: FormQuestion; value: unknown }) {
+  // File-type answers
+  if (question.type === "file") {
+    const filename = typeof value === "string" ? value : formatValue(value);
+    return (
+      <div className="space-y-1">
+        <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <File className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>{filename}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Address-type answers
+  if (question.type === "address" || isAddressObject(value)) {
+    const addr = isAddressObject(value) ? value : null;
+    return (
+      <div className="space-y-1">
+        <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>{addr ? formatAddress(addr) : formatValue(value)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Signature-type answers
+  if (question.type === "signature") {
+    return (
+      <div className="space-y-1">
+        <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium italic">{formatValue(value)}</p>
+          <Badge variant="outline" className="text-[10px] h-5 gap-1 font-normal bg-violet-50 text-violet-700 border-violet-200">
+            <PenLine className="h-2.5 w-2.5" />
+            e-signed
+          </Badge>
+        </div>
+      </div>
+    );
+  }
+
+  // Boolean / yes_no / checkbox answers
+  if (question.type === "yes_no" || question.type === "checkbox") {
+    const boolVal = value === true || value === "yes" || value === "Yes" || value === "true";
+    return (
+      <div className="space-y-1">
+        <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {boolVal ? (
+            <div className="flex items-center gap-1.5 text-green-700">
+              <Check className="h-4 w-4" />
+              <span>Yes</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-red-600">
+              <X className="h-4 w-4" />
+              <span>No</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default
   return (
     <div className="space-y-1">
       <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
@@ -81,6 +182,14 @@ export default function SubmissionDetailPage({
     submission?.customerId ?? record?.relatedCustomerId ?? ""
   );
   const [mergeRule, setMergeRule] = useState<"submitted_wins" | "existing_wins" | "ask">("submitted_wins");
+  const [selectedPetIds, setSelectedPetIds] = useState<number[]>([]);
+  const [linkedCustomerName, setLinkedCustomerName] = useState<string>("");
+
+  // Post-processing actions state
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingServiceType, setBookingServiceType] = useState<string>("");
+  const [bookingDate, setBookingDate] = useState<string>("");
+  const [bookingNotes, setBookingNotes] = useState<string>("");
 
   useEffect(() => {
     if (record?.status === "unread") {
@@ -93,6 +202,36 @@ export default function SubmissionDetailPage({
     if (!form) return [];
     return form.questions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== "");
   }, [form, answers]);
+
+  // Group questions by section
+  const sections = form?.sections ?? [];
+  const hasSections = sections.length > 0;
+
+  const groupedQuestions = useMemo(() => {
+    if (!hasSections) return null;
+    const sortedSections = [...sections].sort((a, b) => a.order - b.order);
+    const grouped: { section: typeof sections[0]; questions: FormQuestion[] }[] = [];
+    const unsectioned: FormQuestion[] = [];
+    for (const sec of sortedSections) {
+      const secQuestions = visibleQuestions.filter((q) => q.sectionId === sec.id);
+      if (secQuestions.length > 0) {
+        grouped.push({ section: sec, questions: secQuestions });
+      }
+    }
+    // Questions without a section
+    for (const q of visibleQuestions) {
+      if (!q.sectionId || !sections.find((s) => s.id === q.sectionId)) {
+        unsectioned.push(q);
+      }
+    }
+    if (unsectioned.length > 0) {
+      grouped.push({
+        section: { id: "_unsectioned", title: "Other", order: 999 },
+        questions: unsectioned,
+      });
+    }
+    return grouped;
+  }, [hasSections, sections, visibleQuestions]);
 
   const emailFromAnswers = useMemo(() => {
     for (const v of Object.values(answers)) {
@@ -109,6 +248,22 @@ export default function SubmissionDetailPage({
     }
     return "";
   }, [answers]);
+
+  // Try to extract pet names from answers
+  const petNamesFromAnswers = useMemo(() => {
+    const names: string[] = [];
+    if (!form) return names;
+    for (const q of form.questions) {
+      const val = answers[q.id];
+      if (!val) continue;
+      const lbl = q.label.toLowerCase();
+      if (lbl.includes("pet name") || lbl.includes("pet's name") || lbl.includes("animal name") || lbl.includes("dog name") || lbl.includes("cat name")) {
+        const s = String(val).trim();
+        if (s) names.push(s);
+      }
+    }
+    return names;
+  }, [form, answers]);
 
   const submissionAuditEntries = useMemo(
     () => (id ? getFormAuditLog({ submissionId: id }) : []),
@@ -130,6 +285,10 @@ export default function SubmissionDetailPage({
     }
     return out;
   }, [emailFromAnswers, phoneFromAnswers]);
+
+  // Customer pets when a customer is selected
+  const selectedCustomer = clients.find((c) => c.id === selectedCustomerId);
+  const customerPets = selectedCustomer?.pets ?? [];
 
   const handleMarkProcessed = () => {
     if (!id || !submission) return;
@@ -188,14 +347,16 @@ export default function SubmissionDetailPage({
         existingValue: d.existing,
         chosen: mergeRule === "ask" ? (conflictChoices[d.field] ?? true ? "submitted" : "existing") : mergeRule === "submitted_wins" ? "submitted" : "existing",
       }));
-    linkSubmissionToCustomer(id, customerId, undefined, {
+    linkSubmissionToCustomer(id, customerId, selectedPetIds.length > 0 ? selectedPetIds : undefined, {
       mergeRule: mergeRule,
       overrides,
       staffUserId: "staff-demo",
       staffUserName: "Staff",
     });
+    const customer = clients.find((c) => c.id === customerId);
+    setLinkedCustomerName(customer?.name ?? "Customer");
     setSelectedCustomerId(customerId);
-    toast.success("Linked to customer");
+    toast.success(`Linked to ${customer?.name ?? "customer"}`);
   };
 
   const [createdProfile, setCreatedProfile] = useState(false);
@@ -215,6 +376,28 @@ export default function SubmissionDetailPage({
     });
     setCreatedProfile(true);
     toast.success(`New profile created: ${name}${email ? ` (${email})` : ""}`);
+  };
+
+  const handleCreateBookingRequest = () => {
+    if (!bookingServiceType || !bookingDate) {
+      toast.error("Please select a service type and date");
+      return;
+    }
+    toast.success("Booking request created");
+    setShowBookingForm(false);
+    setBookingServiceType("");
+    setBookingDate("");
+    setBookingNotes("");
+  };
+
+  const handleFlagFollowUp = () => {
+    toast.success("Follow-up alert created for staff");
+  };
+
+  const togglePetSelection = (petId: number) => {
+    setSelectedPetIds((prev) =>
+      prev.includes(petId) ? prev.filter((id) => id !== petId) : [...prev, petId]
+    );
   };
 
   if (!submission || !record) {
@@ -261,7 +444,26 @@ export default function SubmissionDetailPage({
           <CardContent className="space-y-4">
             {visibleQuestions.length === 0 ? (
               <p className="text-sm text-muted-foreground">No answers recorded.</p>
+            ) : hasSections && groupedQuestions ? (
+              /* Section-grouped layout */
+              groupedQuestions.map((group, gi) => (
+                <div key={group.section.id}>
+                  {gi > 0 && <Separator className="my-4" />}
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold text-foreground">{group.section.title}</h3>
+                    {group.section.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{group.section.description}</p>
+                    )}
+                  </div>
+                  <div className="space-y-3 pl-1">
+                    {group.questions.map((q) => (
+                      <AnswerBlock key={q.id} question={q} value={answers[q.id]} />
+                    ))}
+                  </div>
+                </div>
+              ))
             ) : (
+              /* Flat layout (no sections) */
               visibleQuestions.map((q) => (
                 <AnswerBlock key={q.id} question={q} value={answers[q.id]} />
               ))
@@ -281,6 +483,19 @@ export default function SubmissionDetailPage({
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Linked success state */}
+            {linkedCustomerName && (
+              <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="font-medium text-green-800">Linked to {linkedCustomerName}</span>
+                {selectedPetIds.length > 0 && (
+                  <span className="text-green-700 text-xs ml-1">
+                    ({selectedPetIds.length} pet{selectedPetIds.length !== 1 ? "s" : ""} selected)
+                  </span>
+                )}
+              </div>
+            )}
+
             {(emailFromAnswers || phoneFromAnswers) && (
               <div className="rounded-md bg-muted/50 p-3 text-sm">
                 <p className="font-medium mb-1">From submission</p>
@@ -292,6 +507,10 @@ export default function SubmissionDetailPage({
             {matchingCustomers.length > 0 ? (
               <div className="space-y-2">
                 <Label>Matching customers</Label>
+                {/* Prompt when matches exist but no selection */}
+                {!selectedCustomerId && !linkedCustomerName && (
+                  <p className="text-xs text-muted-foreground italic">Select a customer to see merge preview</p>
+                )}
                 <div className="space-y-2">
                   {matchingCustomers.map((c) => (
                     <div
@@ -320,6 +539,53 @@ export default function SubmissionDetailPage({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No existing customer matched by email/phone.</p>
+            )}
+
+            {/* Pet matching section */}
+            {selectedCustomerId && customerPets.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <PawPrint className="h-3.5 w-3.5" />
+                    Link pets
+                  </Label>
+                  {petNamesFromAnswers.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Pet names from submission: <span className="font-medium">{petNamesFromAnswers.join(", ")}</span>
+                    </p>
+                  )}
+                  <div className="space-y-1.5">
+                    {customerPets.map((pet) => {
+                      const isSelected = selectedPetIds.includes(pet.id);
+                      const isLinked = linkedCustomerName && isSelected;
+                      return (
+                        <label
+                          key={pet.id}
+                          className={`flex items-center gap-3 rounded-md border p-2.5 cursor-pointer transition-colors ${
+                            isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/30"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => togglePetSelection(pet.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{pet.name}</span>
+                              {isLinked && <Check className="h-3.5 w-3.5 text-green-600" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {pet.breed ?? pet.type}
+                              {pet.age != null ? ` · ${pet.age} yr${pet.age !== 1 ? "s" : ""} old` : ""}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
             )}
 
             <Separator />
@@ -418,6 +684,84 @@ export default function SubmissionDetailPage({
               <Button size="sm" variant={selectedCustomerId || createdProfile ? "default" : "secondary"} onClick={handleMarkProcessed}>
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Mark as processed
+              </Button>
+            </div>
+
+            {/* Post-processing actions */}
+            <Separator />
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Post-processing actions</Label>
+
+              {/* Create booking request */}
+              <div className="space-y-2">
+                {!showBookingForm ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => setShowBookingForm(true)}
+                  >
+                    <CalendarPlus className="h-4 w-4 mr-2" />
+                    Create booking request
+                  </Button>
+                ) : (
+                  <div className="rounded-md border bg-muted/20 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">New booking request</p>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setShowBookingForm(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs">Service type</Label>
+                        <Select value={bookingServiceType} onValueChange={setBookingServiceType}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select service" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daycare">Daycare</SelectItem>
+                            <SelectItem value="boarding">Boarding</SelectItem>
+                            <SelectItem value="grooming">Grooming</SelectItem>
+                            <SelectItem value="training">Training</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Date</Label>
+                        <Input
+                          type="date"
+                          className="h-8 text-sm"
+                          value={bookingDate}
+                          onChange={(e) => setBookingDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Notes (optional)</Label>
+                        <Input
+                          className="h-8 text-sm"
+                          placeholder="Add any notes..."
+                          value={bookingNotes}
+                          onChange={(e) => setBookingNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <Button size="sm" className="h-8 text-xs" onClick={handleCreateBookingRequest}>
+                      Create request
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Flag for follow-up */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-amber-700 border-amber-200 hover:bg-amber-50"
+                onClick={handleFlagFollowUp}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Flag for follow-up
               </Button>
             </div>
           </CardContent>

@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,9 +19,10 @@ import {
   type SubmissionStatus,
   type SubmissionListFilters,
 } from "@/data/form-submissions";
-import { getFormById, getFormsByFacility } from "@/data/forms";
+import { getFormById, getFormsByFacility, evaluateLogicRules } from "@/data/forms";
+import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
-import { FileText, Inbox, Search, ChevronRight } from "lucide-react";
+import { FileText, Inbox, Search, AlertTriangle, AlertCircle } from "lucide-react";
 
 const FACILITY_ID = 11;
 
@@ -61,12 +61,32 @@ function formatSubmissionDate(iso: string): string {
   return `${y}-${m}-${day} ${h}:${min}:${s}`;
 }
 
+/** Get status badge styles (flat/pastel, no gradients) */
+function statusBadgeProps(status: string): { className?: string; variant?: "outline" | "default" | "secondary" | "destructive" } {
+  switch (status) {
+    case "unread":
+      return { className: "bg-blue-100 text-blue-800 border-0" };
+    case "read":
+      return { variant: "outline" };
+    case "processed":
+      return { className: "bg-green-100 text-green-800 border-0" };
+    case "archived":
+      return { className: "bg-muted text-muted-foreground" };
+    default:
+      return { variant: "outline" };
+  }
+}
+
 export default function SubmissionsInboxPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">("all");
   const [formIdFilter, setFormIdFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+
+  const facility = facilities.find((f) => f.id === FACILITY_ID);
+  const locations = facility?.locationsList ?? [];
 
   const filters: SubmissionListFilters = useMemo(
     () => ({
@@ -74,8 +94,9 @@ export default function SubmissionsInboxPage() {
       formId: formIdFilter === "all" ? undefined : formIdFilter,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
+      locationId: locationFilter === "all" ? undefined : locationFilter,
     }),
-    [statusFilter, formIdFilter, dateFrom, dateTo]
+    [statusFilter, formIdFilter, dateFrom, dateTo, locationFilter]
   );
 
   const list = useMemo(
@@ -85,7 +106,39 @@ export default function SubmissionsInboxPage() {
 
   const forms = useMemo(() => getFormsByFacility(FACILITY_ID), []);
 
-  const unreadCount = getSubmissionsWithRecords(FACILITY_ID, { status: "unread" }).length;
+  // Pre-compute flags for each submission
+  const submissionFlags = useMemo(() => {
+    const flagMap = new Map<string, { alertFlag: boolean; missingCount: number }>();
+    for (const { submission } of list) {
+      const form = getFormById(submission.formId);
+      let alertFlag = false;
+      let missingCount = 0;
+
+      // Red-alert flag detection via logic rules
+      if (form?.logicRules?.length) {
+        const effects = evaluateLogicRules(form.logicRules, submission.answers);
+        alertFlag = effects.alertFlag;
+      }
+
+      // Missing required fields detection
+      if (form?.questions) {
+        const answers = submission.answers ?? {};
+        const missingRequired = form.questions.filter(
+          (q) => q.required && (answers[q.id] === undefined || answers[q.id] === "")
+        );
+        missingCount = missingRequired.length;
+      }
+
+      flagMap.set(submission.id, { alertFlag, missingCount });
+    }
+    return flagMap;
+  }, [list]);
+
+  // Summary stats
+  const totalCount = list.length;
+  const unreadCount = list.filter(({ record }) => record.status === "unread").length;
+  const processedCount = list.filter(({ record }) => record.status === "processed").length;
+  const alertCount = Array.from(submissionFlags.values()).filter((f) => f.alertFlag).length;
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
@@ -94,6 +147,28 @@ export default function SubmissionsInboxPage() {
         <p className="text-muted-foreground">
           Process form submissions, match to customers and pets, or create new profiles.
         </p>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Total</span>
+          <Badge variant="secondary">{totalCount}</Badge>
+        </div>
+        <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          <span className="text-muted-foreground">Unread</span>
+          <Badge className="bg-blue-100 text-blue-800 border-0">{unreadCount}</Badge>
+        </div>
+        <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Processed</span>
+          <Badge className="bg-green-100 text-green-800 border-0">{processedCount}</Badge>
+        </div>
+        <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+          <span className="text-muted-foreground">Alerts</span>
+          <Badge className="bg-red-100 text-red-800 border-0">{alertCount}</Badge>
+        </div>
       </div>
 
       {/* Filters */}
@@ -152,6 +227,22 @@ export default function SubmissionsInboxPage() {
               className="w-[140px]"
             />
           </div>
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All locations</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.name} value={loc.name}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -181,17 +272,20 @@ export default function SubmissionsInboxPage() {
                     <th className="text-left py-3 px-2 font-medium">Pet(s)</th>
                     <th className="text-left py-3 px-2 font-medium">Status</th>
                     <th className="text-left py-3 px-2 font-medium">Flags</th>
-                    <th className="w-10" />
                   </tr>
                 </thead>
                 <tbody>
                   {list.map(({ submission, record }) => {
                     const form = getFormById(submission.formId);
                     const hasFiles = submissionHasFiles(submission.id);
+                    const flags = submissionFlags.get(submission.id);
+                    const isUnread = record.status === "unread";
+                    const badgeProps = statusBadgeProps(record.status);
                     return (
                       <tr
                         key={submission.id}
-                        className="border-b hover:bg-muted/50"
+                        className={`border-b hover:bg-muted/50 cursor-pointer ${isUnread ? "border-l-2 border-l-primary font-medium" : ""}`}
+                        onClick={() => router.push(`/facility/dashboard/forms/submissions/${submission.id}`)}
                       >
                         <td className="py-3 px-2 whitespace-nowrap">
                           {formatSubmissionDate(submission.createdAt)}
@@ -205,34 +299,30 @@ export default function SubmissionsInboxPage() {
                         </td>
                         <td className="py-3 px-2">
                           <Badge
-                            variant={
-                              record.status === "unread"
-                                ? "default"
-                                : record.status === "processed"
-                                  ? "secondary"
-                                  : "outline"
-                            }
+                            variant={badgeProps.variant}
+                            className={badgeProps.className}
                           >
                             {record.status}
                           </Badge>
                         </td>
                         <td className="py-3 px-2">
-                          <div className="flex gap-1">
+                          <div className="flex gap-1.5 items-center">
                             {hasFiles && (
                               <span className="inline-flex items-center gap-0.5 text-muted-foreground" title="Has file upload">
                                 <FileText className="h-3.5 w-3.5" />
                               </span>
                             )}
+                            {flags?.alertFlag && (
+                              <span className="inline-flex items-center text-red-600" title="Red alert">
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                            {(flags?.missingCount ?? 0) > 0 && (
+                              <span className="inline-flex items-center text-amber-600" title={`${flags!.missingCount} required field(s) missing`}>
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              </span>
+                            )}
                           </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push(`/facility/dashboard/forms/submissions/${submission.id}`)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
                         </td>
                       </tr>
                     );
