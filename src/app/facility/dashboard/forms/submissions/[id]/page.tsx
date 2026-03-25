@@ -21,6 +21,8 @@ import {
   getSubmissionRecord,
   updateSubmissionRecordStatus,
   linkSubmissionToCustomer,
+  getMappingResultsByGroup,
+  type MappingResult,
 } from "@/data/form-submissions";
 import { getFormAuditLog } from "@/lib/form-audit";
 import { notifyCustomerSubmissionConfirmed } from "@/lib/form-customer-notifications";
@@ -43,6 +45,10 @@ import {
   CalendarPlus,
   PawPrint,
   MapPin,
+  User,
+  Tag,
+  Syringe,
+  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -202,6 +208,13 @@ export default function SubmissionDetailPage({
     if (!form) return [];
     return form.questions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== "");
   }, [form, answers]);
+
+  const mappingResults = useMemo(() => {
+    if (!form || !submission) return {};
+    return getMappingResultsByGroup(submission.id, form.fieldMapping, form.questions);
+  }, [form, submission]);
+
+  const hasMappings = Object.keys(mappingResults).length > 0;
 
   // Group questions by section
   const sections = form?.sections ?? [];
@@ -767,6 +780,66 @@ export default function SubmissionDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Mapping Summary: where each answer is stored */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ArrowRight className="h-4 w-4" />
+            Where answers go
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Field mappings configured in the form builder determine where each answer is stored.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {!hasMappings ? (
+            <p className="text-sm text-muted-foreground">No field mappings configured for this form.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(mappingResults).map(([group, items]) => {
+                const groupConfig: Record<string, { label: string; icon: React.ReactNode; bg: string }> = {
+                  customer: { label: "Customer Profile", icon: <User className="h-4 w-4 text-blue-600" />, bg: "bg-blue-50" },
+                  pet: { label: "Pet Profile", icon: <PawPrint className="h-4 w-4 text-amber-600" />, bg: "bg-amber-50" },
+                  medical: { label: "Medical / Vaccine", icon: <Syringe className="h-4 w-4 text-red-600" />, bg: "bg-red-50" },
+                  notes: { label: "Notes", icon: <FileText className="h-4 w-4 text-slate-600" />, bg: "bg-slate-50" },
+                  tags: { label: "Tags", icon: <Tag className="h-4 w-4 text-purple-600" />, bg: "bg-purple-50" },
+                };
+                const config = groupConfig[group] ?? { label: group, icon: <FileText className="h-4 w-4 text-slate-600" />, bg: "bg-slate-50" };
+                return (
+                  <div key={group} className={`rounded-lg border p-3 ${config.bg}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      {config.icon}
+                      <span className="text-sm font-semibold">{config.label}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {(items as MappingResult[]).map((item, idx) => (
+                        <div key={idx} className="rounded-md bg-white/80 border border-white/60 px-2.5 py-2 text-sm">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                            <span>{item.questionLabel}</span>
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                            <span className="font-medium text-foreground">{item.label}</span>
+                            {item.hasAttachment && (
+                              <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                          </div>
+                          {group === "tags" ? (
+                            <Badge variant="secondary" className="mt-1 text-xs bg-purple-100 text-purple-700 border-purple-200">
+                              {formatValue(item.value)}
+                            </Badge>
+                          ) : (
+                            <p className="text-sm font-medium truncate">{formatValue(item.value)}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Audit & compliance: timestamps, merge decision, audit trail */}
       <Card>

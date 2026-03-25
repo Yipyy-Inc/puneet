@@ -257,6 +257,7 @@ export function linkSubmissionToCustomer(
     overrides?: MergeOverride[];
     staffUserId?: string | number;
     staffUserName?: string;
+    mappingResults?: MappingResult[];
   }
 ): FormSubmission | null {
   const sub = submissions.find((s) => s.id === id);
@@ -275,6 +276,7 @@ export function linkSubmissionToCustomer(
       overrides,
       staffUserId: options?.staffUserId,
       staffUserName: options?.staffUserName,
+      mappingResults: options?.mappingResults,
     };
     logMergeDecision({
       facilityId: rec.facilityId,
@@ -289,6 +291,95 @@ export function linkSubmissionToCustomer(
     });
   }
   return sub;
+}
+
+/**
+ * 6.2 Apply Field Mappings — process submission answers through form's field mappings.
+ * Returns a structured summary of where each answer goes (customer, pet, medical, notes, tags).
+ * In production, this would write to the database; here it returns the plan for UI display.
+ */
+export interface MappingResult {
+  target: string;
+  group: "customer" | "pet" | "medical" | "notes" | "tags";
+  label: string;
+  questionLabel: string;
+  value: unknown;
+  hasAttachment: boolean;
+}
+
+export function applyFieldMappings(
+  submissionId: string,
+  formFieldMappings: { questionId: string; target: string }[],
+  formQuestions: { id: string; label: string; type?: string }[],
+): MappingResult[] {
+  const sub = submissions.find((s) => s.id === submissionId);
+  if (!sub) return [];
+  const answers = sub.answers;
+  const results: MappingResult[] = [];
+
+  for (const mapping of formFieldMappings) {
+    const answer = answers[mapping.questionId];
+    if (answer === undefined || answer === "") continue;
+
+    const question = formQuestions.find((q) => q.id === mapping.questionId);
+    const questionLabel = question?.label ?? mapping.questionId;
+
+    // Determine group from target prefix
+    let group: MappingResult["group"] = "notes";
+    let label = mapping.target;
+
+    if (mapping.target.startsWith("customer.")) {
+      group = "customer";
+      label = mapping.target.replace("customer.", "").replace(/\./g, " › ");
+    } else if (mapping.target.startsWith("pet.")) {
+      group = "pet";
+      label = mapping.target.replace("pet.", "");
+    } else if (mapping.target.startsWith("medical.")) {
+      group = "medical";
+      label = mapping.target.replace("medical.", "");
+    } else if (mapping.target.startsWith("notes")) {
+      group = "notes";
+      label = mapping.target === "notes" ? "General notes" : mapping.target.replace("notes.", "") + " notes";
+    } else if (mapping.target.startsWith("tags.")) {
+      group = "tags";
+      label = mapping.target.replace("tags.", "") + " tag";
+    }
+
+    // Capitalize first letter of label
+    label = label.charAt(0).toUpperCase() + label.slice(1);
+
+    // Check for attachments
+    const answerRec = answerRecords.find(
+      (a) => a.submissionId === submissionId && a.fieldId === mapping.questionId
+    );
+
+    results.push({
+      target: mapping.target,
+      group,
+      label,
+      questionLabel,
+      value: answer,
+      hasAttachment: !!(answerRec?.attachments?.length),
+    });
+  }
+
+  return results;
+}
+
+/** Get mapping results grouped by category for display */
+export function getMappingResultsByGroup(
+  submissionId: string,
+  formFieldMappings: { questionId: string; target: string }[],
+  formQuestions: { id: string; label: string; type?: string }[],
+): Record<string, MappingResult[]> {
+  const results = applyFieldMappings(submissionId, formFieldMappings, formQuestions);
+  const grouped: Record<string, MappingResult[]> = {};
+  for (const r of results) {
+    const key = r.group;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(r);
+  }
+  return grouped;
 }
 
 // ----- Seed: example submissions for UI demo -----

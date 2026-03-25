@@ -186,6 +186,7 @@ function SortableQuestionRow({
   idx,
   total,
   selectedQuestionId,
+  mappingTarget,
   onSelect,
   onUpdateLabel,
   onMoveUp,
@@ -196,6 +197,7 @@ function SortableQuestionRow({
   idx: number;
   total: number;
   selectedQuestionId: string | null;
+  mappingTarget?: string;
   onSelect: () => void;
   onUpdateLabel: (v: string) => void;
   onMoveUp: () => void;
@@ -204,6 +206,9 @@ function SortableQuestionRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+  const mappingLabel = mappingTarget
+    ? MAPPING_TARGET_GROUPS.flatMap((g) => g.targets).find((t) => t.value === mappingTarget)?.label ?? mappingTarget
+    : null;
   return (
     <div
       ref={setNodeRef}
@@ -215,14 +220,21 @@ function SortableQuestionRow({
       <div {...attributes} {...listeners} className="shrink-0 cursor-grab active:cursor-grabbing touch-none">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
-      <Input
-        value={q.label || ""}
-        onChange={(e) => onUpdateLabel(e.target.value)}
-        onFocus={onSelect}
-        onClick={onSelect}
-        className="flex-1 min-w-0 h-8 border-0 shadow-none focus-visible:ring-0 text-sm"
-        placeholder="Question text"
-      />
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <Input
+          value={q.label || ""}
+          onChange={(e) => onUpdateLabel(e.target.value)}
+          onFocus={onSelect}
+          onClick={onSelect}
+          className="flex-1 min-w-0 h-8 border-0 shadow-none focus-visible:ring-0 text-sm"
+          placeholder="Question text"
+        />
+        {mappingLabel && (
+          <Badge variant="secondary" className="shrink-0 text-[10px] h-5 px-1.5 font-normal bg-blue-50 text-blue-700 border-blue-200">
+            {mappingLabel}
+          </Badge>
+        )}
+      </div>
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMoveUp} disabled={idx === 0}>
         <ChevronUp className="h-4 w-4" />
       </Button>
@@ -816,6 +828,7 @@ export function FormBuilderEditor({
                               idx={idx}
                               total={secQuestions.length}
                               selectedQuestionId={selectedQuestionId}
+                              mappingTarget={fieldMapping.find((m) => m.questionId === q.id)?.target}
                               onSelect={() => setSelectedQuestionId(q.id)}
                               onUpdateLabel={(v) => updateQuestion(q.id, { label: v })}
                               onMoveUp={() => moveQuestion(q.id, "up")}
@@ -857,7 +870,14 @@ export function FormBuilderEditor({
         )}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Field mapping</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base">Field mapping</CardTitle>
+              {fieldMapping.length > 0 && (
+                <Badge variant="secondary" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                  {fieldMapping.length} mapped
+                </Badge>
+              )}
+            </div>
             <Button variant="outline" size="sm" onClick={addMapping}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -930,6 +950,22 @@ export function FormBuilderEditor({
                     </Button>
                   </div>
                 ))}
+                {/* Mapping preview summary — shows grouped target counts */}
+                <div className="flex flex-wrap gap-1.5 pt-2 border-t mt-3">
+                  {(() => {
+                    const counts: Record<string, number> = {};
+                    for (const m of fieldMapping) {
+                      const group = MAPPING_TARGET_GROUPS.find((g) => g.targets.some((t) => t.value === m.target));
+                      const key = group?.group ?? "Other";
+                      counts[key] = (counts[key] ?? 0) + 1;
+                    }
+                    return Object.entries(counts).map(([group, count]) => (
+                      <Badge key={group} variant="outline" className="text-[10px] h-5 font-normal">
+                        {group}: {count}
+                      </Badge>
+                    ));
+                  })()}
+                </div>
               </div>
             )}
           </CardContent>
