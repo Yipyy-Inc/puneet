@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -18,12 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap } from "lucide-react";
 import {
   messageTemplates,
   type AutomationRule,
 } from "@/data/communications-hub";
+import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
+import { TEMPLATE_VARIABLES } from "@/data/template-variables";
 
 interface AutomationRuleModalProps {
   rule?: AutomationRule | null;
@@ -87,6 +90,32 @@ export function AutomationRuleModal({
     formData.trigger === "appointment_reminder";
   const showDaysBeforeExpiry = formData.trigger === "vaccination_expiry";
 
+  const selectedTemplate = messageTemplates.find(
+    (t) => t.id === formData.templateId,
+  );
+
+  const usedVariableKeys = useMemo(() => {
+    if (!selectedTemplate) return [];
+    const pattern = /\{\{([a-z_]+)\}\}/g;
+    const keys: string[] = [];
+    let match;
+    while ((match = pattern.exec(selectedTemplate.body)) !== null) {
+      if (!keys.includes(match[1])) keys.push(match[1]);
+    }
+    if (selectedTemplate.subject) {
+      pattern.lastIndex = 0;
+      while ((match = pattern.exec(selectedTemplate.subject)) !== null) {
+        if (!keys.includes(match[1])) keys.push(match[1]);
+      }
+    }
+    return keys;
+  }, [selectedTemplate]);
+
+  const usedVariables = useMemo(
+    () => TEMPLATE_VARIABLES.filter((v) => usedVariableKeys.includes(v.key)),
+    [usedVariableKeys],
+  );
+
   return (
     <>
       <DialogHeader>
@@ -104,6 +133,7 @@ export function AutomationRuleModal({
           <Label htmlFor="name">Rule Name *</Label>
           <Input
             id="name"
+            aria-required="true"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g., Booking Confirmation Email"
@@ -190,6 +220,31 @@ export function AutomationRuleModal({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Variable chips for selected template */}
+        {usedVariables.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">
+              Variables used in template
+            </Label>
+            <div className="flex flex-wrap gap-1.5">
+              {usedVariables.map((v) => (
+                <Badge key={v.key} variant="secondary" className="text-xs">
+                  {v.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Template Preview */}
+        {selectedTemplate && (
+          <TemplatePreviewPanel
+            template={selectedTemplate.body}
+            subject={selectedTemplate.subject}
+            emptyMessage="Select a template to see a preview"
+          />
+        )}
 
         {/* Schedule Settings */}
         {(showHoursBefore || showDaysBeforeExpiry) && (

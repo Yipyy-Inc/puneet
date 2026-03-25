@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -21,6 +21,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Send, Paperclip, X } from "lucide-react";
 import { messageTemplates } from "@/data/communications-hub";
+import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
+import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
+import { resolveTemplate, getMockPreviewData } from "@/lib/template-variable-resolver";
 
 interface ComposeMessageModalProps {
   onClose: () => void;
@@ -36,6 +40,9 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
   });
 
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [activeField, setActiveField] = useState<"subject" | "body">("body");
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTemplateSelect = (templateId: string) => {
     const template = messageTemplates.find((t) => t.id === templateId);
@@ -51,7 +58,6 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
   };
 
   const handleFileAttach = () => {
-    // In a real app, would open file picker
     const mockFile = new File(["content"], "document.pdf", {
       type: "application/pdf",
     });
@@ -67,9 +73,27 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
     onClose();
   };
 
+  const activeRef = activeField === "subject" ? subjectRef : bodyRef;
+  const activeValue = formData[activeField];
+  const setActiveValue = useCallback(
+    (newValue: string) => {
+      setFormData((prev) => ({ ...prev, [activeField]: newValue }));
+    },
+    [activeField],
+  );
+  const handleInsertVariable = useInsertAtCursor(activeRef, activeValue, setActiveValue);
+
   const availableTemplates = messageTemplates.filter(
     (t) => t.type === formData.type,
   );
+
+  const hasVariables = formData.body.includes("{{");
+
+  const estimatedSmsLength = useMemo(() => {
+    if (formData.type !== "sms" || !hasVariables) return null;
+    const resolved = resolveTemplate(formData.body, getMockPreviewData());
+    return resolved.length;
+  }, [formData.type, formData.body, hasVariables]);
 
   return (
     <>
@@ -94,7 +118,7 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
               })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-required="true">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -131,6 +155,7 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
           </Label>
           <Input
             id="to"
+            aria-required="true"
             value={formData.to}
             onChange={(e) => setFormData({ ...formData, to: e.target.value })}
             placeholder={
@@ -144,13 +169,24 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
         {/* Subject (Email only) */}
         {formData.type === "email" && (
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="subject">Subject *</Label>
+              {activeField === "subject" && (
+                <VariableInsertDropdown
+                  context="general"
+                  onInsert={handleInsertVariable}
+                />
+              )}
+            </div>
             <Input
               id="subject"
+              ref={subjectRef}
+              aria-required="true"
               value={formData.subject}
               onChange={(e) =>
                 setFormData({ ...formData, subject: e.target.value })
               }
+              onFocus={() => setActiveField("subject")}
               placeholder="Enter subject line"
             />
           </div>
@@ -158,20 +194,44 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
 
         {/* Message Body */}
         <div className="space-y-2">
-          <Label htmlFor="body">Message *</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="body">Message *</Label>
+            {(formData.type === "sms" || activeField === "body") && (
+              <VariableInsertDropdown
+                context="general"
+                onInsert={handleInsertVariable}
+              />
+            )}
+          </div>
           <Textarea
             id="body"
+            ref={bodyRef}
+            aria-required="true"
             value={formData.body}
             onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+            onFocus={() => setActiveField("body")}
             placeholder="Enter your message..."
             rows={formData.type === "sms" ? 5 : 10}
           />
           {formData.type === "sms" && (
-            <p className="text-xs text-muted-foreground">
-              {formData.body.length} / 160 characters
-            </p>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p>{formData.body.length} / 160 characters (template)</p>
+              {estimatedSmsLength !== null && (
+                <p className={estimatedSmsLength > 160 ? "text-amber-600 font-medium" : ""}>
+                  ~{estimatedSmsLength} / 160 characters (estimated after variables)
+                </p>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Template Preview */}
+        {hasVariables && (
+          <TemplatePreviewPanel
+            template={formData.body}
+            subject={formData.type === "email" ? formData.subject : undefined}
+          />
+        )}
 
         {/* File Attachments (Email only) */}
         {formData.type === "email" && (
@@ -202,6 +262,7 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={`Remove ${file.name}`}
                         onClick={() => handleRemoveAttachment(idx)}
                       >
                         <X className="h-4 w-4" />

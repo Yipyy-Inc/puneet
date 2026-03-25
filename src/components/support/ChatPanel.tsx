@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { ChatConversation } from "@/data/chats";
 import { cn } from "@/lib/utils";
+import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
 
 interface ChatPanelProps {
   conversations: ChatConversation[];
@@ -37,6 +39,8 @@ export function ChatPanel({
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const insertVariable = useInsertAtCursor(chatInputRef, newMessage, setNewMessage);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -327,6 +331,7 @@ export function ChatPanel({
           </Button>
           <div className="flex-1 relative">
             <Input
+              ref={chatInputRef}
               placeholder="Write a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -334,6 +339,10 @@ export function ChatPanel({
               className="pr-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
             />
           </div>
+          <VariableInsertDropdown
+            context="general"
+            onInsert={insertVariable}
+          />
           <Button
             variant="ghost"
             size="icon"

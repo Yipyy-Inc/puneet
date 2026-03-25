@@ -17,6 +17,8 @@ import {
   Award,
   Target,
   Settings,
+  Braces,
+  MessageSquare,
   Star,
   Heart,
 } from "lucide-react";
@@ -34,7 +36,13 @@ import {
   promoCodes,
   type CustomerSegment,
 } from "@/data/marketing";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { EmailTemplateModal } from "@/components/marketing/EmailTemplateModal";
 import { SegmentBuilderModal } from "@/components/marketing/SegmentBuilderModal";
 import { CampaignBuilderModal } from "@/components/marketing/CampaignBuilderModal";
@@ -43,6 +51,9 @@ import { FacilityBrandingSection } from "@/components/marketing/FacilityBranding
 import { PlaydateAlertsTab } from "@/components/marketing/PlaydateAlertsTab";
 import { LoyaltyBuilderModal } from "@/components/marketing/LoyaltyBuilderModal";
 import { ReferralConfigModal } from "@/components/marketing/ReferralConfigModal";
+import { QuickReplyModal } from "@/components/marketing/QuickReplyModal";
+import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
+import { quickReplyTemplates } from "@/data/quick-replies";
 
 export default function MarketingPage() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -56,6 +67,11 @@ export default function MarketingPage() {
   >(null);
   const [selectedCampaign, setSelectedCampaign] = useState<
     (typeof campaigns)[0] | null
+  >(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showQuickReplyModal, setShowQuickReplyModal] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<
+    (typeof emailTemplates)[0] | null
   >(null);
   const [selectedSegment, setSelectedSegment] =
     useState<CustomerSegment | null>(null);
@@ -89,7 +105,18 @@ export default function MarketingPage() {
       header: "Template Name",
       cell: ({ row }) => (
         <div>
-          <div className="font-medium">{row.original.name}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{row.original.name}</span>
+            {row.original.variables.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-xs gap-0.5 px-1.5 py-0"
+              >
+                <Braces className="h-2.5 w-2.5" />
+                {row.original.variables.length}
+              </Badge>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground">
             {row.original.subject}
           </div>
@@ -132,9 +159,11 @@ export default function MarketingPage() {
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Preview template"
+            title="Preview"
             onClick={() => {
-              setSelectedTemplate(row.original);
-              setShowTemplateModal(true);
+              setPreviewTemplate(row.original);
+              setShowPreviewModal(true);
             }}
           >
             <Eye className="h-4 w-4" />
@@ -142,6 +171,8 @@ export default function MarketingPage() {
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Edit template"
+            title="Edit"
             onClick={() => {
               setSelectedTemplate(row.original);
               setShowTemplateModal(true);
@@ -152,11 +183,12 @@ export default function MarketingPage() {
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Copy template"
+            title="Copy"
             onClick={() => {
               navigator.clipboard.writeText(row.original.body);
               console.log(`Template "${row.original.name}" copied`);
             }}
-            aria-label={`Copy template ${row.original.name}`}
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -661,6 +693,55 @@ export default function MarketingPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Quick Reply Templates */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Quick Reply Templates
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pre-written responses for chat and SMS conversations
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowQuickReplyModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Quick Reply
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2">
+                {quickReplyTemplates.map((reply) => (
+                  <button
+                    key={reply.name}
+                    type="button"
+                    className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer group text-left"
+                    onClick={() =>
+                      alert(`Quick reply "${reply.name}" copied to clipboard`)
+                    }
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{reply.name}</span>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {reply.category}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {reply.body}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Segments Tab */}
@@ -1027,6 +1108,43 @@ export default function MarketingPage() {
           <ReferralConfigModal
             onClose={() => setShowReferralConfigModal(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="min-w-2xl max-h-[90vh] overflow-y-auto">
+          {previewTemplate && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{previewTemplate.name}</DialogTitle>
+                <DialogDescription className="capitalize">
+                  {previewTemplate.category} template
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <TemplatePreviewPanel
+                  template={previewTemplate.body}
+                  subject={previewTemplate.subject}
+                  emptyMessage="This template has no content"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPreviewModal(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showQuickReplyModal} onOpenChange={setShowQuickReplyModal}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <QuickReplyModal onClose={() => setShowQuickReplyModal(false)} />
         </DialogContent>
       </Dialog>
     </div>

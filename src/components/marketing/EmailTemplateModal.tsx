@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -29,6 +29,8 @@ import { Mail, Eye, ChevronDown, Gift, MousePointerClick } from "lucide-react";
 import type { EmailTemplate } from "@/data/marketing";
 import { facilityBranding, EMAIL_USE_CASE_OPTIONS } from "@/data/marketing";
 import { getContrastTextColor, hexToRgba } from "@/lib/color-utils";
+import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
 
 interface EmailTemplateModalProps {
   template?: EmailTemplate | null;
@@ -36,24 +38,6 @@ interface EmailTemplateModalProps {
 }
 
 const BRAND_TEXT_COLOR = getContrastTextColor(facilityBranding.primaryColor);
-
-const AVAILABLE_VARIABLES = [
-  "{{first_name}}",
-  "{{last_name}}",
-  "{{client_name}}",
-  "{{pet_name}}",
-  "{{facility_name}}",
-  "{{service_type}}",
-  "{{appointment_time}}",
-  "{{booking_date}}",
-  "{{offer_code}}",
-  "{{offer_expiry}}",
-  "{{cta_link}}",
-  "{{friend_pet_name}}",
-  "{{referral_code}}",
-  "{{service_name}}",
-  "{{last_groom_date}}",
-];
 
 export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProps) {
   const [formData, setFormData] = useState({
@@ -72,19 +56,28 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
 
   const [previewMode, setPreviewMode] = useState(false);
   const [offerOpen, setOfferOpen] = useState(!!template?.offerSection);
+  const [activeField, setActiveField] = useState<"subject" | "body">("body");
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSave = () => {
     console.log("Saving template:", formData);
     onClose();
   };
 
-  const insertVariable = (variable: string) => {
-    setFormData({ ...formData, body: formData.body + " " + variable });
-  };
-
   const update = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
   };
+
+  const activeRef = activeField === "subject" ? subjectRef : bodyRef;
+  const activeValue = formData[activeField];
+  const setActiveValue = useCallback(
+    (newValue: string) => {
+      setFormData((prev) => ({ ...prev, [activeField]: newValue }));
+    },
+    [activeField],
+  );
+  const insertVariable = useInsertAtCursor(activeRef, activeValue, setActiveValue);
 
   return (
     <>
@@ -107,6 +100,7 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                   <Label htmlFor="name">Template Name *</Label>
                   <Input
                     id="name"
+                    aria-required="true"
                     value={formData.name}
                     onChange={(e) => update("name", e.target.value)}
                     placeholder="e.g., Welcome New Client"
@@ -133,7 +127,7 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               <div className="space-y-2">
                 <Label>Category *</Label>
                 <Select value={formData.category} onValueChange={(v) => update("category", v)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-required="true">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -147,11 +141,20 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
 
               {/* Subject Line */}
               <div className="space-y-2">
-                <Label htmlFor="subject">Subject Line *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="subject">Subject Line *</Label>
+                  <VariableInsertDropdown
+                    context="marketing"
+                    onInsert={insertVariable}
+                  />
+                </div>
                 <Input
                   id="subject"
+                  ref={subjectRef}
+                  aria-required="true"
                   value={formData.subject}
                   onChange={(e) => update("subject", e.target.value)}
+                  onFocus={() => setActiveField("subject")}
                   placeholder="e.g., Welcome to {{facility_name}}!"
                 />
               </div>
@@ -161,8 +164,11 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                 <Label htmlFor="body">Email Body *</Label>
                 <Textarea
                   id="body"
+                  ref={bodyRef}
+                  aria-required="true"
                   value={formData.body}
                   onChange={(e) => update("body", e.target.value)}
+                  onFocus={() => setActiveField("body")}
                   placeholder="Enter your email content here..."
                   rows={8}
                 />
@@ -244,29 +250,6 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                         placeholder="e.g., {{booking_link}}"
                       />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Available Variables */}
-              <Card>
-                <CardContent className="pt-4">
-                  <Label className="text-sm font-medium">Available Variables</Label>
-                  <p className="text-xs text-muted-foreground mt-1 mb-2">
-                    Click to insert into email body
-                  </p>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Template variables">
-                    {AVAILABLE_VARIABLES.map((variable) => (
-                      <Button
-                        key={variable}
-                        variant="outline"
-                        size="sm"
-                        className="h-auto py-0.5 px-2 text-xs font-normal"
-                        onClick={() => insertVariable(variable)}
-                      >
-                        {variable}
-                      </Button>
-                    ))}
                   </div>
                 </CardContent>
               </Card>

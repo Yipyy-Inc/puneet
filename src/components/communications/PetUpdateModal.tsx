@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -20,6 +20,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Bell, Camera } from "lucide-react";
 import { clients } from "@/data/clients";
+import { resolveTemplate, resolveVariable, getMockPreviewData } from "@/lib/template-variable-resolver";
+import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
 
 interface PetUpdateModalProps {
   onClose: () => void;
@@ -34,6 +37,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
   });
 
   const [photoAttached, setPhotoAttached] = useState(false);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   // One-tap update types
   const quickUpdates = [
@@ -75,16 +79,23 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
     },
   ];
 
-  const handleQuickUpdate = (type: string, defaultMessage: string) => {
-    const selectedClient = clients.find(
-      (c) => c.id.toString() === formData.clientId,
-    );
-    const selectedPet = selectedClient?.pets.find(
-      (p) => p.id.toString() === formData.petId,
-    );
+  const selectedClient = clients.find(
+    (c) => c.id.toString() === formData.clientId,
+  );
+  const pets = selectedClient?.pets || [];
+  const selectedPet = pets.find((p) => p.id.toString() === formData.petId);
 
+  const facilityName = useMemo(
+    () => resolveVariable("facility_name", getMockPreviewData()) ?? "Facility",
+    [],
+  );
+
+  const handleQuickUpdate = (type: string, defaultMessage: string) => {
     const message = selectedPet
-      ? defaultMessage.replace("{{pet_name}}", selectedPet.name)
+      ? resolveTemplate(defaultMessage, {
+          customer: selectedClient,
+          pets: selectedPet ? [selectedPet] : [],
+        })
       : defaultMessage;
 
     setFormData({
@@ -94,8 +105,15 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
     });
   };
 
+  const setMessage = useCallback(
+    (newValue: string) => {
+      setFormData((prev) => ({ ...prev, message: newValue }));
+    },
+    [],
+  );
+  const handleInsertVariable = useInsertAtCursor(messageRef, formData.message, setMessage);
+
   const handlePhotoAttach = () => {
-    // In a real app, would open camera/file picker
     setPhotoAttached(!photoAttached);
   };
 
@@ -108,11 +126,6 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
     );
     onClose();
   };
-
-  const selectedClient = clients.find(
-    (c) => c.id.toString() === formData.clientId,
-  );
-  const pets = selectedClient?.pets || [];
 
   return (
     <>
@@ -134,7 +147,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
               setFormData({ ...formData, clientId: value, petId: "" })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-required="true">
               <SelectValue placeholder="Select a client" />
             </SelectTrigger>
             <SelectContent>
@@ -157,7 +170,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                 setFormData({ ...formData, petId: value })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger aria-required="true">
                 <SelectValue placeholder="Select a pet" />
               </SelectTrigger>
               <SelectContent>
@@ -206,9 +219,17 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
         {formData.updateType && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="message">Update Message *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="message">Update Message *</Label>
+                <VariableInsertDropdown
+                  context="booking"
+                  onInsert={handleInsertVariable}
+                />
+              </div>
               <Textarea
                 id="message"
+                ref={messageRef}
+                aria-required="true"
                 value={formData.message}
                 onChange={(e) =>
                   setFormData({ ...formData, message: e.target.value })
@@ -251,15 +272,11 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                 <div className="p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
                     <Bell className="h-4 w-4" />
-                    <span className="font-semibold">PawCare Facility</span>
+                    <span className="font-semibold">{facilityName}</span>
                   </div>
                   <div className="text-sm">
                     <strong>
-                      {
-                        pets.find((p) => p.id.toString() === formData.petId)
-                          ?.name
-                      }{" "}
-                      Update:
+                      {selectedPet?.name} Update:
                     </strong>{" "}
                     {formData.message}
                   </div>
