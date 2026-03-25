@@ -43,6 +43,8 @@ export interface FormRecord {
   audience: FormAudience;
   appliesTo?: FormAppliesTo;
   settings?: FormSettings;
+  repeatPerPet?: boolean;
+  requireAuth?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -256,6 +258,7 @@ export interface Form {
   /** Sections (builder); when present, each question should have sectionId */
   sections?: FormSectionDTO[];
   repeatPerPet?: boolean;
+  requireAuth?: boolean;
   createdAt: string;
   updatedAt: string;
   // New model fields (optional for backward compat)
@@ -381,6 +384,8 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
     fieldMapping,
     logicRules: flatLogicRules.length ? flatLogicRules : undefined,
     sections: sections.length ? sections : undefined,
+    repeatPerPet: record.repeatPerPet,
+    requireAuth: record.requireAuth,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     status: record.status,
@@ -543,6 +548,8 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
     audience: input.internal ? "staff" : (input.audience ?? "customer"),
     appliesTo: input.appliesTo,
     settings: input.settings,
+    repeatPerPet: input.repeatPerPet,
+    requireAuth: input.requireAuth,
     createdAt: now,
     updatedAt: now,
   };
@@ -655,6 +662,8 @@ export function updateForm(
     ...(input.audience !== undefined && { audience: input.audience as FormAudience }),
     ...(input.appliesTo !== undefined && { appliesTo: input.appliesTo }),
     ...(input.settings !== undefined && { settings: input.settings }),
+    ...(input.repeatPerPet !== undefined && { repeatPerPet: input.repeatPerPet }),
+    ...(input.requireAuth !== undefined && { requireAuth: input.requireAuth }),
     updatedAt: new Date().toISOString(),
   };
   formRecords[idx] = updatedRecord;

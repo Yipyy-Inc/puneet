@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { FormWizard } from "@/components/forms/FormWizard";
 
 interface PetFormData {
   name: string;
@@ -45,6 +46,8 @@ export default function AddPetPage() {
   const { selectedFacility } = useCustomerFacility();
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showWizard, setShowWizard] = useState(false);
+  const [newPetId, setNewPetId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<PetFormData>({
     name: "",
@@ -104,15 +107,13 @@ export default function AddPetPage() {
         weight: Number(formData.weight),
       };
 
-      const newPet = await createPet(petData);
-      toast.success(
-        newPet?.id
-          ? "Pet added! Complete any required forms from the Forms tab on their profile."
-          : "Pet added successfully!"
-      );
-      if (newPet?.id) {
-        router.push(`/customer/pets/${newPet.id}?tab=forms`);
+      const createdPet = await createPet(petData);
+      if (createdPet?.id) {
+        setNewPetId(createdPet.id);
+        toast.success("Pet added! Let's complete any required forms.");
+        setShowWizard(true);
       } else {
+        toast.success("Pet added successfully!");
         router.push("/customer/pets");
       }
     } catch (error: any) {
@@ -132,9 +133,35 @@ export default function AddPetPage() {
   };
 
   const PetIcon = formData.type === "Cat" ? Cat : Dog;
+  const facilityId = selectedFacility?.id ?? 11;
+  const MOCK_CUSTOMER_ID = 15;
+
+  if (showWizard && newPetId) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => router.push(`/customer/pets/${newPetId}?tab=forms`)}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Required Forms</h1>
+              <p className="text-muted-foreground text-sm">Complete these forms for {formData.name}</p>
+            </div>
+          </div>
+          <FormWizard
+            petId={newPetId}
+            customerId={MOCK_CUSTOMER_ID}
+            facilityId={facilityId}
+            onComplete={() => router.push(`/customer/pets/${newPetId}?tab=forms`)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">

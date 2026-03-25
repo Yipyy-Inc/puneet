@@ -119,12 +119,15 @@ export default function CustomerPetDetailPage({
   }
 
   const facilityId = selectedFacility?.id ?? 11;
-  const facilityForms = useMemo(
-    () =>
-      getFormsByFacility(facilityId).filter(
-        (f) => (f.type === "intake" || f.type === "pet") && !f.internal && f.status !== "archived"
-      ),
+  const allFacilityForms = useMemo(
+    () => getFormsByFacility(facilityId).filter((f) => !f.internal && f.status !== "archived"),
     [facilityId]
+  );
+  const facilityForms = allFacilityForms.filter(
+    (f) => f.type === "intake" || f.type === "pet"
+  );
+  const optionalForms = allFacilityForms.filter(
+    (f) => f.type === "service" || f.type === "owner"
   );
   const petSubmissions = useMemo(
     () => getSubmissionsForPet(facilityId, pet.id),
@@ -136,6 +139,7 @@ export default function CustomerPetDetailPage({
   );
   const requiredForms = facilityForms.filter((f) => !completedFormIds.has(f.id));
   const completedForms = facilityForms.filter((f) => completedFormIds.has(f.id));
+  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
 
   const photos = petPhotos.filter((p) => p.petId === pet.id);
   const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
@@ -1044,54 +1048,128 @@ export default function CustomerPetDetailPage({
                   Forms for {pet.name}
                 </CardTitle>
                 <CardDescription>
-                  Required intake and pet profile forms. Complete required forms and view completed submissions.
+                  Complete required forms, view submissions, and fill optional forms.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Required (incomplete) */}
                 {requiredForms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-destructive mb-2">Required (incomplete)</h4>
+                    <h4 className="text-sm font-medium text-destructive mb-2 flex items-center gap-1">
+                      <AlertTriangle className="h-4 w-4" />
+                      Required ({requiredForms.length} incomplete)
+                    </h4>
                     <ul className="space-y-2">
                       {requiredForms.map((form) => (
                         <li key={form.id}>
                           <Link
                             href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
-                            className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50"
+                            className="flex items-center justify-between rounded-lg border border-destructive/30 p-3 hover:bg-destructive/5 transition-colors"
                           >
-                            <span className="font-medium">{form.name}</span>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <span className="font-medium">{form.name}</span>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
+                                {form.settings?.welcomeMessage && ` · ${form.settings.welcomeMessage.slice(0, 60)}...`}
+                              </p>
+                            </div>
+                            <Badge variant="destructive" className="text-xs shrink-0">Fill now</Badge>
                           </Link>
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
+
+                {/* Completed (view-only with expandable answers) */}
                 {completedForms.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-green-600 mb-2 flex items-center gap-1">
                       <CheckCircle2 className="h-4 w-4" />
-                      Completed (view-only)
+                      Completed ({completedForms.length})
                     </h4>
                     <ul className="space-y-2">
                       {completedForms.map((form) => {
                         const sub = petSubmissions.find((s) => s.formId === form.id);
+                        const isExpanded = expandedSubmission === form.id;
                         return (
                           <li key={form.id}>
-                            <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
-                              <span className="font-medium">{form.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Submitted {sub?.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ""}
-                              </span>
-                            </div>
+                            <button
+                              type="button"
+                              className="w-full text-left rounded-lg border p-3 bg-green-50/50 hover:bg-green-50 transition-colors"
+                              onClick={() => setExpandedSubmission(isExpanded ? null : form.id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{form.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {sub?.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ""}
+                                </span>
+                              </div>
+                            </button>
+                            {isExpanded && sub && (
+                              <div className="mt-1 rounded-lg border bg-muted/30 p-3 space-y-2">
+                                {form.questions
+                                  .filter((q) => sub.answers[q.id] !== undefined && sub.answers[q.id] !== "")
+                                  .map((q) => (
+                                    <div key={q.id} className="text-sm">
+                                      <span className="text-muted-foreground text-xs">{q.label}</span>
+                                      <p className="font-medium">
+                                        {Array.isArray(sub.answers[q.id])
+                                          ? (sub.answers[q.id] as string[]).join(", ")
+                                          : typeof sub.answers[q.id] === "object"
+                                            ? JSON.stringify(sub.answers[q.id])
+                                            : String(sub.answers[q.id])}
+                                      </p>
+                                    </div>
+                                  ))}
+                                {form.questions.filter((q) => sub.answers[q.id] !== undefined && sub.answers[q.id] !== "").length === 0 && (
+                                  <p className="text-xs text-muted-foreground">No answers recorded.</p>
+                                )}
+                              </div>
+                            )}
                           </li>
                         );
                       })}
                     </ul>
                   </div>
                 )}
-                {facilityForms.length === 0 && (
+
+                {/* Optional forms (service / owner forms) */}
+                {optionalForms.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Optional forms</h4>
+                    <ul className="space-y-2">
+                      {optionalForms.map((form) => {
+                        const isDone = completedFormIds.has(form.id);
+                        return (
+                          <li key={form.id}>
+                            {isDone ? (
+                              <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/20">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <span className="text-sm">{form.name}</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">Done</span>
+                              </div>
+                            ) : (
+                              <Link
+                                href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
+                                className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                              >
+                                <span className="text-sm">{form.name}</span>
+                                <Badge variant="secondary" className="text-xs">Optional</Badge>
+                              </Link>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {facilityForms.length === 0 && optionalForms.length === 0 && (
                   <p className="text-sm text-muted-foreground py-4">
-                    No intake or pet forms for this facility.
+                    No forms available for this facility.
                   </p>
                 )}
               </CardContent>

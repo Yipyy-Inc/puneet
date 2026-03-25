@@ -270,6 +270,7 @@ export function FormBuilderEditor({
   );
   const [internal, setInternal] = useState(existing?.internal ?? false);
   const [repeatPerPet, setRepeatPerPet] = useState(existing?.repeatPerPet ?? false);
+  const [requireAuth, setRequireAuth] = useState(existing?.requireAuth ?? false);
   const defaultSectionIdRef = useRef<string>(generateSectionId());
   const defaultSectionId = defaultSectionIdRef.current;
   const [sections, setSections] = useState<FormSectionDTO[]>(() =>
@@ -469,6 +470,7 @@ export function FormBuilderEditor({
         serviceType: serviceType || undefined,
         internal,
         repeatPerPet,
+        requireAuth,
         audience,
         appliesTo: appliesData,
         sections,
@@ -494,6 +496,7 @@ export function FormBuilderEditor({
         fieldMapping,
         logicRules: formLogicRules.length ? formLogicRules : undefined,
         repeatPerPet,
+        requireAuth,
         settings,
       });
       onSave(created);
@@ -507,6 +510,7 @@ export function FormBuilderEditor({
     serviceType,
     internal,
     repeatPerPet,
+    requireAuth,
     audience,
     appliesTo,
     sections,
@@ -537,6 +541,7 @@ export function FormBuilderEditor({
       serviceType: serviceType || undefined,
       internal,
       repeatPerPet,
+      requireAuth,
       audience,
       appliesTo: appliesData,
       sections,
@@ -547,7 +552,7 @@ export function FormBuilderEditor({
       status: "published",
     });
     if (updated) onSave(updated);
-  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, audience, appliesTo, sections, questions, sortedSections, fieldMapping, formLogicRules, welcomeMessage, submitMessage, themeColor, onSave]);
+  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, requireAuth, audience, appliesTo, sections, questions, sortedSections, fieldMapping, formLogicRules, welcomeMessage, submitMessage, themeColor, onSave]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -734,6 +739,14 @@ export function FormBuilderEditor({
                   onCheckedChange={setRepeatPerPet}
                 />
                 <Label htmlFor="repeatPerPet">Repeat per pet</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="requireAuth"
+                  checked={requireAuth}
+                  onCheckedChange={setRequireAuth}
+                />
+                <Label htmlFor="requireAuth">Require verification</Label>
               </div>
             </div>
           </CardContent>

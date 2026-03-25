@@ -6,19 +6,31 @@ import { getFormBySlug, shouldShowQuestion, evaluateLogicRules, type Form, type 
 import { createSubmission, submissionHasFiles } from "@/data/form-submissions";
 import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
 import { triggerFormEvent } from "@/lib/form-automation-events";
+import { clients } from "@/data/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Mail, KeyRound, Shield, Edit2, Dog, Cat } from "lucide-react";
 
 const DRAFT_PREFIX = "formDraft_";
+const AUTH_PREFIX = "formAuth_";
 
 function draftKey(formId: string, petId?: number, customerId?: number): string {
   if (petId != null) return `${DRAFT_PREFIX}${formId}_pet_${petId}`;
   if (customerId != null) return `${DRAFT_PREFIX}${formId}_cust_${customerId}`;
   return `${DRAFT_PREFIX}${formId}_anon`;
 }
+
+function authKey(formId: string): string {
+  return `${AUTH_PREFIX}${formId}`;
+}
+
+type Pet = {
+  id: number;
+  name: string;
+  type: string;
+};
 
 export default function PublicFormPage() {
   const params = useParams();
@@ -34,6 +46,40 @@ export default function PublicFormPage() {
   const draftLoadedRef = useRef(false);
   const formStartedEmittedRef = useRef(false);
 
+  // Feature 1: Authentication Gate state
+  const [authVerified, setAuthVerified] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authCodeSent, setAuthCodeSent] = useState(false);
+  const [authCode, setAuthCode] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Feature 2: Post-Submission Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [previousSubmissionId, setPreviousSubmissionId] = useState<string | null>(null);
+  const [lastSubmittedAnswers, setLastSubmittedAnswers] = useState<Record<string, unknown> | null>(null);
+
+  // Feature 3: Multi-Pet Support state
+  const [selectedPetIds, setSelectedPetIds] = useState<number[]>([]);
+  const [currentPetIndex, setCurrentPetIndex] = useState(0);
+  const [multiPetSubmitting, setMultiPetSubmitting] = useState(false);
+  const [multiPetSubmittedCount, setMultiPetSubmittedCount] = useState(0);
+
+  // Check auth from sessionStorage on mount
+  useEffect(() => {
+    if (!form || typeof window === "undefined") return;
+    const requireAuth = (form as Form & { requireAuth?: boolean }).requireAuth ?? false;
+    if (!requireAuth) {
+      setAuthVerified(true);
+      return;
+    }
+    try {
+      const stored = sessionStorage.getItem(authKey(form.id));
+      if (stored === "verified") setAuthVerified(true);
+    } catch {
+      // ignore
+    }
+  }, [form?.id]);
+
   const context = {
     petType: searchParams?.get("petType") ?? undefined,
     serviceType: searchParams?.get("service") ?? undefined,
@@ -43,6 +89,19 @@ export default function PublicFormPage() {
   const linkCustomerId = searchParams?.get("customerId");
   const petIds = linkPetId ? [parseInt(linkPetId, 10)].filter((n) => !Number.isNaN(n)) : undefined;
   const customerId = linkCustomerId ? parseInt(linkCustomerId, 10) : undefined;
+
+  // Feature 3: Look up customer pets for multi-pet support
+  const repeatPerPet = form?.repeatPerPet ?? false;
+  const customerRecord = customerId ? clients.find((c) => c.id === customerId) : undefined;
+  const customerPets: Pet[] = customerRecord?.pets?.map((p) => ({ id: p.id, name: p.name, type: p.type })) ?? [];
+  const isMultiPet = repeatPerPet && !!customerId && customerPets.length > 0;
+
+  // Auto-select single pet
+  useEffect(() => {
+    if (isMultiPet && customerPets.length === 1 && selectedPetIds.length === 0) {
+      setSelectedPetIds([customerPets[0].id]);
+    }
+  }, [isMultiPet, customerPets.length]);
 
   // Evaluate logic rules to determine hide/require/end effects
   const logicEffects = form?.logicRules?.length
@@ -123,39 +182,124 @@ export default function PublicFormPage() {
         return;
       }
       setError(null);
-      const submission = createSubmission({
-        formId: form.id,
-        facilityId: form.facilityId,
-        context: Object.keys(context).length ? context : undefined,
-        answers,
-        ...(customerId && { customerId }),
-        ...(petIds?.length && { petIds }),
-      });
-      triggerFormEvent("form_submitted", {
-        facilityId: form.facilityId,
-        formId: form.id,
-        formName: form.name,
-        submissionId: submission.id,
-        customerId,
-        petIds,
-      });
-      notifyStaffOnFormSubmission({
-        facilityId: form.facilityId,
-        submissionId: submission.id,
-        formId: form.id,
-        formName: form.name,
-        hasFiles: submissionHasFiles(submission.id),
-        hasRedFlag: false,
-      });
+
+      // Determine event name (append "(revised)" if editing a previous submission)
+      const eventSuffix = isEditing ? " (revised)" : "";
+      const formEventName = form.name + eventSuffix;
+
+      // Feature 3: Multi-pet — create one submission per selected pet
+      if (isMultiPet && selectedPetIds.length > 0) {
+        setMultiPetSubmitting(true);
+        let lastSubId = "";
+        selectedPetIds.forEach((pid) => {
+          const submission = createSubmission({
+            formId: form.id,
+            facilityId: form.facilityId,
+            context: Object.keys(context).length ? context : undefined,
+            answers,
+            ...(customerId && { customerId }),
+            petIds: [pid],
+          });
+          lastSubId = submission.id;
+          triggerFormEvent("form_submitted", {
+            facilityId: form.facilityId,
+            formId: form.id,
+            formName: formEventName,
+            submissionId: submission.id,
+            customerId,
+            petIds: [pid],
+          });
+          notifyStaffOnFormSubmission({
+            facilityId: form.facilityId,
+            submissionId: submission.id,
+            formId: form.id,
+            formName: formEventName,
+            hasFiles: submissionHasFiles(submission.id),
+            hasRedFlag: false,
+          });
+        });
+        setMultiPetSubmittedCount(selectedPetIds.length);
+        setPreviousSubmissionId(lastSubId);
+        setLastSubmittedAnswers({ ...answers });
+        setMultiPetSubmitting(false);
+      } else {
+        // Single submission flow
+        const submission = createSubmission({
+          formId: form.id,
+          facilityId: form.facilityId,
+          context: Object.keys(context).length ? context : undefined,
+          answers,
+          ...(customerId && { customerId }),
+          ...(petIds?.length && { petIds }),
+        });
+        triggerFormEvent("form_submitted", {
+          facilityId: form.facilityId,
+          formId: form.id,
+          formName: formEventName,
+          submissionId: submission.id,
+          customerId,
+          petIds,
+        });
+        notifyStaffOnFormSubmission({
+          facilityId: form.facilityId,
+          submissionId: submission.id,
+          formId: form.id,
+          formName: formEventName,
+          hasFiles: submissionHasFiles(submission.id),
+          hasRedFlag: false,
+        });
+        setPreviousSubmissionId(submission.id);
+        setLastSubmittedAnswers({ ...answers });
+      }
+
       try {
         if (typeof window !== "undefined") {
           localStorage.removeItem(draftKey(form.id, petIds?.[0], customerId));
         }
       } catch {}
+      setIsEditing(false);
       setSubmitted(true);
     },
-    [form, visibleQuestions, answers, context, customerId, petIds]
+    [form, visibleQuestions, answers, context, customerId, petIds, isEditing, isMultiPet, selectedPetIds]
   );
+
+  // Feature 2: Handle "Review & Edit" — go back to form with pre-filled answers
+  const handleReviewEdit = useCallback(() => {
+    if (lastSubmittedAnswers) {
+      setAnswers({ ...lastSubmittedAnswers });
+    }
+    setIsEditing(true);
+    setSubmitted(false);
+    setError(null);
+  }, [lastSubmittedAnswers]);
+
+  // Feature 1: Auth handlers
+  const handleSendCode = useCallback(() => {
+    if (!authEmail || !authEmail.includes("@")) {
+      setAuthError("Please enter a valid email address.");
+      return;
+    }
+    setAuthError(null);
+    // Mock: just mark code as sent
+    setAuthCodeSent(true);
+  }, [authEmail]);
+
+  const handleVerifyCode = useCallback(() => {
+    if (authCode.length !== 6 || !/^\d{6}$/.test(authCode)) {
+      setAuthError("Please enter a valid 6-digit code.");
+      return;
+    }
+    setAuthError(null);
+    setAuthVerified(true);
+    // Persist in sessionStorage
+    if (form && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(authKey(form.id), "verified");
+      } catch {
+        // ignore
+      }
+    }
+  }, [authCode, form?.id]);
 
   if (!slug) {
     return (
@@ -186,6 +330,94 @@ export default function PublicFormPage() {
     );
   }
 
+  // Feature 1: Authentication Gate
+  const requireAuth = (form as Form & { requireAuth?: boolean }).requireAuth ?? false;
+  if (requireAuth && !authVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-blue-600" />
+            </div>
+            <CardTitle className="text-xl">{form.name}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Please verify your identity to access this form
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {authError && (
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+                {authError}
+              </div>
+            )}
+            {!authCodeSent ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="auth-email">Email address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="auth-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      className="pl-10 min-h-12 text-base"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSendCode}
+                  className="w-full min-h-12 text-base"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send verification code
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground text-center">
+                  A 6-digit code has been sent to <span className="font-medium text-foreground">{authEmail}</span>
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="auth-code">Verification code</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="auth-code"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={authCode}
+                      onChange={(e) => setAuthCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="pl-10 min-h-12 text-base tracking-widest text-center font-mono"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleVerifyCode}
+                  className="w-full min-h-12 text-base"
+                >
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Verify code
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthCodeSent(false); setAuthCode(""); setAuthError(null); }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Use a different email
+                </button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -196,6 +428,25 @@ export default function PublicFormPage() {
             <p className="text-muted-foreground">
               {form?.settings?.submitMessage || "Your response has been submitted successfully."}
             </p>
+            {isMultiPet && multiPetSubmittedCount > 1 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {multiPetSubmittedCount} submissions created (one per selected pet).
+              </p>
+            )}
+            {/* Feature 2: Review & Edit button */}
+            <Button
+              variant="outline"
+              onClick={handleReviewEdit}
+              className="mt-4 min-h-12 text-base"
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
+              Review &amp; Edit
+            </Button>
+            {previousSubmissionId && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Submission ID: {previousSubmissionId}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -207,6 +458,23 @@ export default function PublicFormPage() {
   const answered = visibleQuestions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== "").length;
   const progressPct = total > 0 ? Math.round((answered / total) * 100) : 0;
 
+  // Feature 3: Determine the active pet for the header badge (multi-pet mode)
+  const activePet = isMultiPet && selectedPetIds.length > 0
+    ? customerPets.find((p) => p.id === selectedPetIds[currentPetIndex]) ?? null
+    : null;
+
+  // Feature 3: Pet toggle helper
+  const togglePet = (petId: number) => {
+    setSelectedPetIds((prev) =>
+      prev.includes(petId)
+        ? prev.filter((id) => id !== petId)
+        : [...prev, petId]
+    );
+  };
+
+  // Feature 3: Whether to show pet selector (multi pet with >1 pet available and no link-specific pet)
+  const showPetSelector = isMultiPet && customerPets.length > 1 && !linkPetId;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-lg">
@@ -215,6 +483,31 @@ export default function PublicFormPage() {
           {form.settings?.welcomeMessage && (
             <p className="text-sm text-muted-foreground mt-1">{form.settings.welcomeMessage}</p>
           )}
+
+          {/* Feature 2: Editing banner */}
+          {isEditing && (
+            <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-center gap-2">
+              <Edit2 className="h-4 w-4 text-amber-700 shrink-0" />
+              <p className="text-sm font-medium text-amber-800">
+                You are editing your previous submission
+              </p>
+            </div>
+          )}
+
+          {/* Feature 3: Active pet badge */}
+          {activePet && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1.5">
+              {activePet.type.toLowerCase() === "cat" ? (
+                <Cat className="h-4 w-4 text-blue-600" />
+              ) : (
+                <Dog className="h-4 w-4 text-blue-600" />
+              )}
+              <span className="text-sm font-medium text-blue-800">
+                Answering for {activePet.name}
+              </span>
+            </div>
+          )}
+
           {/* Progress indicator: mobile-first */}
           {total > 0 && (
             <div className="mt-4 space-y-1.5">
@@ -243,17 +536,69 @@ export default function PublicFormPage() {
           <p className="text-xs text-muted-foreground mb-4">
             Your progress is saved automatically. You can leave and come back anytime.
           </p>
-          {form.repeatPerPet && (
+          {form.repeatPerPet && !isMultiPet && (
             <p className="text-xs text-muted-foreground mb-4">
               This form can be completed once per pet. Use the link from your pet&apos;s Forms tab to fill for a specific pet.
             </p>
           )}
+
+          {/* Feature 3: Multi-pet selector */}
+          {showPetSelector && (
+            <div className="mb-6">
+              <Label className="text-sm font-medium mb-2 block">
+                Select which pets this form applies to
+              </Label>
+              <div className="space-y-2">
+                {customerPets.map((pet) => {
+                  const isSelected = selectedPetIds.includes(pet.id);
+                  return (
+                    <label
+                      key={pet.id}
+                      className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer touch-manipulation transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-input hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5 shrink-0"
+                        checked={isSelected}
+                        onChange={() => togglePet(pet.id)}
+                      />
+                      {pet.type.toLowerCase() === "cat" ? (
+                        <Cat className="h-5 w-5 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Dog className="h-5 w-5 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="text-base font-medium">{pet.name}</span>
+                      <span className="text-xs text-muted-foreground">{pet.type}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {isMultiPet && selectedPetIds.length === 0 && (
+                <p className="text-xs text-destructive mt-2">
+                  Please select at least one pet.
+                </p>
+              )}
+            </div>
+          )}
+
           {logicEffects?.endFormMessage ? (
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-center">
               <p className="text-sm font-medium text-amber-800">{logicEffects.endFormMessage}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={(e) => {
+              // Feature 3: Block submission if multi-pet and none selected
+              if (isMultiPet && selectedPetIds.length === 0) {
+                e.preventDefault();
+                setError("Please select at least one pet before submitting.");
+                return;
+              }
+              handleSubmit(e);
+            }} className="space-y-6">
               {error && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
                   <p className="font-medium">Please complete the required fields</p>
@@ -271,8 +616,12 @@ export default function PublicFormPage() {
                   onChange={(v) => setAnswer(q.id, v)}
                 />
               ))}
-              <Button type="submit" className="w-full min-h-12 text-base touch-manipulation">
-                Submit
+              <Button
+                type="submit"
+                className="w-full min-h-12 text-base touch-manipulation"
+                disabled={multiPetSubmitting}
+              >
+                {isEditing ? "Resubmit" : isMultiPet && selectedPetIds.length > 1 ? `Submit for ${selectedPetIds.length} pets` : "Submit"}
               </Button>
             </form>
           )}
