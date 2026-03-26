@@ -23,7 +23,7 @@ import { CreateFormModal } from "@/components/forms/CreateFormModal";
 import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { getFormsByFacility, duplicateForm, archiveForm, deleteForm, type Form, type FormType } from "@/data/forms";
 import { triggerFormEvent } from "@/lib/form-automation-events";
-import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine, Archive, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Lock, Pencil, Copy, ExternalLink, Share2, Code, PenLine, Archive, Trash2, MoreVertical, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 const FORM_CATEGORIES: { value: FormType; label: string }[] = [
@@ -65,6 +65,12 @@ export default function IntakeFormsPage() {
           </Button>
           <Button variant="outline" asChild>
             <Link href="/facility/dashboard/forms/templates">From template</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/facility/dashboard/forms/audit">
+              <Shield className="mr-2 h-4 w-4" />
+              Audit Trail
+            </Link>
           </Button>
         </div>
         <CreateFormModal
