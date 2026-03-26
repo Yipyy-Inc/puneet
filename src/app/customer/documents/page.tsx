@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clientDocuments } from "@/data/documents";
+import { getFormsByFacility } from "@/data/forms";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +18,8 @@ import {
   Download,
   Dog,
   AlertCircle,
+  ClipboardList,
+  ExternalLink,
 } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
@@ -24,7 +28,7 @@ const MOCK_CUSTOMER_ID = 15;
 export default function CustomerDocumentsPage() {
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"agreements" | "documents">("agreements");
+  const [activeTab, setActiveTab] = useState<"agreements" | "documents" | "forms">("agreements");
 
   const customerDocs = useMemo(() => {
     let filtered = clientDocuments.filter((d) => d.clientId === MOCK_CUSTOMER_ID);
@@ -108,6 +112,7 @@ export default function CustomerDocumentsPage() {
             <TabsList>
               <TabsTrigger value="agreements">Agreements & Waivers</TabsTrigger>
               <TabsTrigger value="documents">Documents Vault</TabsTrigger>
+              <TabsTrigger value="forms">Forms</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -191,6 +196,63 @@ export default function CustomerDocumentsPage() {
                 Facilities can require certain agreements to be signed before new bookings are
                 approved. If you’re blocked from booking, check here to see if any agreements are
                 missing or contact the facility for help.
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Forms */}
+          <TabsContent value="forms" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Available Forms
+                </CardTitle>
+                <CardDescription>
+                  Fill out required and optional forms for your facility. Your progress is saved automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(() => {
+                  const facilityId = selectedFacility?.id ?? 11;
+                  const forms = getFormsByFacility(facilityId).filter(
+                    (f) => f.status === "published" && f.audience !== "staff"
+                  );
+                  if (forms.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center text-center py-10">
+                        <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+                        <p className="font-semibold">No forms available</p>
+                        <p className="text-sm text-muted-foreground">
+                          Your facility hasn&apos;t published any forms yet. Check back later.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return forms.map((form) => (
+                    <div
+                      key={form.id}
+                      className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="font-medium flex items-center gap-2">
+                          <ClipboardList className="h-4 w-4 text-primary" />
+                          {form.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
+                          {form.type && <> · <span className="capitalize">{form.type}</span></>}
+                        </p>
+                      </div>
+                      <Button size="sm" asChild>
+                        <Link href={`/forms/${form.slug}`}>
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Fill out
+                        </Link>
+                      </Button>
+                    </div>
+                  ));
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
