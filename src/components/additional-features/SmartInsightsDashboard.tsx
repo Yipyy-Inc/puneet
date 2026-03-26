@@ -94,7 +94,7 @@ export function SmartInsightsDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-bold">
-            <Lightbulb className="h-6 w-6 text-yellow-500" />
+            <Lightbulb className="size-6 text-yellow-500" />
             Smart Insights
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -201,7 +201,7 @@ export function SmartInsightsDashboard() {
                   </Button>
                   <Button size="sm">
                     Take Action
-                    <ExternalLink className="ml-1 h-3 w-3" />
+                    <ExternalLink className="ml-1 size-3" />
                   </Button>
                 </div>
               </div>

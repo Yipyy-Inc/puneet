@@ -703,7 +703,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     if (serviceType === "daycare") {
       return (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-          <Sun className="mr-1 h-3 w-3" />
+          <Sun className="mr-1 size-3" />
           Daycare
         </Badge>
       );
@@ -711,7 +711,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     if (serviceType === "boarding") {
       return (
         <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-          <Bed className="mr-1 h-3 w-3" />
+          <Bed className="mr-1 size-3" />
           Boarding
         </Badge>
       );
@@ -719,7 +719,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     // Custom service badge
     return (
       <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-        <PawPrint className="mr-1 h-3 w-3" />
+        <PawPrint className="mr-1 size-3" />
         {serviceType.charAt(0).toUpperCase() +
           serviceType.slice(1).replace(/-/g, " ")}
       </Badge>
@@ -736,7 +736,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
         {/* Compact header: title + dropdown filters */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
-            <PawPrint className="text-primary h-5 w-5" />
+            <PawPrint className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Daycare & Boarding</h3>
           </div>
 
@@ -831,7 +831,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search arrivals..."
                     value={scheduledQuery}
@@ -879,13 +879,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -898,8 +898,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
-                                <PawPrint className="h-5 w-5 text-orange-600" />
+                              <div className="flex size-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
+                                <PawPrint className="size-5 text-orange-600" />
                               </div>
                             </Link>
                           )}
@@ -952,7 +952,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             }}
                             className="gap-1 bg-green-600 hover:bg-green-700"
                           >
-                            <LogIn className="h-3 w-3" />
+                            <LogIn className="size-3" />
                             Check In
                           </Button>
                         </div>
@@ -994,7 +994,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search checked-in pets..."
                     value={checkedInQuery}
@@ -1042,13 +1042,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -1061,8 +1061,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-                                <PawPrint className="text-primary h-5 w-5" />
+                              <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                                <PawPrint className="text-primary size-5" />
                               </div>
                             </Link>
                           )}
@@ -1090,7 +1090,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               {item.ownerName} • {item.petBreed}
                             </p>
                             <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               <span>In: {formatTime(item.checkInTime)}</span>
                               <span>•</span>
                               <span>
@@ -1127,7 +1127,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             }}
                             className="gap-1"
                           >
-                            <LogOut className="h-3 w-3" />
+                            <LogOut className="size-3" />
                             Check Out
                           </Button>
                         </div>
@@ -1169,7 +1169,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search checkouts..."
                     value={checkedOutQuery}
@@ -1204,13 +1204,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -1223,8 +1223,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
-                                <PawPrint className="h-5 w-5 text-gray-600" />
+                              <div className="flex size-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
+                                <PawPrint className="size-5 text-gray-600" />
                               </div>
                             </Link>
                           )}
@@ -1246,7 +1246,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               {item.ownerName} • {item.petBreed}
                             </p>
                             <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               <span>
                                 Out:{" "}
                                 {item.checkOutTime
@@ -1272,7 +1272,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
           type="details"
           title="Check In"
           description="Confirm check-in for this pet"
-          icon={<LogIn className="h-5 w-5 text-green-600" />}
+          icon={<LogIn className="size-5 text-green-600" />}
           size="xl"
         >
           {selectedItem && (
@@ -1292,13 +1292,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 overflow-hidden rounded-full">
+                            <div className="size-12 overflow-hidden rounded-full">
                               <Image
                                 src={getPetImage(selectedItem.petId)!}
                                 alt={selectedItem.petName}
                                 width={48}
                                 height={48}
-                                className="h-full w-full object-cover"
+                                className="size-full object-cover"
                               />
                             </div>
                           </Link>
@@ -1310,8 +1310,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                              <PawPrint className="text-primary h-6 w-6" />
+                            <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-6" />
                             </div>
                           </Link>
                         );
@@ -1356,13 +1356,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       const client = findClientForPet(selectedItem.petId);
                       return client ? (
                         <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
-                          <div className="h-12 w-12 overflow-hidden rounded-full">
+                          <div className="size-12 overflow-hidden rounded-full">
                             <Image
                               src="/people/person-2.jpg"
                               alt={client.name}
                               width={48}
                               height={48}
-                              className="h-full w-full object-cover"
+                              className="size-full object-cover"
                             />
                           </div>
                           <div>
@@ -1370,15 +1370,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               {client.name}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3" />
+                              <Mail className="size-3" />
                               {client.email}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3" />
+                              <Phone className="size-3" />
                               {client.phone}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <MapPin className="h-3 w-3" />
+                              <MapPin className="size-3" />
                               {client.address
                                 ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
                                 : "N/A"}
@@ -1451,7 +1451,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
           type="details"
           title="Check Out"
           description="Confirm check-out for this pet"
-          icon={<LogOut className="h-5 w-5 text-orange-600" />}
+          icon={<LogOut className="size-5 text-orange-600" />}
           size="xl"
         >
           {selectedItem && (
@@ -1471,13 +1471,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 overflow-hidden rounded-full">
+                            <div className="size-12 overflow-hidden rounded-full">
                               <Image
                                 src={getPetImage(selectedItem.petId)!}
                                 alt={selectedItem.petName}
                                 width={48}
                                 height={48}
-                                className="h-full w-full object-cover"
+                                className="size-full object-cover"
                               />
                             </div>
                           </Link>
@@ -1489,8 +1489,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                              <PawPrint className="text-primary h-6 w-6" />
+                            <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-6" />
                             </div>
                           </Link>
                         );
@@ -1535,13 +1535,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       const client = findClientForPet(selectedItem.petId);
                       return client ? (
                         <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
-                          <div className="h-12 w-12 overflow-hidden rounded-full">
+                          <div className="size-12 overflow-hidden rounded-full">
                             <Image
                               src="/people/person-2.jpg"
                               alt={client.name}
                               width={48}
                               height={48}
-                              className="h-full w-full object-cover"
+                              className="size-full object-cover"
                             />
                           </div>
                           <div>
@@ -1549,15 +1549,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               {client.name}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3" />
+                              <Mail className="size-3" />
                               {client.email}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3" />
+                              <Phone className="size-3" />
                               {client.phone}
                             </p>
                             <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                              <MapPin className="h-3 w-3" />
+                              <MapPin className="size-3" />
                               {client.address
                                 ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
                                 : "N/A"}
@@ -1672,7 +1672,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
           type="details"
           title="Pet Details"
           description="View details for this pet"
-          icon={<CheckCircle className="h-5 w-5 text-gray-600" />}
+          icon={<CheckCircle className="size-5 text-gray-600" />}
           size="xl"
         >
           {selectedItem && (
@@ -1696,13 +1696,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     : "#"
                                 }
                               >
-                                <div className="h-12 w-12 overflow-hidden rounded-full">
+                                <div className="size-12 overflow-hidden rounded-full">
                                   <Image
                                     src={getPetImage(selectedItem.petId)!}
                                     alt={selectedItem.petName}
                                     width={48}
                                     height={48}
-                                    className="h-full w-full object-cover"
+                                    className="size-full object-cover"
                                   />
                                 </div>
                               </Link>
@@ -1714,8 +1714,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     : "#"
                                 }
                               >
-                                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                                  <PawPrint className="text-primary h-6 w-6" />
+                                <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                                  <PawPrint className="text-primary size-6" />
                                 </div>
                               </Link>
                             );
@@ -1764,13 +1764,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           const client = findClientForPet(selectedItem.petId);
                           return client ? (
                             <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
-                              <div className="h-12 w-12 overflow-hidden rounded-full">
+                              <div className="size-12 overflow-hidden rounded-full">
                                 <Image
                                   src="/people/person-2.jpg"
                                   alt={client.name}
                                   width={48}
                                   height={48}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                               <div>
@@ -1778,15 +1778,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                   {client.name}
                                 </p>
                                 <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                                  <Mail className="h-3 w-3" />
+                                  <Mail className="size-3" />
                                   {client.email}
                                 </p>
                                 <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                                  <Phone className="h-3 w-3" />
+                                  <Phone className="size-3" />
                                   {client.phone}
                                 </p>
                                 <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                                  <MapPin className="h-3 w-3" />
+                                  <MapPin className="size-3" />
                                   {client.address
                                     ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
                                     : "N/A"}
@@ -1871,13 +1871,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               : "#"
                           }
                         >
-                          <div className="h-12 w-12 overflow-hidden rounded-full">
+                          <div className="size-12 overflow-hidden rounded-full">
                             <Image
                               src={getPetImage(selectedItem.petId)!}
                               alt={selectedItem.petName}
                               width={48}
                               height={48}
-                              className="h-full w-full object-cover"
+                              className="size-full object-cover"
                             />
                           </div>
                         </Link>
@@ -1889,8 +1889,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               : "#"
                           }
                         >
-                          <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                            <PawPrint className="text-primary h-6 w-6" />
+                          <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                            <PawPrint className="text-primary size-6" />
                           </div>
                         </Link>
                       );

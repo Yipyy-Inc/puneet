@@ -202,7 +202,7 @@ export default function AddPetPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-6">
-                <div className="bg-muted relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg">
+                <div className="bg-muted relative flex size-32 items-center justify-center overflow-hidden rounded-lg">
                   {formData.imageUrl ? (
                     <Image
                       src={formData.imageUrl}

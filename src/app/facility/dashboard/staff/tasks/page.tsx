@@ -226,7 +226,7 @@ export default function StaffTasksPage() {
           <span className="font-medium">{task.templateName}</span>
           {task.petName && (
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
-              <PawPrint className="h-3 w-3" />
+              <PawPrint className="size-3" />
               {task.petName}
             </span>
           )}
@@ -837,7 +837,7 @@ export default function StaffTasksPage() {
               <div className="space-y-2">
                 <Label>Photo Proof (Required)</Label>
                 <div className="rounded-lg border-2 border-dashed p-8 text-center">
-                  <Camera className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                  <Camera className="text-muted-foreground mx-auto mb-2 size-8" />
                   <p className="text-muted-foreground text-sm">
                     Click to upload photo proof
                   </p>

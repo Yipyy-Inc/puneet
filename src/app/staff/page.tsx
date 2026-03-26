@@ -387,7 +387,7 @@ export default function StaffSchedulePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-yellow-500" />
+              <AlertCircle className="mx-auto mb-4 size-12 text-yellow-500" />
               <h2 className="mb-2 text-xl font-semibold">
                 No Staff Member Found
               </h2>
@@ -449,7 +449,7 @@ export default function StaffSchedulePage() {
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Info className="h-5 w-5 text-blue-600" />
+              <Info className="size-5 text-blue-600" />
               New Schedule Updates
             </CardTitle>
           </CardHeader>
@@ -493,7 +493,7 @@ export default function StaffSchedulePage() {
         <Card className="border-green-200 bg-green-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <ArrowRightLeft className="h-5 w-5 text-green-600" />
+              <ArrowRightLeft className="size-5 text-green-600" />
               Available Swap Requests
             </CardTitle>
           </CardHeader>
@@ -648,7 +648,7 @@ export default function StaffSchedulePage() {
                             </div>
                             {shift.location && (
                               <div className="text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
+                                <MapPin className="size-3" />
                                 {shift.location}
                               </div>
                             )}
@@ -672,7 +672,7 @@ export default function StaffSchedulePage() {
             <CardContent>
               {mySchedules.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No upcoming shifts scheduled</p>
                 </div>
               ) : (
@@ -707,7 +707,7 @@ export default function StaffSchedulePage() {
                             <span className="font-medium">{shift.role}</span>
                             {shift.location && (
                               <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
+                                <MapPin className="size-3" />
                                 <span>{shift.location}</span>
                               </div>
                             )}
@@ -725,7 +725,7 @@ export default function StaffSchedulePage() {
                                   <Checkbox
                                     checked={task.status === "completed"}
                                     disabled
-                                    className="h-3 w-3"
+                                    className="size-3"
                                   />
                                   <span
                                     className={
@@ -781,7 +781,7 @@ export default function StaffSchedulePage() {
             <CardContent>
               {todayShifts.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No shifts scheduled for today</p>
                 </div>
               ) : (
@@ -806,7 +806,7 @@ export default function StaffSchedulePage() {
                                     variant="outline"
                                     className="flex items-center gap-1"
                                   >
-                                    <MapPin className="h-3 w-3" />
+                                    <MapPin className="size-3" />
                                     {shift.location}
                                   </Badge>
                                 )}

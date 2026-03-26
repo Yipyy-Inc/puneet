@@ -276,7 +276,7 @@ export function TimeRangeSlider({
             }}
           />
           <div
-            className="border-primary bg-background absolute h-5 w-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
+            className="border-primary bg-background absolute size-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
             style={{
               left: `${startPercent}%`,
               top: "50%",
@@ -288,7 +288,7 @@ export function TimeRangeSlider({
             }}
           />
           <div
-            className="border-primary bg-background absolute h-5 w-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
+            className="border-primary bg-background absolute size-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
             style={{
               left: `${endPercent}%`,
               top: "50%",

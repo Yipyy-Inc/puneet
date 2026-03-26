@@ -264,8 +264,8 @@ export function ExportReportModal({
       <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-6 w-6 text-green-600" />
+            <div className="flex size-10 items-center justify-center rounded-full bg-green-100">
+              <Check className="size-6 text-green-600" />
             </div>
             Export Complete
           </DialogTitle>
@@ -308,7 +308,7 @@ export function ExportReportModal({
                 onClick={() => setFormat(fmt)}
               >
                 <CardContent className="pt-6 text-center">
-                  <FileText className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                  <FileText className="text-muted-foreground mx-auto mb-2 size-8" />
                   <div className="font-medium capitalize">
                     {fmt.toUpperCase()}
                   </div>

@@ -75,7 +75,7 @@ export function CustomerAcquisitionMetrics() {
                     {metrics.totalNewCustomers.toLocaleString()}
                   </h3>
                   <span className="text-success inline-flex items-center text-xs font-medium">
-                    <TrendingUp className="mr-0.5 h-3 w-3" />+
+                    <TrendingUp className="mr-0.5 size-3" />+
                     {metrics.growthRate}%
                   </span>
                 </div>
@@ -90,7 +90,7 @@ export function CustomerAcquisitionMetrics() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Users className="h-5 w-5 text-white" />
+                <Users className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -119,7 +119,7 @@ export function CustomerAcquisitionMetrics() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <DollarSign className="h-5 w-5 text-white" />
+                <DollarSign className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -148,7 +148,7 @@ export function CustomerAcquisitionMetrics() {
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <TrendingUp className="h-5 w-5 text-white" />
+                <TrendingUp className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -177,7 +177,7 @@ export function CustomerAcquisitionMetrics() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <Award className="h-5 w-5 text-white" />
+                <Award className="size-5 text-white" />
               </div>
             </div>
           </CardContent>

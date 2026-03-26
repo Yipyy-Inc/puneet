@@ -61,7 +61,7 @@ export function TagAssignmentPopover({
         <div className="border-b p-2">
           <div className="relative">
             <Search
-              className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2"
+              className="text-muted-foreground absolute top-1/2 left-2 size-3.5 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
@@ -101,10 +101,10 @@ export function TagAssignmentPopover({
                 )}
               >
                 <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: tag.color, color: textColor }}
                 >
-                  <Icon className="h-3 w-3" />
+                  <Icon className="size-3" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -147,7 +147,7 @@ export function TagAssignmentPopover({
               setOpen(false);
             }}
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="size-3" />
             Create new tag
           </a>
         </div>

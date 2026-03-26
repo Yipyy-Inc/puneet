@@ -143,7 +143,7 @@ export function MessageAttachmentUpload({
                   className="size-4"
                   onClick={() => handleRemoveAttachment(att.id)}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="size-3" />
                 </Button>
               </div>
             ))}

@@ -198,7 +198,7 @@ export function BoardingRequestDialog({
                   </div>
                   <div className="rounded-md border p-3">
                     <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <Calendar className="h-3.5 w-3.5" /> Check-in / out
+                      <Calendar className="size-3.5" /> Check-in / out
                     </div>
                     <div className="font-medium">
                       {request.checkInDate} → {request.checkOutDate}

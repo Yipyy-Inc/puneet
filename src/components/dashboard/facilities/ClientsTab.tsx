@@ -30,7 +30,7 @@ export function ClientsTab({ clients }: ClientsTabProps) {
     <Card className="shadow-card border-0">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <UserCheck className="h-5 w-5" />
+          <UserCheck className="size-5" />
           Clients
           <Badge variant="secondary" className="ml-2">
             {clients.length}
@@ -53,7 +53,7 @@ export function ClientsTab({ clients }: ClientsTabProps) {
                 <TableRow key={index}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold">
+                      <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full text-xs font-semibold">
                         {client.person.name
                           .split(" ")
                           .map((n) => n[0])
@@ -65,14 +65,14 @@ export function ClientsTab({ clients }: ClientsTabProps) {
                   </TableCell>
                   <TableCell>
                     <span className="text-muted-foreground flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5" />
+                      <Mail className="size-3.5" />
                       {client.person.email}
                     </span>
                   </TableCell>
                   <TableCell>
                     {client.person.phone ? (
                       <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5" />
+                        <Phone className="size-3.5" />
                         {client.person.phone}
                       </span>
                     ) : (

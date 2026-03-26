@@ -135,7 +135,7 @@ function TagInput({
                 onClick={() => onChange(value.filter((x) => x !== t))}
                 aria-label={`Remove ${t}`}
               >
-                <X className="h-3 w-3" />
+                <X className="size-3" />
               </button>
             </Badge>
           ))}

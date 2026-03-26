@@ -456,7 +456,7 @@ export function InvoicesTab() {
       {customerInvoices.length === 0 ? (
         <Card>
           <CardContent className="space-y-3 py-12 text-center">
-            <FileText className="text-muted-foreground mx-auto h-12 w-12 opacity-50" />
+            <FileText className="text-muted-foreground mx-auto size-12 opacity-50" />
             <p className="font-semibold">No invoices found</p>
             <p className="text-muted-foreground text-sm">
               Your invoices and receipts will appear here
@@ -480,12 +480,12 @@ export function InvoicesTab() {
                       </CardTitle>
                       <CardDescription className="flex items-center gap-4">
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className="size-3" />
                           Issued: {formatDate(invoice.issuedDate)}
                         </span>
                         {invoice.dueDate && (
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                            <Calendar className="size-3" />
                             Due: {formatDate(invoice.dueDate)}
                           </span>
                         )}

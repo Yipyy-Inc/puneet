@@ -457,7 +457,7 @@ export function KennelCalendarView({
                             {!isMaintenance && (
                               <div className="flex h-full items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
                                 <div className="bg-background text-muted-foreground flex items-center gap-1 rounded-sm border px-2 py-1 text-xs shadow-sm">
-                                  <Plus className="h-3 w-3" />
+                                  <Plus className="size-3" />
                                   Add
                                 </div>
                               </div>
@@ -555,8 +555,8 @@ export function KennelCalendarView({
                             }
                           />
 
-                          <div className="bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                            <PawPrint className="text-muted-foreground h-3 w-3" />
+                          <div className="bg-muted flex size-6 shrink-0 items-center justify-center rounded-full">
+                            <PawPrint className="text-muted-foreground size-3" />
                           </div>
                           <span
                             className={cn(

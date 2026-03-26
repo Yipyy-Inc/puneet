@@ -398,7 +398,7 @@ function ServiceDayBlockingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CalendarX className="h-5 w-5" />
+          <CalendarX className="size-5" />
           Service-Specific Day Blocking
         </CardTitle>
         <p className="text-muted-foreground text-sm">
@@ -659,7 +659,7 @@ function OneDayScheduleOverrideCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+          <Clock className="size-5" />
           One-Day Schedule Time Override (Special Hours)
         </CardTitle>
         <p className="text-muted-foreground text-sm">
@@ -866,7 +866,7 @@ function DropOffPickUpOverrideCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Timer className="h-5 w-5" />
+          <Timer className="size-5" />
           Drop-Off &amp; Pick-Up Time Overrides
         </CardTitle>
         <p className="text-muted-foreground text-sm">
@@ -2285,7 +2285,7 @@ function ReportCardSettingsCard() {
                               });
                             }}
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="size-3" />
                           </Button>
                         </div>
                       )}
@@ -2896,7 +2896,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="size-5" />
                 Locations
               </CardTitle>
             </CardHeader>
@@ -3173,7 +3173,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
+                <Mail className="size-5" />
                 Communication Integrations
               </CardTitle>
             </CardHeader>
@@ -3219,7 +3219,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Phone className="h-5 w-5" />
+                <Phone className="size-5" />
                 VOIP & Phone System
               </CardTitle>
             </CardHeader>
@@ -3269,7 +3269,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
+                <DollarSign className="size-5" />
                 Accounting Integration
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -3324,7 +3324,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
+                <Zap className="size-5" />
                 AI Tools
               </CardTitle>
             </CardHeader>

@@ -66,7 +66,7 @@ export default function CustomServiceRatesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <DollarSign className="h-5 w-5" />
+              <DollarSign className="size-5" />
               Pricing Model
             </CardTitle>
           </CardHeader>
@@ -220,7 +220,7 @@ export default function CustomServiceRatesPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Clock className="h-5 w-5" />
+                  <Clock className="size-5" />
                   Session Options
                 </CardTitle>
               </CardHeader>

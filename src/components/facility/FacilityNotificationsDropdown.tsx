@@ -89,12 +89,12 @@ export function FacilityNotificationsDropdown({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="hover:bg-muted relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
+          className="hover:bg-muted relative flex size-10 items-center justify-center rounded-xl transition-colors"
           aria-label="Notifications"
         >
-          <Bell className="text-muted-foreground h-5 w-5" />
+          <Bell className="text-muted-foreground size-5" />
           {unreadCount > 0 && (
-            <span className="bg-primary absolute top-2 right-2 h-2 w-2 animate-pulse rounded-full" />
+            <span className="bg-primary absolute top-2 right-2 size-2 animate-pulse rounded-full" />
           )}
         </button>
       </DropdownMenuTrigger>

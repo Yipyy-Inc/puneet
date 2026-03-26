@@ -294,7 +294,7 @@ export function TenantActivityLogs({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="flex items-center gap-2 text-xl font-semibold">
-            <Activity className="h-5 w-5" />
+            <Activity className="size-5" />
             Activity & Audit Logs
           </h3>
           <p className="text-muted-foreground text-sm">
@@ -330,7 +330,7 @@ export function TenantActivityLogs({
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Activity className="h-5 w-5 text-white" />
+                <Activity className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -357,7 +357,7 @@ export function TenantActivityLogs({
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Shield className="h-5 w-5 text-white" />
+                <Shield className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -384,7 +384,7 @@ export function TenantActivityLogs({
                     "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
                 }}
               >
-                <AlertTriangle className="h-5 w-5 text-white" />
+                <AlertTriangle className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -411,7 +411,7 @@ export function TenantActivityLogs({
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <FileText className="h-5 w-5 text-white" />
+                <FileText className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -424,7 +424,7 @@ export function TenantActivityLogs({
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <TrendingUp className="h-5 w-5" />
+              <TrendingUp className="size-5" />
               Weekly Activity Trend
             </CardTitle>
             <p className="text-muted-foreground text-sm">
@@ -488,7 +488,7 @@ export function TenantActivityLogs({
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Activity className="h-5 w-5" />
+              <Activity className="size-5" />
               Activity Distribution
             </CardTitle>
             <p className="text-muted-foreground text-sm">
@@ -541,7 +541,7 @@ export function TenantActivityLogs({
       <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Users className="h-5 w-5" />
+            <Users className="size-5" />
             Most Active Users
           </CardTitle>
           <p className="text-muted-foreground text-sm">
@@ -663,9 +663,9 @@ export function TenantActivityLogs({
                     >
                       <div className="flex items-start gap-4">
                         <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl ${getActivityColor(log.actionType)} `}
+                          className={`flex size-10 items-center justify-center rounded-xl ${getActivityColor(log.actionType)} `}
                         >
-                          <Icon className="h-5 w-5" />
+                          <Icon className="size-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -679,23 +679,23 @@ export function TenantActivityLogs({
                           </p>
                           <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                             <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                              <User className="size-3" />
                               {log.actorName}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               {formatTimestamp(log.timestamp)}
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="text-muted-foreground h-5 w-5" />
+                        <ChevronRight className="text-muted-foreground size-5" />
                       </div>
                     </div>
                   );
                 })}
                 {filteredActivityLogs.length === 0 && (
                   <div className="text-muted-foreground p-8 text-center">
-                    <Activity className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                    <Activity className="mx-auto mb-3 size-12 opacity-50" />
                     <p>No activity logs found</p>
                     <p className="text-sm">
                       Try adjusting your search or filter
@@ -820,7 +820,7 @@ export function TenantActivityLogs({
               </table>
               {filteredAuditLogs.length === 0 && (
                 <div className="text-muted-foreground p-8 text-center">
-                  <Shield className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Shield className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No audit logs found</p>
                   <p className="text-sm">Try adjusting your search or filter</p>
                 </div>

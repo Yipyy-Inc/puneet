@@ -206,7 +206,7 @@ export function BehaviorSection({
                   onClick={() => handleRemoveTrigger(trigger)}
                   className="hover:bg-muted ml-1 rounded-sm"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="size-3" />
                 </button>
               </Badge>
             ))}

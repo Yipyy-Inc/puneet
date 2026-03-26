@@ -435,7 +435,7 @@ export function CampaignBuilderModal({
                       );
                     }}
                   >
-                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    <Plus className="mr-1 size-3.5" />
                     New Segment
                   </Button>
                 </div>
@@ -449,7 +449,7 @@ export function CampaignBuilderModal({
                         {selectedSegment.name}
                       </span>
                       <Badge>
-                        <Users className="mr-1 h-3 w-3" />
+                        <Users className="mr-1 size-3" />
                         {selectedSegment.customerCount} recipients
                       </Badge>
                     </div>
@@ -482,7 +482,7 @@ export function CampaignBuilderModal({
                     onClick={() => setCampaignType("email")}
                     aria-pressed={campaignType === "email"}
                   >
-                    <Mail className="mr-1 h-3.5 w-3.5" /> Email
+                    <Mail className="mr-1 size-3.5" /> Email
                   </Button>
                   <Button
                     variant={campaignType === "sms" ? "default" : "outline"}
@@ -642,7 +642,7 @@ export function CampaignBuilderModal({
                     <CardContent className="space-y-2 py-3">
                       <div className="text-muted-foreground flex items-center gap-2 text-xs">
                         <div
-                          className="flex h-5 w-5 items-center justify-center rounded-sm text-[10px] font-bold"
+                          className="flex size-5 items-center justify-center rounded-sm text-[10px] font-bold"
                           style={{
                             backgroundColor: facilityBranding.primaryColor,
                             color: BRAND_TEXT_COLOR,
@@ -852,7 +852,7 @@ export function CampaignBuilderModal({
                   {goal && (
                     <div className="flex items-center gap-2">
                       <ChevronRight
-                        className="text-muted-foreground h-3 w-3"
+                        className="text-muted-foreground size-3"
                         aria-hidden="true"
                       />
                       <span className="text-muted-foreground">Goal:</span>
@@ -863,7 +863,7 @@ export function CampaignBuilderModal({
                   )}
                   <div className="flex items-center gap-2">
                     <ChevronRight
-                      className="text-muted-foreground h-3 w-3"
+                      className="text-muted-foreground size-3"
                       aria-hidden="true"
                     />
                     <span className="text-muted-foreground">Campaign:</span>
@@ -871,7 +871,7 @@ export function CampaignBuilderModal({
                   </div>
                   <div className="flex items-center gap-2">
                     <ChevronRight
-                      className="text-muted-foreground h-3 w-3"
+                      className="text-muted-foreground size-3"
                       aria-hidden="true"
                     />
                     <span className="text-muted-foreground">Segment:</span>
@@ -884,7 +884,7 @@ export function CampaignBuilderModal({
                   </div>
                   <div className="flex items-center gap-2">
                     <ChevronRight
-                      className="text-muted-foreground h-3 w-3"
+                      className="text-muted-foreground size-3"
                       aria-hidden="true"
                     />
                     <span className="text-muted-foreground">Template:</span>
@@ -892,7 +892,7 @@ export function CampaignBuilderModal({
                   </div>
                   <div className="flex items-center gap-2">
                     <ChevronRight
-                      className="text-muted-foreground h-3 w-3"
+                      className="text-muted-foreground size-3"
                       aria-hidden="true"
                     />
                     <span className="text-muted-foreground">Send:</span>
@@ -906,7 +906,7 @@ export function CampaignBuilderModal({
                   </div>
                   <div className="flex items-center gap-2">
                     <ChevronRight
-                      className="text-muted-foreground h-3 w-3"
+                      className="text-muted-foreground size-3"
                       aria-hidden="true"
                     />
                     <span className="text-muted-foreground">Type:</span>

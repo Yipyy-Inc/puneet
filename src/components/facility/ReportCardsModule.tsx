@@ -597,7 +597,7 @@ export function ReportCardsModule({
       defaultVisible: true,
       render: (item) => (
         <div className="flex items-center gap-2">
-          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
+          <div className="bg-primary/10 flex size-8 items-center justify-center rounded-full">
             <PawPrint className="text-primary size-4" />
           </div>
           <div>
@@ -648,12 +648,12 @@ export function ReportCardsModule({
       render: (item) =>
         item.delivery.status === "sent" ? (
           <Badge variant="success">
-            <Check className="mr-1 h-3 w-3" />
+            <Check className="mr-1 size-3" />
             Sent
           </Badge>
         ) : item.delivery.status === "scheduled" ? (
           <Badge variant="secondary">
-            <CalendarClock className="mr-1 h-3 w-3" />
+            <CalendarClock className="mr-1 size-3" />
             Scheduled
           </Badge>
         ) : (
@@ -684,7 +684,7 @@ export function ReportCardsModule({
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-primary/10 rounded-lg p-2">
-                <FileText className="text-primary h-5 w-5" />
+                <FileText className="text-primary size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{reportCards.length}</p>
@@ -697,7 +697,7 @@ export function ReportCardsModule({
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-info/10 rounded-lg p-2">
-                <Clock className="text-info h-5 w-5" />
+                <Clock className="text-info size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{todayCards}</p>
@@ -710,7 +710,7 @@ export function ReportCardsModule({
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-success/10 rounded-lg p-2">
-                <Mail className="text-success h-5 w-5" />
+                <Mail className="text-success size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{sentCards}</p>
@@ -723,7 +723,7 @@ export function ReportCardsModule({
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-warning/10 rounded-lg p-2">
-                <Send className="text-warning h-5 w-5" />
+                <Send className="text-warning size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{scheduledCards}</p>
@@ -1381,7 +1381,7 @@ export function ReportCardsModule({
                               alt="Report card"
                               width={80}
                               height={80}
-                              className="h-full w-full object-cover"
+                              className="size-full object-cover"
                             />
                           </div>
                         ))}
@@ -1437,7 +1437,7 @@ export function ReportCardsModule({
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PawPrint className="h-5 w-5" />
+              <PawPrint className="size-5" />
               Report Card - {viewingCard?.petName}
             </DialogTitle>
           </DialogHeader>
@@ -1501,17 +1501,17 @@ export function ReportCardsModule({
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border bg-white">
+                        <div className="flex size-12 items-center justify-center overflow-hidden rounded-lg border bg-white">
                           {profile.logo ? (
                             <Image
                               src={profile.logo}
                               alt={`${facilityName} logo`}
                               width={48}
                               height={48}
-                              className="h-full w-full object-contain"
+                              className="size-full object-contain"
                             />
                           ) : (
-                            <PawPrint className="text-muted-foreground h-5 w-5" />
+                            <PawPrint className="text-muted-foreground size-5" />
                           )}
                         </div>
                         <div>
@@ -1702,7 +1702,7 @@ export function ReportCardsModule({
                               alt="Report card thumbnail"
                               width={80}
                               height={80}
-                              className="h-full w-full object-cover"
+                              className="size-full object-cover"
                             />
                           </div>
                         ))}
@@ -1723,7 +1723,7 @@ export function ReportCardsModule({
                 <div className="flex items-center justify-between">
                   {viewingCard.delivery.status === "sent" ? (
                     <Badge variant="success">
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="mr-1 size-3" />
                       Sent
                       {viewingCard.delivery.sentAt &&
                         ` at ${new Date(
@@ -1732,7 +1732,7 @@ export function ReportCardsModule({
                     </Badge>
                   ) : viewingCard.delivery.status === "scheduled" ? (
                     <Badge variant="secondary">
-                      <CalendarClock className="mr-1 h-3 w-3" />
+                      <CalendarClock className="mr-1 size-3" />
                       Scheduled for{" "}
                       {viewingCard.delivery.scheduledFor
                         ? new Date(

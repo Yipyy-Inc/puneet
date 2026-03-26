@@ -126,7 +126,7 @@ export default function CustomServiceDashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <CalendarDays className="h-5 w-5" />
+                  <CalendarDays className="size-5" />
                   Today&apos;s Upcoming Bookings
                 </CardTitle>
                 <Link href={`${basePath}/bookings`}>
@@ -140,8 +140,8 @@ export default function CustomServiceDashboardPage() {
             <CardContent>
               {MOCK_BOOKINGS.length === 0 ? (
                 <div className="py-10 text-center">
-                  <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl">
-                    <CalendarDays className="text-muted-foreground h-6 w-6" />
+                  <div className="bg-muted mx-auto mb-3 flex size-12 items-center justify-center rounded-xl">
+                    <CalendarDays className="text-muted-foreground size-6" />
                   </div>
                   <p className="font-medium">No bookings yet today</p>
                   <p className="text-muted-foreground mt-1 text-sm">
@@ -149,7 +149,7 @@ export default function CustomServiceDashboardPage() {
                     come in.
                   </p>
                   <Button variant="outline" size="sm" className="mt-3">
-                    <Plus className="h-3.5 w-3.5" />
+                    <Plus className="size-3.5" />
                     Create First Booking
                   </Button>
                 </div>
@@ -163,8 +163,8 @@ export default function CustomServiceDashboardPage() {
                         className="bg-card hover:bg-muted/50 flex flex-col justify-between gap-2 rounded-lg border p-3 transition-colors sm:flex-row sm:items-center"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-                            <PawPrint className="text-primary h-5 w-5" />
+                          <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                            <PawPrint className="text-primary size-5" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate font-medium">

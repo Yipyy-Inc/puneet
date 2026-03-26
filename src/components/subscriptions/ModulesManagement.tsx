@@ -226,7 +226,7 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             <div className="bg-primary/10 rounded-lg p-2">
-              <Icon className="text-primary h-6 w-6" />
+              <Icon className="text-primary size-6" />
             </div>
             <div className="space-y-1">
               <CardTitle className="text-lg">{module.name}</CardTitle>
@@ -306,7 +306,7 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
         {module.dependencies.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-muted-foreground flex items-center gap-1 text-sm font-semibold">
-              <Lock className="h-3 w-3" />
+              <Lock className="size-3" />
               Dependencies
             </h4>
             <div className="flex flex-wrap gap-1">
@@ -360,7 +360,7 @@ function PackageCard({ pkg, onEdit, onDelete, allModules }: PackageCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="flex items-center gap-1">
-              <Percent className="h-3 w-3" />
+              <Percent className="size-3" />
               {pkg.discount}% off
             </Badge>
             {!pkg.isActive && <Badge variant="destructive">Inactive</Badge>}

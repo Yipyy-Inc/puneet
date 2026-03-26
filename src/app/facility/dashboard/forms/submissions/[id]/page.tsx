@@ -124,7 +124,7 @@ function AnswerBlock({
           {question.label}
         </Label>
         <div className="flex items-center gap-2 text-sm font-medium">
-          <File className="text-muted-foreground h-3.5 w-3.5" />
+          <File className="text-muted-foreground size-3.5" />
           <span>{filename}</span>
         </div>
       </div>
@@ -140,7 +140,7 @@ function AnswerBlock({
           {question.label}
         </Label>
         <div className="flex items-center gap-2 text-sm font-medium">
-          <MapPin className="text-muted-foreground h-3.5 w-3.5" />
+          <MapPin className="text-muted-foreground size-3.5" />
           <span>{addr ? formatAddress(addr) : formatValue(value)}</span>
         </div>
       </div>
@@ -764,7 +764,7 @@ export default function SubmissionDetailPage({
                       >
                         {selectedCustomerId === c.id ? (
                           <>
-                            <Check className="mr-1 h-3.5 w-3.5" /> Selected
+                            <Check className="mr-1 size-3.5" /> Selected
                           </>
                         ) : (
                           "Select"
@@ -786,7 +786,7 @@ export default function SubmissionDetailPage({
                 <Separator />
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
-                    <PawPrint className="h-3.5 w-3.5" />
+                    <PawPrint className="size-3.5" />
                     Link pets
                   </Label>
                   {petNamesFromAnswers.length > 0 && (
@@ -820,7 +820,7 @@ export default function SubmissionDetailPage({
                                 {pet.name}
                               </span>
                               {isLinked && (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
+                                <Check className="size-3.5 text-green-600" />
                               )}
                             </div>
                             <p className="text-muted-foreground text-xs">
@@ -865,7 +865,7 @@ export default function SubmissionDetailPage({
             {selectedCustomerId && mergeDiff.length > 0 && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  <AlertCircle className="size-3.5 text-amber-500" />
                   Merge diff (
                   {
                     mergeDiff.filter((d) => d.existing !== "(empty)").length
@@ -1176,12 +1176,12 @@ export default function SubmissionDetailPage({
                         >
                           <div className="text-muted-foreground mb-0.5 flex items-center gap-1.5 text-xs">
                             <span>{item.questionLabel}</span>
-                            <ArrowRight className="h-3 w-3 shrink-0" />
+                            <ArrowRight className="size-3 shrink-0" />
                             <span className="text-foreground font-medium">
                               {item.label}
                             </span>
                             {item.hasAttachment && (
-                              <Paperclip className="text-muted-foreground h-3 w-3 shrink-0" />
+                              <Paperclip className="text-muted-foreground size-3 shrink-0" />
                             )}
                           </div>
                           {group === "tags" ? (

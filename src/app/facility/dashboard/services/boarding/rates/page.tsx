@@ -490,8 +490,8 @@ export default function BoardingRatesPage() {
                   {rates.filter((r) => r.isActive).length}
                 </p>
               </div>
-              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <DollarSign className="text-primary h-6 w-6" />
+              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                <DollarSign className="text-primary size-6" />
               </div>
             </div>
           </CardContent>
@@ -507,8 +507,8 @@ export default function BoardingRatesPage() {
                   {discounts.filter((d) => d.isActive).length}
                 </p>
               </div>
-              <div className="bg-success/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <Percent className="text-success h-6 w-6" />
+              <div className="bg-success/10 flex size-12 items-center justify-center rounded-full">
+                <Percent className="text-success size-6" />
               </div>
             </div>
           </CardContent>
@@ -524,8 +524,8 @@ export default function BoardingRatesPage() {
                   {surcharges.filter((s) => s.isActive).length}
                 </p>
               </div>
-              <div className="bg-warning/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <TrendingUp className="text-warning h-6 w-6" />
+              <div className="bg-warning/10 flex size-12 items-center justify-center rounded-full">
+                <TrendingUp className="text-warning size-6" />
               </div>
             </div>
           </CardContent>
@@ -536,7 +536,7 @@ export default function BoardingRatesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Nightly Rates
           </CardTitle>
           <Button onClick={handleAddRate}>
@@ -558,7 +558,7 @@ export default function BoardingRatesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Percent className="h-5 w-5" />
+            <Percent className="size-5" />
             Multi-Night Discounts
           </CardTitle>
           <Button onClick={handleAddDiscount}>
@@ -580,7 +580,7 @@ export default function BoardingRatesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Calendar className="h-5 w-5" />
+            <Calendar className="size-5" />
             Peak Period Surcharges
           </CardTitle>
           <Button onClick={handleAddSurcharge}>

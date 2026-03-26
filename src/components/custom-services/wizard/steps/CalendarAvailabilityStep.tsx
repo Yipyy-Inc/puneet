@@ -90,7 +90,7 @@ export function CalendarAvailabilityStep({
 
       {!cal.enabled && (
         <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0" />
           <span>
             Calendar is disabled. This service won&apos;t appear on the
             scheduling calendar. You can still enable online booking and manual
@@ -203,7 +203,7 @@ export function CalendarAvailabilityStep({
                   size="icon-sm"
                   onClick={() => removeDurationOption(i)}
                 >
-                  <Trash2 className="text-destructive h-3.5 w-3.5" />
+                  <Trash2 className="text-destructive size-3.5" />
                 </Button>
               )}
             </div>
@@ -216,7 +216,7 @@ export function CalendarAvailabilityStep({
               onClick={addDurationOption}
               className="mt-1"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="size-3.5" />
               Add Duration
             </Button>
           )}

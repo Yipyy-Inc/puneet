@@ -65,7 +65,7 @@ export function CRMLoyaltySection({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Star className="text-primary h-5 w-5" />
+              <Star className="text-primary size-5" />
               Loyalty Program
             </CardTitle>
             <CardDescription>
@@ -93,7 +93,7 @@ export function CRMLoyaltySection({
                     style={{ backgroundColor: currentTier.color }}
                     className="text-white"
                   >
-                    <Award className="mr-1 h-3 w-3" />
+                    <Award className="mr-1 size-3" />
                     {currentTier.displayName}
                   </Badge>
                 </div>

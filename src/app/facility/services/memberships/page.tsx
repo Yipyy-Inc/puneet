@@ -247,7 +247,7 @@ export default function MembershipsPage() {
           <span className="font-medium">{item.name as string}</span>
           {(item.isPopular as boolean) && (
             <Badge variant="default" className="text-xs">
-              <Star className="mr-1 h-3 w-3" />
+              <Star className="mr-1 size-3" />
               Popular
             </Badge>
           )}
@@ -871,7 +871,7 @@ export default function MembershipsPage() {
                         onClick={() => removePerk(index)}
                         className="hover:text-destructive ml-1"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="size-3" />
                       </button>
                     </Badge>
                   ))}

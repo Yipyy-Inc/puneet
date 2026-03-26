@@ -164,7 +164,7 @@ export function AdvancedSettings({
             <CardHeader className="cursor-pointer transition-colors">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <PawPrint className="h-5 w-5" />
+                  <PawPrint className="size-5" />
                   Advanced Settings
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -204,7 +204,7 @@ export function AdvancedSettings({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <PawPrint className="h-5 w-5" />
+                    <PawPrint className="size-5" />
                     Pet Categories & Restrictions
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -312,7 +312,7 @@ export function AdvancedSettings({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileText className="h-5 w-5" />
+                    <FileText className="size-5" />
                     Custom Fields
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -396,7 +396,7 @@ export function AdvancedSettings({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileCheck className="h-5 w-5" />
+                    <FileCheck className="size-5" />
                     Waivers & Contracts
                     <Tooltip>
                       <TooltipTrigger asChild>

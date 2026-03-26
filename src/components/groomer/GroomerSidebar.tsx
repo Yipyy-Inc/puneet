@@ -27,7 +27,7 @@ export function GroomerSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-pink-500 to-rose-500">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-pink-500 to-rose-500">
             <Scissors className="size-4 text-white" />
           </div>
           <span className="font-semibold">Groomer</span>

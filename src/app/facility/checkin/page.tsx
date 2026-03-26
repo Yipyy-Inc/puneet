@@ -221,7 +221,7 @@ function CheckInContent() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
+                <Search className="size-5" />
                 Find booking
               </CardTitle>
               <CardDescription>
@@ -574,7 +574,7 @@ function CheckInContent() {
               disabled={!canCheckIn || checkingIn}
               onClick={handleCheckIn}
             >
-              <LogIn className="h-5 w-5" />
+              <LogIn className="size-5" />
               {checkingIn
                 ? "Checking in…"
                 : isPreCheckMissing

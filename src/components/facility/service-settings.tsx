@@ -309,7 +309,7 @@ export function ServiceSettingsComponent({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PawPrint className="h-5 w-5" />
+                  <PawPrint className="size-5" />
                   Service Status
                 </CardTitle>
               </CardHeader>
@@ -337,7 +337,7 @@ export function ServiceSettingsComponent({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
+                  <DollarSign className="size-5" />
                   Pricing
                 </CardTitle>
               </CardHeader>
@@ -384,7 +384,7 @@ export function ServiceSettingsComponent({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+                    <Users className="size-5" />
                     Capacity
                   </CardTitle>
                 </CardHeader>
@@ -416,7 +416,7 @@ export function ServiceSettingsComponent({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
+                    <Clock className="size-5" />
                     Operating Hours
                   </CardTitle>
                 </CardHeader>
@@ -468,7 +468,7 @@ export function ServiceSettingsComponent({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
+                    <Clock className="size-5" />
                     Check-in/Check-out
                   </CardTitle>
                 </CardHeader>
@@ -557,14 +557,14 @@ export function ServiceSettingsComponent({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="size-5" />
                 Available Locations
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {locations.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <MapPin className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                  <MapPin className="mx-auto mb-2 size-12 opacity-50" />
                   <p>No locations available</p>
                   <p className="text-sm">Add locations in facility settings</p>
                 </div>
@@ -621,7 +621,7 @@ export function ServiceSettingsComponent({
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+                  <Package className="size-5" />
                   Service Packages
                 </CardTitle>
                 {isEditing && (
@@ -639,7 +639,7 @@ export function ServiceSettingsComponent({
                 {!currentSettings.packages ||
                 currentSettings.packages.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Package className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <Package className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No packages configured</p>
                     {isEditing && (
                       <p className="text-sm">
@@ -734,14 +734,14 @@ export function ServiceSettingsComponent({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+                <Calendar className="size-5" />
                 Scheduled Sessions
               </CardTitle>
             </CardHeader>
             <CardContent>
               {currentSettings.sessions.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Calendar className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                  <Calendar className="mx-auto mb-2 size-12 opacity-50" />
                   <p>No sessions scheduled</p>
                 </div>
               ) : (

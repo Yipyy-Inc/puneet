@@ -191,7 +191,7 @@ export function BookingModal({ booking }: BookingModalProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-blue-500 p-2">
-                    <Calendar className="h-5 w-5 text-white" />
+                    <Calendar className="size-5 text-white" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-blue-900">Service</p>
@@ -207,7 +207,7 @@ export function BookingModal({ booking }: BookingModalProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-green-500 p-2">
-                    <Clock className="h-5 w-5 text-white" />
+                    <Clock className="size-5 text-white" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-green-900">
@@ -225,7 +225,7 @@ export function BookingModal({ booking }: BookingModalProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-purple-500 p-2">
-                    <DollarSign className="h-5 w-5 text-white" />
+                    <DollarSign className="size-5 text-white" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-purple-900">
@@ -243,7 +243,7 @@ export function BookingModal({ booking }: BookingModalProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-orange-500 p-2">
-                    <CheckCircle className="h-5 w-5 text-white" />
+                    <CheckCircle className="size-5 text-white" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-orange-900">
@@ -306,7 +306,7 @@ export function BookingModal({ booking }: BookingModalProps) {
           <Card className="overflow-hidden">
             <CardHeader className="from-primary/5 to-primary/10 bg-linear-to-r">
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="text-primary h-5 w-5" />
+                <Calendar className="text-primary size-5" />
                 Schedule & Dates
               </CardTitle>
             </CardHeader>
@@ -377,7 +377,7 @@ export function BookingModal({ booking }: BookingModalProps) {
             <Card className="overflow-hidden">
               <CardHeader className="bg-linear-to-r from-green-50 to-green-100">
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-green-600" />
+                  <User className="size-5 text-green-600" />
                   Client Information
                 </CardTitle>
               </CardHeader>
@@ -385,8 +385,8 @@ export function BookingModal({ booking }: BookingModalProps) {
                 {client ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                        <User className="h-6 w-6 text-green-600" />
+                      <div className="flex size-12 items-center justify-center rounded-full bg-green-100">
+                        <User className="size-6 text-green-600" />
                       </div>
                       <div>
                         <h3 className="text-lg font-bold">{client.name}</h3>
@@ -410,7 +410,7 @@ export function BookingModal({ booking }: BookingModalProps) {
                   </div>
                 ) : (
                   <div className="py-8 text-center">
-                    <User className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                    <User className="text-muted-foreground mx-auto mb-2 size-12" />
                     <p className="text-muted-foreground">
                       Client information not found
                     </p>
@@ -422,7 +422,7 @@ export function BookingModal({ booking }: BookingModalProps) {
             <Card className="overflow-hidden">
               <CardHeader className="bg-linear-to-r from-pink-50 to-pink-100">
                 <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-pink-600" />
+                  <Heart className="size-5 text-pink-600" />
                   Pet Information
                 </CardTitle>
               </CardHeader>
@@ -430,8 +430,8 @@ export function BookingModal({ booking }: BookingModalProps) {
                 {pet ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-100">
-                        <Heart className="h-6 w-6 text-pink-600" />
+                      <div className="flex size-12 items-center justify-center rounded-full bg-pink-100">
+                        <Heart className="size-6 text-pink-600" />
                       </div>
                       <div>
                         <h3 className="text-lg font-bold">{pet.name}</h3>
@@ -498,7 +498,7 @@ export function BookingModal({ booking }: BookingModalProps) {
                   </div>
                 ) : (
                   <div className="py-8 text-center">
-                    <Heart className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                    <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
                     <p className="text-muted-foreground">
                       Pet information not found
                     </p>
@@ -514,7 +514,7 @@ export function BookingModal({ booking }: BookingModalProps) {
             <Card className="overflow-hidden">
               <CardHeader className="bg-linear-to-r from-indigo-50 to-indigo-100">
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-indigo-600" />
+                  <Settings className="size-5 text-indigo-600" />
                   Service Configuration
                 </CardTitle>
               </CardHeader>
@@ -524,7 +524,7 @@ export function BookingModal({ booking }: BookingModalProps) {
                     {booking.kennel && (
                       <div className="flex items-center gap-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                         <div className="rounded-lg bg-blue-500 p-2">
-                          <Home className="h-5 w-5 text-white" />
+                          <Home className="size-5 text-white" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-blue-900">
@@ -539,7 +539,7 @@ export function BookingModal({ booking }: BookingModalProps) {
                     {booking.walkSchedule && (
                       <div className="flex items-center gap-4 rounded-lg border border-green-200 bg-green-50 p-4">
                         <div className="rounded-lg bg-green-500 p-2">
-                          <Clock className="h-5 w-5 text-white" />
+                          <Clock className="size-5 text-white" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-green-900">
@@ -584,7 +584,7 @@ export function BookingModal({ booking }: BookingModalProps) {
             <Card className="overflow-hidden">
               <CardHeader className="bg-linear-to-r from-amber-50 to-amber-100">
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-amber-600" />
+                  <FileText className="size-5 text-amber-600" />
                   Special Requests & Notes
                 </CardTitle>
               </CardHeader>
@@ -602,7 +602,7 @@ export function BookingModal({ booking }: BookingModalProps) {
           <Card className="overflow-hidden">
             <CardHeader className="bg-linear-to-r from-emerald-50 to-emerald-100">
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
+                <DollarSign className="size-5 text-emerald-600" />
                 Payment Summary
               </CardTitle>
             </CardHeader>

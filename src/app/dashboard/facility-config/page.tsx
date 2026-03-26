@@ -60,7 +60,7 @@ export default function FacilityConfigPage() {
         </div>
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-start space-x-2">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600" />
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-yellow-600" />
             <div>
               <div className="font-medium text-yellow-800">{"Warning"}</div>
               <div className="text-sm text-yellow-700">

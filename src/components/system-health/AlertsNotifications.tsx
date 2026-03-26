@@ -69,7 +69,7 @@ export function AlertsNotifications() {
     const Icon = icons[status] || AlertCircle;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -155,16 +155,16 @@ export function AlertsNotifications() {
 
   const alertActions = (item: SystemAlert) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Eye className="size-4" />
       </Button>
       {item.status === "New" && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Check className="size-4" />
         </Button>
       )}
       {(item.status === "Acknowledged" || item.status === "New") && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Play className="size-4" />
         </Button>
       )}
@@ -214,7 +214,7 @@ export function AlertsNotifications() {
             const Icon = getChannelIcon(channel);
             return (
               <Badge key={channel} variant="outline" className="gap-1 text-xs">
-                <Icon className="h-3 w-3" />
+                <Icon className="size-3" />
                 {channel}
               </Badge>
             );
@@ -243,11 +243,11 @@ export function AlertsNotifications() {
 
   const configActions = (item: AlertConfiguration) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Settings className="size-4" />
       </Button>
       {item.enabled && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Eye className="size-4" />
         </Button>
       )}
@@ -309,11 +309,11 @@ export function AlertsNotifications() {
 
   const channelActions = (item: NotificationChannel) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Settings className="size-4" />
       </Button>
       {item.status === "Active" && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Zap className="size-4" />
         </Button>
       )}
@@ -361,8 +361,8 @@ export function AlertsNotifications() {
                   Require attention
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
-                <Bell className="h-6 w-6 text-orange-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
+                <Bell className="size-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -382,8 +382,8 @@ export function AlertsNotifications() {
                   High priority alerts
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
+                <AlertTriangle className="size-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -403,8 +403,8 @@ export function AlertsNotifications() {
                   Across all alerts
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
+                <Users className="size-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -424,8 +424,8 @@ export function AlertsNotifications() {
                   Monitoring configurations
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
-                <Settings className="h-6 w-6 text-blue-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
+                <Settings className="size-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -445,7 +445,7 @@ export function AlertsNotifications() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="size-5" />
                 System Alerts
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -470,7 +470,7 @@ export function AlertsNotifications() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Settings className="h-5 w-5" />
+                <Settings className="size-5" />
                 Alert Configuration
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -493,7 +493,7 @@ export function AlertsNotifications() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Bell className="h-5 w-5" />
+                <Bell className="size-5" />
                 Notification Channels
               </CardTitle>
               <p className="text-muted-foreground text-sm">

@@ -178,7 +178,7 @@ function WizardQuestionInput({
                 <input
                   type="radio"
                   name={htmlId}
-                  className="h-5 w-5 shrink-0"
+                  className="size-5 shrink-0"
                   value={o.value}
                   checked={value === o.value}
                   onChange={() => onChange(o.value)}
@@ -260,7 +260,7 @@ function WizardQuestionInput({
               >
                 <input
                   type="checkbox"
-                  className="h-5 w-5"
+                  className="size-5"
                   checked={selected.has(o.value)}
                   onChange={() => toggle(o.value)}
                 />
@@ -279,7 +279,7 @@ function WizardQuestionInput({
           <input
             id={htmlId}
             type="checkbox"
-            className="h-5 w-5 shrink-0"
+            className="size-5 shrink-0"
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
           />
@@ -743,7 +743,7 @@ export function FormWizard({
       <Card className="mx-auto w-full max-w-lg">
         <CardContent className="pt-6">
           <div className="flex items-center justify-center py-8">
-            <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+            <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
             <span className="text-muted-foreground ml-3 text-sm">
               Loading required forms...
             </span>
@@ -759,7 +759,7 @@ export function FormWizard({
       <Card className="mx-auto w-full max-w-lg">
         <CardContent className="flex flex-col items-center py-12 pt-6 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-            <CheckCircle className="h-10 w-10 text-emerald-600" />
+            <CheckCircle className="size-10 text-emerald-600" />
           </div>
           <h2 className="mb-2 text-xl font-semibold">
             {totalSteps === 0 ? "No Forms Required" : "All Forms Completed"}

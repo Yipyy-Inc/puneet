@@ -250,7 +250,7 @@ export function DataTable<T extends object>({
                     />
                     <div className="grid gap-1 font-normal">
                       <p className="flex items-center gap-2 text-xs leading-none font-medium">
-                        {col.icon && <col.icon className="h-3.5 w-3.5" />}
+                        {col.icon && <col.icon className="size-3.5" />}
                         {col.label}
                       </p>
                     </div>

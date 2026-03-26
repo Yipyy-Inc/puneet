@@ -45,7 +45,7 @@ export function ProcessPaymentModal({
       <DialogContent className="min-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Process Payment - Booking #{booking.id}
           </DialogTitle>
           <DialogDescription>
@@ -87,7 +87,7 @@ export function ProcessPaymentModal({
                   htmlFor="card-payment"
                   className="flex flex-1 cursor-pointer items-center gap-3"
                 >
-                  <CreditCard className="text-primary h-5 w-5" />
+                  <CreditCard className="text-primary size-5" />
                   <div>
                     <div className="font-medium">Credit/Debit Card</div>
                     <div className="text-muted-foreground text-xs">
@@ -103,7 +103,7 @@ export function ProcessPaymentModal({
                   htmlFor="cash-payment"
                   className="flex flex-1 cursor-pointer items-center gap-3"
                 >
-                  <Banknote className="text-primary h-5 w-5" />
+                  <Banknote className="text-primary size-5" />
                   <div>
                     <div className="font-medium">Cash</div>
                     <div className="text-muted-foreground text-xs">

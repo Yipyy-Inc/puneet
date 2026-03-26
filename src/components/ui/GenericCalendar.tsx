@@ -271,12 +271,12 @@ export function GenericCalendar<T extends CalendarItem>({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-5 w-5 p-0"
+                        className="size-5 p-0"
                         onClick={() =>
                           config.onAddClick?.(formatDate(cell.date))
                         }
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="size-3" />
                       </Button>
                     )}
                 </div>
@@ -311,7 +311,7 @@ export function GenericCalendar<T extends CalendarItem>({
                           >
                             <div
                               className={cn(
-                                "mr-1 inline-block h-2 w-2 rounded-full",
+                                "mr-1 inline-block size-2 rounded-full",
                                 config.getItemColor?.(item) || "bg-gray-500",
                               )}
                             />
@@ -438,7 +438,7 @@ export function GenericCalendar<T extends CalendarItem>({
                               config.onAddClick?.(formatDate(date))
                             }
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="size-3" />
                           </Button>
                         ) : null}
                       </TableCell>
@@ -544,7 +544,7 @@ export function GenericCalendar<T extends CalendarItem>({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <CalendarIcon className="h-5 w-5" />
+          <CalendarIcon className="size-5" />
           {config.title || getDateRangeText()}
         </CardTitle>
         <div className="flex gap-2">
@@ -572,7 +572,7 @@ export function GenericCalendar<T extends CalendarItem>({
           <div className="mt-6 flex flex-wrap gap-4 border-t pt-4">
             {config.legendItems.map((item, index) => (
               <div key={index} className="flex items-center gap-2">
-                <div className={cn("h-3 w-3 rounded-full", item.color)} />
+                <div className={cn("size-3 rounded-full", item.color)} />
                 <span className="text-sm">{item.label}</span>
               </div>
             ))}

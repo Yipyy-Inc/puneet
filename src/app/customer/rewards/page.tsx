@@ -228,7 +228,7 @@ export default function CustomerRewardsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary/20 rounded-full p-4">
-                      <Star className="text-primary h-8 w-8" />
+                      <Star className="text-primary size-8" />
                     </div>
                     <div>
                       <div className="text-4xl font-bold">
@@ -319,7 +319,7 @@ export default function CustomerRewardsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+              <TrendingUp className="size-5" />
               How Points Are Earned
             </CardTitle>
             <CardDescription>
@@ -356,7 +356,7 @@ export default function CustomerRewardsPage() {
                         )}
                       {rule.conditions && (
                         <div className="text-muted-foreground mt-1 text-xs">
-                          <Info className="mr-1 inline h-3 w-3" />
+                          <Info className="mr-1 inline size-3" />
                           {rule.conditions}
                         </div>
                       )}
@@ -373,7 +373,7 @@ export default function CustomerRewardsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
+                <Award className="size-5" />
                 Current Tier Benefits
               </CardTitle>
             </CardHeader>
@@ -381,7 +381,7 @@ export default function CustomerRewardsPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {loyaltyData.currentTier.benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start gap-2">
-                    <CheckCircle2 className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                    <CheckCircle2 className="text-primary mt-0.5 size-5 shrink-0" />
                     <span className="text-sm">{benefit}</span>
                   </div>
                 ))}
@@ -457,15 +457,15 @@ export default function CustomerRewardsPage() {
                                   <div className="flex items-center gap-2">
                                     {isEarned ? (
                                       <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/20">
-                                        <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                        <TrendingUp className="size-3.5 text-green-600 dark:text-green-400" />
                                       </div>
                                     ) : isRedeemed ? (
                                       <div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900/20">
-                                        <GiftIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                        <GiftIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
                                       </div>
                                     ) : (
                                       <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/20">
-                                        <Clock className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                                        <Clock className="size-3.5 text-red-600 dark:text-red-400" />
                                       </div>
                                     )}
                                     <span className="text-sm">
@@ -495,7 +495,7 @@ export default function CustomerRewardsPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <TrendingUp className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <TrendingUp className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No points history yet</p>
                     <p className="mt-1 text-xs">
                       Start booking services to earn points!
@@ -545,7 +545,7 @@ export default function CustomerRewardsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Gift className="h-5 w-5" />
+                  <Gift className="size-5" />
                   Rewards Available
                 </CardTitle>
                 <CardDescription>
@@ -626,7 +626,7 @@ export default function CustomerRewardsPage() {
                                 </div>
                                 {reward.terms && (
                                   <div className="bg-muted text-muted-foreground mt-2 rounded-sm p-2 text-xs">
-                                    <Info className="mr-1 inline h-3 w-3" />
+                                    <Info className="mr-1 inline size-3" />
                                     {reward.terms}
                                   </div>
                                 )}
@@ -713,7 +713,7 @@ export default function CustomerRewardsPage() {
                     {loyaltyRewards.filter((r: LoyaltyReward) => r.isActive)
                       .length === 0 && (
                       <div className="text-muted-foreground py-8 text-center">
-                        <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                        <Gift className="mx-auto mb-2 size-12 opacity-50" />
                         <p>No rewards available at this time</p>
                         <p className="mt-1 text-xs">
                           Check back later for new rewards!
@@ -723,7 +723,7 @@ export default function CustomerRewardsPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <Gift className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No loyalty data available</p>
                   </div>
                 )}
@@ -736,7 +736,7 @@ export default function CustomerRewardsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <Users className="size-5" />
                   Refer Friends
                 </CardTitle>
                 <CardDescription>
@@ -828,7 +828,7 @@ export default function CustomerRewardsPage() {
                   ))
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <Users className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No referral codes available</p>
                     <p className="mt-1 text-xs">
                       Contact the facility to get your referral code
@@ -864,7 +864,7 @@ export default function CustomerRewardsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
+                  <Sparkles className="size-5" />
                   Earned Badges
                 </CardTitle>
                 <CardDescription>
@@ -897,7 +897,7 @@ export default function CustomerRewardsPage() {
                                 </Badge>
                               )}
                             </div>
-                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                            <CheckCircle2 className="size-5 shrink-0 text-green-600" />
                           </div>
                         </CardContent>
                       </Card>
@@ -905,7 +905,7 @@ export default function CustomerRewardsPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Award className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <Award className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No badges earned yet</p>
                     <p className="mt-1 text-xs">
                       Keep booking and referring to unlock badges!

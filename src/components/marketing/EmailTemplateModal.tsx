@@ -252,7 +252,7 @@ export function EmailTemplateModal({
               <Card>
                 <CardContent className="space-y-3 pt-4">
                   <Label className="flex items-center gap-1.5 text-sm font-medium">
-                    <MousePointerClick className="h-3.5 w-3.5" />
+                    <MousePointerClick className="size-3.5" />
                     Call-to-Action Button
                   </Label>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -287,7 +287,7 @@ export function EmailTemplateModal({
                 {/* Logo */}
                 <div className="flex items-center gap-3 border-b pb-3">
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
+                    className="flex size-10 items-center justify-center rounded-lg text-sm font-bold"
                     style={{
                       backgroundColor: facilityBranding.primaryColor,
                       color: BRAND_TEXT_COLOR,

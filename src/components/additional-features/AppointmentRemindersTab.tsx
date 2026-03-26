@@ -76,7 +76,7 @@ export function AppointmentRemindersTab() {
                 </p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
-              <Calendar className="text-muted-foreground h-8 w-8" />
+              <Calendar className="text-muted-foreground size-8" />
             </div>
           </CardContent>
         </Card>
@@ -90,7 +90,7 @@ export function AppointmentRemindersTab() {
                 </p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
+              <AlertCircle className="size-8 text-yellow-500" />
             </div>
           </CardContent>
         </Card>
@@ -106,7 +106,7 @@ export function AppointmentRemindersTab() {
                   {stats.overdue}
                 </p>
               </div>
-              <AlertCircle className="h-8 w-8 text-red-500" />
+              <AlertCircle className="size-8 text-red-500" />
             </div>
           </CardContent>
         </Card>
@@ -122,7 +122,7 @@ export function AppointmentRemindersTab() {
                   {stats.sentThisWeek}
                 </p>
               </div>
-              <Send className="h-8 w-8 text-green-500" />
+              <Send className="size-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -187,7 +187,7 @@ export function AppointmentRemindersTab() {
                   <TableCell>
                     {reminder.lastReminderDate ? (
                       <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        <CheckCircle className="size-3 text-green-600" />
                         {new Date(
                           reminder.lastReminderDate,
                         ).toLocaleDateString()}
@@ -203,7 +203,7 @@ export function AppointmentRemindersTab() {
                     <div className="flex items-center justify-end gap-2">
                       {!reminder.reminderSent && (
                         <Button variant="outline" size="sm">
-                          <Send className="mr-1 h-3 w-3" />
+                          <Send className="mr-1 size-3" />
                           Send
                         </Button>
                       )}

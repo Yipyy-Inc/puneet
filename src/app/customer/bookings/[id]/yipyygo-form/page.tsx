@@ -332,7 +332,7 @@ export default function YipyyGoFormPage({
   if (authState === "checking") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="size-8 animate-spin" />
       </div>
     );
   }
@@ -481,7 +481,7 @@ export default function YipyyGoFormPage({
   if (!formData) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="size-8 animate-spin" />
       </div>
     );
   }
@@ -552,7 +552,7 @@ export default function YipyyGoFormPage({
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 rounded-lg p-2">
-                    <RotateCcw className="text-primary h-5 w-5" />
+                    <RotateCcw className="text-primary size-5" />
                   </div>
                   <div>
                     <p className="font-medium">Use same as last time</p>

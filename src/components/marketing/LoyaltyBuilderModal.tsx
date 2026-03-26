@@ -401,7 +401,7 @@ export function LoyaltyBuilderModal({ onClose }: LoyaltyBuilderModalProps) {
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <Award className="h-5 w-5" />
+          <Award className="size-5" />
           Loyalty Program Builder
         </DialogTitle>
         <DialogDescription>
@@ -412,27 +412,27 @@ export function LoyaltyBuilderModal({ onClose }: LoyaltyBuilderModalProps) {
       <Tabs defaultValue="earning" className="w-full">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="earning" className="text-xs">
-            <Star className="mr-1 h-3 w-3" />
+            <Star className="mr-1 size-3" />
             Earning
           </TabsTrigger>
           <TabsTrigger value="tiers" className="text-xs">
-            <Layers className="mr-1 h-3 w-3" />
+            <Layers className="mr-1 size-3" />
             Tiers
           </TabsTrigger>
           <TabsTrigger value="expiration" className="text-xs">
-            <Clock className="mr-1 h-3 w-3" />
+            <Clock className="mr-1 size-3" />
             Expiration
           </TabsTrigger>
           <TabsTrigger value="stacking" className="text-xs">
-            <LayoutList className="mr-1 h-3 w-3" />
+            <LayoutList className="mr-1 size-3" />
             Stacking
           </TabsTrigger>
           <TabsTrigger value="scope" className="text-xs">
-            <Target className="mr-1 h-3 w-3" />
+            <Target className="mr-1 size-3" />
             Scope
           </TabsTrigger>
           <TabsTrigger value="general" className="text-xs">
-            <Settings2 className="mr-1 h-3 w-3" />
+            <Settings2 className="mr-1 size-3" />
             General
           </TabsTrigger>
         </TabsList>
@@ -747,7 +747,7 @@ export function LoyaltyBuilderModal({ onClose }: LoyaltyBuilderModalProps) {
                         className="font-mono"
                       />
                       <div
-                        className="h-10 w-10 shrink-0 rounded-sm border"
+                        className="size-10 shrink-0 rounded-sm border"
                         style={{ backgroundColor: tier.color }}
                         aria-hidden="true"
                       />

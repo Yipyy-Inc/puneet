@@ -140,7 +140,7 @@ export default function CustomerDocumentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5" />
+                  <ShieldCheck className="size-5" />
                   Agreements & Waivers
                 </CardTitle>
                 <CardDescription>
@@ -152,7 +152,7 @@ export default function CustomerDocumentsPage() {
               <CardContent className="space-y-3">
                 {agreementDocs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <AlertCircle className="text-muted-foreground mb-2 h-10 w-10" />
+                    <AlertCircle className="text-muted-foreground mb-2 size-10" />
                     <p className="font-semibold">No agreements on file yet</p>
                     <p className="text-muted-foreground text-sm">
                       Your facility may ask you to sign agreements or waivers
@@ -224,7 +224,7 @@ export default function CustomerDocumentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" />
+                  <ClipboardList className="size-5" />
                   Available Forms
                 </CardTitle>
                 <CardDescription>
@@ -246,7 +246,7 @@ export default function CustomerDocumentsPage() {
                   if (forms.length === 0) {
                     return (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <AlertCircle className="text-muted-foreground mb-2 h-10 w-10" />
+                        <AlertCircle className="text-muted-foreground mb-2 size-10" />
                         <p className="font-semibold">No forms available</p>
                         <p className="text-muted-foreground text-sm">
                           Your facility hasn&apos;t published any forms yet.
@@ -294,7 +294,7 @@ export default function CustomerDocumentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
+                  <FileText className="size-5" />
                   Documents Vault
                 </CardTitle>
                 <CardDescription>
@@ -305,7 +305,7 @@ export default function CustomerDocumentsPage() {
               <CardContent className="space-y-4">
                 {otherDocs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <AlertCircle className="text-muted-foreground mb-2 h-10 w-10" />
+                    <AlertCircle className="text-muted-foreground mb-2 size-10" />
                     <p className="font-semibold">No documents yet</p>
                     <p className="text-muted-foreground text-sm">
                       When your facility uploads vaccine records, medical notes,
@@ -329,7 +329,7 @@ export default function CustomerDocumentsPage() {
                             {doc.petId && (
                               <>
                                 {" "}
-                                · <Dog className="mr-1 inline-block h-3 w-3" />
+                                · <Dog className="mr-1 inline-block size-3" />
                                 Pet ID #{doc.petId}
                               </>
                             )}

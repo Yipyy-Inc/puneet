@@ -44,7 +44,7 @@ export function CheckInOutStep({ data, onChange }: CheckInOutStepProps) {
 
       {!cio.enabled && (
         <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0" />
           <span>
             Check-in/out is disabled. Staff will not be prompted to log arrival
             or departure for this service.
@@ -124,7 +124,7 @@ export function CheckInOutStep({ data, onChange }: CheckInOutStepProps) {
         {/* QR Code Support */}
         <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
           <div className="flex items-start gap-3">
-            <QrCode className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+            <QrCode className="text-muted-foreground mt-0.5 size-5 shrink-0" />
             <div className="space-y-0.5">
               <Label
                 htmlFor="qr-support"
@@ -147,7 +147,7 @@ export function CheckInOutStep({ data, onChange }: CheckInOutStepProps) {
 
         {cio.qrCodeSupport && (
           <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <Info className="mt-0.5 size-3.5 shrink-0" />
             <span>
               A QR code will be generated when this service module is activated.
               Print and post it at the check-in station.

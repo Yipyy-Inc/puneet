@@ -142,7 +142,7 @@ function IconButton({
           size="icon"
           onClick={onClick}
           aria-label={label}
-          className="relative h-10 w-10 rounded-xl"
+          className="relative size-10 rounded-xl"
           data-has-badge={showBadge ? "true" : "false"}
         >
           {children}
@@ -205,7 +205,7 @@ export function TopBarIcons({
           badge={msgBadge}
           onClick={() => nav(inboxHref)}
         >
-          <Inbox className="text-muted-foreground h-5 w-5" />
+          <Inbox className="text-muted-foreground size-5" />
         </IconButton>
 
         <IconButton
@@ -213,12 +213,12 @@ export function TopBarIcons({
           badge={alertBadge}
           onClick={() => nav(notificationsHref)}
         >
-          <Bell className="text-muted-foreground h-5 w-5" />
+          <Bell className="text-muted-foreground size-5" />
         </IconButton>
 
         {showQuickCreate && (
           <IconButton label="Create" onClick={handleQuickCreate}>
-            <Plus className="text-muted-foreground h-5 w-5" />
+            <Plus className="text-muted-foreground size-5" />
           </IconButton>
         )}
       </div>

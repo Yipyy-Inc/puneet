@@ -202,7 +202,7 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
+          <Settings className="size-5" />
           Referral Program Settings
         </DialogTitle>
         <DialogDescription>

@@ -113,7 +113,7 @@ export function Calendar({
           variant="outline"
           size="icon"
           onClick={handlePreviousMonth}
-          className="h-7 w-7"
+          className="size-7"
         >
           <ChevronLeft className="size-4" />
         </Button>
@@ -124,7 +124,7 @@ export function Calendar({
           variant="outline"
           size="icon"
           onClick={handleNextMonth}
-          className="h-7 w-7"
+          className="size-7"
         >
           <ChevronRight className="size-4" />
         </Button>

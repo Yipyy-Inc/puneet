@@ -37,11 +37,11 @@ export function TagIconPicker({
       {/* Preview */}
       <div className="flex items-center gap-3">
         <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm"
+          className="flex size-12 shrink-0 items-center justify-center rounded-xl shadow-sm"
           style={{ backgroundColor: selectedColor, color: textColor }}
         >
           {createElement(resolveIcon(selectedIcon), {
-            className: "h-6 w-6",
+            className: "size-6",
           })}
         </div>
         <div>
@@ -69,14 +69,14 @@ export function TagIconPicker({
                 title={opt.label}
                 aria-label={opt.label}
                 className={cn(
-                  `focus:ring-ring relative h-9 w-9 rounded-lg shadow-sm transition-transform hover:scale-110 focus:ring-2 focus:ring-offset-1 focus:outline-none`,
+                  `focus:ring-ring relative size-9 rounded-lg shadow-sm transition-transform hover:scale-110 focus:ring-2 focus:ring-offset-1 focus:outline-none`,
                   isSelected && "ring-ring ring-2 ring-offset-1",
                 )}
                 style={{ backgroundColor: opt.hex }}
               >
                 {isSelected && (
                   <Check
-                    className="absolute inset-0 m-auto h-3.5 w-3.5"
+                    className="absolute inset-0 m-auto size-3.5"
                     style={{ color: getContrastTextColor(opt.hex) }}
                   />
                 )}
@@ -123,7 +123,7 @@ export function TagIconPicker({
           Icon
         </Label>
         <div className="relative mb-3">
-          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             placeholder="Search icons..."
             value={search}
@@ -144,7 +144,7 @@ export function TagIconPicker({
                 title={name}
                 aria-label={name}
                 className={cn(
-                  `hover:bg-accent focus:ring-ring flex h-10 w-10 items-center justify-center rounded-lg border transition-all focus:ring-2 focus:outline-none`,
+                  `hover:bg-accent focus:ring-ring flex size-10 items-center justify-center rounded-lg border transition-all focus:ring-2 focus:outline-none`,
                   isSelected
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background text-foreground",

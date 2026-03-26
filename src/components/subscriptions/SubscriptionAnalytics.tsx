@@ -164,7 +164,7 @@ export function SubscriptionAnalytics() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="size-5" />
               Distribution by Tier
             </CardTitle>
           </CardHeader>
@@ -197,7 +197,7 @@ export function SubscriptionAnalytics() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <Package className="size-5" />
               Most Popular Modules
             </CardTitle>
           </CardHeader>
@@ -231,7 +231,7 @@ export function SubscriptionAnalytics() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <TrendingUp className="size-5" />
             Actionable Insights
           </CardTitle>
         </CardHeader>
@@ -239,7 +239,7 @@ export function SubscriptionAnalytics() {
           <div className="space-y-3">
             {upsellOpportunities > 0 && (
               <div className="flex items-start gap-3 rounded-lg bg-blue-500/10 p-3">
-                <TrendingUp className="mt-0.5 h-5 w-5 text-blue-500" />
+                <TrendingUp className="mt-0.5 size-5 text-blue-500" />
                 <div>
                   <p className="text-sm font-medium">Upsell Opportunity</p>
                   <p className="text-muted-foreground text-sm">
@@ -252,7 +252,7 @@ export function SubscriptionAnalytics() {
 
             {expiringSoon > 0 && (
               <div className="flex items-start gap-3 rounded-lg bg-orange-500/10 p-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
+                <AlertTriangle className="mt-0.5 size-5 text-orange-500" />
                 <div>
                   <p className="text-sm font-medium">Expiring Subscriptions</p>
                   <p className="text-muted-foreground text-sm">
@@ -265,7 +265,7 @@ export function SubscriptionAnalytics() {
 
             {trialSubscriptions > 0 && (
               <div className="flex items-start gap-3 rounded-lg bg-purple-500/10 p-3">
-                <Users className="mt-0.5 h-5 w-5 text-purple-500" />
+                <Users className="mt-0.5 size-5 text-purple-500" />
                 <div>
                   <p className="text-sm font-medium">Active Trials</p>
                   <p className="text-muted-foreground text-sm">
@@ -278,7 +278,7 @@ export function SubscriptionAnalytics() {
 
             {churnRisk > 0 && (
               <div className="flex items-start gap-3 rounded-lg bg-red-500/10 p-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 text-red-500" />
+                <AlertTriangle className="mt-0.5 size-5 text-red-500" />
                 <div>
                   <p className="text-sm font-medium">Churn Risk</p>
                   <p className="text-muted-foreground text-sm">

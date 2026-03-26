@@ -55,10 +55,10 @@ export function BookingRequestsTopbarDropdown({
                 variant="ghost"
                 size="icon"
                 aria-label="Booking requests"
-                className={cn("relative h-10 w-10 rounded-xl", className)}
+                className={cn("relative size-10 rounded-xl", className)}
                 data-has-badge={badge ? "true" : "false"}
               >
-                <CalendarClock className="text-muted-foreground h-5 w-5" />
+                <CalendarClock className="text-muted-foreground size-5" />
                 {badge ? (
                   <span
                     data-slot="topbar-badge"

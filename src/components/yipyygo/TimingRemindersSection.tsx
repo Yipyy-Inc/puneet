@@ -103,7 +103,7 @@ export function TimingRemindersSection({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <Clock className="size-5" />
             Send Timing & Deadline
           </CardTitle>
           <CardDescription>

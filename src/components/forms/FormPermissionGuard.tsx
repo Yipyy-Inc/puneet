@@ -54,7 +54,7 @@ export function FormPermissionGuard({
   return (
     <Card>
       <CardContent className="py-12 text-center">
-        <Shield className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10" />
+        <Shield className="text-muted-foreground/50 mx-auto mb-3 size-10" />
         <h3 className="text-muted-foreground text-sm font-semibold">
           Access Restricted
         </h3>

@@ -255,7 +255,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 size="icon-sm"
                 onClick={() => removeDurationTier(i)}
               >
-                <Trash2 className="text-destructive h-3.5 w-3.5" />
+                <Trash2 className="text-destructive size-3.5" />
               </Button>
             </div>
           ))}
@@ -265,7 +265,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
             size="sm"
             onClick={addDurationTier}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="size-3.5" />
             Add Tier
           </Button>
         </div>
@@ -312,7 +312,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 size="icon-sm"
                 onClick={() => removePeakRule(rule.id)}
               >
-                <Trash2 className="text-destructive h-3.5 w-3.5" />
+                <Trash2 className="text-destructive size-3.5" />
               </Button>
             </div>
           ))}
@@ -322,7 +322,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
             size="sm"
             onClick={addPeakRule}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="size-3.5" />
             Add Rule
           </Button>
         </div>

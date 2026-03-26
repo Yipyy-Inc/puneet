@@ -14,9 +14,9 @@ import type { CustomServiceModule } from "@/lib/types";
 
 function BooleanIcon({ value }: { value: boolean }) {
   return value ? (
-    <Check className="h-3.5 w-3.5 text-green-600" />
+    <Check className="size-3.5 text-green-600" />
   ) : (
-    <X className="text-muted-foreground h-3.5 w-3.5" />
+    <X className="text-muted-foreground size-3.5" />
   );
 }
 
@@ -39,7 +39,7 @@ function SectionHeader({
         onClick={() => onEdit(stepIndex)}
         className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
       >
-        <Pencil className="h-3 w-3" />
+        <Pencil className="size-3" />
         Edit
       </Button>
     </div>
@@ -83,7 +83,7 @@ export function WizardReviewPanel({
           className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
           style={gradientStyle}
         >
-          <DynamicIcon name={data.icon} className="h-7 w-7" />
+          <DynamicIcon name={data.icon} className="size-7" />
         </div>
         <div>
           <h2 className="text-base/tight font-bold">

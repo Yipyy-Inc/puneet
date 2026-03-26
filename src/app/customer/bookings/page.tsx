@@ -341,7 +341,7 @@ export default function CustomerBookingsPage() {
                                     />
                                   ) : (
                                     <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                                      <PetIcon className="text-primary h-8 w-8" />
+                                      <PetIcon className="text-primary size-8" />
                                     </div>
                                   )}
                                 </div>
@@ -351,7 +351,7 @@ export default function CustomerBookingsPage() {
                                   <div className="flex items-start justify-between">
                                     <div>
                                       <div className="mb-1 flex items-center gap-2">
-                                        <ServiceIcon className="text-muted-foreground h-5 w-5" />
+                                        <ServiceIcon className="text-muted-foreground size-5" />
                                         <h3 className="text-lg font-semibold capitalize">
                                           {booking.service}
                                           {booking.serviceType && (
@@ -550,7 +550,7 @@ export default function CustomerBookingsPage() {
                   </div>
                 ) : (
                   <div className="py-12 text-center">
-                    <Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <Calendar className="text-muted-foreground mx-auto mb-4 size-12" />
                     <h3 className="mb-2 text-lg font-semibold">
                       No upcoming bookings
                     </h3>
@@ -594,7 +594,7 @@ export default function CustomerBookingsPage() {
                                     />
                                   ) : (
                                     <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                                      <PetIcon className="text-primary h-8 w-8" />
+                                      <PetIcon className="text-primary size-8" />
                                     </div>
                                   )}
                                 </div>
@@ -602,7 +602,7 @@ export default function CustomerBookingsPage() {
                                   <div className="flex items-start justify-between">
                                     <div>
                                       <div className="mb-1 flex items-center gap-2">
-                                        <ServiceIcon className="text-muted-foreground h-5 w-5" />
+                                        <ServiceIcon className="text-muted-foreground size-5" />
                                         <h3 className="font-semibold capitalize">
                                           {booking.service}
                                         </h3>
@@ -630,7 +630,7 @@ export default function CustomerBookingsPage() {
                   </div>
                 ) : (
                   <div className="py-12 text-center">
-                    <Clock className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <Clock className="text-muted-foreground mx-auto mb-4 size-12" />
                     <h3 className="mb-2 text-lg font-semibold">
                       No past bookings
                     </h3>

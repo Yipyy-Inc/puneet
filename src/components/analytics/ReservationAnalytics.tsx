@@ -62,7 +62,7 @@ export function ReservationAnalytics() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Calendar className="h-5 w-5 text-white" />
+                <Calendar className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -94,7 +94,7 @@ export function ReservationAnalytics() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <CheckCircle2 className="h-5 w-5 text-white" />
+                <CheckCircle2 className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -126,7 +126,7 @@ export function ReservationAnalytics() {
                     "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
                 }}
               >
-                <XCircle className="h-5 w-5 text-white" />
+                <XCircle className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -155,7 +155,7 @@ export function ReservationAnalytics() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <TrendingUp className="h-5 w-5 text-white" />
+                <TrendingUp className="size-5 text-white" />
               </div>
             </div>
           </CardContent>

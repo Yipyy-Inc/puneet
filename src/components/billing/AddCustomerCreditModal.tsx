@@ -116,7 +116,7 @@ export function AddCustomerCreditModal({
       <DialogContent className="min-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Add Customer Credit
           </DialogTitle>
           <DialogDescription>

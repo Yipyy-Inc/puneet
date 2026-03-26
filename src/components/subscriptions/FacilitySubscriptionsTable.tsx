@@ -237,7 +237,7 @@ export function FacilitySubscriptionsTable() {
   const renderActions = (item: FacilitySubscription) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
+        <Button variant="ghost" className="size-8 p-0">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="size-4" />
         </Button>
@@ -413,7 +413,7 @@ export function FacilitySubscriptionsTable() {
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+              <Eye className="size-5" />
               Subscription Details
             </DialogTitle>
             <DialogDescription>
@@ -499,7 +499,7 @@ export function FacilitySubscriptionsTable() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5" />
+              <Edit className="size-5" />
               Edit Subscription
             </DialogTitle>
             <DialogDescription>
@@ -550,7 +550,7 @@ export function FacilitySubscriptionsTable() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <Package className="size-5" />
               Manage Modules
             </DialogTitle>
             <DialogDescription>
@@ -573,7 +573,7 @@ export function FacilitySubscriptionsTable() {
                     variant="secondary"
                     className="bg-green-100 text-green-700"
                   >
-                    <CheckCircle className="mr-1 h-3 w-3" />
+                    <CheckCircle className="mr-1 size-3" />
                     Enabled
                   </Badge>
                 </div>
@@ -599,7 +599,7 @@ export function FacilitySubscriptionsTable() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+              <TrendingUp className="size-5" />
               Upgrade Tier
             </DialogTitle>
             <DialogDescription>
@@ -645,7 +645,7 @@ export function FacilitySubscriptionsTable() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
-              <Archive className="h-5 w-5" />
+              <Archive className="size-5" />
               Cancel Subscription
             </DialogTitle>
             <DialogDescription>

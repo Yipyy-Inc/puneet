@@ -23,32 +23,32 @@ const ROLES: { role: FacilityRole; label: string; icon: React.ReactNode }[] = [
   {
     role: "owner",
     label: "Owner",
-    icon: <Crown className="h-3.5 w-3.5 text-amber-600" />,
+    icon: <Crown className="size-3.5 text-amber-600" />,
   },
   {
     role: "manager",
     label: "Manager",
-    icon: <Briefcase className="h-3.5 w-3.5 text-blue-600" />,
+    icon: <Briefcase className="size-3.5 text-blue-600" />,
   },
   {
     role: "front_desk",
     label: "Front Desk",
-    icon: <UserCheck className="h-3.5 w-3.5 text-green-600" />,
+    icon: <UserCheck className="size-3.5 text-green-600" />,
   },
   {
     role: "groomer",
     label: "Groomer",
-    icon: <User className="h-3.5 w-3.5 text-slate-500" />,
+    icon: <User className="size-3.5 text-slate-500" />,
   },
   {
     role: "trainer",
     label: "Trainer",
-    icon: <User className="h-3.5 w-3.5 text-slate-500" />,
+    icon: <User className="size-3.5 text-slate-500" />,
   },
   {
     role: "kennel_tech",
     label: "Kennel Tech",
-    icon: <User className="h-3.5 w-3.5 text-slate-500" />,
+    icon: <User className="size-3.5 text-slate-500" />,
   },
 ];
 
@@ -117,7 +117,7 @@ export function FormPermissionsPanel() {
                 ))}
                 <th className="min-w-[80px] px-2 py-2 text-center text-xs font-medium">
                   <div className="flex flex-col items-center gap-1">
-                    <Users className="h-3.5 w-3.5 text-violet-500" />
+                    <Users className="size-3.5 text-violet-500" />
                     <span>Customer</span>
                     <Badge
                       variant="secondary"
@@ -140,12 +140,12 @@ export function FormPermissionsPanel() {
                       {r.granted[pIdx] ? (
                         <Check className="mx-auto size-4 text-green-600" />
                       ) : (
-                        <X className="text-muted-foreground/30 mx-auto h-3.5 w-3.5" />
+                        <X className="text-muted-foreground/30 mx-auto size-3.5" />
                       )}
                     </td>
                   ))}
                   <td className="px-2 py-2 text-center">
-                    <X className="text-muted-foreground/30 mx-auto h-3.5 w-3.5" />
+                    <X className="text-muted-foreground/30 mx-auto size-3.5" />
                   </td>
                 </tr>
               ))}

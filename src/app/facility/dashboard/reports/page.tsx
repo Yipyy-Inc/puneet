@@ -595,7 +595,7 @@ export default function ReportsPage() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <FileText className="text-muted-foreground h-5 w-5" />
+                        <FileText className="text-muted-foreground size-5" />
                         <div>
                           <div className="font-medium">{report.name}</div>
                           <div className="text-muted-foreground text-sm">

@@ -44,9 +44,9 @@ export default function TestGroomingValidationPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {isAvailable ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="size-5 text-green-500" />
               ) : (
-                <XCircle className="h-5 w-5 text-red-500" />
+                <XCircle className="size-5 text-red-500" />
               )}
               Statut de Disponibilité
             </CardTitle>
@@ -79,7 +79,7 @@ export default function TestGroomingValidationPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="size-5" />
                   Date Disponible la Plus Proche
                 </CardTitle>
               </CardHeader>
@@ -115,7 +115,7 @@ export default function TestGroomingValidationPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+                  <Package className="size-5" />
                   Catégories de Services Disponibles
                 </CardTitle>
               </CardHeader>
@@ -151,7 +151,7 @@ export default function TestGroomingValidationPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <Users className="size-5" />
                   Mode de Sélection du Toilettage
                 </CardTitle>
               </CardHeader>
@@ -211,7 +211,7 @@ export default function TestGroomingValidationPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
+                  <CreditCard className="size-5" />
                   Informations sur l&apos;Acompte
                 </CardTitle>
               </CardHeader>

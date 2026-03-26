@@ -245,7 +245,7 @@ export function RoomAssignmentBoard({
                               type="button"
                               size="icon"
                               variant="ghost"
-                              className="h-7 w-7"
+                              className="size-7"
                               onClick={() => onUnassign(pet.petId)}
                             >
                               <X className="size-4" />

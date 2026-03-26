@@ -285,7 +285,7 @@ export function SegmentBuilderModal({
           {!isEditing && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 text-sm">
-                <Zap className="h-3.5 w-3.5" />
+                <Zap className="size-3.5" />
                 Quick Start from Pre-Built Segment
               </Label>
               <div
@@ -375,11 +375,11 @@ export function SegmentBuilderModal({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="size-7 p-0"
                           onClick={() => handleRemoveGroup(group.id)}
                           aria-label={`Remove filter group ${groupIdx + 1}`}
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="size-3.5" />
                         </Button>
                       )}
                     </div>
@@ -410,13 +410,13 @@ export function SegmentBuilderModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className="size-6 p-0"
                             onClick={() =>
                               handleRemoveFilter(group.id, filter.id)
                             }
                             aria-label={`Remove filter: ${def?.label || filter.field}`}
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="size-3.5" />
                           </Button>
                         </div>
                       );
@@ -656,7 +656,7 @@ export function SegmentBuilderModal({
                                 newFilterMultiValues.length === 0)
                             }
                           >
-                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            <Plus className="mr-1 size-3.5" />
                             Add Filter
                           </Button>
                         </div>
@@ -671,7 +671,7 @@ export function SegmentBuilderModal({
                           setActiveGroupId(group.id);
                         }}
                       >
-                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        <Plus className="mr-1 size-3.5" />
                         Add Filter
                       </Button>
                     )}
@@ -687,7 +687,7 @@ export function SegmentBuilderModal({
               onClick={handleAddGroup}
               className="w-full border-dashed"
             >
-              <Plus className="mr-1 h-3.5 w-3.5" />
+              <Plus className="mr-1 size-3.5" />
               Add Filter Group
             </Button>
           </div>
@@ -706,7 +706,7 @@ export function SegmentBuilderModal({
                     </div>
                   </div>
                   <Users
-                    className="text-primary/20 h-10 w-10"
+                    className="text-primary/20 size-10"
                     aria-hidden="true"
                   />
                 </div>

@@ -160,7 +160,7 @@ export function ClientPetStep({
       {petsNeedingEvaluation.length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
-            <FileWarning className="mt-0.5 h-5 w-5 text-red-600" />
+            <FileWarning className="mt-0.5 size-5 text-red-600" />
             <div className="flex-1">
               <h4 className="text-sm font-semibold text-red-800">
                 Evaluation Required
@@ -236,7 +236,7 @@ export function ClientPetStep({
                         >
                           <div className="flex items-center gap-3">
                             <Avatar
-                              className={` ${isSelected ? "h-12 w-12" : `h-10 w-10`} transition-all`}
+                              className={` ${isSelected ? "size-12" : `size-10`} transition-all`}
                             >
                               <AvatarImage
                                 src={client.imageUrl}
@@ -368,9 +368,9 @@ export function ClientPetStep({
                           ) : (
                             <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
                               {pet.type === "Cat" ? (
-                                <Cat className="text-muted-foreground h-8 w-8" />
+                                <Cat className="text-muted-foreground size-8" />
                               ) : (
-                                <PawPrint className="text-muted-foreground h-8 w-8" />
+                                <PawPrint className="text-muted-foreground size-8" />
                               )}
                             </div>
                           )}
@@ -395,7 +395,7 @@ export function ClientPetStep({
                                         variant="destructive"
                                         className="text-xs"
                                       >
-                                        <FileWarning className="mr-1 h-3 w-3" />
+                                        <FileWarning className="mr-1 size-3" />
                                         Evaluation Expired
                                       </Badge>
                                     ) : hasValidEvaluation(pet) ? (
@@ -403,7 +403,7 @@ export function ClientPetStep({
                                         variant="secondary"
                                         className="bg-green-100 text-xs text-green-800 hover:bg-green-100"
                                       >
-                                        <Check className="mr-1 h-3 w-3" />
+                                        <Check className="mr-1 size-3" />
                                         Evaluation Passed
                                       </Badge>
                                     ) : selectedService === "evaluation" ? (
@@ -418,7 +418,7 @@ export function ClientPetStep({
                                         variant="secondary"
                                         className="bg-yellow-100 text-xs text-yellow-800 hover:bg-yellow-100"
                                       >
-                                        <FileWarning className="mr-1 h-3 w-3" />
+                                        <FileWarning className="mr-1 size-3" />
                                         No Evaluation
                                       </Badge>
                                     ) : (
@@ -433,7 +433,7 @@ export function ClientPetStep({
                                 )}
                               </div>
                               {isSelected && !isDisabled && (
-                                <Check className="text-primary h-5 w-5 shrink-0" />
+                                <Check className="text-primary size-5 shrink-0" />
                               )}
                               {isDisabled &&
                                 selectedService === "evaluation" && (

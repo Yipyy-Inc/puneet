@@ -101,7 +101,7 @@ export function ProcessRefundModal({
       <DialogContent className="min-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className="size-5" />
             Process Refund
           </DialogTitle>
           <DialogDescription>Refund payment #{payment?.id}</DialogDescription>

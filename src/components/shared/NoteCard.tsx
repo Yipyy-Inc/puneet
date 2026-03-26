@@ -74,8 +74,8 @@ export function NoteCard({
       {/* Header */}
       <div className="mb-1.5 flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-            <User className="text-muted-foreground h-3 w-3" />
+          <div className="bg-muted flex size-6 shrink-0 items-center justify-center rounded-full">
+            <User className="text-muted-foreground size-3" />
           </div>
           <div className="min-w-0">
             <span className="block truncate text-sm font-medium">
@@ -129,7 +129,7 @@ export function NoteCard({
                 className="text-muted-foreground hover:text-primary flex cursor-pointer items-center gap-0.5 text-xs transition-colors hover:underline"
                 aria-label="View edit history"
               >
-                <History className="h-3 w-3" />
+                <History className="size-3" />
                 <span>
                   Edited
                   {note.updatedAt ? ` ${formatNoteDate(note.updatedAt)}` : ""}
@@ -143,7 +143,7 @@ export function NoteCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="size-8 p-0"
                   onClick={onTogglePin}
                   aria-label={note.isPinned ? "Unpin note" : "Pin note"}
                   title={note.isPinned ? "Unpin" : "Pin"}
@@ -159,7 +159,7 @@ export function NoteCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="size-8 p-0"
                   onClick={onToggleVisibility}
                   aria-label={
                     note.visibility === "internal"
@@ -183,7 +183,7 @@ export function NoteCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="size-8 p-0"
                   onClick={onEdit}
                   aria-label="Edit note"
                   title="Edit note"
@@ -197,7 +197,7 @@ export function NoteCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive h-7 w-7 p-0"
+                      className="text-destructive hover:text-destructive size-7 p-0"
                       aria-label="Delete note"
                     >
                       <Trash2 className="size-4" />

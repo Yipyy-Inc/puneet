@@ -384,7 +384,7 @@ export function DaycareCalendarView({
                               !isExpanded && (
                                 <div className="flex h-full items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
                                   <div className="bg-background text-muted-foreground flex items-center gap-1 rounded-sm border px-2 py-1 text-xs shadow-sm">
-                                    <Plus className="h-3 w-3" />
+                                    <Plus className="size-3" />
                                     Add
                                   </div>
                                 </div>
@@ -438,7 +438,7 @@ export function DaycareCalendarView({
                               onReservationClick?.(reservation);
                             }}
                           >
-                            <div className="bg-muted flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
+                            <div className="bg-muted flex size-5 shrink-0 items-center justify-center rounded-full">
                               <PawPrint className="text-muted-foreground h-2.5 w-2.5" />
                             </div>
                             <div className="flex min-w-0 flex-1 items-center gap-2">

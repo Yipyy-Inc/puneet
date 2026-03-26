@@ -46,7 +46,7 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
             <div className="flex flex-1 flex-col items-center">
               <div
                 className={cn(
-                  `flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium`,
+                  `flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium`,
                   index < currentStep
                     ? "border-primary bg-primary text-primary-foreground"
                     : index === currentStep

@@ -94,7 +94,7 @@ export function NotesList({
             className="h-7 gap-1 text-xs"
             onClick={() => setAddModalOpen(true)}
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="size-3" />
             Add Note
           </Button>
         )}
@@ -104,9 +104,9 @@ export function NotesList({
       {filteredNotes.length === 0 ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-8">
           {compact ? (
-            <MessageSquare className="mb-1 h-6 w-6" />
+            <MessageSquare className="mb-1 size-6" />
           ) : (
-            <StickyNote className="mb-2 h-8 w-8" />
+            <StickyNote className="mb-2 size-8" />
           )}
           <p className="text-sm">No notes yet</p>
           {!readOnly && (
@@ -146,7 +146,7 @@ export function NotesList({
                   <>
                     {hasBothSections && (
                       <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
-                        <Pin className="h-3 w-3" />
+                        <Pin className="size-3" />
                         Pinned
                       </div>
                     )}

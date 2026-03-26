@@ -459,7 +459,7 @@ export default function CustomerDashboardPage() {
                 <div className="bg-primary/10 rounded-lg p-3">
                   {(() => {
                     const ServiceIcon = getServiceIcon(nextBooking.service);
-                    return <ServiceIcon className="text-primary h-6 w-6" />;
+                    return <ServiceIcon className="text-primary size-6" />;
                   })()}
                 </div>
                 <div className="flex-1 space-y-2">
@@ -602,7 +602,7 @@ export default function CustomerDashboardPage() {
                     {loyaltyData.points} pts
                   </div>
                 </div>
-                <div className="min-w-[200px] flex-1">
+                <div className="min-w-50 flex-1">
                   <div className="mb-1 text-xs tracking-wide text-white uppercase drop-shadow-sm">
                     LOYALTY REWARDS
                   </div>
@@ -654,7 +654,7 @@ export default function CustomerDashboardPage() {
             <CardContent className="space-y-3">
               {customerPets.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Dog className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                  <Dog className="mx-auto mb-2 size-12 opacity-50" />
                   <p>No pets registered yet</p>
                   <Button variant="outline" size="sm" className="mt-4" asChild>
                     <Link href="/customer/pets/add">Add your first pet</Link>
@@ -669,14 +669,14 @@ export default function CustomerDashboardPage() {
                         key={pet.id}
                         className="bg-background/60 flex items-center gap-3 rounded-lg border p-3"
                       >
-                        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                          <Dog className="text-primary h-6 w-6" />
+                        <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                          <Dog className="text-primary size-6" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium">{pet.name}</p>
                             <div className="flex items-center gap-1">
-                              <div className="h-2 w-2 rounded-full bg-green-500" />
+                              <div className="size-2 rounded-full bg-green-500" />
                               <span className="text-muted-foreground text-xs">
                                 Healthy
                               </span>
@@ -728,7 +728,7 @@ export default function CustomerDashboardPage() {
             <CardContent className="space-y-3">
               {messagesData.recent.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <MessageSquare className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                  <MessageSquare className="mx-auto mb-2 size-12 opacity-50" />
                   <p>No messages yet</p>
                 </div>
               ) : (
@@ -750,8 +750,8 @@ export default function CustomerDashboardPage() {
                         (window.location.href = "/customer/messages")
                       }
                     >
-                      <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-                        <Icon className="text-primary h-5 w-5" />
+                      <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                        <Icon className="text-primary size-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
@@ -759,7 +759,7 @@ export default function CustomerDashboardPage() {
                             {message.staffName || "Facility Team"}
                           </p>
                           {isUnread && (
-                            <div className="h-2 w-2 shrink-0 rounded-full bg-orange-500" />
+                            <div className="size-2 shrink-0 rounded-full bg-orange-500" />
                           )}
                         </div>
                         <p className="text-muted-foreground truncate text-xs">
@@ -783,12 +783,12 @@ export default function CustomerDashboardPage() {
             <CardTitle className="flex items-center gap-2">
               {urgentActions.length > 0 ? (
                 <>
-                  <AlertTriangle className="text-destructive h-5 w-5" />
+                  <AlertTriangle className="text-destructive size-5" />
                   Action Needed
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="size-5 text-green-600" />
                   Getting Started
                 </>
               )}
@@ -833,7 +833,7 @@ export default function CustomerDashboardPage() {
                       >
                         <Link href={action.actionLink}>
                           {action.actionLabel}
-                          <ExternalLink className="ml-1 h-3 w-3" />
+                          <ExternalLink className="ml-1 size-3" />
                         </Link>
                       </Button>
                     </div>

@@ -107,8 +107,8 @@ function AddonCardToggle({
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Scissors className="text-muted-foreground h-8 w-8" />
+          <div className="flex size-full items-center justify-center">
+            <Scissors className="text-muted-foreground size-8" />
           </div>
         )}
         {selected && (
@@ -167,7 +167,7 @@ function AddonCardQuantity({
             unoptimized
           />
         ) : (
-          <div className="bg-muted flex h-full w-full items-center justify-center" />
+          <div className="bg-muted flex size-full items-center justify-center" />
         )}
       </div>
       <CardContent className="flex flex-1 flex-col space-y-3 p-4">
@@ -181,7 +181,7 @@ function AddonCardQuantity({
           <ul className="text-muted-foreground space-y-0.5 text-xs">
             {addon.included.slice(0, 3).map((item, i) => (
               <li key={i} className="flex items-center gap-1">
-                <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                <CheckCircle className="text-primary size-3 shrink-0" />
                 {item}
               </li>
             ))}
@@ -218,7 +218,7 @@ function AddonCardQuantity({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="size-8 p-0"
                 disabled={quantity === 0}
                 onClick={() => onQuantityChange(-1)}
               >
@@ -231,7 +231,7 @@ function AddonCardQuantity({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="size-8 p-0"
                 onClick={() => onQuantityChange(1)}
               >
                 +
@@ -246,7 +246,7 @@ function AddonCardQuantity({
             >
               {isAdded ? (
                 <>
-                  <CheckCircle className="mr-1 h-3 w-3" />
+                  <CheckCircle className="mr-1 size-3" />
                   Added
                 </>
               ) : (

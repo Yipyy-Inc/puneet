@@ -60,9 +60,9 @@ const defaultSizes: Record<ModalProps["type"], keyof typeof sizeClasses> = {
 };
 
 const defaultIcons: Record<ModalProps["type"], React.ReactNode> = {
-  confirmation: <Info className="h-6 w-6 text-blue-500" />,
-  warning: <AlertTriangle className="h-6 w-6 text-amber-500" />,
-  details: <CheckCircle2 className="text-primary h-6 w-6" />,
+  confirmation: <Info className="size-6 text-blue-500" />,
+  warning: <AlertTriangle className="size-6 text-amber-500" />,
+  details: <CheckCircle2 className="text-primary size-6" />,
   form: null,
 };
 

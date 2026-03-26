@@ -143,7 +143,7 @@ export default function ResourcesPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="bg-primary/10 mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-              <Box className="text-primary h-7 w-7" />
+              <Box className="text-primary size-7" />
             </div>
             <h3 className="text-lg font-semibold">No resources yet</h3>
             <p className="text-muted-foreground mt-1 max-w-sm text-sm/relaxed">
@@ -153,16 +153,16 @@ export default function ResourcesPage() {
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <Droplets className="h-3 w-3" /> Pool
+                <Droplets className="size-3" /> Pool
               </span>
               <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <Car className="h-3 w-3" /> Van
+                <Car className="size-3" /> Van
               </span>
               <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <DoorOpen className="h-3 w-3" /> Room
+                <DoorOpen className="size-3" /> Room
               </span>
               <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <Wrench className="h-3 w-3" /> Equipment
+                <Wrench className="size-3" /> Equipment
               </span>
             </div>
             <Button onClick={openCreateModal} className="mt-5">
@@ -180,8 +180,8 @@ export default function ResourcesPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-                        <Icon className="text-primary h-5 w-5" />
+                      <div className="bg-primary/10 flex size-10 items-center justify-center rounded-lg">
+                        <Icon className="text-primary size-5" />
                       </div>
                       <div>
                         <CardTitle className="text-base">

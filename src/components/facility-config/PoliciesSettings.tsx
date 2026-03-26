@@ -126,7 +126,7 @@ export function PoliciesSettings({
             <CardHeader className="cursor-pointer transition-colors">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
+                  <Shield className="size-5" />
                   Policies & Requirements
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -162,7 +162,7 @@ export function PoliciesSettings({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Shield className="h-5 w-5" />
+                    <Shield className="size-5" />
                     Vaccination Requirements
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -270,7 +270,7 @@ export function PoliciesSettings({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="h-5 w-5" />
+                    <Users className="size-5" />
                     User Roles & Permissions
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -196,7 +196,7 @@ export function GlobalSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="flex items-center gap-2 text-xl font-semibold">
-            <Settings className="h-5 w-5" />
+            <Settings className="size-5" />
             Global Settings
           </h3>
           <p className="text-muted-foreground text-sm">
@@ -209,7 +209,7 @@ export function GlobalSettings() {
               variant="secondary"
               className="gap-1 bg-yellow-100 text-yellow-700"
             >
-              <AlertTriangle className="h-3 w-3" />
+              <AlertTriangle className="size-3" />
               Unsaved changes
             </Badge>
           )}
@@ -247,7 +247,7 @@ export function GlobalSettings() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Languages className="h-5 w-5 text-white" />
+                <Languages className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -274,7 +274,7 @@ export function GlobalSettings() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <DollarSign className="h-5 w-5 text-white" />
+                <DollarSign className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -301,7 +301,7 @@ export function GlobalSettings() {
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Mail className="h-5 w-5 text-white" />
+                <Mail className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -331,7 +331,7 @@ export function GlobalSettings() {
                     : "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
                 }}
               >
-                <Globe className="h-5 w-5 text-white" />
+                <Globe className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -366,7 +366,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <FileText className="h-5 w-5" />
+                  <FileText className="size-5" />
                   Platform Identity
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -414,7 +414,7 @@ export function GlobalSettings() {
                   <div className="space-y-2">
                     <Label>Logo</Label>
                     <div className="border-muted-foreground/25 hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors">
-                      <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                      <Upload className="text-muted-foreground mx-auto mb-2 size-8" />
                       <p className="text-muted-foreground text-xs">
                         Click to upload
                       </p>
@@ -423,7 +423,7 @@ export function GlobalSettings() {
                   <div className="space-y-2">
                     <Label>Favicon</Label>
                     <div className="border-muted-foreground/25 hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors">
-                      <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                      <Upload className="text-muted-foreground mx-auto mb-2 size-8" />
                       <p className="text-muted-foreground text-xs">32x32 PNG</p>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Palette className="h-5 w-5" />
+                  <Palette className="size-5" />
                   Colors & Theme
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -448,7 +448,7 @@ export function GlobalSettings() {
                     <Label>Primary Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="h-8 w-8 cursor-pointer rounded-lg border"
+                        className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.primaryColor }}
                         onClick={() => {
                           setSelectedColorType("primary");
@@ -468,7 +468,7 @@ export function GlobalSettings() {
                     <Label>Secondary Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="h-8 w-8 cursor-pointer rounded-lg border"
+                        className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.secondaryColor }}
                         onClick={() => {
                           setSelectedColorType("secondary");
@@ -488,7 +488,7 @@ export function GlobalSettings() {
                     <Label>Accent Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="h-8 w-8 cursor-pointer rounded-lg border"
+                        className="size-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.accentColor }}
                         onClick={() => {
                           setSelectedColorType("accent");
@@ -561,7 +561,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Mail className="h-5 w-5" />
+                  <Mail className="size-5" />
                   Support Contact
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -608,7 +608,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Link className="h-5 w-5" />
+                  <Link className="size-5" />
                   Social Links
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -668,7 +668,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Languages className="h-5 w-5" />
+                  <Languages className="size-5" />
                   Supported Languages
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -742,7 +742,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <DollarSign className="h-5 w-5" />
+                  <DollarSign className="size-5" />
                   Supported Currencies
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -828,7 +828,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Clock className="h-5 w-5" />
+                  <Clock className="size-5" />
                   Date & Time Settings
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -903,7 +903,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Shield className="h-5 w-5" />
+                  <Shield className="size-5" />
                   Security Settings
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1002,7 +1002,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="size-5" />
                   Registration & Trials
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1047,7 +1047,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTriangle className="size-5" />
                   Maintenance Mode
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1091,7 +1091,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Bell className="h-5 w-5" />
+                  <Bell className="size-5" />
                   Notification Channels
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1101,8 +1101,8 @@ export function GlobalSettings() {
               <CardContent className="space-y-4">
                 <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                      <Mail className="h-5 w-5 text-blue-600" />
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-blue-100">
+                      <Mail className="size-5 text-blue-600" />
                     </div>
                     <div>
                       <Label>Email Notifications</Label>
@@ -1120,8 +1120,8 @@ export function GlobalSettings() {
                 </div>
                 <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                      <Bell className="h-5 w-5 text-green-600" />
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-green-100">
+                      <Bell className="size-5 text-green-600" />
                     </div>
                     <div>
                       <Label>SMS Notifications</Label>
@@ -1139,8 +1139,8 @@ export function GlobalSettings() {
                 </div>
                 <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                      <Bell className="h-5 w-5 text-purple-600" />
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-purple-100">
+                      <Bell className="size-5 text-purple-600" />
                     </div>
                     <div>
                       <Label>Push Notifications</Label>
@@ -1163,7 +1163,7 @@ export function GlobalSettings() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <FileText className="h-5 w-5" />
+                  <FileText className="size-5" />
                   Email Templates
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1252,7 +1252,7 @@ export function GlobalSettings() {
               ].map((color) => (
                 <button
                   key={color}
-                  className="hover:border-primary h-8 w-8 rounded-lg border-2 border-transparent transition-colors"
+                  className="hover:border-primary size-8 rounded-lg border-2 border-transparent transition-colors"
                   style={{ backgroundColor: color }}
                   onClick={() => {
                     handleBrandingChange(
@@ -1297,7 +1297,7 @@ export function GlobalSettings() {
             >
               <div className="mb-4 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl"
+                  className="flex size-12 items-center justify-center rounded-xl"
                   style={{ backgroundColor: branding.primaryColor }}
                 >
                   <span className="text-xl font-bold text-white">
@@ -1351,7 +1351,7 @@ export function GlobalSettings() {
         <DialogContent className="min-w-5xl">
           <div className="flex flex-col items-center py-4 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-8 w-8 text-green-600" />
+              <Check className="size-8 text-green-600" />
             </div>
             <DialogTitle>Settings Saved</DialogTitle>
             <DialogDescription>
@@ -1369,7 +1369,7 @@ export function GlobalSettings() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5" />
+              <Edit className="size-5" />
               Edit Email Template
             </DialogTitle>
             <DialogDescription>{selectedTemplate?.name}</DialogDescription>

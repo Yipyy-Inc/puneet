@@ -458,7 +458,7 @@ export function GroomingCheckInOutSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+              <Clock className="size-5" />
               Scheduled Arrivals ({displayedScheduled.length})
             </CardTitle>
           </CardHeader>
@@ -470,7 +470,7 @@ export function GroomingCheckInOutSection() {
                   className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex flex-1 items-center gap-4">
-                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
+                    <div className="bg-muted relative size-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -479,8 +479,8 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <PawPrint className="text-muted-foreground h-6 w-6" />
+                        <div className="flex size-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground size-6" />
                         </div>
                       )}
                     </div>
@@ -494,19 +494,19 @@ export function GroomingCheckInOutSection() {
                       <div className="text-muted-foreground text-sm">
                         <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="size-3" />
                             {apt.ownerName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
+                            <Phone className="size-3" />
                             {apt.ownerPhone}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Scissors className="h-3 w-3" />
+                            <Scissors className="size-3" />
                             {apt.stylistName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="size-3" />
                             {apt.startTime} - {apt.endTime}
                           </span>
                         </div>
@@ -548,7 +548,7 @@ export function GroomingCheckInOutSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <LogIn className="h-5 w-5" />
+              <LogIn className="size-5" />
               Checked In / In Progress ({displayedCheckedIn.length})
             </CardTitle>
           </CardHeader>
@@ -560,7 +560,7 @@ export function GroomingCheckInOutSection() {
                   className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex flex-1 items-center gap-4">
-                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
+                    <div className="bg-muted relative size-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -569,8 +569,8 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <PawPrint className="text-muted-foreground h-6 w-6" />
+                        <div className="flex size-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground size-6" />
                         </div>
                       )}
                     </div>
@@ -584,16 +584,16 @@ export function GroomingCheckInOutSection() {
                       <div className="text-muted-foreground text-sm">
                         <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="size-3" />
                             {apt.ownerName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Scissors className="h-3 w-3" />
+                            <Scissors className="size-3" />
                             {apt.stylistName}
                           </span>
                           {apt.checkInTime && (
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               Checked in: {formatTime(apt.checkInTime)}
                             </span>
                           )}
@@ -697,7 +697,7 @@ export function GroomingCheckInOutSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
+              <CheckCircle className="size-5" />
               Ready for Pickup ({displayedReady.length})
             </CardTitle>
           </CardHeader>
@@ -709,7 +709,7 @@ export function GroomingCheckInOutSection() {
                   className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex flex-1 items-center gap-4">
-                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
+                    <div className="bg-muted relative size-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -718,8 +718,8 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <PawPrint className="text-muted-foreground h-6 w-6" />
+                        <div className="flex size-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground size-6" />
                         </div>
                       )}
                     </div>
@@ -733,15 +733,15 @@ export function GroomingCheckInOutSection() {
                       <div className="text-muted-foreground text-sm">
                         <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="size-3" />
                             {apt.ownerName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
+                            <Phone className="size-3" />
                             {apt.ownerPhone}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Scissors className="h-3 w-3" />
+                            <Scissors className="size-3" />
                             {apt.stylistName}
                           </span>
                         </div>
@@ -786,7 +786,7 @@ export function GroomingCheckInOutSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <LogOut className="h-5 w-5" />
+              <LogOut className="size-5" />
               Checked Out Today ({displayedCheckedOut.length})
             </CardTitle>
           </CardHeader>
@@ -798,7 +798,7 @@ export function GroomingCheckInOutSection() {
                   className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex flex-1 items-center gap-4">
-                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
+                    <div className="bg-muted relative size-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -807,8 +807,8 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <PawPrint className="text-muted-foreground h-6 w-6" />
+                        <div className="flex size-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground size-6" />
                         </div>
                       )}
                     </div>
@@ -822,12 +822,12 @@ export function GroomingCheckInOutSection() {
                       <div className="text-muted-foreground text-sm">
                         <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="size-3" />
                             {apt.ownerName}
                           </span>
                           {apt.checkOutTime && (
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               Checked out: {formatTime(apt.checkOutTime)}
                             </span>
                           )}
@@ -900,8 +900,8 @@ export function GroomingCheckInOutSection() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <PawPrint className="text-muted-foreground h-8 w-8" />
+                    <div className="flex size-full items-center justify-center">
+                      <PawPrint className="text-muted-foreground size-8" />
                     </div>
                   )}
                 </div>

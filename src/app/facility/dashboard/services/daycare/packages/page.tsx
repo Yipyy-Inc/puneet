@@ -257,12 +257,12 @@ export default function DaycarePackagesPage() {
       render: (item) => (
         <div className="flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
+            className={`size-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
           />
           <span className="font-medium">{item.name}</span>
           {item.popular && (
             <Badge variant="warning" className="text-xs">
-              <Star className="mr-1 h-3 w-3" />
+              <Star className="mr-1 size-3" />
               Popular
             </Badge>
           )}
@@ -355,7 +355,7 @@ export default function DaycarePackagesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/10 rounded-lg p-2">
-                    <Package className="text-primary h-5 w-5" />
+                    <Package className="text-primary size-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{packages.length}</p>
@@ -370,7 +370,7 @@ export default function DaycarePackagesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-success/10 rounded-lg p-2">
-                    <Package className="text-success h-5 w-5" />
+                    <Package className="text-success size-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{activePackages}</p>
@@ -383,7 +383,7 @@ export default function DaycarePackagesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-warning/10 rounded-lg p-2">
-                    <Star className="text-warning h-5 w-5" />
+                    <Star className="text-warning size-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{popularPackages}</p>
@@ -396,7 +396,7 @@ export default function DaycarePackagesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-info/10 rounded-lg p-2">
-                    <TrendingUp className="text-info h-5 w-5" />
+                    <TrendingUp className="text-info size-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">${totalSavings}</p>
@@ -421,7 +421,7 @@ export default function DaycarePackagesPage() {
                   {pkg.popular && (
                     <div className="absolute top-3 right-3">
                       <Badge variant="warning">
-                        <Star className="mr-1 h-3 w-3" />
+                        <Star className="mr-1 size-3" />
                         Popular
                       </Badge>
                     </div>

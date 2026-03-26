@@ -206,7 +206,7 @@ export function FormPhase2Settings({
                   className="h-7 text-xs"
                   onClick={addRule}
                 >
-                  <Plus className="mr-1 h-3 w-3" />
+                  <Plus className="mr-1 size-3" />
                   Add rule
                 </Button>
               </div>
@@ -227,10 +227,10 @@ export function FormPhase2Settings({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0"
+                      className="size-6 p-0"
                       onClick={() => removeRule(rule.id)}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="size-3" />
                     </Button>
                   </div>
                   <Select
@@ -464,7 +464,7 @@ export function FormPhase2Settings({
                   live.
                 </p>
                 <div className="rounded-lg border border-dashed border-violet-200 bg-violet-50/50 p-4 text-center">
-                  <CreditCard className="mx-auto mb-2 h-6 w-6 text-violet-400" />
+                  <CreditCard className="mx-auto mb-2 size-6 text-violet-400" />
                   <p className="text-xs font-medium text-violet-700">
                     Tokenized card capture
                   </p>

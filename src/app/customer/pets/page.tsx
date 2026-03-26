@@ -161,10 +161,10 @@ export default function CustomerPetsPage() {
                               alt={pet.name}
                               width={64}
                               height={64}
-                              className="h-full w-full rounded-lg object-cover"
+                              className="size-full rounded-lg object-cover"
                             />
                           ) : (
-                            <PetIcon className="text-primary h-8 w-8" />
+                            <PetIcon className="text-primary size-8" />
                           )}
                         </div>
                         <div>

@@ -338,7 +338,7 @@ export default function CustomerReferPage() {
           className="flex items-center justify-between rounded-lg border border-green-500/20 bg-green-500/10 p-4"
         >
           <div className="flex items-center gap-3">
-            <Gift className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+            <Gift className="size-5 shrink-0 text-green-600 dark:text-green-400" />
             <div>
               <p className="text-sm font-semibold text-green-700 dark:text-green-300">
                 Reward Earned!
@@ -436,7 +436,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="size-5" />
               Your Referral Link
             </CardTitle>
             <CardDescription>
@@ -502,7 +502,7 @@ export default function CustomerReferPage() {
                         alt="QR Code"
                         width={200}
                         height={200}
-                        className="h-full w-full"
+                        className="size-full"
                         unoptimized
                       />
                     </div>
@@ -526,7 +526,7 @@ export default function CustomerReferPage() {
               </>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
-                <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <Users className="mx-auto mb-2 size-12 opacity-50" />
                 <p>No referral code available</p>
                 <p className="mt-1 text-xs">
                   Contact support to get your referral code
@@ -540,7 +540,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5" />
+              <Gift className="size-5" />
               How It Works
             </CardTitle>
             <CardDescription>
@@ -553,7 +553,7 @@ export default function CustomerReferPage() {
                 <div className="space-y-3">
                   <div className="border-primary/20 bg-primary/10 rounded-lg border p-4">
                     <div className="flex items-start gap-3">
-                      <Gift className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                      <Gift className="text-primary mt-0.5 size-5 shrink-0" />
                       <div className="flex-1">
                         <div className="mb-1 text-sm font-semibold">
                           You Get:
@@ -585,7 +585,7 @@ export default function CustomerReferPage() {
 
                   <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
                     <div className="flex items-start gap-3">
-                      <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                      <UserPlus className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
                       <div className="flex-1">
                         <div className="mb-1 text-sm font-semibold">
                           Your Friend Gets:
@@ -677,7 +677,7 @@ export default function CustomerReferPage() {
               </>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
-                <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <Gift className="mx-auto mb-2 size-12 opacity-50" />
                 <p>Referral program not configured</p>
                 <p className="mt-1 text-xs">
                   Contact the facility for more information
@@ -692,7 +692,7 @@ export default function CustomerReferPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <TrendingUp className="size-5" />
             Referral Tracking
           </CardTitle>
           <CardDescription>
@@ -776,7 +776,7 @@ export default function CustomerReferPage() {
             </div>
           ) : (
             <div className="text-muted-foreground py-8 text-center">
-              <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+              <Users className="mx-auto mb-2 size-12 opacity-50" />
               <p>No referrals yet</p>
               <p className="mt-1 text-xs">
                 Share your referral link to start earning rewards!

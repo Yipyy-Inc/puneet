@@ -74,10 +74,10 @@ export function StatCard({
                   )}
                 >
                   {changeType === "up" && (
-                    <TrendingUp className="mr-0.5 h-3 w-3" />
+                    <TrendingUp className="mr-0.5 size-3" />
                   )}
                   {changeType === "down" && (
-                    <TrendingDown className="mr-0.5 h-3 w-3" />
+                    <TrendingDown className="mr-0.5 size-3" />
                   )}
                   {change}
                 </span>
@@ -93,14 +93,14 @@ export function StatCard({
               styles.iconBg,
             )}
           >
-            <Icon className={cn("h-5 w-5", styles.iconColor)} />
+            <Icon className={cn("size-5", styles.iconColor)} />
           </div>
         </div>
       </CardContent>
 
       {/* Decorative gradient overlay */}
       <div
-        className="pointer-events-none absolute top-0 right-0 h-24 w-24 opacity-5"
+        className="pointer-events-none absolute top-0 right-0 size-24 opacity-5"
         style={{
           background: `radial-gradient(circle at top right, currentColor 0%, transparent 70%)`,
         }}

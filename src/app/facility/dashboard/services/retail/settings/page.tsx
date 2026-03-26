@@ -349,7 +349,7 @@ export default function RetailSettingsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 w-8 p-0"
+                                className="size-8 p-0"
                                 onClick={() => {
                                   const newPercentages = [
                                     ...config.percentages,
@@ -368,7 +368,7 @@ export default function RetailSettingsPage() {
                                 }}
                                 disabled={!isEditing}
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="size-3" />
                               </Button>
                             </div>
                           </div>
@@ -560,7 +560,7 @@ export default function RetailSettingsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="size-8"
                         onClick={() => {
                           setEditingPaymentMethod(method);
                           setCustomPaymentForm({
@@ -578,7 +578,7 @@ export default function RetailSettingsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive h-8 w-8"
+                        className="text-destructive size-8"
                         onClick={() => {
                           setCustomPaymentMethodsList(
                             customPaymentMethodsList.filter(

@@ -72,7 +72,7 @@ export function SecurityManagement() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -92,7 +92,7 @@ export function SecurityManagement() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -311,7 +311,7 @@ export function SecurityManagement() {
       label: "Location",
       render: (item: SessionManagement) => (
         <div className="flex items-center gap-1 text-sm">
-          <MapPin className="text-muted-foreground h-3 w-3" />
+          <MapPin className="text-muted-foreground size-3" />
           {item.location}
         </div>
       ),
@@ -444,7 +444,7 @@ export function SecurityManagement() {
             {item.ipAddress}
           </div>
           <div className="text-muted-foreground flex items-center gap-1 text-xs">
-            <MapPin className="h-3 w-3 shrink-0" />
+            <MapPin className="size-3 shrink-0" />
             <span className="truncate">{item.location}</span>
           </div>
         </div>
@@ -482,7 +482,7 @@ export function SecurityManagement() {
       render: (item: FailedLoginAttempt) =>
         item.isBlocked ? (
           <Badge variant="destructive" className="gap-1">
-            <Ban className="h-3 w-3" />
+            <Ban className="size-3" />
             Blocked
           </Badge>
         ) : (
@@ -539,11 +539,11 @@ export function SecurityManagement() {
 
   const alertActions = (item: SecurityAlert) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Eye className="size-4" />
       </Button>
       {item.status === "New" && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Play className="size-4" />
         </Button>
       )}
@@ -580,8 +580,8 @@ export function SecurityManagement() {
                   Excellent security posture
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
-                <ShieldCheck className="h-6 w-6 text-green-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
+                <ShieldCheck className="size-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -601,8 +601,8 @@ export function SecurityManagement() {
                   {securityDashboardStats.criticalAlerts} critical
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
-                <ShieldAlert className="h-6 w-6 text-red-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
+                <ShieldAlert className="size-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -622,8 +622,8 @@ export function SecurityManagement() {
                   Users currently logged in
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
+                <Users className="size-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -643,8 +643,8 @@ export function SecurityManagement() {
                   Users with MFA enabled
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
-                <Lock className="h-6 w-6 text-purple-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
+                <Lock className="size-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -666,7 +666,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Lock className="h-5 w-5" />
+                <Lock className="size-5" />
                 Multi-Factor Authentication
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -686,7 +686,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Globe className="h-5 w-5" />
+                <Globe className="size-5" />
                 IP Whitelist Management
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -706,7 +706,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Clock className="h-5 w-5" />
+                <Clock className="size-5" />
                 Active Sessions
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -726,7 +726,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Key className="h-5 w-5" />
+                <Key className="size-5" />
                 Password Policies
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -828,7 +828,7 @@ export function SecurityManagement() {
                         className="flex items-center gap-2 text-sm"
                       >
                         <div
-                          className="h-3 w-3 shrink-0 rounded-full"
+                          className="size-3 shrink-0 rounded-full"
                           style={{
                             backgroundColor: COLORS[index % COLORS.length],
                           }}
@@ -858,7 +858,7 @@ export function SecurityManagement() {
                 {securityDashboardStats.topThreats.map((threat, index) => (
                   <div key={index} className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <div className="bg-destructive/10 text-destructive flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                      <div className="bg-destructive/10 text-destructive flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                         {index + 1}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -889,7 +889,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="size-5" />
                 Failed Login Attempts
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -908,7 +908,7 @@ export function SecurityManagement() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <ShieldAlert className="h-5 w-5" />
+                <ShieldAlert className="size-5" />
                 Security Alerts
               </CardTitle>
               <p className="text-muted-foreground text-sm">

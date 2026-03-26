@@ -78,7 +78,7 @@ export function PreCheckReviewPanel({
             <div className="flex flex-wrap items-center justify-end gap-2">
               {statusBadge(form.status)}
               <Badge variant="outline" className="font-mono">
-                <QrCode className="mr-1 inline h-3.5 w-3.5" />
+                <QrCode className="mr-1 inline size-3.5" />
                 {form.qrCodeToken}
               </Badge>
             </div>
@@ -104,7 +104,7 @@ export function PreCheckReviewPanel({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7"
+                        className="size-7"
                         onClick={() => {
                           const next = form.belongings.filter(
                             (_, i) => i !== idx,

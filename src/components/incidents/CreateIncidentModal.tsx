@@ -192,7 +192,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <AlertTriangle className="text-destructive h-5 w-5" />
+          <AlertTriangle className="text-destructive size-5" />
           Report New Incident
         </DialogTitle>
         <DialogDescription>
@@ -326,7 +326,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                       className="ml-2"
                       onClick={() => handleRemovePet(pet.id)}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </button>
                   </Badge>
                 ))}
@@ -384,7 +384,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                       className="ml-2"
                       onClick={() => handleRemoveStaff(staff)}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </button>
                   </Badge>
                 ))}

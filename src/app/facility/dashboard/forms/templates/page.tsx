@@ -31,35 +31,35 @@ const TEMPLATE_META: Record<
   { icon: React.ReactNode; color: string; bg: string; description: string }
 > = {
   "tpl-starter-new-client": {
-    icon: <ClipboardList className="h-5 w-5" />,
+    icon: <ClipboardList className="size-5" />,
     color: "text-blue-600",
     bg: "bg-blue-50",
     description:
       "Collect customer contact details, referral source, and notes for new clients.",
   },
   "tpl-starter-pet-profile": {
-    icon: <PawPrint className="h-5 w-5" />,
+    icon: <PawPrint className="size-5" />,
     color: "text-amber-600",
     bg: "bg-amber-50",
     description:
       "Capture pet basics — name, breed, birthday, allergies, and special needs.",
   },
   "tpl-starter-boarding": {
-    icon: <Hotel className="h-5 w-5" />,
+    icon: <Hotel className="size-5" />,
     color: "text-violet-600",
     bg: "bg-violet-50",
     description:
       "Emergency contacts, feeding/medication instructions, and behavior notes for boarding.",
   },
   "tpl-starter-grooming": {
-    icon: <Scissors className="h-5 w-5" />,
+    icon: <Scissors className="size-5" />,
     color: "text-rose-600",
     bg: "bg-rose-50",
     description:
       "Grooming consent, sensitivities, and photo release authorization.",
   },
   "tpl-starter-behavior": {
-    icon: <ShieldCheck className="h-5 w-5" />,
+    icon: <ShieldCheck className="size-5" />,
     color: "text-emerald-600",
     bg: "bg-emerald-50",
     description:
@@ -136,7 +136,7 @@ export default function TemplatesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="text-primary h-5 w-5" />
+            <Sparkles className="text-primary size-5" />
             Starter templates
           </CardTitle>
           <p className="text-muted-foreground text-sm">
@@ -163,7 +163,7 @@ export default function TemplatesPage() {
                       className={`flex items-center gap-3 px-4 py-3 ${meta?.bg ?? `bg-muted/30`} `}
                     >
                       <div className={meta?.color ?? "text-muted-foreground"}>
-                        {meta?.icon ?? <FileText className="h-5 w-5" />}
+                        {meta?.icon ?? <FileText className="size-5" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold">{t.name}</h3>
@@ -212,7 +212,7 @@ export default function TemplatesPage() {
                         {t.questions.length} questions
                       </span>
                       <Button size="sm" onClick={() => handleUseTemplate(t)}>
-                        <Copy className="mr-2 h-3.5 w-3.5" />
+                        <Copy className="mr-2 size-3.5" />
                         Use template
                       </Button>
                     </div>
@@ -228,7 +228,7 @@ export default function TemplatesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="text-muted-foreground h-5 w-5" />
+            <FileText className="text-muted-foreground size-5" />
             Your templates
           </CardTitle>
           <p className="text-muted-foreground text-sm">
@@ -250,7 +250,7 @@ export default function TemplatesPage() {
                   className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
                 >
                   <div className="bg-muted/30 flex items-center gap-3 px-4 py-3">
-                    <FileText className="text-muted-foreground h-5 w-5" />
+                    <FileText className="text-muted-foreground size-5" />
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold">{t.name}</h3>
                       <Badge variant="secondary" className="mt-0.5 text-[10px]">
@@ -288,7 +288,7 @@ export default function TemplatesPage() {
                       {t.questions.length} questions
                     </span>
                     <Button size="sm" onClick={() => handleUseTemplate(t)}>
-                      <Copy className="mr-2 h-3.5 w-3.5" />
+                      <Copy className="mr-2 size-3.5" />
                       Use template
                     </Button>
                   </div>

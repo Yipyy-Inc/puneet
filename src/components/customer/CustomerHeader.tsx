@@ -131,7 +131,7 @@ export function CustomerHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
-              <User className="h-5 w-5" />
+              <User className="size-5" />
               <span className="sr-only">User menu</span>
             </Button>
           </DropdownMenuTrigger>

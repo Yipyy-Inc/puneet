@@ -205,7 +205,7 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {row.original.isFavorite && (
-            <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
+            <Star className="size-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
           )}
           <div>
             <div className="flex items-center gap-1.5 font-medium">
@@ -700,7 +700,7 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
+                    <MessageSquare className="size-5" />
                     Quick Reply Templates
                   </CardTitle>
                   <p className="text-muted-foreground mt-1 text-sm">

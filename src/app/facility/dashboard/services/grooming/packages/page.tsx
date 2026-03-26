@@ -224,7 +224,7 @@ export default function GroomingPackagesPage() {
             <span className="font-medium">{pkg.name}</span>
             {pkg.isPopular && (
               <Badge className="bg-yellow-100 text-yellow-700">
-                <Star className="mr-1 h-3 w-3 fill-yellow-500" />
+                <Star className="mr-1 size-3 fill-yellow-500" />
                 Popular
               </Badge>
             )}
@@ -912,7 +912,7 @@ export default function GroomingPackagesPage() {
                   }
                   className="w-full"
                 >
-                  <Plus className="mr-1 h-3 w-3" />
+                  <Plus className="mr-1 size-3" />
                   Add Product
                 </Button>
               </div>

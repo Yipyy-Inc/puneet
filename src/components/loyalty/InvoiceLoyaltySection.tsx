@@ -43,7 +43,7 @@ export function InvoiceLoyaltySection({
         {loyaltyPointsEarned && loyaltyPointsEarned > 0 && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+              <TrendingUp className="size-3.5 text-green-600 dark:text-green-400" />
               <span className="text-muted-foreground">Points Earned</span>
             </div>
             <Badge className="bg-green-500">+{loyaltyPointsEarned} pts</Badge>
@@ -53,7 +53,7 @@ export function InvoiceLoyaltySection({
         {loyaltyPointsRedeemed && loyaltyPointsRedeemed > 0 && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Gift className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <Gift className="size-3.5 text-blue-600 dark:text-blue-400" />
               <span className="text-muted-foreground">Points Redeemed</span>
             </div>
             <Badge className="bg-blue-500">-{loyaltyPointsRedeemed} pts</Badge>
@@ -63,7 +63,7 @@ export function InvoiceLoyaltySection({
         {tierDiscount && tierDiscount > 0 && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Star className="text-primary h-3.5 w-3.5" />
+              <Star className="text-primary size-3.5" />
               <span className="text-muted-foreground">Tier Discount</span>
             </div>
             <Badge variant="outline" className="border-primary text-primary">
@@ -75,7 +75,7 @@ export function InvoiceLoyaltySection({
         {discountCode && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Gift className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              <Gift className="size-3.5 text-purple-600 dark:text-purple-400" />
               <span className="text-muted-foreground">Discount Code</span>
             </div>
             <Badge variant="outline" className="font-mono">
@@ -87,7 +87,7 @@ export function InvoiceLoyaltySection({
         {creditApplied && creditApplied > 0 && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Gift className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+              <Gift className="size-3.5 text-green-600 dark:text-green-400" />
               <span className="text-muted-foreground">Credit Applied</span>
             </div>
             <Badge className="bg-green-500">${creditApplied.toFixed(2)}</Badge>

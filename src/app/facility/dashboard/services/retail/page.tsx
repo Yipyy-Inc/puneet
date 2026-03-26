@@ -1606,7 +1606,7 @@ export default function POSPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="size-5" />
                 Cart
               </CardTitle>
               {cart.length > 0 && (
@@ -1626,7 +1626,7 @@ export default function POSPage() {
             <div className="bg-muted/30 mb-3 shrink-0 space-y-3 rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1.5 text-xs font-medium">
-                  <LinkIcon className="h-3.5 w-3.5" />
+                  <LinkIcon className="size-3.5" />
                   Attach to Account / Pet / Booking
                 </Label>
                 <Button
@@ -1635,7 +1635,7 @@ export default function POSPage() {
                   className="h-7 text-xs"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <Search className="mr-1 h-3 w-3" />
+                  <Search className="mr-1 size-3" />
                   Search
                 </Button>
               </div>
@@ -1658,7 +1658,7 @@ export default function POSPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="size-6"
                       onClick={() => {
                         setSelectedClientId("");
                         setCustomerName("");
@@ -1667,7 +1667,7 @@ export default function POSPage() {
                         setSelectedBookingId(null);
                       }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </Button>
                   </div>
 
@@ -1692,10 +1692,10 @@ export default function POSPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="size-6"
                         onClick={() => setSelectedPetId(null)}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="size-3" />
                       </Button>
                     </div>
                   )}
@@ -1723,10 +1723,10 @@ export default function POSPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="size-6"
                         onClick={() => setSelectedBookingId(null)}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="size-3" />
                       </Button>
                     </div>
                   )}
@@ -1802,7 +1802,7 @@ export default function POSPage() {
                   className="h-8 w-full text-xs"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <LinkIcon className="mr-1 h-3 w-3" />
+                  <LinkIcon className="mr-1 size-3" />
                   Link to Customer / Pet / Booking
                 </Button>
               )}
@@ -1819,7 +1819,7 @@ export default function POSPage() {
             {/* Cart Items - Scrollable area */}
             {cart.length === 0 ? (
               <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-                <ShoppingCart className="mb-2 h-12 w-12" />
+                <ShoppingCart className="mb-2 size-12" />
                 <p>Cart is empty</p>
                 <p className="text-sm">Scan a barcode to add items</p>
               </div>
@@ -1853,12 +1853,12 @@ export default function POSPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-6 w-6"
+                          className="size-6"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity - 1)
                           }
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="size-3" />
                         </Button>
                         <span className="w-6 text-center text-sm">
                           {item.quantity}
@@ -1866,12 +1866,12 @@ export default function POSPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-6 w-6"
+                          className="size-6"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity + 1)
                           }
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="size-3" />
                         </Button>
                       </div>
                       <div className="text-right">
@@ -1884,23 +1884,23 @@ export default function POSPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5"
+                                className="size-5"
                                 onClick={() => {
                                   setSelectedCartItem(item.id);
                                   setIsDiscountModalOpen(true);
                                 }}
                                 title="Apply Discount"
                               >
-                                <Percent className="h-3 w-3" />
+                                <Percent className="size-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 text-blue-600"
+                                className="size-5 text-blue-600"
                                 onClick={() => openEditPriceModal(item.id)}
                                 title="Edit Price / Discount"
                               >
-                                <DollarSign className="h-3 w-3" />
+                                <DollarSign className="size-3" />
                               </Button>
                             </>
                           )}
@@ -1908,24 +1908,24 @@ export default function POSPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-5 w-5 text-green-600"
+                              className="size-5 text-green-600"
                               onClick={() => {
                                 setSelectedCartItem(item.id);
                                 setIsCompItemModalOpen(true);
                               }}
                               title="Comp / Free Item"
                             >
-                              <Check className="h-3 w-3" />
+                              <Check className="size-3" />
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive h-5 w-5"
+                            className="text-destructive size-5"
                             onClick={() => removeFromCart(item.id)}
                             title="Remove Item"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="size-3" />
                           </Button>
                         </div>
                       </div>
@@ -2015,7 +2015,7 @@ export default function POSPage() {
                         }}
                         disabled={calculatedTipAmount === 0}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="size-3" />
                       </Button>
                     </div>
                   </div>
@@ -2705,19 +2705,19 @@ export default function POSPage() {
                           </p>
                           <div className="text-muted-foreground mt-1 space-y-1 text-sm">
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
+                              <Calendar className="size-3" />
                               {booking.startDate}
                               {booking.endDate !== booking.startDate &&
                                 ` - ${booking.endDate}`}
                             </div>
                             {booking.checkInTime && (
                               <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
+                                <Clock className="size-3" />
                                 Check-in: {booking.checkInTime}
                               </div>
                             )}
                             <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
+                              <DollarSign className="size-3" />
                               Current total: ${booking.totalCost.toFixed(2)}
                             </div>
                           </div>
@@ -2744,7 +2744,7 @@ export default function POSPage() {
               </div>
             ) : (
               <div className="text-muted-foreground py-8 text-center">
-                <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                 <p>No bookings available</p>
                 <p className="mt-1 text-sm">
                   Customer must have a confirmed or active booking
@@ -3340,7 +3340,7 @@ export default function POSPage() {
                               setYipyyPayDeviceId(null);
                             }}
                           >
-                            <CreditCard className="h-5 w-5" />
+                            <CreditCard className="size-5" />
                             <div className="text-left">
                               <p className="font-medium">Card on File</p>
                               <p className="text-muted-foreground text-xs">
@@ -3390,7 +3390,7 @@ export default function POSPage() {
                                 }
                               }}
                             >
-                              <Printer className="h-5 w-5" />
+                              <Printer className="size-5" />
                               <div className="text-left">
                                 <p className="font-medium">Clover Terminal</p>
                                 <p className="text-muted-foreground text-xs">
@@ -3425,7 +3425,7 @@ export default function POSPage() {
                                 setSelectedTokenizedCard(null);
                               }}
                             >
-                              <Banknote className="h-5 w-5" />
+                              <Banknote className="size-5" />
                               <div className="text-left">
                                 <p className="font-medium">Cash</p>
                                 <p className="text-muted-foreground text-xs">
@@ -3464,7 +3464,7 @@ export default function POSPage() {
                                 selectedClientId === "__walk_in__"
                               }
                             >
-                              <Wallet className="h-5 w-5" />
+                              <Wallet className="size-5" />
                               <div className="text-left">
                                 <p className="font-medium">Store Credit</p>
                                 <p className="text-muted-foreground text-xs">
@@ -3502,7 +3502,7 @@ export default function POSPage() {
                                 setSelectedTokenizedCard(null);
                               }}
                             >
-                              <Gift className="h-5 w-5" />
+                              <Gift className="size-5" />
                               <div className="text-left">
                                 <p className="font-medium">Gift Card</p>
                                 <p className="text-muted-foreground text-xs">
@@ -3543,7 +3543,7 @@ export default function POSPage() {
                                 }
                               }}
                             >
-                              <Smartphone className="h-5 w-5" />
+                              <Smartphone className="size-5" />
                               <div className="text-left">
                                 <p className="font-medium">Pay with iPhone</p>
                                 <p className="text-muted-foreground text-xs">
@@ -4252,7 +4252,7 @@ export default function POSPage() {
                               <p className="font-medium">{client.name}</p>
                               {selectedClientId === String(client.id) && (
                                 <Badge variant="default" className="text-xs">
-                                  <Check className="mr-1 h-3 w-3" />
+                                  <Check className="mr-1 size-3" />
                                   Selected
                                 </Badge>
                               )}
@@ -4260,19 +4260,19 @@ export default function POSPage() {
                             <div className="text-muted-foreground mt-1 space-y-1 text-sm">
                               {client.email && (
                                 <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
+                                  <Mail className="size-3" />
                                   {client.email}
                                 </div>
                               )}
                               {client.phone && (
                                 <div className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
+                                  <Phone className="size-3" />
                                   {client.phone}
                                 </div>
                               )}
                               {client.pets && client.pets.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-1">
-                                  <PawPrint className="h-3 w-3" />
+                                  <PawPrint className="size-3" />
                                   {client.pets.map((pet) => (
                                     <Badge
                                       key={pet.id}
@@ -4292,14 +4292,14 @@ export default function POSPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Search className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <Search className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No customers found</p>
                     <p className="mt-1 text-sm">Try a different search term</p>
                   </div>
                 )
               ) : (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Search className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <Search className="mx-auto mb-4 size-12 opacity-50" />
                   <p>Start typing to search customers</p>
                   <p className="mt-1 text-sm">
                     Search by email, phone, name, or pet name
@@ -4347,7 +4347,7 @@ export default function POSPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5" />
+              <Smartphone className="size-5" />
               Pay with iPhone (Tap to Pay)
             </DialogTitle>
             <DialogDescription>
@@ -4675,7 +4675,7 @@ export default function POSPage() {
                     <div className="relative">
                       <Smartphone className="text-primary h-20 w-20 animate-pulse" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+                        <div className="border-primary size-8 animate-spin rounded-full border-4 border-t-transparent" />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -4876,7 +4876,7 @@ export default function POSPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
+              <Receipt className="size-5" />
               Payment Successful
             </DialogTitle>
           </DialogHeader>

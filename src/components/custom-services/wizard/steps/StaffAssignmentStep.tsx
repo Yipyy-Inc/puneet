@@ -78,7 +78,7 @@ export function StaffAssignmentStep({
       {/* Auto-Assign */}
       <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
         <div className="flex items-start gap-3">
-          <Users className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+          <Users className="text-muted-foreground mt-0.5 size-5 shrink-0" />
           <div className="space-y-0.5">
             <Label
               htmlFor="auto-assign"

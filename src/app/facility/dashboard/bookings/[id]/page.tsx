@@ -202,9 +202,9 @@ export default function FacilityBookingDetailPage({
           <CardContent className="py-4">
             <div className="flex items-start gap-3">
               {formRequirementsCheck.hasBlocker ? (
-                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                <ShieldAlert className="mt-0.5 size-5 shrink-0 text-red-600" />
               ) : (
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
               )}
               <div className="min-w-0 flex-1">
                 <h3
@@ -241,9 +241,9 @@ export default function FacilityBookingDetailPage({
                       className="flex items-center gap-2 text-sm"
                     >
                       {m.enforcement === "block" ? (
-                        <Ban className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                        <Ban className="size-3.5 shrink-0 text-red-500" />
                       ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
                       )}
                       <span
                         className={
@@ -369,7 +369,7 @@ export default function FacilityBookingDetailPage({
                     View {bookingAlerts.all.length} alert
                     {bookingAlerts.all.length !== 1 ? "s" : ""}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <ChevronDown className="size-3.5" />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>

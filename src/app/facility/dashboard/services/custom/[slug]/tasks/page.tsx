@@ -164,7 +164,7 @@ export default function CustomServiceTasksPage() {
                           : `bg-muted/40 text-muted-foreground border-transparent`
                       } `}
                     >
-                      <PhaseIcon className="h-3.5 w-3.5" />
+                      <PhaseIcon className="size-3.5" />
                       {cfg.label}
                     </div>
                   );
@@ -189,8 +189,8 @@ export default function CustomServiceTasksPage() {
                 <p className="text-muted-foreground text-sm">Completed</p>
                 <p className="text-2xl font-bold">{completedCount}</p>
               </div>
-              <div className="bg-success/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <CheckCircle2 className="text-success h-6 w-6" />
+              <div className="bg-success/10 flex size-12 items-center justify-center rounded-full">
+                <CheckCircle2 className="text-success size-6" />
               </div>
             </div>
           </CardContent>
@@ -202,8 +202,8 @@ export default function CustomServiceTasksPage() {
                 <p className="text-muted-foreground text-sm">In Progress</p>
                 <p className="text-2xl font-bold">{inProgressCount}</p>
               </div>
-              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <Play className="text-primary h-6 w-6" />
+              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                <Play className="text-primary size-6" />
               </div>
             </div>
           </CardContent>
@@ -215,8 +215,8 @@ export default function CustomServiceTasksPage() {
                 <p className="text-muted-foreground text-sm">Pending</p>
                 <p className="text-2xl font-bold">{pendingCount}</p>
               </div>
-              <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
-                <Clock className="text-muted-foreground h-6 w-6" />
+              <div className="bg-muted flex size-12 items-center justify-center rounded-full">
+                <Clock className="text-muted-foreground size-6" />
               </div>
             </div>
           </CardContent>
@@ -228,7 +228,7 @@ export default function CustomServiceTasksPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <ClipboardList className="h-5 w-5" />
+              <ClipboardList className="size-5" />
               Today&apos;s Tasks
             </CardTitle>
             <Button size="sm" variant="outline">
@@ -250,7 +250,7 @@ export default function CustomServiceTasksPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`bg-muted flex h-9 w-9 items-center justify-center rounded-full ${phaseCfg.color} `}
+                      className={`bg-muted flex size-9 items-center justify-center rounded-full ${phaseCfg.color} `}
                     >
                       <PhaseIcon className="size-4" />
                     </div>

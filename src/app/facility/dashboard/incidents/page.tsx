@@ -105,7 +105,7 @@ export default function IncidentsPage() {
           className="capitalize"
         >
           {row.original.severity === "critical" && (
-            <AlertTriangle className="mr-1 inline h-3 w-3" />
+            <AlertTriangle className="mr-1 inline size-3" />
           )}
           {row.original.severity}
         </Badge>
@@ -162,10 +162,10 @@ export default function IncidentsPage() {
       cell: ({ row }) => {
         const status = row.original.status;
         const icon = {
-          open: <AlertCircle className="mr-1 inline h-3 w-3" />,
-          investigating: <Clock className="mr-1 inline h-3 w-3" />,
-          resolved: <CheckCircle2 className="mr-1 inline h-3 w-3" />,
-          closed: <XCircle className="mr-1 inline h-3 w-3" />,
+          open: <AlertCircle className="mr-1 inline size-3" />,
+          investigating: <Clock className="mr-1 inline size-3" />,
+          resolved: <CheckCircle2 className="mr-1 inline size-3" />,
+          closed: <XCircle className="mr-1 inline size-3" />,
         }[status];
 
         return (
@@ -183,7 +183,7 @@ export default function IncidentsPage() {
         <div className="text-center">
           {row.original.managerNotified ? (
             <Badge variant="default">
-              <CheckCircle2 className="mr-1 inline h-3 w-3" />
+              <CheckCircle2 className="mr-1 inline size-3" />
               Yes
             </Badge>
           ) : (

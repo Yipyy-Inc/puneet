@@ -38,7 +38,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
       {/* Enable toggle */}
       <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
         <div className="flex items-start gap-3">
-          <Globe className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+          <Globe className="text-muted-foreground mt-0.5 size-5 shrink-0" />
           <div className="space-y-0.5">
             <Label
               htmlFor="ob-enabled"
@@ -61,7 +61,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
 
       {!ob.enabled && (
         <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0" />
           <span>
             Online booking is off. This service can only be booked internally by
             staff.

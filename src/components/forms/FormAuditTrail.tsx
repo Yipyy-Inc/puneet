@@ -150,7 +150,7 @@ function OverridesTable({
     <div className="space-y-2">
       {mergeRule && (
         <div className="flex items-center gap-2">
-          <ArrowRightLeft className="h-3.5 w-3.5 text-violet-500" />
+          <ArrowRightLeft className="size-3.5 text-violet-500" />
           <span className="text-xs font-medium">
             Rule: {MERGE_RULE_LABELS[mergeRule] ?? mergeRule}
           </span>
@@ -252,11 +252,11 @@ function AuditRow({ entry }: { entry: FormAuditEntry }) {
         {/* actor chip */}
         <div className="text-muted-foreground mt-0.5 flex shrink-0 items-center gap-1.5 text-xs">
           {entry.actorType === "customer" ? (
-            <User className="h-3 w-3" />
+            <User className="size-3" />
           ) : entry.actorType === "system" ? (
-            <Bot className="h-3 w-3" />
+            <Bot className="size-3" />
           ) : (
-            <Shield className="h-3 w-3" />
+            <Shield className="size-3" />
           )}
           <span className="hidden sm:inline">
             {entry.actorName ?? String(entry.actorId ?? "System")}
@@ -466,7 +466,7 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <Shield className="text-primary h-5 w-5" />
+          <Shield className="text-primary size-5" />
           <h2 className="text-2xl font-bold">Form Audit Trail</h2>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
@@ -551,7 +551,7 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Clock className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
+            <Clock className="text-muted-foreground mx-auto mb-3 size-8" />
             <p className="text-muted-foreground font-medium">No audit events</p>
             <p className="text-muted-foreground mt-1 text-xs">
               {actionFilter !== "all" || formFilter !== "all"

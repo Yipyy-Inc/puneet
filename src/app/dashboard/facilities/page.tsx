@@ -121,7 +121,7 @@ function StatCard({
                   className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
+                    className={`mr-0.5 size-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
@@ -135,7 +135,7 @@ function StatCard({
             className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
-            <Icon className="h-5 w-5 text-white" />
+            <Icon className="size-5 text-white" />
           </div>
         </div>
       </CardContent>
@@ -395,8 +395,8 @@ export default function FacilitiesPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-warning/10 flex h-10 w-10 items-center justify-center rounded-xl">
-                  <AlertCircle className="text-warning h-5 w-5" />
+                <div className="bg-warning/10 flex size-10 items-center justify-center rounded-xl">
+                  <AlertCircle className="text-warning size-5" />
                 </div>
                 <div>
                   <h3 className="font-semibold">
@@ -486,7 +486,7 @@ export default function FacilitiesPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+              <Mail className="size-5" />
               {"Notify All"}
             </DialogTitle>
             <DialogDescription>
@@ -496,7 +496,7 @@ export default function FacilitiesPage() {
           {notificationSent ? (
             <div className="flex flex-col items-center py-8">
               <div className="bg-success/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                <CheckCircle className="text-success h-8 w-8" />
+                <CheckCircle className="text-success size-8" />
               </div>
               <h3 className="text-lg font-semibold">Notification Sent!</h3>
               <p className="text-muted-foreground text-sm">

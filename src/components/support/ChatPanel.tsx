@@ -98,7 +98,7 @@ export function ChatPanel({
         {/* Header */}
         <CardHeader className="border-b px-4 py-4">
           <div className="mb-3 flex items-center gap-2">
-            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+            <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
               <MessageSquare className="text-primary size-4" />
             </div>
             <CardTitle className="text-lg">Live Chat Support</CardTitle>
@@ -120,7 +120,7 @@ export function ChatPanel({
             <div className="p-2">
               {filteredConversations.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <MessageSquare className="mx-auto mb-2 h-10 w-10 opacity-50" />
+                  <MessageSquare className="mx-auto mb-2 size-10 opacity-50" />
                   <p className="text-sm">No conversations found</p>
                 </div>
               ) : (
@@ -136,14 +136,14 @@ export function ChatPanel({
                       className="group hover:bg-muted/50 mb-1 flex w-full items-start gap-3 rounded-xl p-3 text-left transition-all"
                     >
                       <div className="relative">
-                        <Avatar className="border-background h-10 w-10 border-2 shadow-sm">
+                        <Avatar className="border-background size-10 border-2 shadow-sm">
                           <AvatarImage src="" />
                           <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-medium">
                             {getInitials(participantName)}
                           </AvatarFallback>
                         </Avatar>
                         {isActive && (
-                          <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2" />
+                          <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export function ChatPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="hover:bg-muted h-8 w-8 shrink-0"
+            className="hover:bg-muted size-8 shrink-0"
             onClick={() => onSelectChat(null)}
           >
             <ArrowLeft className="size-4" />
@@ -206,7 +206,7 @@ export function ChatPanel({
               </AvatarFallback>
             </Avatar>
             {isActive && (
-              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2" />
+              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2" />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -224,21 +224,21 @@ export function ChatPanel({
           <Button
             variant="outline"
             size="icon"
-            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary h-9 w-9 rounded-full transition-colors"
+            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary size-9 rounded-full transition-colors"
           >
             <Phone className="size-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary h-9 w-9 rounded-full transition-colors"
+            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary size-9 rounded-full transition-colors"
           >
             <Video className="size-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="hover:bg-muted h-9 w-9 rounded-full transition-colors"
+            className="hover:bg-muted size-9 rounded-full transition-colors"
           >
             <MoreVertical className="size-4" />
           </Button>
@@ -270,7 +270,7 @@ export function ChatPanel({
                   )}
                 >
                   {!isSupport && (
-                    <Avatar className="border-border h-8 w-8 shrink-0 border shadow-sm">
+                    <Avatar className="border-border size-8 shrink-0 border shadow-sm">
                       <AvatarImage src="" />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                         {getInitials(senderName)}
@@ -329,7 +329,7 @@ export function ChatPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground h-9 w-9 shrink-0"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground size-9 shrink-0"
           >
             <Paperclip className="size-4" />
           </Button>
@@ -347,13 +347,13 @@ export function ChatPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground h-9 w-9 shrink-0"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground size-9 shrink-0"
           >
             <Smile className="size-4" />
           </Button>
           <Button
             size="icon"
-            className="bg-primary hover:bg-primary/90 h-9 w-9 shrink-0 shadow-sm"
+            className="bg-primary hover:bg-primary/90 size-9 shrink-0 shadow-sm"
             onClick={handleSend}
             disabled={!newMessage.trim()}
           >

@@ -72,7 +72,7 @@ export function SystemStatus() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -172,11 +172,11 @@ export function SystemStatus() {
       render: (item: ServerStatus) => (
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
-            <Cpu className="h-3 w-3" />
+            <Cpu className="size-3" />
             <span>CPU: {item.cpu}%</span>
           </div>
           <div className="flex items-center gap-2">
-            <HardDrive className="h-3 w-3" />
+            <HardDrive className="size-3" />
             <span>MEM: {item.memory}%</span>
           </div>
         </div>
@@ -327,7 +327,7 @@ export function SystemStatus() {
         <div className="text-sm">
           {item.incidents24h === 0 ? (
             <Badge variant="default" className="gap-1">
-              <CheckCircle2 className="h-3 w-3" />
+              <CheckCircle2 className="size-3" />
               None
             </Badge>
           ) : (
@@ -463,8 +463,8 @@ export function SystemStatus() {
                   All systems operational
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
-                <Activity className="h-6 w-6 text-green-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
+                <Activity className="size-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -490,8 +490,8 @@ export function SystemStatus() {
                   % availability
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
-                <Server className="h-6 w-6 text-blue-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
+                <Server className="size-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -511,8 +511,8 @@ export function SystemStatus() {
                   Average across all endpoints
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
-                <Zap className="h-6 w-6 text-purple-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
+                <Zap className="size-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -532,8 +532,8 @@ export function SystemStatus() {
                   {healthDashboardStats.criticalAlerts} critical
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
-                <AlertCircle className="h-6 w-6 text-orange-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
+                <AlertCircle className="size-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -627,7 +627,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Server className="h-5 w-5" />
+                <Server className="size-5" />
                 Server Status Monitoring
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -642,7 +642,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Gauge className="h-5 w-5" />
+                <Gauge className="size-5" />
                 Resource Utilization
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -663,7 +663,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Database className="h-5 w-5" />
+                <Database className="size-5" />
                 Database Performance
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -681,7 +681,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Link className="h-5 w-5" />
+                <Link className="size-5" />
                 API Availability
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -696,7 +696,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <BarChart3 className="h-5 w-5" />
+                <BarChart3 className="size-5" />
                 Performance Metrics
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -717,7 +717,7 @@ export function SystemStatus() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Globe className="h-5 w-5" />
+                <Globe className="size-5" />
                 Service Uptime Tracking
               </CardTitle>
               <p className="text-muted-foreground text-sm">

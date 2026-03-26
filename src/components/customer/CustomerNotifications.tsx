@@ -147,11 +147,11 @@ export function CustomerNotifications() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className="size-5" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 flex size-5 items-center justify-center p-0 text-xs"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
@@ -211,7 +211,7 @@ export function CustomerNotifications() {
                                     {notif.title}
                                   </p>
                                   {!notif.read && (
-                                    <div className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full" />
+                                    <div className="bg-primary mt-1.5 size-2 shrink-0 rounded-full" />
                                   )}
                                 </div>
                                 <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
@@ -236,7 +236,7 @@ export function CustomerNotifications() {
                                   {notif.title}
                                 </p>
                                 {!notif.read && (
-                                  <div className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full" />
+                                  <div className="bg-primary mt-1.5 size-2 shrink-0 rounded-full" />
                                 )}
                               </div>
                               <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">

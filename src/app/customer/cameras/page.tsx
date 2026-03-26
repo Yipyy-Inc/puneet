@@ -247,9 +247,9 @@ export default function CustomerCamerasPage() {
                       <>
                         {/* Simulated video feed */}
                         <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
-                          <Video className="h-12 w-12 text-slate-600" />
+                          <Video className="size-12 text-slate-600" />
                           <div className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-red-600 px-2 py-1 text-xs text-white">
-                            <CircleDot className="h-2 w-2 animate-pulse" />
+                            <CircleDot className="size-2 animate-pulse" />
                             LIVE
                           </div>
                           <div className="absolute top-2 right-2 rounded-sm bg-black/50 px-2 py-1 text-xs text-white">
@@ -259,7 +259,7 @@ export default function CustomerCamerasPage() {
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-                        <AlertCircle className="h-12 w-12 text-slate-600" />
+                        <AlertCircle className="size-12 text-slate-600" />
                       </div>
                     )}
                   </div>
@@ -309,12 +309,12 @@ export default function CustomerCamerasPage() {
                 onClick={() => setSelectedCamera(null)}
                 className="absolute top-4 right-4 z-10 rounded-lg bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
               >
-                <AlertCircle className="h-5 w-5" />
+                <AlertCircle className="size-5" />
               </button>
 
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center text-white">
-                  <Video className="mx-auto mb-4 h-24 w-24 text-slate-600" />
+                  <Video className="mx-auto mb-4 size-24 text-slate-600" />
                   <h3 className="mb-2 text-xl font-semibold">
                     {selectedCamera.name}
                   </h3>
@@ -322,7 +322,7 @@ export default function CustomerCamerasPage() {
                     {selectedCamera.location}
                   </p>
                   <div className="flex items-center justify-center gap-2">
-                    <CircleDot className="h-3 w-3 animate-pulse text-green-500" />
+                    <CircleDot className="size-3 animate-pulse text-green-500" />
                     <span className="text-sm">Live Stream</span>
                   </div>
                   <p className="mt-4 text-xs text-slate-500">

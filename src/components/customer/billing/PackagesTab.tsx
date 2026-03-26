@@ -107,7 +107,7 @@ export function PackagesTab() {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="flex items-center gap-2">
-                          <Crown className="h-5 w-5 text-yellow-500" />
+                          <Crown className="size-5 text-yellow-500" />
                           {membership.planName}
                         </CardTitle>
                         <CardDescription>
@@ -153,12 +153,12 @@ export function PackagesTab() {
                       <div className="flex items-center gap-2">
                         {membership.autoRenew ? (
                           <>
-                            <Check className="h-3 w-3 text-green-500" />
+                            <Check className="size-3 text-green-500" />
                             Auto-renewal enabled
                           </>
                         ) : (
                           <>
-                            <X className="text-muted-foreground h-3 w-3" />
+                            <X className="text-muted-foreground size-3" />
                             Auto-renewal disabled
                           </>
                         )}
@@ -186,7 +186,7 @@ export function PackagesTab() {
                 <Card key={credit.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
+                      <CreditCard className="size-5" />
                       Prepaid Balance
                     </CardTitle>
                   </CardHeader>
@@ -237,7 +237,7 @@ export function PackagesTab() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <Package className="h-5 w-5" />
+                        <Package className="size-5" />
                         {plan.name}
                       </CardTitle>
                       {plan.isPopular && (
@@ -278,7 +278,7 @@ export function PackagesTab() {
                       <ul className="text-muted-foreground space-y-1 text-sm">
                         {plan.perks.map((perk, idx) => (
                           <li key={idx} className="flex items-center gap-2">
-                            <Check className="h-3 w-3 text-green-500" />
+                            <Check className="size-3 text-green-500" />
                             {perk}
                           </li>
                         ))}

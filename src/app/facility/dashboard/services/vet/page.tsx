@@ -209,7 +209,7 @@ export default function VetServicePage() {
   return (
     <ServiceSettingsComponent
       serviceName="Veterinary"
-      serviceIcon={<Stethoscope className="h-6 w-6" />}
+      serviceIcon={<Stethoscope className="size-6" />}
       locations={locations}
       settings={settings}
       onSave={handleSave}

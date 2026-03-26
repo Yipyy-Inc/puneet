@@ -167,7 +167,7 @@ export function OverviewTab({
             <Card className="shadow-card border-0">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <Phone className="h-5 w-5" />
+                  <Phone className="size-5" />
                   Contact Information
                 </CardTitle>
                 <Button variant="outline" size="sm" onClick={handleEditContact}>
@@ -177,7 +177,7 @@ export function OverviewTab({
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
-                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
                     <Mail className="text-primary size-4" />
                   </div>
                   <div>
@@ -188,7 +188,7 @@ export function OverviewTab({
                   </div>
                 </div>
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
-                  <div className="bg-success/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
                     <Phone className="text-success size-4" />
                   </div>
                   <div>
@@ -199,7 +199,7 @@ export function OverviewTab({
                   </div>
                 </div>
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
-                  <div className="bg-info/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <div className="bg-info/10 flex size-8 items-center justify-center rounded-lg">
                     <Globe className="text-info size-4" />
                   </div>
                   <div>
@@ -216,7 +216,7 @@ export function OverviewTab({
             <Card className="shadow-card border-0">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                  <User className="h-5 w-5" />
+                  <User className="size-5" />
                   Owner / Admin
                 </CardTitle>
                 <Button variant="outline" size="sm" onClick={handleEditOwner}>
@@ -227,7 +227,7 @@ export function OverviewTab({
               <CardContent className="space-y-3">
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    className="flex size-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                     style={{
                       background:
                         "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -249,7 +249,7 @@ export function OverviewTab({
                   </div>
                 </div>
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
-                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
                     <Mail className="text-primary size-4" />
                   </div>
                   <div>
@@ -260,7 +260,7 @@ export function OverviewTab({
                   </div>
                 </div>
                 <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
-                  <div className="bg-success/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
                     <Phone className="text-success size-4" />
                   </div>
                   <div>
@@ -288,21 +288,21 @@ export function OverviewTab({
                   className="h-auto flex-col gap-2 py-4"
                   onClick={onNavigateToReports}
                 >
-                  <FileText className="h-5 w-5" />
+                  <FileText className="size-5" />
                   <span className="text-xs">Generate Report</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="h-auto flex-col gap-2 py-4"
                 >
-                  <Mail className="h-5 w-5" />
+                  <Mail className="size-5" />
                   <span className="text-xs">Send Notification</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="h-auto flex-col gap-2 py-4"
                 >
-                  <Key className="h-5 w-5" />
+                  <Key className="size-5" />
                   <span className="text-xs">Reset Password</span>
                 </Button>
                 <Button
@@ -310,7 +310,7 @@ export function OverviewTab({
                   className="h-auto flex-col gap-2 py-4"
                   onClick={onNavigateToModules}
                 >
-                  <Puzzle className="h-5 w-5" />
+                  <Puzzle className="size-5" />
                   <span className="text-xs">Manage Modules</span>
                 </Button>
               </div>
@@ -323,7 +323,7 @@ export function OverviewTab({
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Activity className="h-5 w-5" />
+                <Activity className="size-5" />
                 Recent Activity
               </CardTitle>
             </CardHeader>
@@ -333,7 +333,7 @@ export function OverviewTab({
                   const Icon = getActivityIcon(activity.type);
                   return (
                     <div key={activity.id} className="flex gap-3">
-                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                      <div className="bg-muted flex size-8 items-center justify-center rounded-lg">
                         <Icon className="text-muted-foreground size-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -498,7 +498,7 @@ export function OverviewTab({
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
+                          className="flex size-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                           style={{
                             background:
                               user.role === "Admin"

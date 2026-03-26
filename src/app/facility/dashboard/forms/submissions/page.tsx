@@ -182,7 +182,7 @@ export default function SubmissionsInboxPage() {
           <Badge variant="secondary">{totalCount}</Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          <span className="size-2 rounded-full bg-blue-500" />
           <span className="text-muted-foreground">Unread</span>
           <Badge className="border-0 bg-blue-100 text-blue-800">
             {unreadCount}
@@ -195,7 +195,7 @@ export default function SubmissionsInboxPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-          <span className="h-2 w-2 rounded-full bg-red-500" />
+          <span className="size-2 rounded-full bg-red-500" />
           <span className="text-muted-foreground">Alerts</span>
           <Badge className="border-0 bg-red-100 text-red-800">
             {alertCount}
@@ -296,7 +296,7 @@ export default function SubmissionsInboxPage() {
         <CardContent>
           {list.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
-              <Search className="mb-4 h-10 w-10 opacity-50" />
+              <Search className="mb-4 size-10 opacity-50" />
               <p>No submissions match your filters.</p>
               <p className="mt-1 text-sm">
                 Submissions appear when forms are filled via shareable links.
@@ -370,7 +370,7 @@ export default function SubmissionsInboxPage() {
                                 className="text-muted-foreground inline-flex items-center gap-0.5"
                                 title="Has file upload"
                               >
-                                <FileText className="h-3.5 w-3.5" />
+                                <FileText className="size-3.5" />
                               </span>
                             )}
                             {flags?.alertFlag && (
@@ -378,7 +378,7 @@ export default function SubmissionsInboxPage() {
                                 className="inline-flex items-center text-red-600"
                                 title="Red alert"
                               >
-                                <AlertTriangle className="h-3.5 w-3.5" />
+                                <AlertTriangle className="size-3.5" />
                               </span>
                             )}
                             {(flags?.missingCount ?? 0) > 0 && (
@@ -386,7 +386,7 @@ export default function SubmissionsInboxPage() {
                                 className="inline-flex items-center text-amber-600"
                                 title={`${flags!.missingCount} required field(s) missing`}
                               >
-                                <AlertCircle className="h-3.5 w-3.5" />
+                                <AlertCircle className="size-3.5" />
                               </span>
                             )}
                           </div>

@@ -82,7 +82,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
               style={gradientStyle}
             >
-              <DynamicIcon name={module.icon} className="h-5 w-5" />
+              <DynamicIcon name={module.icon} className="size-5" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm/tight font-semibold">
@@ -217,7 +217,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
           className="mt-1 w-full transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
           onClick={handleEdit}
         >
-          <Eye className="h-3.5 w-3.5" />
+          <Eye className="size-3.5" />
           View & Edit
         </Button>
       </CardContent>

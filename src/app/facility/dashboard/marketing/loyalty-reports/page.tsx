@@ -293,7 +293,7 @@ export default function LoyaltyReportsPage() {
                 {loyaltyStats.totalPointsIssued.toLocaleString()}
               </div>
               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                <TrendingUp className="h-3 w-3 text-green-600" />
+                <TrendingUp className="size-3 text-green-600" />
                 <span>Lifetime total</span>
               </div>
             </CardContent>
@@ -311,7 +311,7 @@ export default function LoyaltyReportsPage() {
                 {loyaltyStats.totalPointsRedeemed.toLocaleString()}
               </div>
               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                <Gift className="h-3 w-3 text-blue-600" />
+                <Gift className="size-3 text-blue-600" />
                 <span>All time</span>
               </div>
             </CardContent>
@@ -329,7 +329,7 @@ export default function LoyaltyReportsPage() {
                 {loyaltyStats.activeMembers}
               </div>
               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                <Users className="h-3 w-3 text-purple-600" />
+                <Users className="size-3 text-purple-600" />
                 <span>
                   of {loyaltyStats.totalMembers} total members (
                   {loyaltyStats.totalMembers > 0
@@ -357,7 +357,7 @@ export default function LoyaltyReportsPage() {
                 {loyaltyStats.currentPointsBalance.toLocaleString()}
               </div>
               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                <Star className="h-3 w-3 text-yellow-600" />
+                <Star className="size-3 text-yellow-600" />
                 <span>Outstanding points</span>
               </div>
             </CardContent>
@@ -407,7 +407,7 @@ export default function LoyaltyReportsPage() {
                 From {referralStats.completedReferrals} completed referrals
               </div>
               <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
-                <ArrowUpRight className="h-3 w-3" />
+                <ArrowUpRight className="size-3" />
                 <span>From first bookings</span>
               </div>
             </CardContent>
@@ -728,7 +728,7 @@ export default function LoyaltyReportsPage() {
                         className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-bold">
+                          <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full font-bold">
                             #{index + 1}
                           </div>
                           <div>
@@ -763,7 +763,7 @@ export default function LoyaltyReportsPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <Users className="mx-auto mb-2 size-12 opacity-50" />
                     <p>No referrals yet</p>
                     <p className="mt-1 text-xs">
                       Start promoting your referral program to see top referrers

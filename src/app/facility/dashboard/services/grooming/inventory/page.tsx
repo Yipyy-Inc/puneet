@@ -437,8 +437,8 @@ export default function InventoryPage() {
                 className="flex items-center justify-between rounded-lg border p-4"
               >
                 <div className="flex items-center gap-4">
-                  <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
-                    <Package className="text-muted-foreground h-5 w-5" />
+                  <div className="bg-muted flex size-10 items-center justify-center rounded-full">
+                    <Package className="text-muted-foreground size-5" />
                   </div>
                   <div>
                     <p className="font-medium">{order.productName}</p>

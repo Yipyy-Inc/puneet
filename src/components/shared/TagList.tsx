@@ -122,12 +122,12 @@ export function TagList({
             type="button"
             className={cn(
               `border-muted-foreground/40 text-muted-foreground hover:border-primary hover:bg-primary/5 hover:text-primary inline-flex items-center justify-center rounded-full border border-dashed transition-colors`,
-              size === "sm" ? "h-5 w-5" : "h-6 w-6",
+              size === "sm" ? "size-5" : "size-6",
             )}
             aria-label="Add tag"
             title="Add tag"
           >
-            <Plus className={size === "sm" ? "h-2.5 w-2.5" : "h-3 w-3"} />
+            <Plus className={size === "sm" ? "h-2.5 w-2.5" : "size-3"} />
           </button>
         </TagAssignmentPopover>
       )}

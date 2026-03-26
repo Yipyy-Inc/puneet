@@ -92,7 +92,7 @@ export function ScheduleSettings({
             <CardHeader className="cursor-pointer transition-colors">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
+                  <Clock className="size-5" />
                   Check-in/Out Times & Operating Hours
                   <Tooltip>
                     <TooltipTrigger asChild>

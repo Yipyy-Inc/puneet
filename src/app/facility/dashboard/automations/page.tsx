@@ -270,7 +270,7 @@ export default function AutomationsPage() {
                           >
                             {rule.enabled ? (
                               <>
-                                <CheckCircle2 className="mr-1 inline h-3 w-3" />
+                                <CheckCircle2 className="mr-1 inline size-3" />
                                 Active
                               </>
                             ) : (
@@ -283,18 +283,18 @@ export default function AutomationsPage() {
                           <Badge variant="outline" className="capitalize">
                             {rule.messageType === "both" ? (
                               <>
-                                <Mail className="mr-1 inline h-3 w-3" />
-                                <MessageSquare className="mr-1 inline h-3 w-3" />
+                                <Mail className="mr-1 inline size-3" />
+                                <MessageSquare className="mr-1 inline size-3" />
                                 Both
                               </>
                             ) : rule.messageType === "email" ? (
                               <>
-                                <Mail className="mr-1 inline h-3 w-3" />
+                                <Mail className="mr-1 inline size-3" />
                                 Email
                               </>
                             ) : (
                               <>
-                                <MessageSquare className="mr-1 inline h-3 w-3" />
+                                <MessageSquare className="mr-1 inline size-3" />
                                 SMS
                               </>
                             )}
@@ -347,7 +347,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+                <Calendar className="size-5" />
                 Booking & Check-in Automations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -359,7 +359,7 @@ export default function AutomationsPage() {
               <div className="space-y-4">
                 {categorizedAutomations.booking.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No booking automations configured</p>
                   </div>
                 ) : (
@@ -409,7 +409,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
+                <Clock className="size-5" />
                 Reminder Automations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -421,7 +421,7 @@ export default function AutomationsPage() {
               <div className="space-y-4">
                 {categorizedAutomations.reminder.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Clock className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <Clock className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No reminder automations configured</p>
                   </div>
                 ) : (
@@ -480,7 +480,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
+                <DollarSign className="size-5" />
                 Payment Automations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -491,7 +491,7 @@ export default function AutomationsPage() {
               <div className="space-y-4">
                 {categorizedAutomations.payment.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <DollarSign className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <DollarSign className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No payment automations configured</p>
                   </div>
                 ) : (
@@ -541,7 +541,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+                <FileText className="size-5" />
                 Form Automations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -553,7 +553,7 @@ export default function AutomationsPage() {
               <div className="space-y-4">
                 {categorizedAutomations.forms.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <FileText className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No form automations configured</p>
                   </div>
                 ) : (
@@ -572,7 +572,7 @@ export default function AutomationsPage() {
                             >
                               {rule.enabled ? (
                                 <>
-                                  <CheckCircle2 className="mr-1 inline h-3 w-3" />
+                                  <CheckCircle2 className="mr-1 inline size-3" />
                                   Active
                                 </>
                               ) : (
@@ -585,18 +585,18 @@ export default function AutomationsPage() {
                             <Badge variant="outline" className="capitalize">
                               {rule.messageType === "both" ? (
                                 <>
-                                  <Mail className="mr-1 inline h-3 w-3" />
-                                  <MessageSquare className="mr-1 inline h-3 w-3" />
+                                  <Mail className="mr-1 inline size-3" />
+                                  <MessageSquare className="mr-1 inline size-3" />
                                   Both
                                 </>
                               ) : rule.messageType === "email" ? (
                                 <>
-                                  <Mail className="mr-1 inline h-3 w-3" />
+                                  <Mail className="mr-1 inline size-3" />
                                   Email
                                 </>
                               ) : (
                                 <>
-                                  <MessageSquare className="mr-1 inline h-3 w-3" />
+                                  <MessageSquare className="mr-1 inline size-3" />
                                   SMS
                                 </>
                               )}
@@ -650,7 +650,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Megaphone className="h-5 w-5" />
+                <Megaphone className="size-5" />
                 Campaign Automations
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">

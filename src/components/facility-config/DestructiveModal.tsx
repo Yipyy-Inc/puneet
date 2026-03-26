@@ -33,7 +33,7 @@ export function DestructiveModal({
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="text-destructive h-5 w-5" />
+            <AlertTriangle className="text-destructive size-5" />
             <DialogTitle>{title}</DialogTitle>
           </div>
           <DialogDescription>{description}</DialogDescription>

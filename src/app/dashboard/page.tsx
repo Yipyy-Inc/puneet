@@ -174,11 +174,11 @@ function SystemHealthCard({ overallHealth }: { overallHealth: number }) {
   const getStatusIcon = (status: "operational" | "degraded" | "down") => {
     switch (status) {
       case "operational":
-        return <CheckCircle2 className="text-success h-3.5 w-3.5" />;
+        return <CheckCircle2 className="text-success size-3.5" />;
       case "degraded":
-        return <AlertCircle className="text-warning h-3.5 w-3.5" />;
+        return <AlertCircle className="text-warning size-3.5" />;
       case "down":
-        return <XCircle className="text-destructive h-3.5 w-3.5" />;
+        return <XCircle className="text-destructive size-3.5" />;
     }
   };
 
@@ -205,7 +205,7 @@ function SystemHealthCard({ overallHealth }: { overallHealth: number }) {
               background: "linear-gradient(135deg, #fb923c 0%, #f97316 100%)",
             }}
           >
-            <Activity className="h-5 w-5 text-white" />
+            <Activity className="size-5 text-white" />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -215,7 +215,7 @@ function SystemHealthCard({ overallHealth }: { overallHealth: number }) {
               className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-md px-2 py-1 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <module.icon className="text-muted-foreground h-3.5 w-3.5" />
+                <module.icon className="text-muted-foreground size-3.5" />
                 <span className="text-xs font-medium">{module.name}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ function ActiveFacilitiesCard({
                 {activeFacilities}
               </h3>
               <span className="text-success inline-flex items-center text-xs font-medium">
-                <TrendingUp className="mr-0.5 h-3 w-3" />
+                <TrendingUp className="mr-0.5 size-3" />
                 +2 new
               </span>
             </div>
@@ -266,7 +266,7 @@ function ActiveFacilitiesCard({
               background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
             }}
           >
-            <Building2 className="h-5 w-5 text-white" />
+            <Building2 className="size-5 text-white" />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -320,7 +320,7 @@ function ReservationsCard({
                 {formattedNumber}
               </h3>
               <span className="text-success inline-flex items-center text-xs font-medium">
-                <TrendingUp className="mr-0.5 h-3 w-3" />
+                <TrendingUp className="mr-0.5 size-3" />
                 +8.2%
               </span>
             </div>
@@ -334,7 +334,7 @@ function ReservationsCard({
               background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
             }}
           >
-            <CalendarCheck className="h-5 w-5 text-white" />
+            <CalendarCheck className="size-5 text-white" />
           </div>
         </div>
         <div className="space-y-1.5">
@@ -408,9 +408,9 @@ function StatCard({
                 } `}
               >
                 {changeType === "up" ? (
-                  <TrendingUp className="mr-0.5 h-3 w-3" />
+                  <TrendingUp className="mr-0.5 size-3" />
                 ) : changeType === "down" ? (
-                  <TrendingDown className="mr-0.5 h-3 w-3" />
+                  <TrendingDown className="mr-0.5 size-3" />
                 ) : null}
                 {change}
               </span>
@@ -423,7 +423,7 @@ function StatCard({
             className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
-            <Icon className="h-5 w-5 text-white" />
+            <Icon className="size-5 text-white" />
           </div>
         </div>
         {chart && <div className="mt-4 h-12">{chart}</div>}
@@ -660,7 +660,7 @@ export default function DashboardPage() {
                   <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="size-8">
                 <MoreHorizontal className="size-4" />
               </Button>
             </div>
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                 this year
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="size-8">
               <MoreHorizontal className="size-4" />
             </Button>
           </CardHeader>
@@ -909,7 +909,7 @@ export default function DashboardPage() {
                   className="hover:bg-muted/30 flex items-center gap-3 rounded-lg p-2 transition-colors"
                 >
                   <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${
+                    className={`flex size-7 items-center justify-center rounded-md text-xs font-bold ${
                       index === 0
                         ? "bg-amber-100 text-amber-700"
                         : index === 1
@@ -941,9 +941,9 @@ export default function DashboardPage() {
                       } `}
                     >
                       {facility.growth > 0 ? (
-                        <TrendingUp className="h-3 w-3" />
+                        <TrendingUp className="size-3" />
                       ) : (
-                        <TrendingDown className="h-3 w-3" />
+                        <TrendingDown className="size-3" />
                       )}
                       {facility.growth > 0 ? "+" : ""}
                       {facility.growth}%
@@ -997,16 +997,16 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                    className={`flex size-7 items-center justify-center rounded-lg ${
                       facility.growth > 0
                         ? "bg-success/10 text-success"
                         : "bg-destructive/10 text-destructive"
                     } `}
                   >
                     {facility.growth > 0 ? (
-                      <TrendingUp className="h-3.5 w-3.5" />
+                      <TrendingUp className="size-3.5" />
                     ) : (
-                      <TrendingDown className="h-3.5 w-3.5" />
+                      <TrendingDown className="size-3.5" />
                     )}
                   </div>
                 </div>

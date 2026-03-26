@@ -197,7 +197,7 @@ export function ServiceStep({
                         : "bg-muted"
                     } `}
                   >
-                    <Icon className="h-12 w-12" />
+                    <Icon className="size-12" />
                   </div>
                 )}
                 <div className="space-y-3 p-4">
@@ -229,7 +229,7 @@ export function ServiceStep({
                   </div>
                 </div>
                 {selectedService === service.id && !isDisabled && (
-                  <Check className="text-primary absolute top-2 right-2 h-5 w-5" />
+                  <Check className="text-primary absolute top-2 right-2 size-5" />
                 )}
               </div>
             );

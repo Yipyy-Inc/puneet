@@ -91,7 +91,7 @@ export default function GroomerLoginPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4 flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-pink-500 to-rose-500">
-              <Scissors className="h-8 w-8 text-white" />
+              <Scissors className="size-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Groomer Login</CardTitle>

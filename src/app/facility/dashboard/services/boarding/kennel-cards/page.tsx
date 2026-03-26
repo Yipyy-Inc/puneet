@@ -123,7 +123,7 @@ export default function KennelCardsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="size-5" />
             Generate Kennel Card
           </CardTitle>
         </CardHeader>
@@ -185,14 +185,14 @@ export default function KennelCardsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="size-5" />
             Generated Kennel Cards
           </CardTitle>
         </CardHeader>
         <CardContent>
           {currentGuests.length === 0 ? (
             <div className="text-muted-foreground py-8 text-center">
-              <PawPrint className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <PawPrint className="mx-auto mb-3 size-12 opacity-50" />
               <p>No boarding guests currently</p>
             </div>
           ) : (
@@ -206,8 +206,8 @@ export default function KennelCardsPage() {
                   >
                     <div className="mb-3 flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-                          <PawPrint className="text-primary h-5 w-5" />
+                        <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary size-5" />
                         </div>
                         <div>
                           <p className="font-semibold">{guest.petName}</p>
@@ -286,7 +286,7 @@ export default function KennelCardsPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+              <CreditCard className="size-5" />
               Kennel Card Preview
             </DialogTitle>
           </DialogHeader>
@@ -303,11 +303,11 @@ export default function KennelCardsPage() {
                   <div className="flex items-center gap-4">
                     <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-gray-200">
                       {selectedGuest.petPhotoUrl ? (
-                        <div className="bg-primary/20 flex h-full w-full items-center justify-center">
-                          <PawPrint className="text-primary h-10 w-10" />
+                        <div className="bg-primary/20 flex size-full items-center justify-center">
+                          <PawPrint className="text-primary size-10" />
                         </div>
                       ) : (
-                        <PawPrint className="h-10 w-10 text-gray-400" />
+                        <PawPrint className="size-10 text-gray-400" />
                       )}
                     </div>
                     <div>
@@ -329,7 +329,7 @@ export default function KennelCardsPage() {
                       {selectedGuest.kennelName}
                     </p>
                     <div className="mt-2 flex h-16 w-16 items-center justify-center rounded-sm bg-gray-200">
-                      <QrCode className="h-10 w-10 text-gray-500" />
+                      <QrCode className="size-10 text-gray-500" />
                     </div>
                   </div>
                 </div>
@@ -378,7 +378,7 @@ export default function KennelCardsPage() {
                 {selectedGuest.allergies.length > 0 && (
                   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
                     <div className="flex items-center gap-2 text-red-800">
-                      <AlertTriangle className="h-5 w-5" />
+                      <AlertTriangle className="size-5" />
                       <span className="font-bold">ALLERGIES</span>
                     </div>
                     <p className="mt-1 font-medium text-red-700">
@@ -391,7 +391,7 @@ export default function KennelCardsPage() {
                 {selectedGuest.medications.length > 0 && (
                   <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
                     <div className="flex items-center gap-2 text-purple-800">
-                      <Pill className="h-5 w-5" />
+                      <Pill className="size-5" />
                       <span className="font-bold">MEDICATIONS</span>
                     </div>
                     <div className="mt-2 space-y-1">
@@ -410,7 +410,7 @@ export default function KennelCardsPage() {
                 {/* Feeding */}
                 <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                   <div className="flex items-center gap-2 text-blue-800">
-                    <Utensils className="h-5 w-5" />
+                    <Utensils className="size-5" />
                     <span className="font-bold">FEEDING</span>
                   </div>
                   <div className="mt-2 text-blue-700">

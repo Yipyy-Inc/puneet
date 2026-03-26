@@ -42,7 +42,7 @@ export default function CustomServiceLayout({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-12 text-center">
         <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
-          <AlertTriangle className="text-muted-foreground h-8 w-8" />
+          <AlertTriangle className="text-muted-foreground size-8" />
         </div>
         <div>
           <h2 className="text-xl font-semibold">Service Not Found</h2>
@@ -152,7 +152,7 @@ export default function CustomServiceLayout({
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex min-w-0 items-center gap-3">
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                className="flex size-10 shrink-0 items-center justify-center rounded-lg"
                 style={{
                   ...getGradientStyle(
                     serviceModule.iconColor,
@@ -162,7 +162,7 @@ export default function CustomServiceLayout({
               >
                 <DynamicIcon
                   name={serviceModule.icon}
-                  className="h-5 w-5 text-white"
+                  className="size-5 text-white"
                 />
               </div>
               <div className="min-w-0">

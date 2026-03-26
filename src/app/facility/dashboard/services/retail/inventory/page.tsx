@@ -628,7 +628,7 @@ export default function InventoryPage() {
               {pendingAlerts.length > 0 && (
                 <Badge
                   variant="destructive"
-                  className="ml-1 h-5 w-5 p-0 text-xs"
+                  className="ml-1 size-5 p-0 text-xs"
                 >
                   {pendingAlerts.length}
                 </Badge>
@@ -649,7 +649,7 @@ export default function InventoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingDown className="h-5 w-5 text-red-500" />
+                  <TrendingDown className="size-5 text-red-500" />
                   Low Stock Items
                 </CardTitle>
               </CardHeader>
@@ -719,7 +719,7 @@ export default function InventoryPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5" />
+                  <RefreshCw className="size-5" />
                   Recent Movements
                 </CardTitle>
               </CardHeader>
@@ -953,8 +953,8 @@ export default function InventoryPage() {
           {selectedAlert && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                <div className="flex size-12 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="size-6 text-red-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold">{selectedAlert.productName}</h3>
@@ -1194,7 +1194,7 @@ export default function InventoryPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="size-8"
                           onClick={() => {
                             setReorderItems((prev) =>
                               prev.filter((i) => i.alertId !== item.alertId),

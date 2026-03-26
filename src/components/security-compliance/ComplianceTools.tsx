@@ -82,7 +82,7 @@ export function ComplianceTools() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -128,7 +128,7 @@ export function ComplianceTools() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -153,7 +153,7 @@ export function ComplianceTools() {
     const Icon = icons[status] || CheckCircle2;
     return (
       <Badge variant={variants[status] || "default"} className="gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -202,11 +202,11 @@ export function ComplianceTools() {
 
   const gdprActions = (item: GDPRCompliance) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Eye className="size-4" />
       </Button>
       {item.documentationUrl && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Download className="size-4" />
         </Button>
       )}
@@ -252,12 +252,12 @@ export function ComplianceTools() {
         <div className="space-y-1">
           {item.isCompliant ? (
             <Badge variant="default" className="gap-1">
-              <CheckCircle2 className="h-3 w-3" />
+              <CheckCircle2 className="size-3" />
               OK
             </Badge>
           ) : (
             <Badge variant="destructive" className="gap-1">
-              <XCircle className="h-3 w-3" />
+              <XCircle className="size-3" />
               No
             </Badge>
           )}
@@ -269,11 +269,11 @@ export function ComplianceTools() {
 
   const dataProtectionActions = (item: DataProtectionSetting) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Settings className="size-4" />
       </Button>
       {!item.isCompliant && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <AlertTriangle className="size-4" />
         </Button>
       )}
@@ -329,11 +329,11 @@ export function ComplianceTools() {
 
   const privacyPolicyActions = (item: PrivacyPolicy) => (
     <div className="flex gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="size-8">
         <Eye className="size-4" />
       </Button>
       {item.status === "Active" && (
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="size-8">
           <Download className="size-4" />
         </Button>
       )}
@@ -376,12 +376,12 @@ export function ComplianceTools() {
       render: (item: UserConsent) =>
         item.consentGiven ? (
           <Badge variant="default" className="gap-1">
-            <CheckCircle2 className="h-3 w-3" />
+            <CheckCircle2 className="size-3" />
             Yes
           </Badge>
         ) : (
           <Badge variant="secondary" className="gap-1">
-            <XCircle className="h-3 w-3" />
+            <XCircle className="size-3" />
             No
           </Badge>
         ),
@@ -651,7 +651,7 @@ export function ComplianceTools() {
         variant={variants[status] || "secondary"}
         className={`gap-1 ${colors[status] || ""} `}
       >
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -675,7 +675,7 @@ export function ComplianceTools() {
     const Icon = icons[type] || FileText;
     return (
       <Badge variant="secondary" className={`gap-1 ${colors[type] || ""} `}>
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {type}
       </Badge>
     );
@@ -698,7 +698,7 @@ export function ComplianceTools() {
         variant={variants[status] || "secondary"}
         className="gap-1 text-xs"
       >
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -788,7 +788,7 @@ export function ComplianceTools() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         title="View Details"
       >
         <Eye className="size-4" />
@@ -797,7 +797,7 @@ export function ComplianceTools() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="size-8"
           title="Process Request"
         >
           <Play className="size-4" />
@@ -809,7 +809,7 @@ export function ComplianceTools() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             title="Download Export"
           >
             <Download className="size-4" />
@@ -818,7 +818,7 @@ export function ComplianceTools() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         title="Send Notification"
       >
         <Mail className="size-4" />
@@ -950,8 +950,8 @@ export function ComplianceTools() {
                   Average across all frameworks
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
-                <Award className="h-6 w-6 text-green-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
+                <Award className="size-6 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -971,8 +971,8 @@ export function ComplianceTools() {
                   Compliance areas
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
-                <Shield className="h-6 w-6 text-blue-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
+                <Shield className="size-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -992,8 +992,8 @@ export function ComplianceTools() {
                   Settings need attention
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
-                <AlertTriangle className="h-6 w-6 text-orange-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
+                <AlertTriangle className="size-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -1013,8 +1013,8 @@ export function ComplianceTools() {
                   Within 30 days
                 </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
-                <FileCheck className="h-6 w-6 text-red-600" />
+              <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
+                <FileCheck className="size-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -1049,8 +1049,8 @@ export function ComplianceTools() {
                       {dataSubjectRequestStats.thisMonthRequests} this month
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
-                    <FileText className="h-6 w-6 text-blue-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
+                    <FileText className="size-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1070,8 +1070,8 @@ export function ComplianceTools() {
                       {dataSubjectRequestStats.inProgressRequests} in progress
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-yellow-500/20 to-yellow-600/20">
-                    <Clock className="h-6 w-6 text-yellow-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-yellow-500/20 to-yellow-600/20">
+                    <Clock className="size-6 text-yellow-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1092,8 +1092,8 @@ export function ComplianceTools() {
                       complete
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
+                    <CheckCircle2 className="size-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1113,8 +1113,8 @@ export function ComplianceTools() {
                       30-day GDPR deadline
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
+                    <AlertTriangle className="size-6 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1126,8 +1126,8 @@ export function ComplianceTools() {
             <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                    <FileOutput className="h-5 w-5 text-blue-600" />
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-blue-100">
+                    <FileOutput className="size-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm font-medium">
@@ -1147,8 +1147,8 @@ export function ComplianceTools() {
             <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                    <UserX className="h-5 w-5 text-red-600" />
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-red-100">
+                    <UserX className="size-5 text-red-600" />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm font-medium">
@@ -1168,8 +1168,8 @@ export function ComplianceTools() {
             <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                    <Settings className="h-5 w-5 text-purple-600" />
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-purple-100">
+                    <Settings className="size-5 text-purple-600" />
                   </div>
                   <div>
                     <p className="text-muted-foreground text-sm font-medium">
@@ -1191,7 +1191,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 Data Subject Requests (GDPR Export/Delete)
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1279,7 +1279,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 GDPR Compliance
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1299,7 +1299,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Lock className="h-5 w-5" />
+                <Lock className="size-5" />
                 Data Protection Settings
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1319,7 +1319,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <FileText className="h-5 w-5" />
+                <FileText className="size-5" />
                 Privacy Policy Management
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1339,7 +1339,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Users className="h-5 w-5" />
+                <Users className="size-5" />
                 User Consent Tracking
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1385,7 +1385,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Award className="h-5 w-5" />
+                <Award className="size-5" />
                 Compliance Frameworks
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1405,7 +1405,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <FileText className="h-5 w-5" />
+                <FileText className="size-5" />
                 Compliance Reports
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1425,7 +1425,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <FileCheck className="h-5 w-5" />
+                <FileCheck className="size-5" />
                 Certificate Management
               </CardTitle>
               <p className="text-muted-foreground text-sm">
@@ -1445,7 +1445,7 @@ export function ComplianceTools() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Database className="h-5 w-5" />
+                <Database className="size-5" />
                 Audit Trail Maintenance
               </CardTitle>
               <p className="text-muted-foreground text-sm">

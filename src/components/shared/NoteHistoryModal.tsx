@@ -50,8 +50,8 @@ export function NoteHistoryModal({
                 <div className="bg-border absolute top-6 bottom-0 left-[11px] w-px" />
               )}
               {/* Timeline dot */}
-              <div className="border-border bg-muted absolute top-1 left-0 flex h-6 w-6 items-center justify-center rounded-full border">
-                <User className="text-muted-foreground h-3 w-3" />
+              <div className="border-border bg-muted absolute top-1 left-0 flex size-6 items-center justify-center rounded-full border">
+                <User className="text-muted-foreground size-3" />
               </div>
 
               <div className="pb-4">

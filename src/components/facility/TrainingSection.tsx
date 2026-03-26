@@ -413,28 +413,28 @@ export function TrainingSection() {
       case "scheduled":
         return (
           <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-            <Calendar className="mr-1 h-3 w-3" />
+            <Calendar className="mr-1 size-3" />
             Scheduled
           </Badge>
         );
       case "pending":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-            <Hourglass className="mr-1 h-3 w-3" />
+            <Hourglass className="mr-1 size-3" />
             Pending
           </Badge>
         );
       case "in-progress":
         return (
           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <PlayCircle className="mr-1 h-3 w-3" />
+            <PlayCircle className="mr-1 size-3" />
             In Progress
           </Badge>
         );
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="mr-1 h-3 w-3" />
+            <CheckCircle className="mr-1 size-3" />
             Completed
           </Badge>
         );
@@ -488,7 +488,7 @@ export function TrainingSection() {
             onClick={() => handleMarkPending(session)}
             className="gap-1"
           >
-            <Hourglass className="h-3 w-3" />
+            <Hourglass className="size-3" />
             Ready
           </Button>
         );
@@ -506,7 +506,7 @@ export function TrainingSection() {
                 : undefined
             }
           >
-            <PlayCircle className="h-3 w-3" />
+            <PlayCircle className="size-3" />
             Start
           </Button>
         );
@@ -523,7 +523,7 @@ export function TrainingSection() {
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <GraduationCap className="text-primary h-5 w-5" />
+            <GraduationCap className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Training</h3>
             <Badge variant="outline">{todaySessions.length} today</Badge>
           </div>
@@ -538,7 +538,7 @@ export function TrainingSection() {
                 onClick={() => setShowScheduled(!showScheduled)}
                 className="h-7 gap-1 px-3"
               >
-                <Calendar className="h-3 w-3" />
+                <Calendar className="size-3" />
                 Scheduled
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.scheduled}
@@ -550,7 +550,7 @@ export function TrainingSection() {
                 onClick={() => setShowPending(!showPending)}
                 className="h-7 gap-1 px-3"
               >
-                <Hourglass className="h-3 w-3" />
+                <Hourglass className="size-3" />
                 Pending
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.pending}
@@ -562,7 +562,7 @@ export function TrainingSection() {
                 onClick={() => setShowInProgress(!showInProgress)}
                 className="h-7 gap-1 px-3"
               >
-                <PlayCircle className="h-3 w-3" />
+                <PlayCircle className="size-3" />
                 In Progress
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.inProgress}
@@ -574,7 +574,7 @@ export function TrainingSection() {
                 onClick={() => setShowCompleted(!showCompleted)}
                 className="h-7 gap-1 px-3"
               >
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle className="size-3" />
                 Completed
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.completed}
@@ -617,9 +617,9 @@ export function TrainingSection() {
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`h-10 w-10 rounded-full ${styles.iconBg} flex shrink-0 items-center justify-center`}
+                      className={`size-10 rounded-full ${styles.iconBg} flex shrink-0 items-center justify-center`}
                     >
-                      <GraduationCap className={`h-5 w-5 ${styles.icon} `} />
+                      <GraduationCap className={`size-5 ${styles.icon} `} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -629,7 +629,7 @@ export function TrainingSection() {
                         {getStatusBadge(session.status)}
                       </div>
                       <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                        <Users className="h-3 w-3" />
+                        <Users className="size-3" />
                         <span>{sessionEnrollments.length} attendees</span>
                         <span>•</span>
                         <span>
@@ -642,13 +642,13 @@ export function TrainingSection() {
                         </span>
                       </div>
                       <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="size-3" />
                         <span>
                           {formatTime(session.startTime)} -{" "}
                           {formatTime(session.endTime)}
                         </span>
                         <span>•</span>
-                        <User className="h-3 w-3" />
+                        <User className="size-3" />
                         <span>{session.trainerName}</span>
                         <span>•</span>
                         {isTrainerAvailable(session.trainerId) ? (
@@ -737,8 +737,8 @@ export function TrainingSection() {
                               className="rounded-full"
                             />
                           ) : (
-                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                              <PawPrint className="text-primary h-6 w-6" />
+                            <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-6" />
                             </div>
                           )}
                           <div>
@@ -915,8 +915,8 @@ export function TrainingSection() {
           {selectedSession && (
             <div className="space-y-4">
               <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
-                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                  <GraduationCap className="text-primary h-6 w-6" />
+                <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                  <GraduationCap className="text-primary size-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -991,13 +991,13 @@ export function TrainingSection() {
                                 }
                                 className="shrink-0"
                               >
-                                <div className="h-8 w-8 overflow-hidden rounded-full">
+                                <div className="size-8 overflow-hidden rounded-full">
                                   <Image
                                     src={getPetImage(enrollment.petId)!}
                                     alt={enrollment.petName}
                                     width={32}
                                     height={32}
-                                    className="h-full w-full object-cover"
+                                    className="size-full object-cover"
                                   />
                                 </div>
                               </Link>
@@ -1010,7 +1010,7 @@ export function TrainingSection() {
                                 }
                                 className="shrink-0"
                               >
-                                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
+                                <div className="bg-primary/10 flex size-8 items-center justify-center rounded-full">
                                   <PawPrint className="text-primary size-4" />
                                 </div>
                               </Link>
@@ -1031,7 +1031,7 @@ export function TrainingSection() {
                               </p>
                             </div>
                             <div className="text-muted-foreground ml-auto flex items-center gap-1 text-xs">
-                              <Phone className="h-3 w-3" />
+                              <Phone className="size-3" />
                               {enrollment.ownerPhone}
                             </div>
                           </div>

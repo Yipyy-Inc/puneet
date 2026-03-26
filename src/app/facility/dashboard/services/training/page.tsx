@@ -25,7 +25,7 @@ export default function TrainingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
+              <CalendarDays className="size-5" />
               Training Series
             </CardTitle>
             <CardDescription>
@@ -44,7 +44,7 @@ export default function TrainingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
+              <BookOpen className="size-5" />
               Course Catalog
             </CardTitle>
             <CardDescription>
@@ -63,7 +63,7 @@ export default function TrainingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+              <Users className="size-5" />
               Students
             </CardTitle>
             <CardDescription>

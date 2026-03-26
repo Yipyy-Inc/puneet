@@ -166,7 +166,7 @@ export function IncidentDetailsModal({
         <div className="flex items-center justify-between">
           <div>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive h-5 w-5" />
+              <AlertTriangle className="text-destructive size-5" />
               Incident Report: {incident.id}
             </DialogTitle>
             <DialogDescription>{incident.title}</DialogDescription>
@@ -391,7 +391,7 @@ export function IncidentDetailsModal({
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Internal Notes</Label>
                   <Badge variant="secondary">
-                    <EyeOff className="mr-1 h-3 w-3" />
+                    <EyeOff className="mr-1 size-3" />
                     Staff Only
                   </Badge>
                 </div>
@@ -413,7 +413,7 @@ export function IncidentDetailsModal({
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Client-Facing Notes</Label>
                   <Badge variant="default">
-                    <Eye className="mr-1 h-3 w-3" />
+                    <Eye className="mr-1 size-3" />
                     Client Visible
                   </Badge>
                 </div>
@@ -448,7 +448,7 @@ export function IncidentDetailsModal({
                   <Card key={photo.id}>
                     <CardContent className="pt-6">
                       <div className="bg-muted mb-3 flex aspect-video items-center justify-center rounded-lg">
-                        <ImageIcon className="text-muted-foreground h-12 w-12" />
+                        <ImageIcon className="text-muted-foreground size-12" />
                       </div>
                       <div className="space-y-2">
                         <div className="text-sm font-medium">
@@ -457,12 +457,12 @@ export function IncidentDetailsModal({
                         <div className="flex items-center gap-2">
                           {photo.isClientVisible ? (
                             <Badge variant="default" className="text-xs">
-                              <Eye className="mr-1 h-3 w-3" />
+                              <Eye className="mr-1 size-3" />
                               Client Visible
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">
-                              <EyeOff className="mr-1 h-3 w-3" />
+                              <EyeOff className="mr-1 size-3" />
                               Internal Only
                             </Badge>
                           )}
@@ -475,7 +475,7 @@ export function IncidentDetailsModal({
             ) : (
               <Card>
                 <CardContent className="text-muted-foreground pt-6 text-center">
-                  <ImageIcon className="mx-auto mb-2 h-12 w-12 opacity-20" />
+                  <ImageIcon className="mx-auto mb-2 size-12 opacity-20" />
                   <p>No photos attached to this incident</p>
                 </CardContent>
               </Card>
@@ -607,7 +607,7 @@ export function IncidentDetailsModal({
             ) : (
               <Card>
                 <CardContent className="text-muted-foreground pt-6 text-center">
-                  <CheckSquare className="mx-auto mb-2 h-12 w-12 opacity-20" />
+                  <CheckSquare className="mx-auto mb-2 size-12 opacity-20" />
                   <p>No follow-up tasks for this incident</p>
                 </CardContent>
               </Card>

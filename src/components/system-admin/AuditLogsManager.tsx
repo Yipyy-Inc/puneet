@@ -529,7 +529,7 @@ export function AuditLogsManager() {
                         "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                     }}
                   >
-                    <FileText className="h-5 w-5 text-white" />
+                    <FileText className="size-5 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -556,7 +556,7 @@ export function AuditLogsManager() {
                         "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
                     }}
                   >
-                    <Shield className="h-5 w-5 text-white" />
+                    <Shield className="size-5 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -583,7 +583,7 @@ export function AuditLogsManager() {
                         "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                     }}
                   >
-                    <AlertTriangle className="h-5 w-5 text-white" />
+                    <AlertTriangle className="size-5 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -610,7 +610,7 @@ export function AuditLogsManager() {
                         "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                     }}
                   >
-                    <Database className="h-5 w-5 text-white" />
+                    <Database className="size-5 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -735,7 +735,7 @@ export function AuditLogsManager() {
               <div className="space-y-4">
                 {auditStatistics.topUsers.map((user, index) => (
                   <div key={user.userId} className="flex items-center gap-4">
-                    <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                    <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
                       {index + 1}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1047,7 +1047,7 @@ export function AuditLogsManager() {
                     })}
                     {filteredResources.length === 0 && (
                       <div className="text-muted-foreground py-8 text-center">
-                        <Database className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                        <Database className="mx-auto mb-3 size-12 opacity-50" />
                         <p>No resources found</p>
                       </div>
                     )}

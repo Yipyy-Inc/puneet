@@ -249,7 +249,7 @@ export default function CustomServicesListPage() {
                 onClick={() => setIsResetting(true)}
                 className="text-muted-foreground"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <RefreshCw className="size-3.5" />
                 <span className="hidden sm:inline">Reset Demo</span>
               </Button>
               <Button asChild>
@@ -269,7 +269,7 @@ export default function CustomServicesListPage() {
             </div>
             <Separator orientation="vertical" className="h-5" />
             <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="size-2 rounded-full bg-green-500" />
               <span className="text-sm">
                 <span className="font-medium text-emerald-600">
                   {stats.active}
@@ -278,7 +278,7 @@ export default function CustomServicesListPage() {
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-yellow-500" />
+              <span className="size-2 rounded-full bg-yellow-500" />
               <span className="text-sm">
                 <span className="font-medium text-amber-600">
                   {stats.draft}
@@ -288,7 +288,7 @@ export default function CustomServicesListPage() {
             </div>
             {stats.disabled > 0 && (
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="size-2 rounded-full bg-red-500" />
                 <span className="text-sm">
                   <span className="font-medium text-red-500">
                     {stats.disabled}
@@ -307,7 +307,7 @@ export default function CustomServicesListPage() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
             <div className="relative min-w-[180px] flex-1 sm:min-w-48">
-              <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+              <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
               <Input
                 placeholder="Search modules..."
                 value={search}
@@ -358,7 +358,7 @@ export default function CustomServicesListPage() {
             {/* Active filter count */}
             {activeFiltersCount > 0 && (
               <Badge variant="secondary" className="h-8 px-3">
-                <SlidersHorizontal className="mr-1 h-3 w-3" />
+                <SlidersHorizontal className="mr-1 size-3" />
                 {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""}
               </Badge>
             )}
@@ -369,21 +369,21 @@ export default function CustomServicesListPage() {
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="icon-sm"
                 onClick={() => setViewMode("grid")}
-                className="h-10 w-10"
+                className="size-10"
                 aria-label="Grid view"
                 aria-pressed={viewMode === "grid"}
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
+                <LayoutGrid className="size-3.5" />
               </Button>
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon-sm"
                 onClick={() => setViewMode("list")}
-                className="h-10 w-10"
+                className="size-10"
                 aria-label="List view"
                 aria-pressed={viewMode === "list"}
               >
-                <List className="h-3.5 w-3.5" />
+                <List className="size-3.5" />
               </Button>
             </div>
           </div>
@@ -397,7 +397,7 @@ export default function CustomServicesListPage() {
             {modules.length === 0 ? (
               <div className="animate-in fade-in max-w-lg duration-500">
                 <div className="bg-primary/10 mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl">
-                  <Plus className="text-primary h-8 w-8" />
+                  <Plus className="text-primary size-8" />
                 </div>
                 <h3 className="text-xl font-semibold">
                   Create your first custom service
@@ -443,7 +443,7 @@ export default function CustomServicesListPage() {
             ) : (
               <>
                 <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Search className="text-muted-foreground h-8 w-8" />
+                  <Search className="text-muted-foreground size-8" />
                 </div>
                 <h3 className="text-lg font-semibold">No results found</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -511,7 +511,7 @@ export default function CustomServicesListPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive h-5 w-5" />
+              <AlertTriangle className="text-destructive size-5" />
               Delete Module
             </DialogTitle>
             <DialogDescription>

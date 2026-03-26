@@ -677,24 +677,24 @@ export function DateSelectionCalendar({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
+                    className="size-6"
                     onClick={handlePrevMonth}
                   >
-                    <ChevronLeft className="h-3 w-3" />
+                    <ChevronLeft className="size-3" />
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
+                    className="size-6"
                     onClick={handleNextMonth}
                   >
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="size-3" />
                   </Button>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <CalendarIcon className="text-muted-foreground h-3 w-3" />
+                  <CalendarIcon className="text-muted-foreground size-3" />
                   <span className="text-xs font-semibold">
                     {currentMonth.toLocaleDateString("en-US", {
                       month: "long",
@@ -978,7 +978,7 @@ export function DateSelectionCalendar({
               </div>
             ) : (
               <div className="text-muted-foreground text-center">
-                <Clock className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <Clock className="mx-auto mb-2 size-8 opacity-50" />
                 <p className="text-sm">
                   Select dates to set check-in/out times
                 </p>

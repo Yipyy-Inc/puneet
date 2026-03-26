@@ -26,7 +26,7 @@ export function MobileAppSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
+            <Smartphone className="size-5" />
             App Identity
           </CardTitle>
         </CardHeader>
@@ -61,14 +61,14 @@ export function MobileAppSettings() {
               <Label>App Icon</Label>
               <div className="flex items-center gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
-                  <ImageIcon className="h-8 w-8 text-slate-400" />
+                  <ImageIcon className="size-8 text-slate-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-muted-foreground mb-2 text-sm">
                     {settings.appIcon}
                   </p>
                   <Button size="sm" variant="outline">
-                    <Upload className="mr-2 h-3 w-3" />
+                    <Upload className="mr-2 size-3" />
                     Upload Icon
                   </Button>
                 </div>
@@ -82,14 +82,14 @@ export function MobileAppSettings() {
               <Label>Splash Screen</Label>
               <div className="flex items-center gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
-                  <ImageIcon className="h-8 w-8 text-slate-400" />
+                  <ImageIcon className="size-8 text-slate-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-muted-foreground mb-2 text-sm">
                     {settings.splashScreen}
                   </p>
                   <Button size="sm" variant="outline">
-                    <Upload className="mr-2 h-3 w-3" />
+                    <Upload className="mr-2 size-3" />
                     Upload Image
                   </Button>
                 </div>
@@ -106,7 +106,7 @@ export function MobileAppSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
+            <Palette className="size-5" />
             Branding Colors
           </CardTitle>
         </CardHeader>
@@ -254,7 +254,7 @@ export function MobileAppSettings() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="size-3" />
                     </a>
                   </Button>
                 )}
@@ -279,7 +279,7 @@ export function MobileAppSettings() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="size-3" />
                     </a>
                   </Button>
                 )}

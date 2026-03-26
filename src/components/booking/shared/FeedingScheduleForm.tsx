@@ -282,8 +282,8 @@ export function FeedingScheduleForm({
                   onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
-                      <Utensils className="h-3.5 w-3.5 text-orange-600" />
+                    <div className="flex size-8 items-center justify-center rounded-full bg-orange-100">
+                      <Utensils className="size-3.5 text-orange-600" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">
@@ -462,18 +462,18 @@ export function FeedingScheduleForm({
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6"
+                                  className="size-6"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     removeOccasion(index, occ.id);
                                   }}
                                 >
-                                  <X className="h-3 w-3" />
+                                  <X className="size-3" />
                                 </Button>
                                 {occExpanded ? (
-                                  <ChevronUp className="h-3 w-3" />
+                                  <ChevronUp className="size-3" />
                                 ) : (
-                                  <ChevronDown className="h-3 w-3" />
+                                  <ChevronDown className="size-3" />
                                 )}
                               </div>
                             </div>
@@ -591,12 +591,12 @@ export function FeedingScheduleForm({
                                       type="button"
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7"
+                                      className="size-7"
                                       onClick={() =>
                                         removeComponent(index, occ.id, comp.id)
                                       }
                                     >
-                                      <X className="h-3 w-3" />
+                                      <X className="size-3" />
                                     </Button>
                                   </div>
                                 ))}
@@ -607,7 +607,7 @@ export function FeedingScheduleForm({
                                   className="h-7 w-full text-[11px]"
                                   onClick={() => addComponent(index, occ.id)}
                                 >
-                                  <Plus className="mr-1 h-3 w-3" />
+                                  <Plus className="mr-1 size-3" />
                                   Add Component
                                 </Button>
                               </div>

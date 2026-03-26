@@ -182,7 +182,7 @@ export default function RolesPermissionsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-primary/10 rounded-lg p-2">
-                      <Icon className="text-primary h-5 w-5" />
+                      <Icon className="text-primary size-5" />
                     </div>
                     <div>
                       <CardTitle className="text-lg">
@@ -262,7 +262,7 @@ export default function RolesPermissionsPage() {
         <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+              <Shield className="size-5" />
               {selectedRole && roleDisplayNames[selectedRole]} -{" "}
               {viewMode === "edit" ? "Edit Permissions" : "View Permissions"}
             </DialogTitle>

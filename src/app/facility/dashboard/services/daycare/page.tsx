@@ -146,14 +146,14 @@ export default function DaycareDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Users className="h-5 w-5" />
+            <Users className="size-5" />
             Currently Checked In
           </CardTitle>
         </CardHeader>
         <CardContent>
           {checkedInPets.length === 0 ? (
             <div className="text-muted-foreground py-8 text-center">
-              <PawPrint className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <PawPrint className="mx-auto mb-3 size-12 opacity-50" />
               <p>No pets currently checked in</p>
             </div>
           ) : (
@@ -170,8 +170,8 @@ export default function DaycareDashboardPage() {
                     key={pet.id}
                     className="bg-card hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-3 transition-colors"
                   >
-                    <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-                      <PawPrint className="text-primary h-5 w-5" />
+                    <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                      <PawPrint className="text-primary size-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{pet.petName}</p>
@@ -193,7 +193,7 @@ export default function DaycareDashboardPage() {
                         {pet.rateType.replace("-", " ")}
                       </Badge>
                       <p className="text-muted-foreground mt-1 text-xs">
-                        <Clock className="mr-1 inline h-3 w-3" />
+                        <Clock className="mr-1 inline size-3" />
                         {hoursElapsed}h elapsed
                       </p>
                     </div>
@@ -209,7 +209,7 @@ export default function DaycareDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <AlertCircle className="h-5 w-5" />
+            <AlertCircle className="size-5" />
             Upcoming Pickups
           </CardTitle>
         </CardHeader>
@@ -236,7 +236,7 @@ export default function DaycareDashboardPage() {
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                      <div className="bg-muted flex size-8 items-center justify-center rounded-full">
                         <PawPrint className="size-4" />
                       </div>
                       <div>

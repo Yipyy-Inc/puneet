@@ -43,7 +43,7 @@ export function InfoCard({
         <div
           className={`rounded-md p-1.5 ${iconVariantStyles[variant]} transition-transform duration-200 group-hover:scale-110`}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="size-3.5" />
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4">

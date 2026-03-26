@@ -40,7 +40,7 @@ export function RevenueReportLoyaltySection({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Gift className="text-primary h-5 w-5" />
+          <Gift className="text-primary size-5" />
           Loyalty & Referral Impact
         </CardTitle>
         <CardDescription>

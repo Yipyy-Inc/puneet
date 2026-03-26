@@ -145,7 +145,7 @@ function ScheduleStep({
       {/* Service info banner */}
       <Card className="bg-muted/50 border-none">
         <CardContent className="flex items-center gap-3 py-3">
-          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+          <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
             <Icon className="text-primary size-4" />
           </div>
           <div className="flex-1">
@@ -156,7 +156,7 @@ function ScheduleStep({
           </div>
           {selectedPets.length > 0 && (
             <Badge variant="secondary" className="gap-1">
-              <Users className="h-3 w-3" />
+              <Users className="size-3" />
               {selectedPets.length} pet{selectedPets.length > 1 ? "s" : ""}
             </Badge>
           )}

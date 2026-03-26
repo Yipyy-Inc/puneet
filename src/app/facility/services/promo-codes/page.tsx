@@ -180,16 +180,16 @@ export default function PromoCodesPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="size-6"
             onClick={(e) => {
               e.stopPropagation();
               handleCopyCode(item.code as string);
             }}
           >
             {copiedCode === item.code ? (
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="size-3 text-green-500" />
             ) : (
-              <Copy className="h-3 w-3" />
+              <Copy className="size-3" />
             )}
           </Button>
         </div>

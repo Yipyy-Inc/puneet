@@ -426,7 +426,7 @@ export default function CustomerReportCardsPage() {
         {timelineItems.length === 0 ? (
           <Card>
             <CardContent className="space-y-3 py-12 text-center">
-              <FileText className="text-muted-foreground mx-auto h-12 w-12 opacity-50" />
+              <FileText className="text-muted-foreground mx-auto size-12 opacity-50" />
               <p className="font-semibold">
                 {hasActiveFilters
                   ? "No report cards match your filters"

@@ -319,7 +319,7 @@ export default function InventoryPage() {
         <Card className="border-warning">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <AlertTriangle className="text-warning h-5 w-5" />
+              <AlertTriangle className="text-warning size-5" />
               Low Stock Alert
             </CardTitle>
           </CardHeader>

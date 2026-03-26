@@ -9,7 +9,7 @@ export default function FormAuditPage() {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+        <Button variant="ghost" size="icon" className="size-8" asChild>
           <Link href="/facility/dashboard/forms">
             <ArrowLeft className="size-4" />
           </Link>

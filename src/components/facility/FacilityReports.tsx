@@ -366,20 +366,20 @@ export function FacilityReports({
                   {formatCurrency(data.summary.totalRevenue)}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
-                  <TrendingUp className="text-success h-3 w-3" />
+                  <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
                     +{data.summary.revenueGrowth.toFixed(1)}%
                   </span>
                 </div>
               </div>
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                className="flex size-10 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
                 }}
               >
-                <DollarSign className="h-5 w-5 text-white" />
+                <DollarSign className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -394,20 +394,20 @@ export function FacilityReports({
                   {data.summary.totalBookings}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
-                  <TrendingUp className="text-success h-3 w-3" />
+                  <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
                     +{data.summary.bookingGrowth.toFixed(1)}%
                   </span>
                 </div>
               </div>
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                className="flex size-10 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <CalendarCheck className="h-5 w-5 text-white" />
+                <CalendarCheck className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -422,20 +422,20 @@ export function FacilityReports({
                   {data.summary.activeClients}
                 </p>
                 <div className="mt-1 flex items-center gap-1">
-                  <TrendingUp className="text-success h-3 w-3" />
+                  <TrendingUp className="text-success size-3" />
                   <span className="text-success text-xs font-medium">
                     +{data.summary.clientGrowth.toFixed(1)}%
                   </span>
                 </div>
               </div>
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                className="flex size-10 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Users className="h-5 w-5 text-white" />
+                <Users className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -456,13 +456,13 @@ export function FacilityReports({
                 </p>
               </div>
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                className="flex size-10 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <BarChart3 className="h-5 w-5 text-white" />
+                <BarChart3 className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -513,7 +513,7 @@ export function FacilityReports({
                     <TrendingUp className="text-muted-foreground size-4" />
                     Revenue & Bookings Trend
                   </CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="size-8">
                     <Download className="size-4" />
                   </Button>
                 </div>
@@ -617,7 +617,7 @@ export function FacilityReports({
                     <BarChart3 className="text-muted-foreground size-4" />
                     Revenue by Service
                   </CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="size-8">
                     <Download className="size-4" />
                   </Button>
                 </div>
@@ -671,7 +671,7 @@ export function FacilityReports({
                     className="h-8 gap-1 text-xs"
                   >
                     View All
-                    <ArrowUpRight className="h-3 w-3" />
+                    <ArrowUpRight className="size-3" />
                   </Button>
                 </div>
               </CardHeader>
@@ -683,7 +683,7 @@ export function FacilityReports({
                       className="hover:bg-muted/50 flex items-center justify-between rounded-lg p-2 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold">
+                        <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full text-xs font-semibold">
                           {index + 1}
                         </div>
                         <div>
@@ -720,7 +720,7 @@ export function FacilityReports({
                       className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-lg p-3 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 flex h-9 w-9 items-center justify-center rounded-lg">
+                        <div className="bg-primary/10 flex size-9 items-center justify-center rounded-lg">
                           <FileText className="text-primary size-4" />
                         </div>
                         <div>
@@ -734,7 +734,7 @@ export function FacilityReports({
                         <Badge variant="secondary" className="text-xs">
                           {report.type}
                         </Badge>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="size-8">
                           <Download className="size-4" />
                         </Button>
                       </div>
@@ -758,7 +758,7 @@ export function FacilityReports({
                 </CardTitle>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="h-8 gap-1">
-                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    <FileSpreadsheet className="size-3.5" />
                     Export
                   </Button>
                 </div>
@@ -884,7 +884,7 @@ export function FacilityReports({
                   Bookings by Day of Week
                 </CardTitle>
                 <Button variant="outline" size="sm" className="h-8 gap-1">
-                  <Printer className="h-3.5 w-3.5" />
+                  <Printer className="size-3.5" />
                   Print
                 </Button>
               </div>
@@ -1082,7 +1082,7 @@ export function FacilityReports({
                   Scheduled Reports
                 </CardTitle>
                 <Button size="sm" className="h-8 gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
+                  <Calendar className="size-3.5" />
                   Schedule New
                 </Button>
               </div>
@@ -1097,23 +1097,23 @@ export function FacilityReports({
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="flex h-10 w-10 items-center justify-center rounded-xl"
+                          className="flex size-10 items-center justify-center rounded-xl"
                           style={{
                             background:
                               "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                           }}
                         >
-                          <FileText className="h-5 w-5 text-white" />
+                          <FileText className="size-5 text-white" />
                         </div>
                         <div>
                           <p className="font-medium">{report.name}</p>
                           <div className="mt-1 flex items-center gap-3">
                             <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               {report.frequency}
                             </span>
                             <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                              <Users className="h-3 w-3" />
+                              <Users className="size-3" />
                               {report.recipients} recipients
                             </span>
                           </div>
@@ -1129,7 +1129,7 @@ export function FacilityReports({
                 </div>
               ) : (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Clock className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Clock className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No scheduled reports</p>
                   <p className="text-sm">
                     Set up automated reports for this facility

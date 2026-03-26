@@ -127,7 +127,7 @@ export function GenericSidebar({
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleAllSections}
-                  className="hover:bg-sidebar-accent flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+                  className="hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-lg transition-colors"
                   title={
                     bulkCollapsed
                       ? "Expand all sections"
@@ -157,9 +157,9 @@ export function GenericSidebar({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="hover:bg-sidebar-accent absolute top-1/2 right-2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm"
+                  className="hover:bg-sidebar-accent absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm"
                 >
-                  <X className="text-muted-foreground h-3 w-3" />
+                  <X className="text-muted-foreground size-3" />
                 </button>
               )}
             </div>
@@ -240,7 +240,7 @@ export function GenericSidebar({
                                     )}
                                   />
                                   {item.count && item.count > 0 && (
-                                    <div className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-red-500" />
+                                    <div className="absolute -top-1 -left-1 size-2 rounded-full bg-red-500" />
                                   )}
                                 </div>
                               </Link>

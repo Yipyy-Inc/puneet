@@ -112,12 +112,12 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
                   <Badge variant={call.aiHandled ? "default" : "outline"}>
                     {call.aiHandled ? (
                       <>
-                        <Zap className="mr-1 inline h-3 w-3" />
+                        <Zap className="mr-1 inline size-3" />
                         AI Receptionist
                       </>
                     ) : (
                       <>
-                        <User className="mr-1 inline h-3 w-3" />
+                        <User className="mr-1 inline size-3" />
                         Staff
                       </>
                     )}
@@ -141,7 +141,7 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
             <CardContent className="pt-6">
               <Label className="mb-3 block text-base">AI Outcome</Label>
               <div className="bg-muted flex items-start gap-3 rounded-lg p-3">
-                <Zap className="text-primary mt-0.5 h-5 w-5" />
+                <Zap className="text-primary mt-0.5 size-5" />
                 <div>
                   <div className="mb-1 font-medium capitalize">
                     {call.outcome.replace(/_/g, " ")}

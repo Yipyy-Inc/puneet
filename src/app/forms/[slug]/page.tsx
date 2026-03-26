@@ -399,8 +399,8 @@ export default function PublicFormPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
-              <Shield className="h-6 w-6 text-blue-600" />
+            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-blue-50">
+              <Shield className="size-6 text-blue-600" />
             </div>
             <CardTitle className="text-xl">{form.name}</CardTitle>
             <p className="text-muted-foreground mt-2 text-sm">
@@ -499,7 +499,7 @@ export default function PublicFormPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center pt-6 text-center">
-            <CheckCircle className="mb-4 h-12 w-12 text-green-600" />
+            <CheckCircle className="mb-4 size-12 text-green-600" />
             <h2 className="mb-2 text-xl font-semibold">Thank you</h2>
             <p className="text-muted-foreground">
               {form?.settings?.submitMessage ||
@@ -702,14 +702,14 @@ export default function PublicFormPage() {
                     >
                       <input
                         type="checkbox"
-                        className="h-5 w-5 shrink-0"
+                        className="size-5 shrink-0"
                         checked={isSelected}
                         onChange={() => togglePet(pet.id)}
                       />
                       {pet.type.toLowerCase() === "cat" ? (
-                        <Cat className="text-muted-foreground h-5 w-5 shrink-0" />
+                        <Cat className="text-muted-foreground size-5 shrink-0" />
                       ) : (
-                        <Dog className="text-muted-foreground h-5 w-5 shrink-0" />
+                        <Dog className="text-muted-foreground size-5 shrink-0" />
                       )}
                       <span className="text-base font-medium">{pet.name}</span>
                       <span className="text-muted-foreground text-xs">
@@ -902,7 +902,7 @@ function QuestionInput({
                 <input
                   type="radio"
                   name={id}
-                  className="h-5 w-5 shrink-0"
+                  className="size-5 shrink-0"
                   value={o.value}
                   checked={value === o.value}
                   onChange={() => onChange(o.value)}
@@ -984,7 +984,7 @@ function QuestionInput({
               >
                 <input
                   type="checkbox"
-                  className="h-5 w-5"
+                  className="size-5"
                   checked={set.has(o.value)}
                   onChange={() => toggle(o.value)}
                 />
@@ -1001,7 +1001,7 @@ function QuestionInput({
           <input
             id={id}
             type="checkbox"
-            className="h-5 w-5 shrink-0"
+            className="size-5 shrink-0"
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
           />
@@ -1152,7 +1152,7 @@ function QuestionInput({
             </p>
             {sigName && (
               <div className="bg-muted/30 text-muted-foreground flex items-center gap-2 rounded-sm px-2 py-1 text-[10px]">
-                <Shield className="h-3 w-3" />
+                <Shield className="size-3" />
                 <span>
                   E-signed · {Intl.DateTimeFormat().resolvedOptions().timeZone}
                 </span>

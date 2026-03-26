@@ -818,8 +818,8 @@ export default function KennelViewPage() {
                       {statusCounts.vacant}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                    <CheckCircle className="size-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -843,8 +843,8 @@ export default function KennelViewPage() {
                       {statusCounts.occupied}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                    <PawPrint className="h-6 w-6 text-blue-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                    <PawPrint className="size-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
@@ -868,8 +868,8 @@ export default function KennelViewPage() {
                       {statusCounts.reserved}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-                    <Calendar className="h-6 w-6 text-yellow-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+                    <Calendar className="size-6 text-yellow-600" />
                   </div>
                 </div>
               </CardContent>
@@ -893,8 +893,8 @@ export default function KennelViewPage() {
                       {statusCounts.maintenance}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                    <Wrench className="h-6 w-6 text-red-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
+                    <Wrench className="size-6 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1028,7 +1028,7 @@ export default function KennelViewPage() {
                                   : 0;
                                 return noteCount > 0 ? (
                                   <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                                    <MessageSquare className="h-3 w-3" />
+                                    <MessageSquare className="size-3" />
                                     {noteCount}{" "}
                                     {noteCount === 1 ? "note" : "notes"}
                                   </div>
@@ -1102,8 +1102,8 @@ export default function KennelViewPage() {
                       {daycareStatusCounts.available}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                    <CheckCircle className="size-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1127,8 +1127,8 @@ export default function KennelViewPage() {
                       {daycareStatusCounts.occupied}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                    <PawPrint className="h-6 w-6 text-blue-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                    <PawPrint className="size-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1152,8 +1152,8 @@ export default function KennelViewPage() {
                       {daycareStatusCounts.reserved}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-                    <Calendar className="h-6 w-6 text-yellow-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+                    <Calendar className="size-6 text-yellow-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1177,8 +1177,8 @@ export default function KennelViewPage() {
                       {daycareStatusCounts.maintenance}
                     </p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                    <Wrench className="h-6 w-6 text-red-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
+                    <Wrench className="size-6 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -1325,7 +1325,7 @@ export default function KennelViewPage() {
             <div className="space-y-4 py-4">
               {selectedKennel.status === "maintenance" ? (
                 <div className="py-8 text-center">
-                  <Wrench className="mx-auto mb-4 h-12 w-12 text-red-600" />
+                  <Wrench className="mx-auto mb-4 size-12 text-red-600" />
                   <p className="text-lg font-medium">Under Maintenance</p>
                   <p className="text-muted-foreground mt-1 text-sm">
                     This kennel is temporarily unavailable

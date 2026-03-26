@@ -207,7 +207,7 @@ export function MedicationSection({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-red-50">
             <Pill className="h-4.5 w-4.5 text-red-600" />
           </div>
           <div>
@@ -261,13 +261,13 @@ export function MedicationSection({
                     <div className="flex items-center gap-3">
                       <div
                         className={cn(
-                          `flex h-8 w-8 items-center justify-center rounded-full`,
+                          `flex size-8 items-center justify-center rounded-full`,
                           showHighRisk ? "bg-red-100" : "bg-violet-100",
                         )}
                       >
                         <Pill
                           className={cn(
-                            "h-3.5 w-3.5",
+                            "size-3.5",
                             showHighRisk ? "text-red-600" : "text-violet-600",
                           )}
                         />
@@ -282,7 +282,7 @@ export function MedicationSection({
                               variant="destructive"
                               className="px-1.5 py-0 text-[10px]"
                             >
-                              <ShieldAlert className="mr-0.5 h-3 w-3" />
+                              <ShieldAlert className="mr-0.5 size-3" />
                               High Risk
                             </Badge>
                           )}
@@ -306,13 +306,13 @@ export function MedicationSection({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:text-destructive h-7 w-7"
+                        className="text-muted-foreground hover:text-destructive size-7"
                         onClick={(e) => {
                           e.stopPropagation();
                           removeMedication(med.id);
                         }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="size-3.5" />
                       </Button>
                       {isExpanded ? (
                         <ChevronUp className="text-muted-foreground size-4" />
@@ -526,13 +526,13 @@ export function MedicationSection({
                                   key={idx}
                                   className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-700"
                                 >
-                                  <Clock className="h-3 w-3" />
+                                  <Clock className="size-3" />
                                   {formatTime(time)}
                                   <button
                                     type="button"
                                     onClick={() => removeTime(med.id, idx)}
                                   >
-                                    <X className="h-3 w-3" />
+                                    <X className="size-3" />
                                   </button>
                                 </span>
                               ))}

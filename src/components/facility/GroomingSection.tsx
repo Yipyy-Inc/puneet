@@ -479,35 +479,35 @@ export function GroomingSection() {
       case "scheduled":
         return (
           <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-            <Calendar className="mr-1 h-3 w-3" />
+            <Calendar className="mr-1 size-3" />
             Scheduled
           </Badge>
         );
       case "checked-in":
         return (
           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <LogIn className="mr-1 h-3 w-3" />
+            <LogIn className="mr-1 size-3" />
             Checked In
           </Badge>
         );
       case "in-progress":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-            <PlayCircle className="mr-1 h-3 w-3" />
+            <PlayCircle className="mr-1 size-3" />
             In Progress
           </Badge>
         );
       case "ready-for-pickup":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="mr-1 h-3 w-3" />
+            <CheckCircle className="mr-1 size-3" />
             Ready for Pickup
           </Badge>
         );
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="mr-1 h-3 w-3" />
+            <CheckCircle className="mr-1 size-3" />
             Completed
           </Badge>
         );
@@ -571,7 +571,7 @@ export function GroomingSection() {
             onClick={() => handleMarkPending(appointment)}
             className="gap-1"
           >
-            <Hourglass className="h-3 w-3" />
+            <Hourglass className="size-3" />
             Arrived
           </Button>
         );
@@ -589,7 +589,7 @@ export function GroomingSection() {
                 : undefined
             }
           >
-            <PlayCircle className="h-3 w-3" />
+            <PlayCircle className="size-3" />
             Start
           </Button>
         );
@@ -606,7 +606,7 @@ export function GroomingSection() {
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <Scissors className="text-primary h-5 w-5" />
+            <Scissors className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Grooming</h3>
             <Badge variant="outline">{todayAppointments.length} today</Badge>
           </div>
@@ -621,7 +621,7 @@ export function GroomingSection() {
                 onClick={() => setShowScheduled(!showScheduled)}
                 className="h-7 gap-1 px-3"
               >
-                <Calendar className="h-3 w-3" />
+                <Calendar className="size-3" />
                 Scheduled
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.scheduled}
@@ -633,7 +633,7 @@ export function GroomingSection() {
                 onClick={() => setShowCheckedIn(!showCheckedIn)}
                 className="h-7 gap-1 px-3"
               >
-                <LogIn className="h-3 w-3" />
+                <LogIn className="size-3" />
                 Checked In
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.checkedIn}
@@ -645,7 +645,7 @@ export function GroomingSection() {
                 onClick={() => setShowInProgress(!showInProgress)}
                 className="h-7 gap-1 px-3"
               >
-                <PlayCircle className="h-3 w-3" />
+                <PlayCircle className="size-3" />
                 In Progress
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.inProgress}
@@ -657,7 +657,7 @@ export function GroomingSection() {
                 onClick={() => setShowReadyForPickup(!showReadyForPickup)}
                 className="h-7 gap-1 px-3"
               >
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle className="size-3" />
                 Ready
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.readyForPickup}
@@ -669,7 +669,7 @@ export function GroomingSection() {
                 onClick={() => setShowCompleted(!showCompleted)}
                 className="h-7 gap-1 px-3"
               >
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle className="size-3" />
                 Completed
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                   {counts.completed}
@@ -718,13 +718,13 @@ export function GroomingSection() {
                         }
                         className="shrink-0"
                       >
-                        <div className="h-10 w-10 overflow-hidden rounded-full">
+                        <div className="size-10 overflow-hidden rounded-full">
                           <Image
                             src={getPetImage(appointment.petId)!}
                             alt={appointment.petName}
                             width={40}
                             height={40}
-                            className="h-full w-full object-cover"
+                            className="size-full object-cover"
                           />
                         </div>
                       </Link>
@@ -738,9 +738,9 @@ export function GroomingSection() {
                         className="shrink-0"
                       >
                         <div
-                          className={`h-10 w-10 rounded-full ${styles.iconBg} flex items-center justify-center`}
+                          className={`size-10 rounded-full ${styles.iconBg} flex items-center justify-center`}
                         >
-                          <PawPrint className={`h-5 w-5 ${styles.icon} `} />
+                          <PawPrint className={`size-5 ${styles.icon} `} />
                         </div>
                       </Link>
                     )}
@@ -762,13 +762,13 @@ export function GroomingSection() {
                         {appointment.ownerName} • {appointment.petBreed}
                       </p>
                       <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="size-3" />
                         <span>
                           {formatTime(appointment.startTime)} -{" "}
                           {formatTime(appointment.endTime)}
                         </span>
                         <span>•</span>
-                        <User className="h-3 w-3" />
+                        <User className="size-3" />
                         <span>{appointment.stylistName}</span>
                         <span>•</span>
                         {isGroomerAvailable(appointment.stylistId) ? (
@@ -829,8 +829,8 @@ export function GroomingSection() {
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                        <PawPrint className="text-primary h-6 w-6" />
+                      <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                        <PawPrint className="text-primary size-6" />
                       </div>
                     )}
                     <div>
@@ -1029,13 +1029,13 @@ export function GroomingSection() {
                           : "#"
                       }
                     >
-                      <div className="h-12 w-12 overflow-hidden rounded-full">
+                      <div className="size-12 overflow-hidden rounded-full">
                         <Image
                           src={getPetImage(selectedAppointment.petId)!}
                           alt={selectedAppointment.petName}
                           width={48}
                           height={48}
-                          className="h-full w-full object-cover"
+                          className="size-full object-cover"
                         />
                       </div>
                     </Link>
@@ -1047,8 +1047,8 @@ export function GroomingSection() {
                           : "#"
                       }
                     >
-                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                        <PawPrint className="text-primary h-6 w-6" />
+                      <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                        <PawPrint className="text-primary size-6" />
                       </div>
                     </Link>
                   );
@@ -1088,7 +1088,7 @@ export function GroomingSection() {
                 <div>
                   <p className="text-muted-foreground">Phone</p>
                   <p className="flex items-center gap-1 font-medium">
-                    <Phone className="h-3 w-3" />
+                    <Phone className="size-3" />
                     {selectedAppointment.ownerPhone}
                   </p>
                 </div>

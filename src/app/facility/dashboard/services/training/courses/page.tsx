@@ -263,12 +263,12 @@ export default function TrainingCourseCatalogPage() {
                           variant="default"
                           className="bg-green-100 text-green-700"
                         >
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
+                          <CheckCircle2 className="mr-1 size-3" />
                           Active
                         </Badge>
                       ) : (
                         <Badge variant="secondary">
-                          <XCircle className="mr-1 h-3 w-3" />
+                          <XCircle className="mr-1 size-3" />
                           Inactive
                         </Badge>
                       )}
@@ -485,7 +485,7 @@ export default function TrainingCourseCatalogPage() {
                           }}
                           className="hover:text-destructive ml-1"
                         >
-                          <XCircle className="h-3 w-3" />
+                          <XCircle className="size-3" />
                         </button>
                       </Badge>
                     );

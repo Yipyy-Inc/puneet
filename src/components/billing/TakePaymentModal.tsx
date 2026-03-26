@@ -302,7 +302,7 @@ export function TakePaymentModal({
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Take Payment
           </DialogTitle>
           <DialogDescription>
@@ -653,7 +653,7 @@ export function TakePaymentModal({
                 {/* Cash Payment */}
                 <TabsContent value="cash" className="space-y-4">
                   <div className="bg-muted/50 rounded-lg p-6 text-center">
-                    <Wallet className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
+                    <Wallet className="text-muted-foreground mx-auto mb-3 size-12" />
                     <h4 className="mb-1 font-semibold">Cash Payment</h4>
                     <p className="text-muted-foreground text-sm">
                       Record this transaction as a cash payment

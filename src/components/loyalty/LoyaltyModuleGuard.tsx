@@ -51,7 +51,7 @@ export function LoyaltyModuleGuard({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="text-muted-foreground h-5 w-5" />
+              <Lock className="text-muted-foreground size-5" />
               Loyalty Program Disabled
             </CardTitle>
             <CardDescription>

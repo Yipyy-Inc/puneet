@@ -165,7 +165,7 @@ export function ServiceSettings({
         >
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Settings className="size-5" />
               Service Settings
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -228,7 +228,7 @@ export function ServiceSettings({
                             size="sm"
                             onClick={() => startEditing(service as ServiceKey)}
                           >
-                            <Edit className="mr-1 h-3 w-3" />
+                            <Edit className="mr-1 size-3" />
                             Edit
                           </Button>
                         )}
@@ -239,7 +239,7 @@ export function ServiceSettings({
                               size="sm"
                               onClick={saveService}
                             >
-                              <Check className="mr-1 h-3 w-3" />
+                              <Check className="mr-1 size-3" />
                               Save
                             </Button>
                             <Button
@@ -247,7 +247,7 @@ export function ServiceSettings({
                               size="sm"
                               onClick={cancelEditing}
                             >
-                              <X className="mr-1 h-3 w-3" />
+                              <X className="mr-1 size-3" />
                               Cancel
                             </Button>
                           </div>

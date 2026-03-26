@@ -83,7 +83,7 @@ export function SystemConfiguration() {
         variant={config.variant}
         className={`text-xs ${config.className} gap-1`}
       >
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -241,13 +241,13 @@ export function SystemConfiguration() {
             }
           >
             {showApiKeys[item.id] ? (
-              <EyeOff className="h-3 w-3" />
+              <EyeOff className="size-3" />
             ) : (
-              <Eye className="h-3 w-3" />
+              <Eye className="size-3" />
             )}
           </Button>
           <Button variant="ghost" size="sm">
-            <Copy className="h-3 w-3" />
+            <Copy className="size-3" />
           </Button>
         </div>
       ),
@@ -522,7 +522,7 @@ export function SystemConfiguration() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Plug className="h-5 w-5 text-white" />
+                <Plug className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -549,7 +549,7 @@ export function SystemConfiguration() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <Key className="h-5 w-5 text-white" />
+                <Key className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -576,7 +576,7 @@ export function SystemConfiguration() {
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Settings className="h-5 w-5 text-white" />
+                <Settings className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -603,7 +603,7 @@ export function SystemConfiguration() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <Flag className="h-5 w-5 text-white" />
+                <Flag className="size-5 text-white" />
               </div>
             </div>
           </CardContent>

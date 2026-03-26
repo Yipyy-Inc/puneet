@@ -479,7 +479,7 @@ export function DaycareDetails({
                               )}
                             </>
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center">
+                            <div className="flex size-full items-center justify-center">
                               <div className="text-muted-foreground text-sm">
                                 No image available
                               </div>
@@ -661,7 +661,7 @@ export function DaycareDetails({
                                           }
                                         }}
                                         disabled={quantity === 0}
-                                        className="h-7 w-7 p-0"
+                                        className="size-7 p-0"
                                       >
                                         -
                                       </Button>
@@ -696,7 +696,7 @@ export function DaycareDetails({
                                             ]);
                                           }
                                         }}
-                                        className="h-7 w-7 p-0"
+                                        className="size-7 p-0"
                                       >
                                         +
                                       </Button>
@@ -733,7 +733,7 @@ export function DaycareDetails({
                                     >
                                       {quantity > 0 ? (
                                         <>
-                                          <Check className="mr-1 h-3 w-3" />
+                                          <Check className="mr-1 size-3" />
                                           Added
                                         </>
                                       ) : (

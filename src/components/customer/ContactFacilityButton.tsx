@@ -31,7 +31,7 @@ export function ContactFacilityButton() {
   return (
     <>
       <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
-        <MessageSquare className="h-5 w-5" />
+        <MessageSquare className="size-5" />
         <span className="sr-only">Contact Facility</span>
       </Button>
 

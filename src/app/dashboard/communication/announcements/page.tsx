@@ -275,7 +275,7 @@ export default function AnnouncementsPage() {
       defaultVisible: true,
       render: (announcement) => (
         <div className="flex items-center gap-1.5">
-          <Building className="text-muted-foreground h-3.5 w-3.5" />
+          <Building className="text-muted-foreground size-3.5" />
           <span className="text-sm">{announcement.target}</span>
         </div>
       ),
@@ -473,7 +473,7 @@ export default function AnnouncementsPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="text-destructive flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTriangle className="size-5" />
                   Emergency Broadcast
                 </DialogTitle>
               </DialogHeader>
@@ -662,7 +662,7 @@ export default function AnnouncementsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="size-8"
                           >
                             <MoreVertical className="size-4" />
                           </Button>
@@ -726,7 +726,7 @@ export default function AnnouncementsPage() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Megaphone className="text-primary h-5 w-5" />
+              <Megaphone className="text-primary size-5" />
               {selectedAnnouncement?.title}
             </DialogTitle>
           </DialogHeader>
@@ -847,7 +847,7 @@ export default function AnnouncementsPage() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
+              <AlertTriangle className="size-5" />
               Delete Announcement
             </DialogTitle>
           </DialogHeader>

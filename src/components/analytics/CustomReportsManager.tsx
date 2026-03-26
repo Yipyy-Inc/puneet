@@ -115,10 +115,10 @@ export function CustomReportsManager() {
             return (
               <div
                 key={format}
-                className="bg-muted flex h-6 w-6 items-center justify-center rounded-sm"
+                className="bg-muted flex size-6 items-center justify-center rounded-sm"
                 title={format}
               >
-                <Icon className="h-3 w-3" />
+                <Icon className="size-3" />
               </div>
             );
           })}
@@ -128,7 +128,7 @@ export function CustomReportsManager() {
   ];
 
   const renderActions = () => (
-    <Button variant="ghost" size="icon" className="h-8 w-8">
+    <Button variant="ghost" size="icon" className="size-8">
       <MoreHorizontal className="size-4" />
     </Button>
   );
@@ -155,13 +155,13 @@ export function CustomReportsManager() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <FileText className="h-5 w-5 text-white" />
+                <FileText className="size-5 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Total Reports</p>
@@ -175,13 +175,13 @@ export function CustomReportsManager() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <PlayCircle className="h-5 w-5 text-white" />
+                <PlayCircle className="size-5 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Active</p>
@@ -197,13 +197,13 @@ export function CustomReportsManager() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Calendar className="h-5 w-5 text-white" />
+                <Calendar className="size-5 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Scheduled</p>
@@ -219,13 +219,13 @@ export function CustomReportsManager() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                className="flex size-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <Download className="h-5 w-5 text-white" />
+                <Download className="size-5 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Exports</p>

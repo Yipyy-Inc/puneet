@@ -191,12 +191,12 @@ export function UserProfileSheet({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:bg-muted relative h-9 w-9 rounded-xl transition-colors"
+          className="hover:bg-muted relative size-9 rounded-xl transition-colors"
           onClick={() => setIsSheetOpen(true)}
         >
-          <Bell className="text-muted-foreground h-5 w-5" />
+          <Bell className="text-muted-foreground size-5" />
           {unreadCount > 0 && (
-            <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium">
+            <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-xs font-medium">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -206,8 +206,8 @@ export function UserProfileSheet({
       {/* Avatar Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-            <Avatar className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="size-9 rounded-full">
+            <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
               <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                 SA
@@ -217,7 +217,7 @@ export function UserProfileSheet({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
+            <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
               <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                 SA
@@ -317,7 +317,7 @@ export function UserProfileSheet({
               {/* Header */}
               <SheetHeader className="p-6 pb-4">
                 <SheetTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
+                  <Bell className="size-5" />
                   Notifications
                   {unreadCount > 0 && (
                     <Badge variant="secondary" className="text-xs">
@@ -373,14 +373,14 @@ export function UserProfileSheet({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                            className="size-6 p-0 opacity-0 group-hover:opacity-100"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               removeNotification(notification.id);
                             }}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="size-3" />
                           </Button>
                         </Link>
                       ))

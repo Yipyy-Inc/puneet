@@ -142,10 +142,10 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                   id="facility-create-new-trigger"
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-xl"
+                  className="size-10 rounded-xl"
                   aria-label="Create"
                 >
-                  <Plus className="text-muted-foreground h-5 w-5" />
+                  <Plus className="text-muted-foreground size-5" />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>

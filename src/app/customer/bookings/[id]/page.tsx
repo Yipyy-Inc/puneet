@@ -149,7 +149,7 @@ export default function BookingDetailPage({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
-                  <Calendar className="text-muted-foreground mt-0.5 h-5 w-5" />
+                  <Calendar className="text-muted-foreground mt-0.5 size-5" />
                   <div>
                     <p className="text-muted-foreground text-sm">Date</p>
                     <p className="font-medium">
@@ -163,7 +163,7 @@ export default function BookingDetailPage({
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Clock className="text-muted-foreground mt-0.5 h-5 w-5" />
+                  <Clock className="text-muted-foreground mt-0.5 size-5" />
                   <div>
                     <p className="text-muted-foreground text-sm">Time</p>
                     <p className="font-medium">
@@ -172,7 +172,7 @@ export default function BookingDetailPage({
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <MapPin className="text-muted-foreground mt-0.5 h-5 w-5" />
+                  <MapPin className="text-muted-foreground mt-0.5 size-5" />
                   <div>
                     <p className="text-muted-foreground text-sm">Location</p>
                     <p className="font-medium">
@@ -181,7 +181,7 @@ export default function BookingDetailPage({
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <DollarSign className="text-muted-foreground mt-0.5 h-5 w-5" />
+                  <DollarSign className="text-muted-foreground mt-0.5 size-5" />
                   <div>
                     <p className="text-muted-foreground text-sm">Total Cost</p>
                     <p className="font-medium">
@@ -236,7 +236,7 @@ export default function BookingDetailPage({
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <QrCode className="text-primary h-5 w-5" />
+                  <QrCode className="text-primary size-5" />
                   Fast-track check-in QR
                 </CardTitle>
                 <CardDescription>
@@ -317,14 +317,14 @@ export default function BookingDetailPage({
               {customer && (
                 <>
                   <div className="flex items-start gap-3">
-                    <User className="text-muted-foreground mt-0.5 h-5 w-5" />
+                    <User className="text-muted-foreground mt-0.5 size-5" />
                     <div>
                       <p className="text-muted-foreground text-sm">Name</p>
                       <p className="font-medium">{customer.name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Phone className="text-muted-foreground mt-0.5 h-5 w-5" />
+                    <Phone className="text-muted-foreground mt-0.5 size-5" />
                     <div>
                       <p className="text-muted-foreground text-sm">Phone</p>
                       <p className="font-medium">
@@ -333,7 +333,7 @@ export default function BookingDetailPage({
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Mail className="text-muted-foreground mt-0.5 h-5 w-5" />
+                    <Mail className="text-muted-foreground mt-0.5 size-5" />
                     <div>
                       <p className="text-muted-foreground text-sm">Email</p>
                       <p className="font-medium">

@@ -373,7 +373,7 @@ export default function CustomerMessagesPage() {
             <div className="space-y-1 p-2">
               {filteredThreads.length === 0 ? (
                 <div className="text-muted-foreground py-12 text-center">
-                  <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <MessageSquare className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No messages yet</p>
                 </div>
               ) : (
@@ -493,7 +493,7 @@ export default function CustomerMessagesPage() {
                           } `}
                         >
                           {message.direction === "inbound" && (
-                            <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                            <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center rounded-full">
                               {getMessageIcon(message)}
                             </div>
                           )}
@@ -523,19 +523,19 @@ export default function CustomerMessagesPage() {
                                   } `}
                                 >
                                   {message.channel === "email" && (
-                                    <Mail className="mr-1 h-3 w-3" />
+                                    <Mail className="mr-1 size-3" />
                                   )}
                                   {message.channel === "sms" && (
-                                    <MessageSquare className="mr-1 h-3 w-3" />
+                                    <MessageSquare className="mr-1 size-3" />
                                   )}
                                   {message.channel === "in-app" && (
-                                    <MessageSquare className="mr-1 h-3 w-3" />
+                                    <MessageSquare className="mr-1 size-3" />
                                   )}
                                   {message.type === "booking_confirmation" && (
-                                    <Calendar className="mr-1 h-3 w-3" />
+                                    <Calendar className="mr-1 size-3" />
                                   )}
                                   {message.type === "report_card" && (
-                                    <FileText className="mr-1 h-3 w-3" />
+                                    <FileText className="mr-1 size-3" />
                                   )}
                                   {message.channel ||
                                     (message.type === "booking_confirmation"
@@ -560,25 +560,25 @@ export default function CustomerMessagesPage() {
                                       {message.deliveryStatus ===
                                         "delivered" && (
                                         <>
-                                          <CheckCircle2 className="h-3 w-3" />
+                                          <CheckCircle2 className="size-3" />
                                           <span>Delivered</span>
                                         </>
                                       )}
                                       {message.deliveryStatus === "read" && (
                                         <>
-                                          <CheckCircle2 className="h-3 w-3" />
+                                          <CheckCircle2 className="size-3" />
                                           <span>Read</span>
                                         </>
                                       )}
                                       {message.deliveryStatus === "sent" && (
                                         <>
-                                          <Clock className="h-3 w-3" />
+                                          <Clock className="size-3" />
                                           <span>Sent</span>
                                         </>
                                       )}
                                       {message.deliveryStatus === "failed" && (
                                         <>
-                                          <XCircle className="h-3 w-3" />
+                                          <XCircle className="size-3" />
                                           <span>Failed</span>
                                         </>
                                       )}
@@ -604,7 +604,7 @@ export default function CustomerMessagesPage() {
                                       )
                                     }
                                   >
-                                    <Calendar className="mr-1 h-3 w-3" />
+                                    <Calendar className="mr-1 size-3" />
                                     Booking:{" "}
                                     {bookings.find(
                                       (b) => b.id === message.bookingId,
@@ -638,7 +638,7 @@ export default function CustomerMessagesPage() {
                             </div>
                           </div>
                           {message.direction === "outbound" && (
-                            <div className="bg-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                            <div className="bg-primary flex size-8 shrink-0 items-center justify-center rounded-full">
                               <MessageSquare className="text-primary-foreground size-4" />
                             </div>
                           )}
@@ -658,7 +658,7 @@ export default function CustomerMessagesPage() {
                               key={att.id}
                               className="bg-muted flex items-center gap-2 rounded-sm px-2 py-1 text-xs"
                             >
-                              <Paperclip className="h-3 w-3" />
+                              <Paperclip className="size-3" />
                               <span className="max-w-[150px] truncate">
                                 {att.name}
                               </span>
@@ -710,7 +710,7 @@ export default function CustomerMessagesPage() {
                   <ScrollArea className="flex-1 p-4">
                     {reminderMessages.length === 0 ? (
                       <div className="py-12 text-center">
-                        <Bell className="text-muted-foreground mx-auto mb-4 h-12 w-12 opacity-50" />
+                        <Bell className="text-muted-foreground mx-auto mb-4 size-12 opacity-50" />
                         <p className="font-semibold">No reminders</p>
                         <p className="text-muted-foreground text-sm">
                           Booking reminders will appear here
@@ -722,8 +722,8 @@ export default function CustomerMessagesPage() {
                           <Card key={message.id}>
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
-                                <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-                                  <Bell className="text-primary h-5 w-5" />
+                                <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                                  <Bell className="text-primary size-5" />
                                 </div>
                                 <div className="flex-1">
                                   <div className="mb-1 flex items-center gap-2">
@@ -731,7 +731,7 @@ export default function CustomerMessagesPage() {
                                       variant="outline"
                                       className="text-xs"
                                     >
-                                      <Bell className="mr-1 h-3 w-3" />
+                                      <Bell className="mr-1 size-3" />
                                       Reminder
                                     </Badge>
                                     {message.bookingId && (
@@ -745,7 +745,7 @@ export default function CustomerMessagesPage() {
                                           )
                                         }
                                       >
-                                        <Calendar className="mr-1 h-3 w-3" />
+                                        <Calendar className="mr-1 size-3" />
                                         View Booking
                                       </Button>
                                     )}

@@ -122,11 +122,11 @@ export function GroomingIntakeForm({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileText className="size-5" />
             Intake Form
             {initialData.completedAt && (
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <CheckCircle className="mr-1 h-3 w-3" />
+                <CheckCircle className="mr-1 size-3" />
                 Completed
               </Badge>
             )}
@@ -214,7 +214,7 @@ export function GroomingIntakeForm({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+          <FileText className="size-5" />
           Intake Form - {petName}
         </CardTitle>
       </CardHeader>
@@ -303,7 +303,7 @@ export function GroomingIntakeForm({
                       onClick={() => handleRemoveAllergy(allergy)}
                       className="hover:bg-destructive/20 ml-1 rounded-full p-0.5"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </button>
                   )}
                 </Badge>
@@ -348,7 +348,7 @@ export function GroomingIntakeForm({
                     onClick={() => handleRemovePhoto(idx)}
                     className="bg-destructive text-destructive-foreground absolute top-1 right-1 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 )}
               </div>
@@ -363,7 +363,7 @@ export function GroomingIntakeForm({
                   className="hidden"
                 />
                 <div className="text-center">
-                  <Camera className="text-muted-foreground mx-auto mb-1 h-6 w-6" />
+                  <Camera className="text-muted-foreground mx-auto mb-1 size-6" />
                   <span className="text-muted-foreground text-xs">
                     Add Photo
                   </span>

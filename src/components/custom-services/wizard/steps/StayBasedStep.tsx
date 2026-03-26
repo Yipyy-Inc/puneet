@@ -24,7 +24,7 @@ export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
       {/* Enable toggle */}
       <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
         <div className="flex items-start gap-3">
-          <Bed className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+          <Bed className="text-muted-foreground mt-0.5 size-5 shrink-0" />
           <div className="space-y-0.5">
             <Label
               htmlFor="sb-enabled"
@@ -47,7 +47,7 @@ export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
 
       {!sb.enabled && (
         <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0" />
           <span>
             Stay-based features are off. This service is treated as a timed
             session or appointment, not a multi-day stay. Enable this for
@@ -135,7 +135,7 @@ export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
 
         {sb.generatesDailyTasks && (
           <div className="flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 p-3 text-xs text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <Info className="mt-0.5 size-3.5 shrink-0" />
             <span>
               Daily tasks will be auto-generated at midnight for each
               in-progress stay. Configure which task types are generated in the{" "}
@@ -148,7 +148,7 @@ export function StayBasedStep({ data, onChange }: StayBasedStepProps) {
       {/* Category hint */}
       {data.category !== "stay_based" && sb.enabled && (
         <div className="flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0" />
           <span>
             Your selected category is{" "}
             <strong>

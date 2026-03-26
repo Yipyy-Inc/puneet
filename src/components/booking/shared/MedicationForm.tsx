@@ -201,13 +201,13 @@ export function MedicationForm({
                   <div className="flex items-center gap-2">
                     <div
                       className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full",
+                        "flex size-8 items-center justify-center rounded-full",
                         showHighRisk ? "bg-red-100" : "bg-violet-100",
                       )}
                     >
                       <Pill
                         className={cn(
-                          "h-3.5 w-3.5",
+                          "size-3.5",
                           showHighRisk ? "text-red-600" : "text-violet-600",
                         )}
                       />

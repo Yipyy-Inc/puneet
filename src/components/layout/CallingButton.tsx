@@ -23,9 +23,9 @@ export function CallingButton() {
             size="icon"
             onClick={() => router.push("/facility/dashboard/calling")}
             aria-label="Calling"
-            className="relative h-10 w-10 rounded-xl"
+            className="relative size-10 rounded-xl"
           >
-            <Phone className="text-muted-foreground h-5 w-5" />
+            <Phone className="text-muted-foreground size-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" align="center">

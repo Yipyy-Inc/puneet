@@ -134,7 +134,7 @@ export default function DaycareRatesPage() {
       render: (item) => (
         <div className="flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
+            className={`size-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
           />
           <span className="font-medium">{item.name}</span>
         </div>
@@ -333,7 +333,7 @@ export default function DaycareRatesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-primary/10 rounded-lg p-2">
-                <DollarSign className="text-primary h-5 w-5" />
+                <DollarSign className="text-primary size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{rates.length}</p>
@@ -346,7 +346,7 @@ export default function DaycareRatesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-success/10 rounded-lg p-2">
-                <Clock className="text-success h-5 w-5" />
+                <Clock className="text-success size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeRates}</p>
@@ -359,7 +359,7 @@ export default function DaycareRatesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="bg-info/10 rounded-lg p-2">
-                <DollarSign className="text-info h-5 w-5" />
+                <DollarSign className="text-info size-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">${avgPrice}</p>

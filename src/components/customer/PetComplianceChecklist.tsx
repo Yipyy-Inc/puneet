@@ -148,9 +148,9 @@ export function PetComplianceChecklist({
           className="text-xs"
         >
           {vaccinationStatus.valid ? (
-            <CheckCircle2 className="mr-1 h-3 w-3" />
+            <CheckCircle2 className="mr-1 size-3" />
           ) : (
-            <XCircle className="mr-1 h-3 w-3" />
+            <XCircle className="mr-1 size-3" />
           )}
           Vaccines
         </Badge>
@@ -159,9 +159,9 @@ export function PetComplianceChecklist({
           className="text-xs"
         >
           {agreementsStatus.valid ? (
-            <CheckCircle2 className="mr-1 h-3 w-3" />
+            <CheckCircle2 className="mr-1 size-3" />
           ) : (
-            <XCircle className="mr-1 h-3 w-3" />
+            <XCircle className="mr-1 size-3" />
           )}
           Agreements
         </Badge>
@@ -171,9 +171,9 @@ export function PetComplianceChecklist({
             className="text-xs"
           >
             {evaluationStatus.valid ? (
-              <CheckCircle2 className="mr-1 h-3 w-3" />
+              <CheckCircle2 className="mr-1 size-3" />
             ) : (
-              <XCircle className="mr-1 h-3 w-3" />
+              <XCircle className="mr-1 size-3" />
             )}
             Evaluation
           </Badge>
@@ -183,9 +183,9 @@ export function PetComplianceChecklist({
           className="text-xs"
         >
           {invoicesStatus.valid ? (
-            <CheckCircle2 className="mr-1 h-3 w-3" />
+            <CheckCircle2 className="mr-1 size-3" />
           ) : (
-            <XCircle className="mr-1 h-3 w-3" />
+            <XCircle className="mr-1 size-3" />
           )}
           Invoices
         </Badge>

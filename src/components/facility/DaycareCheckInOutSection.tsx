@@ -358,7 +358,7 @@ export function DaycareCheckInOutSection() {
   const getServiceBadge = () => {
     return (
       <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-        <Sun className="mr-1 h-3 w-3" />
+        <Sun className="mr-1 size-3" />
         Daycare
       </Badge>
     );
@@ -374,7 +374,7 @@ export function DaycareCheckInOutSection() {
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <PawPrint className="text-primary h-5 w-5" />
+            <PawPrint className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Daycare Check-In/Out</h3>
           </div>
 
@@ -473,13 +473,13 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -492,8 +492,8 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
-                                <PawPrint className="h-5 w-5 text-orange-600" />
+                              <div className="flex size-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
+                                <PawPrint className="size-5 text-orange-600" />
                               </div>
                             </Link>
                           )}
@@ -524,7 +524,7 @@ export function DaycareCheckInOutSection() {
                           }}
                           className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
                         >
-                          <LogIn className="h-3 w-3" />
+                          <LogIn className="size-3" />
                           Check In
                         </Button>
                       </div>
@@ -576,13 +576,13 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -595,8 +595,8 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-                                <PawPrint className="text-primary h-5 w-5" />
+                              <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                                <PawPrint className="text-primary size-5" />
                               </div>
                             </Link>
                           )}
@@ -618,7 +618,7 @@ export function DaycareCheckInOutSection() {
                               {item.ownerName} • {item.petBreed}
                             </p>
                             <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               <span>In: {formatTime(item.checkInTime)}</span>
                               <span>•</span>
                               <span>
@@ -646,7 +646,7 @@ export function DaycareCheckInOutSection() {
                             }}
                             className="gap-1"
                           >
-                            <LogOut className="h-3 w-3" />
+                            <LogOut className="size-3" />
                             Check Out
                           </Button>
                         </div>
@@ -697,13 +697,13 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 overflow-hidden rounded-full">
+                              <div className="size-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
                                   width={40}
                                   height={40}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               </div>
                             </Link>
@@ -716,8 +716,8 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
-                                <PawPrint className="h-5 w-5 text-gray-600" />
+                              <div className="flex size-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
+                                <PawPrint className="size-5 text-gray-600" />
                               </div>
                             </Link>
                           )}
@@ -739,7 +739,7 @@ export function DaycareCheckInOutSection() {
                               {item.ownerName} • {item.petBreed}
                             </p>
                             <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                               <span>
                                 Out:{" "}
                                 {item.checkOutTime
@@ -771,17 +771,17 @@ export function DaycareCheckInOutSection() {
               <DialogTitle className="flex items-center gap-2">
                 {checkInOutMode === "check-in" ? (
                   <>
-                    <LogIn className="h-5 w-5 text-green-600" />
+                    <LogIn className="size-5 text-green-600" />
                     Check In
                   </>
                 ) : checkInOutMode === "check-out" ? (
                   <>
-                    <LogOut className="h-5 w-5 text-orange-600" />
+                    <LogOut className="size-5 text-orange-600" />
                     Check Out
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-5 w-5 text-gray-600" />
+                    <CheckCircle className="size-5 text-gray-600" />
                     Checkout Details
                   </>
                 )}
@@ -808,13 +808,13 @@ export function DaycareCheckInOutSection() {
                             : "#"
                         }
                       >
-                        <div className="h-12 w-12 overflow-hidden rounded-full">
+                        <div className="size-12 overflow-hidden rounded-full">
                           <Image
                             src={getPetImage(selectedItem.petId)!}
                             alt={selectedItem.petName}
                             width={48}
                             height={48}
-                            className="h-full w-full object-cover"
+                            className="size-full object-cover"
                           />
                         </div>
                       </Link>
@@ -826,8 +826,8 @@ export function DaycareCheckInOutSection() {
                             : "#"
                         }
                       >
-                        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                          <PawPrint className="text-primary h-6 w-6" />
+                        <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary size-6" />
                         </div>
                       </Link>
                     );
@@ -865,7 +865,7 @@ export function DaycareCheckInOutSection() {
                   <div>
                     <p className="text-muted-foreground">Phone</p>
                     <p className="flex items-center gap-1 font-medium">
-                      <Phone className="h-3 w-3" />
+                      <Phone className="size-3" />
                       {selectedItem.ownerPhone}
                     </p>
                   </div>
@@ -894,11 +894,11 @@ export function DaycareCheckInOutSection() {
                             } `}
                           >
                             {checkoutStatus.status === "early" ? (
-                              <Clock className="h-3 w-3" />
+                              <Clock className="size-3" />
                             ) : checkoutStatus.status === "late" ? (
-                              <AlertTriangle className="h-3 w-3" />
+                              <AlertTriangle className="size-3" />
                             ) : (
-                              <CheckCircle className="h-3 w-3" />
+                              <CheckCircle className="size-3" />
                             )}
                             {checkoutStatus.message}
                           </p>

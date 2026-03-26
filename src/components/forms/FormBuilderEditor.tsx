@@ -308,7 +308,7 @@ function SortableQuestionRow({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={onMoveUp}
         disabled={idx === 0}
       >
@@ -317,7 +317,7 @@ function SortableQuestionRow({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={onMoveDown}
         disabled={idx === total - 1}
       >
@@ -326,7 +326,7 @@ function SortableQuestionRow({
       <Button
         variant="ghost"
         size="icon"
-        className="text-destructive h-8 w-8"
+        className="text-destructive size-8"
         onClick={onRemove}
       >
         <Trash2 className="size-4" />
@@ -963,7 +963,7 @@ export function FormBuilderEditor({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive h-8 w-8 shrink-0"
+                            className="text-destructive size-8 shrink-0"
                             onClick={() => removeSection(section.id)}
                             disabled={questionsBySection.length <= 1}
                             title="Remove section"
@@ -1135,7 +1135,7 @@ export function FormBuilderEditor({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 shrink-0"
+                      className="size-8 shrink-0"
                       onClick={() => removeMapping(m.questionId)}
                     >
                       <Trash2 className="size-4" />
@@ -1250,7 +1250,7 @@ export function FormBuilderEditor({
                   setPreviewMode(previewMode === "desktop" ? "none" : "desktop")
                 }
               >
-                <Monitor className="mr-1 h-3.5 w-3.5" />
+                <Monitor className="mr-1 size-3.5" />
                 Desktop
               </Button>
               <Button
@@ -1260,7 +1260,7 @@ export function FormBuilderEditor({
                   setPreviewMode(previewMode === "mobile" ? "none" : "mobile")
                 }
               >
-                <Smartphone className="mr-1 h-3.5 w-3.5" />
+                <Smartphone className="mr-1 size-3.5" />
                 Mobile
               </Button>
             </div>
@@ -1270,7 +1270,7 @@ export function FormBuilderEditor({
                 size="sm"
                 onClick={() => setPreviewAudience("customer")}
               >
-                <Eye className="mr-1 h-3.5 w-3.5" />
+                <Eye className="mr-1 size-3.5" />
                 Customer view
               </Button>
               <Button
@@ -1278,7 +1278,7 @@ export function FormBuilderEditor({
                 size="sm"
                 onClick={() => setPreviewAudience("staff")}
               >
-                <EyeOff className="mr-1 h-3.5 w-3.5" />
+                <EyeOff className="mr-1 size-3.5" />
                 Staff view
               </Button>
             </div>
@@ -1483,10 +1483,10 @@ function LogicRuleEditor({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 w-7 shrink-0 p-0"
+          className="size-7 shrink-0 p-0"
           onClick={onRemove}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="size-3.5" />
         </Button>
       </div>
       {/* Plain-language summary */}
@@ -1604,7 +1604,7 @@ function LogicRuleEditor({
                 >
                   <input
                     type="checkbox"
-                    className="h-3.5 w-3.5"
+                    className="size-3.5"
                     checked={rule.targetQuestionIds?.includes(q.id) ?? false}
                     onChange={(e) => {
                       const current = rule.targetQuestionIds ?? [];

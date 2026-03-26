@@ -170,7 +170,7 @@ export function PriceAdjustmentForm({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Price Adjustments
           </div>
           {!readOnly && (
@@ -344,7 +344,7 @@ export function PriceAdjustmentForm({
                         </span>
                         {adjustment.customerNotified ? (
                           <Badge variant="outline" className="text-xs">
-                            <Bell className="mr-1 h-3 w-3" />
+                            <Bell className="mr-1 size-3" />
                             Customer Notified
                           </Badge>
                         ) : (

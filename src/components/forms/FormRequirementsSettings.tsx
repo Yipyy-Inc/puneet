@@ -41,17 +41,17 @@ const STAGE_CONFIG: Record<
   before_booking: {
     label: "Before booking",
     description: "Customer must complete before requesting a booking",
-    icon: <CalendarCheck className="h-3.5 w-3.5" />,
+    icon: <CalendarCheck className="size-3.5" />,
   },
   before_approval: {
     label: "Before approval",
     description: "Staff cannot approve booking until this form is submitted",
-    icon: <ClipboardCheck className="h-3.5 w-3.5" />,
+    icon: <ClipboardCheck className="size-3.5" />,
   },
   before_checkin: {
     label: "Before check-in",
     description: "Required before pet can be checked in",
-    icon: <DoorOpen className="h-3.5 w-3.5" />,
+    icon: <DoorOpen className="size-3.5" />,
   },
 };
 
@@ -61,12 +61,12 @@ const _ENFORCEMENT_CONFIG: Record<
 > = {
   block: {
     label: "Block step",
-    icon: <Ban className="h-3 w-3" />,
+    icon: <Ban className="size-3" />,
     color: "bg-red-50 text-red-700 border-red-200",
   },
   warn: {
     label: "Allow with banner",
-    icon: <AlertTriangle className="h-3 w-3" />,
+    icon: <AlertTriangle className="size-3" />,
     color: "bg-amber-50 text-amber-700 border-amber-200",
   },
 };
@@ -197,7 +197,7 @@ export function FormRequirementsSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Shield className="text-primary h-5 w-5" />
+              <Shield className="text-primary size-5" />
               <CardTitle>Form Requirements per Service</CardTitle>
             </div>
             <Button size="sm" onClick={handleSave}>
@@ -229,7 +229,7 @@ export function FormRequirementsSettings() {
                 {/* Service header */}
                 <div className="bg-muted/30 flex items-center justify-between rounded-t-lg p-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-md">
+                    <div className="bg-primary/10 flex size-8 items-center justify-center rounded-md">
                       <FileText className="text-primary size-4" />
                     </div>
                     <div>
@@ -252,7 +252,7 @@ export function FormRequirementsSettings() {
                     size="sm"
                     onClick={() => addRequirement(sIdx)}
                   >
-                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    <Plus className="mr-1 size-3.5" />
                     Add form
                   </Button>
                 </div>
@@ -305,10 +305,10 @@ export function FormRequirementsSettings() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-destructive h-7 w-7 shrink-0"
+                              className="text-destructive size-7 shrink-0"
                               onClick={() => removeRequirement(sIdx, rIdx)}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="size-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -362,13 +362,13 @@ export function FormRequirementsSettings() {
                                   <SelectContent>
                                     <SelectItem value="block">
                                       <span className="flex items-center gap-1.5">
-                                        <Ban className="h-3 w-3 text-red-600" />
+                                        <Ban className="size-3 text-red-600" />
                                         Block step
                                       </span>
                                     </SelectItem>
                                     <SelectItem value="warn">
                                       <span className="flex items-center gap-1.5">
-                                        <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                        <AlertTriangle className="size-3 text-amber-600" />
                                         Allow with banner
                                       </span>
                                     </SelectItem>
@@ -378,10 +378,10 @@ export function FormRequirementsSettings() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 shrink-0"
+                                    className="size-6 shrink-0"
                                     onClick={() => removeGate(sIdx, rIdx, gIdx)}
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <Trash2 className="size-3" />
                                   </Button>
                                 )}
                               </div>
@@ -393,7 +393,7 @@ export function FormRequirementsSettings() {
                                 className="text-muted-foreground h-6 text-xs"
                                 onClick={() => addGate(sIdx, rIdx)}
                               >
-                                <Plus className="mr-1 h-3 w-3" />
+                                <Plus className="mr-1 size-3" />
                                 Add stage gate
                               </Button>
                             )}
@@ -460,9 +460,9 @@ export function FormRequirementsSettings() {
                           className="flex items-center gap-1.5 text-xs"
                         >
                           {item.enforcement === "block" ? (
-                            <ShieldAlert className="h-3 w-3 shrink-0 text-red-500" />
+                            <ShieldAlert className="size-3 shrink-0 text-red-500" />
                           ) : (
-                            <CheckCircle className="h-3 w-3 shrink-0 text-amber-500" />
+                            <CheckCircle className="size-3 shrink-0 text-amber-500" />
                           )}
                           <span className="truncate">
                             <span className="font-medium">{item.service}</span>:{" "}

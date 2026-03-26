@@ -288,8 +288,8 @@ export default function TrainingCheckInPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-1 items-center gap-4">
-                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                        <GraduationCap className="text-primary h-6 w-6" />
+                      <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                        <GraduationCap className="text-primary size-6" />
                       </div>
                       <div className="flex-1">
                         <div className="mb-1 flex items-center gap-3">
@@ -337,7 +337,7 @@ export default function TrainingCheckInPage() {
                     <div className="flex items-center gap-2">
                       {arrival.checkedIn ? (
                         <div className="flex items-center gap-2 text-green-600">
-                          <CheckCircle2 className="h-5 w-5" />
+                          <CheckCircle2 className="size-5" />
                           <span className="text-sm font-medium">
                             Checked In
                           </span>

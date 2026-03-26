@@ -76,7 +76,7 @@ export function RefundBookingModal({
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
+              <AlertTriangle className="size-5" />
               Cannot Process Refund
             </DialogTitle>
           </DialogHeader>
@@ -103,7 +103,7 @@ export function RefundBookingModal({
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <DollarSign className="size-5" />
             Process Refund - Booking #{booking.id}
           </DialogTitle>
           <DialogDescription>

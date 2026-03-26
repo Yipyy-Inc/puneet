@@ -220,7 +220,7 @@ export function PricingSettings({
         >
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+              <DollarSign className="size-5" />
               Pricing Structures
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -299,7 +299,7 @@ export function PricingSettings({
                         size="sm"
                         onClick={() => startEditing(service as PricingField)}
                       >
-                        <Edit className="mr-1 h-3 w-3" />
+                        <Edit className="mr-1 size-3" />
                         Edit
                       </Button>
                     )}
@@ -310,7 +310,7 @@ export function PricingSettings({
                           size="sm"
                           onClick={handleSaveClick}
                         >
-                          <Check className="mr-1 h-3 w-3" />
+                          <Check className="mr-1 size-3" />
                           Save
                         </Button>
                         <Button
@@ -318,7 +318,7 @@ export function PricingSettings({
                           size="sm"
                           onClick={cancelEditing}
                         >
-                          <X className="mr-1 h-3 w-3" />
+                          <X className="mr-1 size-3" />
                           Cancel
                         </Button>
                       </div>
@@ -371,7 +371,7 @@ export function PricingSettings({
                     size="sm"
                     onClick={() => startEditing("boarding" as PricingField)} // Use any field to enable tax editing
                   >
-                    <Edit className="mr-1 h-3 w-3" />
+                    <Edit className="mr-1 size-3" />
                     Edit
                   </Button>
                 )}
@@ -382,11 +382,11 @@ export function PricingSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="mr-1 size-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="mr-1 size-3" />
                       Cancel
                     </Button>
                   </div>

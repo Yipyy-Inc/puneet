@@ -134,7 +134,7 @@ export default function CustomServiceBookingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <CalendarDays className="h-5 w-5" />
+            <CalendarDays className="size-5" />
             All Bookings
           </CardTitle>
         </CardHeader>

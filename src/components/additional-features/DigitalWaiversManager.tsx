@@ -80,7 +80,7 @@ export function DigitalWaiversManager() {
                 </p>
                 <p className="text-2xl font-bold">{stats.totalWaivers}</p>
               </div>
-              <FileText className="text-muted-foreground h-8 w-8" />
+              <FileText className="text-muted-foreground size-8" />
             </div>
           </CardContent>
         </Card>
@@ -96,7 +96,7 @@ export function DigitalWaiversManager() {
                   {stats.activeWaivers}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="size-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ export function DigitalWaiversManager() {
                 </p>
                 <p className="text-2xl font-bold">{stats.totalSignatures}</p>
               </div>
-              <Edit className="text-muted-foreground h-8 w-8" />
+              <Edit className="text-muted-foreground size-8" />
             </div>
           </CardContent>
         </Card>
@@ -126,7 +126,7 @@ export function DigitalWaiversManager() {
                   {stats.validSignatures}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="size-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -142,7 +142,7 @@ export function DigitalWaiversManager() {
                   {stats.expiredSignatures}
                 </p>
               </div>
-              <AlertCircle className="h-8 w-8 text-red-500" />
+              <AlertCircle className="size-8 text-red-500" />
             </div>
           </CardContent>
         </Card>
@@ -224,10 +224,10 @@ export function DigitalWaiversManager() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm">
-                            <Eye className="h-3 w-3" />
+                            <Eye className="size-3" />
                           </Button>
                           <Button variant="ghost" size="sm">
-                            <Edit className="h-3 w-3" />
+                            <Edit className="size-3" />
                           </Button>
                         </div>
                       </TableCell>
@@ -303,10 +303,10 @@ export function DigitalWaiversManager() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" size="sm">
-                            <Eye className="h-3 w-3" />
+                            <Eye className="size-3" />
                           </Button>
                           <Button variant="ghost" size="sm">
-                            <Download className="h-3 w-3" />
+                            <Download className="size-3" />
                           </Button>
                         </div>
                       </TableCell>

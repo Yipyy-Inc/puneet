@@ -150,13 +150,13 @@ export default function AnalyticsOverviewPage() {
             <CardHeader>
               <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex size-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                   }}
                 >
-                  <TrendingUp className="h-6 w-6 text-white" />
+                  <TrendingUp className="size-6 text-white" />
                 </div>
                 <CardTitle className="text-xl">Business Intelligence</CardTitle>
               </div>
@@ -194,13 +194,13 @@ export default function AnalyticsOverviewPage() {
             <CardHeader>
               <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex size-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                   }}
                 >
-                  <Activity className="h-6 w-6 text-white" />
+                  <Activity className="size-6 text-white" />
                 </div>
                 <CardTitle className="text-xl">Performance Metrics</CardTitle>
               </div>
@@ -238,13 +238,13 @@ export default function AnalyticsOverviewPage() {
             <CardHeader>
               <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex size-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                   }}
                 >
-                  <FileText className="h-6 w-6 text-white" />
+                  <FileText className="size-6 text-white" />
                 </div>
                 <CardTitle className="text-xl">Custom Reports</CardTitle>
               </div>

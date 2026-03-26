@@ -514,7 +514,7 @@ export default function StylistsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-1 text-2xl font-bold">
-              <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+              <Star className="size-5 fill-yellow-400 text-yellow-400" />
               {avgRating.toFixed(2)}
             </div>
             <p className="text-muted-foreground text-xs">Across all stylists</p>

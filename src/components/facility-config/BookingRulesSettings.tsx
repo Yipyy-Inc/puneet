@@ -228,7 +228,7 @@ export function BookingRulesSettings({
         >
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <Calendar className="size-5" />
               Booking Rules
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -303,7 +303,7 @@ export function BookingRulesSettings({
                     size="sm"
                     onClick={() => startEditing("cutOffTimes")}
                   >
-                    <Edit className="mr-1 h-3 w-3" />
+                    <Edit className="mr-1 size-3" />
                     Edit
                   </Button>
                 )}
@@ -314,11 +314,11 @@ export function BookingRulesSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="mr-1 size-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="mr-1 size-3" />
                       Cancel
                     </Button>
                   </div>
@@ -359,7 +359,7 @@ export function BookingRulesSettings({
                     size="sm"
                     onClick={() => startEditing("deposits")}
                   >
-                    <Edit className="mr-1 h-3 w-3" />
+                    <Edit className="mr-1 size-3" />
                     Edit
                   </Button>
                 )}
@@ -370,11 +370,11 @@ export function BookingRulesSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="mr-1 size-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="mr-1 h-3 w-3" />
+                      <X className="mr-1 size-3" />
                       Cancel
                     </Button>
                   </div>

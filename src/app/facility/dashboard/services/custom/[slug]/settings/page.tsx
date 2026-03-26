@@ -38,12 +38,12 @@ function StatusRow({ label, enabled }: { label: string; enabled: boolean }) {
       <div className="flex items-center gap-1.5">
         {enabled ? (
           <>
-            <CheckCircle2 className="text-success h-3.5 w-3.5" />
+            <CheckCircle2 className="text-success size-3.5" />
             <span className="text-success text-xs font-medium">Yes</span>
           </>
         ) : (
           <>
-            <XCircle className="text-muted-foreground h-3.5 w-3.5" />
+            <XCircle className="text-muted-foreground size-3.5" />
             <span className="text-muted-foreground text-xs">No</span>
           </>
         )}
@@ -97,7 +97,7 @@ export default function CustomServiceSettingsPage() {
               </div>
               <Link href={editHref}>
                 <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  <Edit className="mr-1.5 size-3.5" />
                   Edit
                 </Button>
               </Link>
@@ -106,7 +106,7 @@ export default function CustomServiceSettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
+                className="flex size-12 shrink-0 items-center justify-center rounded-lg"
                 style={{
                   ...getGradientStyle(
                     serviceModule.iconColor,
@@ -116,7 +116,7 @@ export default function CustomServiceSettingsPage() {
               >
                 <DynamicIcon
                   name={serviceModule.icon}
-                  className="h-6 w-6 text-white"
+                  className="size-6 text-white"
                 />
               </div>
               <div>
@@ -188,7 +188,7 @@ export default function CustomServiceSettingsPage() {
               </div>
               <Link href={editHref}>
                 <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  <Edit className="mr-1.5 size-3.5" />
                   Edit
                 </Button>
               </Link>
@@ -243,7 +243,7 @@ export default function CustomServiceSettingsPage() {
               </div>
               <Link href={editHref}>
                 <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  <Edit className="mr-1.5 size-3.5" />
                   Edit
                 </Button>
               </Link>
@@ -253,7 +253,7 @@ export default function CustomServiceSettingsPage() {
             {/* Calendar */}
             <div>
               <div className="mb-2 flex items-center gap-1.5">
-                <Calendar className="text-muted-foreground h-3.5 w-3.5" />
+                <Calendar className="text-muted-foreground size-3.5" />
                 <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Calendar
                 </span>
@@ -297,7 +297,7 @@ export default function CustomServiceSettingsPage() {
             {/* Check-In/Out */}
             <div>
               <div className="mb-2 flex items-center gap-1.5">
-                <LogIn className="text-muted-foreground h-3.5 w-3.5" />
+                <LogIn className="text-muted-foreground size-3.5" />
                 <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Check-In / Out
                 </span>
@@ -335,7 +335,7 @@ export default function CustomServiceSettingsPage() {
             {/* Online Booking */}
             <div>
               <div className="mb-2 flex items-center gap-1.5">
-                <Settings className="text-muted-foreground h-3.5 w-3.5" />
+                <Settings className="text-muted-foreground size-3.5" />
                 <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Online Booking
                 </span>
@@ -384,7 +384,7 @@ export default function CustomServiceSettingsPage() {
               </div>
               <Link href={editHref}>
                 <Button variant="outline" size="sm">
-                  <Edit className="mr-1.5 h-3.5 w-3.5" />
+                  <Edit className="mr-1.5 size-3.5" />
                   Edit
                 </Button>
               </Link>

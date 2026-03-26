@@ -28,7 +28,7 @@ export function LocationsTab({ locations }: LocationsTabProps) {
     <Card className="shadow-card border-0">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <MapPin className="h-5 w-5" />
+          <MapPin className="size-5" />
           Locations
           <Badge variant="secondary" className="ml-2">
             {locations.length}
@@ -52,7 +52,7 @@ export function LocationsTab({ locations }: LocationsTabProps) {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex h-8 w-8 items-center justify-center rounded-lg"
+                        className="flex size-8 items-center justify-center rounded-lg"
                         style={{
                           background:
                             "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -65,7 +65,7 @@ export function LocationsTab({ locations }: LocationsTabProps) {
                   </TableCell>
                   <TableCell>
                     <span className="text-muted-foreground flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" />
+                      <MapPin className="size-3.5" />
                       {location.address}
                     </span>
                   </TableCell>

@@ -795,7 +795,7 @@ export default function FacilityBookingsPage() {
           <CardContent>
             <div className="text-2xl font-bold">${totalRevenue}</div>
             <p className="text-muted-foreground flex items-center text-xs">
-              <TrendingUp className="mr-1 h-3 w-3" />
+              <TrendingUp className="mr-1 size-3" />
               {"Total received"}
             </p>
           </CardContent>

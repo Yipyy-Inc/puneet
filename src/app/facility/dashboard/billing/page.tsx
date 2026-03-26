@@ -527,13 +527,13 @@ export default function FacilityBillingPage() {
                         >
                           <div className="flex items-center gap-3">
                             {method === "card" && (
-                              <CreditCard className="text-muted-foreground h-5 w-5" />
+                              <CreditCard className="text-muted-foreground size-5" />
                             )}
                             {method === "cash" && (
-                              <Wallet className="text-muted-foreground h-5 w-5" />
+                              <Wallet className="text-muted-foreground size-5" />
                             )}
                             {method === "gift_card" && (
-                              <Gift className="text-muted-foreground h-5 w-5" />
+                              <Gift className="text-muted-foreground size-5" />
                             )}
                             <div>
                               <p className="font-medium capitalize">
@@ -699,7 +699,7 @@ export default function FacilityBillingPage() {
                           {gc.status}
                         </Badge>
                       </div>
-                      <Gift className="text-muted-foreground h-5 w-5" />
+                      <Gift className="text-muted-foreground size-5" />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -956,7 +956,7 @@ export default function FacilityBillingPage() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
-                <CheckCircle className="mx-auto mb-2 h-12 w-12 text-green-500" />
+                <CheckCircle className="mx-auto mb-2 size-12 text-green-500" />
                 <h3 className="text-lg font-semibold">All Caught Up!</h3>
                 <p className="text-muted-foreground text-sm">
                   No outstanding invoices
@@ -975,7 +975,7 @@ export default function FacilityBillingPage() {
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
+              <Receipt className="size-5" />
               Payment Details
             </DialogTitle>
           </DialogHeader>
@@ -1090,7 +1090,7 @@ export default function FacilityBillingPage() {
                       <div className="flex items-center gap-3">
                         {selectedTransaction.paymentMethod === "card" && (
                           <>
-                            <CreditCard className="h-5 w-5" />
+                            <CreditCard className="size-5" />
                             <div>
                               <p className="font-medium">
                                 {selectedTransaction.cardBrand?.toUpperCase()}{" "}
@@ -1106,13 +1106,13 @@ export default function FacilityBillingPage() {
                         )}
                         {selectedTransaction.paymentMethod === "cash" && (
                           <>
-                            <Wallet className="h-5 w-5" />
+                            <Wallet className="size-5" />
                             <p className="font-medium">Cash Payment</p>
                           </>
                         )}
                         {selectedTransaction.paymentMethod === "gift_card" && (
                           <>
-                            <Gift className="h-5 w-5" />
+                            <Gift className="size-5" />
                             <p className="font-medium">
                               Gift Card: {selectedTransaction.giftCardId}
                             </p>
@@ -1236,7 +1236,7 @@ export default function FacilityBillingPage() {
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+              <FileText className="size-5" />
               Invoice Details
             </DialogTitle>
           </DialogHeader>
@@ -1475,7 +1475,7 @@ export default function FacilityBillingPage() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5" />
+              <Gift className="size-5" />
               Gift Card Details
             </DialogTitle>
           </DialogHeader>

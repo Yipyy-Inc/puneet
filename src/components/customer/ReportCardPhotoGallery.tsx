@@ -240,7 +240,7 @@ export function ReportCardPhotoGallery({
                       alt={`Thumbnail ${idx + 1}`}
                       width={80}
                       height={80}
-                      className="h-full w-full object-cover"
+                      className="size-full object-cover"
                     />
                   </button>
                 ))}

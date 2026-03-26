@@ -259,7 +259,7 @@ export function CreateAdminUserModal({
         {showSuccess ? (
           <div className="py-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="size-8 text-green-600" />
             </div>
             <h3 className="mb-2 text-xl font-semibold">
               User Created Successfully
@@ -273,7 +273,7 @@ export function CreateAdminUserModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
+                <UserPlus className="size-5" />
                 {"Create New User"} - Step {step} of 3
               </DialogTitle>
               <DialogDescription>

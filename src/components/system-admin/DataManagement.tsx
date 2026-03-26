@@ -152,7 +152,7 @@ export function DataManagement() {
         variant={config.variant}
         className={`text-xs ${config.className} gap-1`}
       >
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {status}
       </Badge>
     );
@@ -515,7 +515,7 @@ export function DataManagement() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Database className="h-5 w-5 text-white" />
+                <Database className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -542,7 +542,7 @@ export function DataManagement() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <HardDrive className="h-5 w-5 text-white" />
+                <HardDrive className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -570,7 +570,7 @@ export function DataManagement() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <ShieldCheck className="h-5 w-5 text-white" />
+                <ShieldCheck className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -597,7 +597,7 @@ export function DataManagement() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <RefreshCw className="h-5 w-5 text-white" />
+                <RefreshCw className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -660,14 +660,14 @@ export function DataManagement() {
           <Card className="shadow-card border-0 bg-blue-50/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <ShieldCheck className="h-5 w-5 text-blue-600" />
+                <ShieldCheck className="size-5 text-blue-600" />
                 Disaster Recovery Procedures
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                  <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     1
                   </div>
                   <div>
@@ -678,7 +678,7 @@ export function DataManagement() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                  <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     2
                   </div>
                   <div>
@@ -689,7 +689,7 @@ export function DataManagement() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                  <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     3
                   </div>
                   <div>
@@ -700,7 +700,7 @@ export function DataManagement() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                  <div className="mt-0.5 flex size-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     4
                   </div>
                   <div>
@@ -790,7 +790,7 @@ export function DataManagement() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
+              <Database className="size-5" />
               Create Manual Backup
             </DialogTitle>
             <DialogDescription>
@@ -800,7 +800,7 @@ export function DataManagement() {
           {backupComplete ? (
             <div className="flex flex-col items-center py-8">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="size-8 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold">Backup Created!</h3>
               <p className="text-muted-foreground text-sm">
@@ -810,7 +810,7 @@ export function DataManagement() {
           ) : backupInProgress ? (
             <div className="flex flex-col items-center py-8">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+                <RefreshCw className="size-8 animate-spin text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold">Creating Backup...</h3>
               <p className="text-muted-foreground text-sm">
@@ -880,7 +880,7 @@ export function DataManagement() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
+              <RefreshCw className="size-5" />
               Restore Backup
             </DialogTitle>
             <DialogDescription>
@@ -890,7 +890,7 @@ export function DataManagement() {
           {restoreComplete ? (
             <div className="flex flex-col items-center py-8">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="size-8 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold">Restore Complete!</h3>
               <p className="text-muted-foreground text-sm">
@@ -900,7 +900,7 @@ export function DataManagement() {
           ) : restoreInProgress ? (
             <div className="flex flex-col items-center py-8">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+                <RefreshCw className="size-8 animate-spin text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold">Restoring...</h3>
               <p className="text-muted-foreground text-sm">
@@ -970,7 +970,7 @@ export function DataManagement() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Settings className="size-5" />
               Edit Retention Policy
             </DialogTitle>
             <DialogDescription>

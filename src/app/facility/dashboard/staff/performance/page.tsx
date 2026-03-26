@@ -116,7 +116,7 @@ export default function StaffPerformancePage() {
       defaultVisible: true,
       render: (staff) => (
         <div className="flex items-center gap-2">
-          <Progress value={staff.completionRate} className="h-2 w-20" />
+          <Progress value={staff.completionRate} className="size-20" />
           <span
             className={
               staff.completionRate >= 90
@@ -252,7 +252,7 @@ export default function StaffPerformancePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-500" />
+            <Award className="size-5 text-yellow-500" />
             Top Performers
           </CardTitle>
         </CardHeader>
@@ -264,7 +264,7 @@ export default function StaffPerformancePage() {
                 className="flex items-center gap-4 rounded-lg border p-4"
               >
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                  className={`flex size-10 items-center justify-center rounded-full ${
                     index === 0
                       ? "bg-yellow-100 text-yellow-700"
                       : index === 1
@@ -331,13 +331,13 @@ export default function StaffPerformancePage() {
                       <div className="mt-1 flex gap-2">
                         {staff.completionRate < 85 && (
                           <Badge variant="outline" className="text-xs">
-                            <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
+                            <TrendingDown className="mr-1 size-3 text-red-500" />
                             Low completion
                           </Badge>
                         )}
                         {staff.photoProofCompliance < 90 && (
                           <Badge variant="outline" className="text-xs">
-                            <Camera className="mr-1 h-3 w-3 text-orange-500" />
+                            <Camera className="mr-1 size-3 text-orange-500" />
                             Photo compliance
                           </Badge>
                         )}
@@ -381,7 +381,7 @@ export default function StaffPerformancePage() {
                         variant="secondary"
                         className="bg-green-100 text-green-800"
                       >
-                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                        <CheckCircle2 className="mr-1 size-3" />
                         Completed
                       </Badge>
                       {task.completedAt && (

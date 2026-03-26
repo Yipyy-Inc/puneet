@@ -66,12 +66,12 @@ export function RevenueOverview() {
             <p className="text-muted-foreground text-xs">
               {monthOverMonthChange > 0 ? (
                 <span className="flex items-center text-green-600">
-                  <TrendingUp className="mr-1 h-3 w-3" />+
+                  <TrendingUp className="mr-1 size-3" />+
                   {monthOverMonthChange.toFixed(1)}% from last month
                 </span>
               ) : (
                 <span className="flex items-center text-red-600">
-                  <TrendingDown className="mr-1 h-3 w-3" />
+                  <TrendingDown className="mr-1 size-3" />
                   {monthOverMonthChange.toFixed(1)}% from last month
                 </span>
               )}

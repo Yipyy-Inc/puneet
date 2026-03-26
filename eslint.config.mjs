@@ -43,10 +43,7 @@ const eslintConfig = defineConfig([
       "better-tailwindcss/enforce-consistent-class-order": "off",
       "better-tailwindcss/enforce-consistent-line-wrapping": "off", // conflicts with Prettier
       "better-tailwindcss/no-unnecessary-whitespace": "off", // conflicts with Prettier
-      "better-tailwindcss/enforce-canonical-classes": [
-        "warn",
-        { collapse: true },
-      ],
+      "better-tailwindcss/enforce-canonical-classes": "warn",
       "better-tailwindcss/no-unknown-classes": "warn",
     },
   },

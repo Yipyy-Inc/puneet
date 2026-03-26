@@ -255,7 +255,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-8 lg:flex-row">
             <div className="flex flex-col items-center lg:items-start">
               <div className="group relative">
-                <Avatar className="ring-background group-hover:ring-primary/20 mb-4 h-32 w-32 shadow-xl ring-4 transition-all duration-300 group-hover:shadow-2xl">
+                <Avatar className="ring-background group-hover:ring-primary/20 mb-4 size-32 shadow-xl ring-4 transition-all duration-300 group-hover:shadow-2xl">
                   <AvatarImage src="" alt={currentUser.name} />
                   <AvatarFallback className="from-primary/20 to-secondary/20 bg-linear-to-br text-3xl">
                     {currentUser.name
@@ -265,7 +265,7 @@ export default function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <Camera className="h-8 w-8 text-white" />
+                  <Camera className="size-8 text-white" />
                 </div>
               </div>
               <Button
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="secondary" className="shadow-sm">
-                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                    <CheckCircle2 className="mr-1 size-3" />
                     {currentUser.status}
                   </Badge>
                 </div>
@@ -379,7 +379,7 @@ export default function ProfilePage() {
               {currentUser.type === "client" && currentUser.pets && (
                 <div className="bg-linear-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border p-4">
                   <div className="mb-3 flex items-center gap-2">
-                    <PawPrint className="text-primary h-5 w-5" />
+                    <PawPrint className="text-primary size-5" />
                     <p className="text-sm font-medium">My Pets</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -389,7 +389,7 @@ export default function ProfilePage() {
                         variant="outline"
                         className="shadow-sm"
                       >
-                        <PawPrint className="mr-1 h-3 w-3" />
+                        <PawPrint className="mr-1 size-3" />
                         {pet.name} ({pet.type}, {pet.age}y)
                       </Badge>
                     ))}
@@ -437,7 +437,7 @@ export default function ProfilePage() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+                <User className="size-5" />
                 Personal Information
               </CardTitle>
             </CardHeader>
@@ -546,7 +546,7 @@ export default function ProfilePage() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 Permissions & Access
               </CardTitle>
             </CardHeader>
@@ -572,7 +572,7 @@ export default function ProfilePage() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
+                <Settings className="size-5" />
                 Preferences
               </CardTitle>
             </CardHeader>
@@ -580,7 +580,7 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
-                    <Globe className="h-5 w-5" />
+                    <Globe className="size-5" />
                     Localization
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -668,7 +668,7 @@ export default function ProfilePage() {
 
                 <div>
                   <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
-                    <Clock className="h-5 w-5" />
+                    <Clock className="size-5" />
                     Date & Time
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -737,7 +737,7 @@ export default function ProfilePage() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 Security Settings
               </CardTitle>
             </CardHeader>
@@ -838,7 +838,7 @@ export default function ProfilePage() {
           <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
+                <Bell className="size-5" />
                 Notification Preferences
               </CardTitle>
             </CardHeader>
@@ -846,7 +846,7 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
-                    <Mail className="h-5 w-5" />
+                    <Mail className="size-5" />
                     Email Notifications
                   </h3>
                   <div className="space-y-4">
@@ -916,7 +916,7 @@ export default function ProfilePage() {
 
                 <div>
                   <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
-                    <Bell className="h-5 w-5" />
+                    <Bell className="size-5" />
                     Push Notifications
                   </h3>
                   <div className="space-y-4">
@@ -982,7 +982,7 @@ export default function ProfilePage() {
 
                 <div>
                   <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
-                    <Phone className="h-5 w-5" />
+                    <Phone className="size-5" />
                     SMS Notifications
                   </h3>
                   <div className="space-y-4">
@@ -1037,7 +1037,7 @@ export default function ProfilePage() {
             <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PawPrint className="h-5 w-5" />
+                  <PawPrint className="size-5" />
                   Pet Management
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
@@ -1051,8 +1051,8 @@ export default function ProfilePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                              <PawPrint className="text-primary h-6 w-6" />
+                            <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-6" />
                             </div>
                             <div>
                               <h3 className="text-lg font-semibold">

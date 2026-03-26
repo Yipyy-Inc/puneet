@@ -52,7 +52,7 @@ export function IconPicker({
           className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-md"
           style={selectedGradient}
         >
-          <DynamicIcon name={selectedIcon} className="h-7 w-7" />
+          <DynamicIcon name={selectedIcon} className="size-7" />
         </div>
         <div>
           <p className="text-sm font-medium">{selectedIcon}</p>
@@ -88,7 +88,7 @@ export function IconPicker({
                 style={getGradientStyle(opt.from, opt.to)}
               >
                 {isSelected && (
-                  <Check className="absolute inset-0 m-auto h-3.5 w-3.5 text-white" />
+                  <Check className="absolute inset-0 m-auto size-3.5 text-white" />
                 )}
                 <span className="sr-only">{opt.label}</span>
               </button>
@@ -103,7 +103,7 @@ export function IconPicker({
           Icon
         </Label>
         <div className="relative mb-3">
-          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             placeholder="Search icons..."
             value={search}

@@ -69,7 +69,7 @@ export default function TrainingSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
+            <BookOpen className="size-5" />
             Course Catalog Configuration
           </CardTitle>
           <CardDescription>
@@ -99,7 +99,7 @@ export default function TrainingSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <SettingsIcon className="h-5 w-5" />
+            <SettingsIcon className="size-5" />
             Additional Settings
           </CardTitle>
           <CardDescription>

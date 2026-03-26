@@ -235,7 +235,7 @@ export function EvaluationModal({
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Clock className="text-muted-foreground h-5 w-5" />
+                  <Clock className="text-muted-foreground size-5" />
                   <Label className="text-base">
                     Select Available Time Slot
                   </Label>

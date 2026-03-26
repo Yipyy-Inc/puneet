@@ -236,7 +236,7 @@ export default function NotificationsPage() {
                                     {notif.title}
                                   </h3>
                                   {!notif.read && (
-                                    <div className="bg-primary h-2 w-2 shrink-0 rounded-full" />
+                                    <div className="bg-primary size-2 shrink-0 rounded-full" />
                                   )}
                                 </div>
                                 <p className="text-muted-foreground mt-1 text-sm">
@@ -251,7 +251,7 @@ export default function NotificationsPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="size-7"
                                     onClick={() => markAsRead(notif.id)}
                                     title="Mark as read"
                                   >
@@ -261,7 +261,7 @@ export default function NotificationsPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="size-7"
                                   onClick={() => deleteNotification(notif.id)}
                                   title="Delete"
                                 >

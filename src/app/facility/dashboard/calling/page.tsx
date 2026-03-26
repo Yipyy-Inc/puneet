@@ -128,10 +128,10 @@ export default function CallingPage() {
         return (
           <Badge variant={variants[row.original.status]}>
             {row.original.status === "missed" && (
-              <PhoneOff className="mr-1 inline h-3 w-3" />
+              <PhoneOff className="mr-1 inline size-3" />
             )}
             {row.original.status === "voicemail" && (
-              <Voicemail className="mr-1 inline h-3 w-3" />
+              <Voicemail className="mr-1 inline size-3" />
             )}
             {row.original.status}
           </Badge>
@@ -145,7 +145,7 @@ export default function CallingPage() {
         <Badge variant={row.original.aiHandled ? "default" : "outline"}>
           {row.original.aiHandled ? (
             <>
-              <Zap className="mr-1 inline h-3 w-3" />
+              <Zap className="mr-1 inline size-3" />
               AI
             </>
           ) : (
@@ -549,7 +549,7 @@ export default function CallingPage() {
                     disabled={!phoneNumber.trim()}
                     size="lg"
                   >
-                    <Phone className="mr-2 h-5 w-5" />
+                    <Phone className="mr-2 size-5" />
                     Dial
                   </Button>
                 </div>
@@ -688,7 +688,7 @@ export default function CallingPage() {
             <CardContent>
               {voicemails.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Voicemail className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <Voicemail className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No voicemails</p>
                 </div>
               ) : (
@@ -715,7 +715,7 @@ export default function CallingPage() {
             <CardContent>
               {callsWithRecordings.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Play className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <Play className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No recordings available</p>
                 </div>
               ) : (

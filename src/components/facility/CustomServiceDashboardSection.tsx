@@ -78,15 +78,12 @@ export const CustomServiceDashboardSection = memo(
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl`,
+                  `flex size-10 shrink-0 items-center justify-center rounded-xl`,
                   "bg-linear-to-br",
                 )}
                 style={gradientStyle}
               >
-                <DynamicIcon
-                  name={module.icon}
-                  className="h-5 w-5 text-white"
-                />
+                <DynamicIcon name={module.icon} className="size-5 text-white" />
               </div>
               <div>
                 <h3 className={cn("text-lg font-semibold", catMeta?.textClass)}>
@@ -100,7 +97,7 @@ export const CustomServiceDashboardSection = memo(
             <Link href={viewAllUrl}>
               <Button variant="outline" size="sm" className="gap-1.5">
                 View All
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="size-3.5" />
               </Button>
             </Link>
           </div>
@@ -130,7 +127,7 @@ export const CustomServiceDashboardSection = memo(
                 className="bg-card hover:bg-muted/30 flex items-center justify-between rounded-lg border p-3 transition-colors"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                  <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center rounded-full">
                     <User className="text-primary size-4" />
                   </div>
                   <div className="min-w-0">
@@ -144,7 +141,7 @@ export const CustomServiceDashboardSection = memo(
                 </div>
                 <div className="ml-2 flex shrink-0 items-center gap-2">
                   <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                    <Clock className="h-3 w-3" />
+                    <Clock className="size-3" />
                     {booking.time}
                   </div>
                   <Badge

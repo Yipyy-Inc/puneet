@@ -149,7 +149,7 @@ export function BalancesTab() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+              <CreditCard className="size-5" />
               Store Credit
             </CardTitle>
           </CardHeader>
@@ -167,7 +167,7 @@ export function BalancesTab() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5" />
+              <Gift className="size-5" />
               Gift Card Balance
             </CardTitle>
           </CardHeader>
@@ -185,7 +185,7 @@ export function BalancesTab() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
+              <Wallet className="size-5" />
               Outstanding Balance
             </CardTitle>
           </CardHeader>
@@ -247,7 +247,7 @@ export function BalancesTab() {
                     {credit.expiryDate && (
                       <div>
                         <p className="text-muted-foreground flex items-center gap-1 text-sm">
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className="size-3" />
                           Expires
                         </p>
                         <p className="text-sm font-semibold">
@@ -305,7 +305,7 @@ export function BalancesTab() {
                     {giftCard.expiryDate && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className="size-3" />
                           Expires:
                         </span>
                         <span>{formatDate(giftCard.expiryDate)}</span>
@@ -377,7 +377,7 @@ export function BalancesTab() {
         customerOutstandingInvoices.length === 0 && (
           <Card>
             <CardContent className="space-y-3 py-12 text-center">
-              <Wallet className="text-muted-foreground mx-auto h-12 w-12 opacity-50" />
+              <Wallet className="text-muted-foreground mx-auto size-12 opacity-50" />
               <p className="font-semibold">No active balances</p>
               <p className="text-muted-foreground text-sm">
                 Your credits, gift card balances, and outstanding amounts will

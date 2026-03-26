@@ -98,7 +98,7 @@ export function TemplatePreviewPanel({
               className="h-7 gap-1 text-xs"
               onClick={() => setMode("preview")}
             >
-              <Eye className="h-3 w-3" />
+              <Eye className="size-3" />
               Preview
             </Button>
             <Button
@@ -107,7 +107,7 @@ export function TemplatePreviewPanel({
               className="h-7 gap-1 text-xs"
               onClick={() => setMode("template")}
             >
-              <Code className="h-3 w-3" />
+              <Code className="size-3" />
               Template
             </Button>
           </div>

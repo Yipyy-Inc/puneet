@@ -249,7 +249,7 @@ export default function CustomerSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+              <User className="size-5" />
               Profile Information
             </CardTitle>
             <CardDescription>
@@ -328,7 +328,7 @@ export default function CustomerSettingsPage() {
             {/* Address */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <MapPin className="text-muted-foreground h-5 w-5" />
+                <MapPin className="text-muted-foreground size-5" />
                 <Label className="text-base font-semibold">Address</Label>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -439,7 +439,7 @@ export default function CustomerSettingsPage() {
             {/* Emergency Contact */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <UserCircle className="text-muted-foreground h-5 w-5" />
+                <UserCircle className="text-muted-foreground size-5" />
                 <Label className="text-base font-semibold">
                   Emergency Contact
                 </Label>
@@ -568,7 +568,7 @@ export default function CustomerSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
+              <MapPin className="size-5" />
               Pick-up & Drop-off Instructions
             </CardTitle>
             <CardDescription>
@@ -635,7 +635,7 @@ export default function CustomerSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
+              <Bell className="size-5" />
               Notification Preferences
             </CardTitle>
             <CardDescription>
@@ -646,7 +646,7 @@ export default function CustomerSettingsPage() {
             {/* Email Notifications */}
             <div className="space-y-4">
               <div className="mb-4 flex items-center gap-2">
-                <Mail className="text-muted-foreground h-5 w-5" />
+                <Mail className="text-muted-foreground size-5" />
                 <h3 className="text-lg font-semibold">Email Notifications</h3>
               </div>
               <div className="space-y-3">
@@ -775,7 +775,7 @@ export default function CustomerSettingsPage() {
               <>
                 <div className="space-y-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <UserCircle className="text-muted-foreground h-5 w-5" />
+                    <UserCircle className="text-muted-foreground size-5" />
                     <h3 className="text-lg font-semibold">
                       Per-Pet Report Cards
                     </h3>
@@ -836,7 +836,7 @@ export default function CustomerSettingsPage() {
             {/* SMS Notifications */}
             <div className="space-y-4">
               <div className="mb-4 flex items-center gap-2">
-                <Phone className="text-muted-foreground h-5 w-5" />
+                <Phone className="text-muted-foreground size-5" />
                 <h3 className="text-lg font-semibold">SMS Notifications</h3>
               </div>
               <div className="space-y-3">
@@ -924,7 +924,7 @@ export default function CustomerSettingsPage() {
             {/* Push Notifications */}
             <div className="space-y-4">
               <div className="mb-4 flex items-center gap-2">
-                <Bell className="text-muted-foreground h-5 w-5" />
+                <Bell className="text-muted-foreground size-5" />
                 <h3 className="text-lg font-semibold">Push Notifications</h3>
               </div>
               <div className="space-y-3">
@@ -1013,7 +1013,7 @@ export default function CustomerSettingsPage() {
               {/* Quiet Hours */}
               <div className="space-y-4">
                 <div className="mb-1 flex items-center gap-2">
-                  <Bell className="text-muted-foreground h-5 w-5" />
+                  <Bell className="text-muted-foreground size-5" />
                   <h3 className="text-lg font-semibold">
                     Quiet Hours (SMS & Push)
                   </h3>
@@ -1080,7 +1080,7 @@ export default function CustomerSettingsPage() {
               {/* Language Preference */}
               <div className="space-y-4">
                 <div className="mb-1 flex items-center gap-2">
-                  <UserCircle className="text-muted-foreground h-5 w-5" />
+                  <UserCircle className="text-muted-foreground size-5" />
                   <h3 className="text-lg font-semibold">Language Preference</h3>
                 </div>
                 <p className="text-muted-foreground text-sm">
@@ -1121,7 +1121,7 @@ export default function CustomerSettingsPage() {
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <AlertCircle className="text-primary mt-0.5 h-5 w-5" />
+                <AlertCircle className="text-primary mt-0.5 size-5" />
                 <div className="flex-1">
                   <p className="mb-1 text-sm font-medium">
                     Changes sync automatically

@@ -216,16 +216,16 @@ export function FacilityBrandingSection() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="size-8 p-0"
                       onClick={() => removeSocialLink(link.id)}
                       aria-label={`Remove ${link.platform} link`}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="size-3.5" />
                     </Button>
                   </div>
                 ))}
                 <Button variant="outline" size="sm" onClick={addSocialLink}>
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Add Link
+                  <Plus className="mr-1 size-3.5" /> Add Link
                 </Button>
               </div>
             </div>
@@ -250,7 +250,7 @@ export function FacilityBrandingSection() {
                 {/* Logo + Name */}
                 <div className="flex items-center gap-2.5 border-b pb-3">
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold"
+                    className="flex size-9 items-center justify-center rounded-lg text-sm font-bold"
                     style={{
                       backgroundColor: formData.primaryColor,
                       color: brandTextColor,

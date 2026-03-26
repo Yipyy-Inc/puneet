@@ -24,8 +24,8 @@ const SIZE_CLASSES = {
 
 const ICON_SIZES = {
   sm: "h-2.5 w-2.5",
-  md: "h-3 w-3",
-  lg: "h-3.5 w-3.5",
+  md: "size-3",
+  lg: "size-3.5",
 } as const;
 
 const PRIORITY_RING = {
@@ -83,7 +83,7 @@ export function TagBadge({
           className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
           aria-label={`Remove ${tag.name} tag`}
         >
-          <X className={size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5"} />
+          <X className={size === "sm" ? "size-2" : "h-2.5 w-2.5"} />
         </button>
       )}
     </span>

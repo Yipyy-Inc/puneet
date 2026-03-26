@@ -742,7 +742,7 @@ export default function CustomerPetDetailPage({
                   className="text-muted-foreground text-xs"
                   title={vaccination.rejectionReason}
                 >
-                  <AlertTriangle className="h-3 w-3" />
+                  <AlertTriangle className="size-3" />
                 </span>
               )}
             </div>
@@ -878,14 +878,14 @@ export default function CustomerPetDetailPage({
         <Card>
           <CardContent className="p-6">
             <div className="flex items-start gap-6">
-              <div className="bg-muted flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg">
+              <div className="bg-muted flex size-32 items-center justify-center overflow-hidden rounded-lg">
                 {pet.imageUrl ? (
                   <Image
                     src={pet.imageUrl}
                     alt={pet.name}
                     width={128}
                     height={128}
-                    className="h-full w-full object-cover"
+                    className="size-full object-cover"
                   />
                 ) : (
                   <PetIcon className="text-muted-foreground h-16 w-16" />
@@ -1178,7 +1178,7 @@ export default function CustomerPetDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <FileText className="h-5 w-5" />
+                  <FileText className="size-5" />
                   Forms for {pet.name}
                 </CardTitle>
                 <CardDescription>
@@ -1356,7 +1356,7 @@ export default function CustomerPetDetailPage({
               <Card className="border-primary/20 bg-primary/5">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                    <Syringe className="h-5 w-5" />
+                    <Syringe className="size-5" />
                     Facility Vaccination Requirements
                   </CardTitle>
                 </CardHeader>
@@ -1378,11 +1378,11 @@ export default function CustomerPetDetailPage({
                       >
                         <div className="flex items-center gap-3">
                           {isUpToDate ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <CheckCircle2 className="size-5 text-green-600" />
                           ) : isExpiringSoon ? (
-                            <AlertTriangle className="text-warning h-5 w-5" />
+                            <AlertTriangle className="text-warning size-5" />
                           ) : (
-                            <XCircle className="text-destructive h-5 w-5" />
+                            <XCircle className="text-destructive size-5" />
                           )}
                           <div>
                             <p className="font-medium">{vaccine}</p>
@@ -1440,7 +1440,7 @@ export default function CustomerPetDetailPage({
               <CardContent>
                 {vaccinations.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Syringe className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <Syringe className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No vaccination records yet</p>
                     <Button
                       variant="outline"
@@ -1457,7 +1457,7 @@ export default function CustomerPetDetailPage({
                     {expiredVaccinations.length > 0 && (
                       <div className="border-destructive/20 bg-destructive/10 mb-4 rounded-lg border p-4">
                         <div className="mb-2 flex items-center gap-2">
-                          <AlertTriangle className="text-destructive h-5 w-5" />
+                          <AlertTriangle className="text-destructive size-5" />
                           <p className="text-destructive font-semibold">
                             {expiredVaccinations.length} Expired Vaccination
                             {expiredVaccinations.length > 1 ? "s" : ""}
@@ -1472,7 +1472,7 @@ export default function CustomerPetDetailPage({
                     {upcomingVaccinations.length > 0 && (
                       <div className="border-warning/20 bg-warning/10 mb-4 rounded-lg border p-4">
                         <div className="mb-2 flex items-center gap-2">
-                          <AlertTriangle className="text-warning h-5 w-5" />
+                          <AlertTriangle className="text-warning size-5" />
                           <p className="text-warning font-semibold">
                             {upcomingVaccinations.length} Vaccination
                             {upcomingVaccinations.length > 1 ? "s" : ""}{" "}
@@ -1505,7 +1505,7 @@ export default function CustomerPetDetailPage({
               <CardContent>
                 {petBookings.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No bookings yet</p>
                     <Button variant="outline" className="mt-4" asChild>
                       <Link href="/customer/bookings">Book a Service</Link>
@@ -1529,7 +1529,7 @@ export default function CustomerPetDetailPage({
               <CardContent>
                 {reports.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <FileText className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No report cards yet</p>
                     <p className="mt-2 text-sm">
                       Report cards will appear here after your pet&apos;s visits
@@ -1569,7 +1569,7 @@ export default function CustomerPetDetailPage({
                                       alt={`Photo ${idx + 1}`}
                                       width={200}
                                       height={200}
-                                      className="h-full w-full object-cover"
+                                      className="size-full object-cover"
                                     />
                                   </div>
                                 ))}
@@ -1623,7 +1623,7 @@ export default function CustomerPetDetailPage({
               <CardContent>
                 {photos.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
-                    <ImageIcon className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <ImageIcon className="mx-auto mb-4 size-12 opacity-50" />
                     <p>No photos yet</p>
                     <p className="mt-2 text-sm">
                       Photos from your pet&apos;s stays will appear here

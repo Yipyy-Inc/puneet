@@ -323,7 +323,7 @@ export default function ActivityTrackingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 {"Sensitive Actions"} - {"Audit Trail"}
               </CardTitle>
             </CardHeader>
@@ -338,7 +338,7 @@ export default function ActivityTrackingPage() {
                       className="flex items-start gap-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/20"
                     >
                       <div className="rounded-lg bg-red-100 p-2 dark:bg-red-900">
-                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        <AlertTriangle className="size-5 text-red-600 dark:text-red-400" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
@@ -354,11 +354,11 @@ export default function ActivityTrackingPage() {
                         </p>
                         <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="size-3" />
                             {log.userName}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="size-3" />
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
                         </div>

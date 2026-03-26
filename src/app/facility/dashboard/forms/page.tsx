@@ -110,7 +110,7 @@ export default function IntakeFormsPage() {
             {FORM_CATEGORIES.map((cat) => (
               <TabsTrigger key={cat.value} value={cat.value}>
                 {cat.value === "internal" && (
-                  <Lock className="text-muted-foreground mr-1.5 h-3.5 w-3.5" />
+                  <Lock className="text-muted-foreground mr-1.5 size-3.5" />
                 )}
                 {cat.label}
               </TabsTrigger>
@@ -260,7 +260,7 @@ function FormCard({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Button variant="ghost" size="icon" className="size-8 shrink-0">
                 <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -270,7 +270,7 @@ function FormCard({
                   router.push(`/facility/dashboard/forms/builder?id=${form.id}`)
                 }
               >
-                <Pencil className="mr-2 h-3.5 w-3.5" />
+                <Pencil className="mr-2 size-3.5" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -282,12 +282,12 @@ function FormCard({
                     );
                 }}
               >
-                <Copy className="mr-2 h-3.5 w-3.5" />
+                <Copy className="mr-2 size-3.5" />
                 Duplicate
               </DropdownMenuItem>
               {form.status !== "archived" && (
                 <DropdownMenuItem onClick={handleArchive}>
-                  <Archive className="mr-2 h-3.5 w-3.5" />
+                  <Archive className="mr-2 size-3.5" />
                   Archive
                 </DropdownMenuItem>
               )}
@@ -295,7 +295,7 @@ function FormCard({
                 onClick={handleDelete}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                <Trash2 className="mr-2 size-3.5" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -318,7 +318,7 @@ function FormCard({
                 router.push(`/facility/dashboard/forms/builder?id=${form.id}`)
               }
             >
-              <Pencil className="mr-1 h-3.5 w-3.5" />
+              <Pencil className="mr-1 size-3.5" />
               Edit
             </Button>
             {!form.internal && (
@@ -326,24 +326,24 @@ function FormCard({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="ghost">
-                      <Share2 className="mr-1 h-3.5 w-3.5" />
+                      <Share2 className="mr-1 size-3.5" />
                       Share
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem onClick={copyLink}>
-                      <Copy className="mr-2 h-3.5 w-3.5" />
+                      <Copy className="mr-2 size-3.5" />
                       Copy link
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setEmbedOpen(true)}>
-                      <Code className="mr-2 h-3.5 w-3.5" />
+                      <Code className="mr-2 size-3.5" />
                       Embed code
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button size="sm" variant="ghost" asChild>
                   <a href={sharePath} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                    <ExternalLink className="mr-1 size-3.5" />
                     Open link
                   </a>
                 </Button>
@@ -368,7 +368,7 @@ function FormCard({
             {embedSnippet}
           </pre>
           <Button onClick={copyEmbed} variant="outline" size="sm">
-            <Copy className="mr-2 h-3.5 w-3.5" />
+            <Copy className="mr-2 size-3.5" />
             Copy embed code
           </Button>
         </DialogContent>

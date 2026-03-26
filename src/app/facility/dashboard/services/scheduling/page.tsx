@@ -1899,7 +1899,7 @@ export default function FacilitySchedulingPage() {
                       {getSickCallInsNeedingCoverage().length}
                     </p>
                   </div>
-                  <AlertCircle className="h-8 w-8 text-red-600" />
+                  <AlertCircle className="size-8 text-red-600" />
                 </div>
               </CardContent>
             </Card>
@@ -1929,7 +1929,7 @@ export default function FacilitySchedulingPage() {
                           .length}
                     </p>
                   </div>
-                  <FileText className="h-8 w-8 text-orange-600" />
+                  <FileText className="size-8 text-orange-600" />
                 </div>
               </CardContent>
             </Card>
@@ -1960,7 +1960,7 @@ export default function FacilitySchedulingPage() {
                       }
                     </p>
                   </div>
-                  <AlertTriangle className="h-8 w-8 text-yellow-600" />
+                  <AlertTriangle className="size-8 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
@@ -2135,7 +2135,7 @@ export default function FacilitySchedulingPage() {
                       }
                     }}
                   >
-                    <Map className="h-3 w-3" />
+                    <Map className="size-3" />
                     {calendarView === "day"
                       ? "Coverage On"
                       : "Coverage (Day View)"}
@@ -2366,7 +2366,7 @@ export default function FacilitySchedulingPage() {
                                             handleEdit(schedule);
                                           }}
                                         >
-                                          <Edit className="h-3 w-3" />
+                                          <Edit className="size-3" />
                                         </Button>
                                         <Button
                                           size="sm"
@@ -2378,7 +2378,7 @@ export default function FacilitySchedulingPage() {
                                             setIsShiftReportModalOpen(true);
                                           }}
                                         >
-                                          <ClipboardList className="h-3 w-3" />
+                                          <ClipboardList className="size-3" />
                                         </Button>
                                         <Button
                                           size="sm"
@@ -2389,7 +2389,7 @@ export default function FacilitySchedulingPage() {
                                             handleDeleteClick(schedule);
                                           }}
                                         >
-                                          <Trash2 className="text-destructive h-3 w-3" />
+                                          <Trash2 className="text-destructive size-3" />
                                         </Button>
                                       </div>
                                     </div>
@@ -2402,7 +2402,7 @@ export default function FacilitySchedulingPage() {
                                   className="h-8 w-full text-xs"
                                   onClick={() => handleAddNew(formatDate(date))}
                                 >
-                                  <Plus className="h-3 w-3" />
+                                  <Plus className="size-3" />
                                 </Button>
                               )}
                             </>
@@ -2461,15 +2461,15 @@ export default function FacilitySchedulingPage() {
                         </h3>
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-sm bg-red-500"></div>
+                            <div className="size-3 rounded-sm bg-red-500"></div>
                             <span>Understaffed</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-sm bg-green-500"></div>
+                            <div className="size-3 rounded-sm bg-green-500"></div>
                             <span>OK</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-sm bg-yellow-500"></div>
+                            <div className="size-3 rounded-sm bg-yellow-500"></div>
                             <span>Overstaffed</span>
                           </div>
                         </div>
@@ -2663,7 +2663,7 @@ export default function FacilitySchedulingPage() {
                               className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-3"
                             >
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
+                                <Avatar className="size-10">
                                   <AvatarFallback>
                                     {schedule.staffName
                                       .split(" ")
@@ -2837,7 +2837,7 @@ export default function FacilitySchedulingPage() {
                     <Card key={role}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Icon className="h-5 w-5" />
+                          <Icon className="size-5" />
                           {category?.label || role} ({schedules.length} shifts)
                         </CardTitle>
                       </CardHeader>
@@ -3207,7 +3207,7 @@ export default function FacilitySchedulingPage() {
                               <Checkbox
                                 checked={task.status === "completed"}
                                 disabled
-                                className="h-3 w-3"
+                                className="size-3"
                               />
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-xs font-medium">
@@ -3247,7 +3247,7 @@ export default function FacilitySchedulingPage() {
                           toast.info("Task assignment feature coming soon");
                         }}
                       >
-                        <Plus className="mr-1.5 h-3 w-3" />
+                        <Plus className="mr-1.5 size-3" />
                         Add Task to Shift
                       </Button>
                     </div>
@@ -3425,7 +3425,7 @@ export default function FacilitySchedulingPage() {
                                           );
                                         }}
                                       >
-                                        <ArrowRightLeft className="mr-1 h-3 w-3" />
+                                        <ArrowRightLeft className="mr-1 size-3" />
                                         Reassign
                                       </Button>
                                       <Button
@@ -3452,7 +3452,7 @@ export default function FacilitySchedulingPage() {
                                           }
                                         }}
                                       >
-                                        <Clock className="mr-1 h-3 w-3" />
+                                        <Clock className="mr-1 size-3" />
                                         Adjust Time
                                       </Button>
                                     </>
@@ -3468,7 +3468,7 @@ export default function FacilitySchedulingPage() {
                                         );
                                       }}
                                     >
-                                      <Info className="mr-1 h-3 w-3" />
+                                      <Info className="mr-1 size-3" />
                                       Continue Anyway
                                     </Button>
                                   )}
@@ -3593,7 +3593,7 @@ export default function FacilitySchedulingPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="size-5 text-green-600" />
                   Publish Schedule
                 </DialogTitle>
                 <DialogDescription>
@@ -3678,7 +3678,7 @@ export default function FacilitySchedulingPage() {
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Users2 className="h-5 w-5" />
+                    <Users2 className="size-5" />
                     Bulk Edit Shifts
                   </DialogTitle>
                   <DialogDescription>
@@ -3844,7 +3844,7 @@ export default function FacilitySchedulingPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
+                        <FileText className="size-5" />
                         Time Off Requests
                       </CardTitle>
                       <p className="text-muted-foreground mt-1 text-sm">
@@ -3944,7 +3944,7 @@ export default function FacilitySchedulingPage() {
                               <TableRow key={request.id}>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8">
+                                    <Avatar className="size-8">
                                       <AvatarFallback>
                                         {request.staffName
                                           .split(" ")
@@ -4085,7 +4085,7 @@ export default function FacilitySchedulingPage() {
                             <TableRow key={callIn.id}>
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
+                                  <Avatar className="size-8">
                                     <AvatarFallback>
                                       {callIn.staffName
                                         .split(" ")
@@ -4131,11 +4131,11 @@ export default function FacilitySchedulingPage() {
                                   }
                                 >
                                   {callIn.coverageStatus === "covered" && (
-                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                    <CheckCircle2 className="mr-1 size-3" />
                                   )}
                                   {callIn.coverageStatus ===
                                     "needs_coverage" && (
-                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                    <AlertTriangle className="mr-1 size-3" />
                                   )}
                                   {callIn.coverageStatus.replace("_", " ")}
                                 </Badge>
@@ -4143,7 +4143,7 @@ export default function FacilitySchedulingPage() {
                               <TableCell>
                                 {callIn.coveredByStaffName ? (
                                   <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
+                                    <Avatar className="size-6">
                                       <AvatarFallback className="text-xs">
                                         {callIn.coveredByStaffName
                                           .split(" ")
@@ -4192,7 +4192,7 @@ export default function FacilitySchedulingPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <ArrowLeftRight className="h-5 w-5" />
+                        <ArrowLeftRight className="size-5" />
                         Shift Swap Requests
                       </CardTitle>
                       <p className="text-muted-foreground mt-1 text-sm">
@@ -4235,7 +4235,7 @@ export default function FacilitySchedulingPage() {
                         <TableRow key={swap.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="size-8">
                                 <AvatarFallback>
                                   {swap.requestingStaffName
                                     .split(" ")
@@ -4259,7 +4259,7 @@ export default function FacilitySchedulingPage() {
                           <TableCell>
                             {swap.targetStaffName ? (
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
+                                <Avatar className="size-6">
                                   <AvatarFallback className="text-xs">
                                     {swap.targetStaffName
                                       .split(" ")
@@ -4273,7 +4273,7 @@ export default function FacilitySchedulingPage() {
                               </div>
                             ) : (
                               <Badge variant="outline">
-                                <User className="mr-1 h-3 w-3" />
+                                <User className="mr-1 size-3" />
                                 Anyone available
                               </Badge>
                             )}
@@ -4315,13 +4315,13 @@ export default function FacilitySchedulingPage() {
                               }
                             >
                               {swap.status === "approved" && (
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                <CheckCircle2 className="mr-1 size-3" />
                               )}
                               {swap.status === "denied" && (
-                                <XCircle className="mr-1 h-3 w-3" />
+                                <XCircle className="mr-1 size-3" />
                               )}
                               {swap.status === "pending" && (
-                                <Clock className="mr-1 h-3 w-3" />
+                                <Clock className="mr-1 size-3" />
                               )}
                               {swap.status}
                             </Badge>
@@ -4380,7 +4380,7 @@ export default function FacilitySchedulingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <Users className="size-5" />
                   Coverage Needs
                 </CardTitle>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -4438,7 +4438,7 @@ export default function FacilitySchedulingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTriangle className="size-5" />
                   Schedule Conflicts
                 </CardTitle>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -4481,7 +4481,7 @@ export default function FacilitySchedulingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5" />
+                    <CalendarDays className="size-5" />
                     Shift Templates
                   </CardTitle>
                   <p className="text-muted-foreground mt-1 text-sm">
@@ -4544,7 +4544,7 @@ export default function FacilitySchedulingPage() {
                   </div>
                 ) : (
                   <div className="py-12 text-center">
-                    <CalendarDays className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <CalendarDays className="text-muted-foreground mx-auto mb-4 size-12" />
                     <p className="text-lg font-medium">No templates yet</p>
                     <p className="text-muted-foreground mt-1 text-sm">
                       Create your first shift template to get started
@@ -4569,7 +4569,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
+              <Phone className="size-5" />
               Same-Day Sick / Call-Out
             </DialogTitle>
             <DialogDescription>
@@ -4756,7 +4756,7 @@ export default function FacilitySchedulingPage() {
                               }}
                             >
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
+                                <Avatar className="size-10">
                                   <AvatarFallback>
                                     {staff.name
                                       .split(" ")
@@ -4791,7 +4791,7 @@ export default function FacilitySchedulingPage() {
                       ) : (
                         <Card className="bg-muted/50">
                           <CardContent className="py-8 text-center">
-                            <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                            <UserX className="text-muted-foreground mx-auto mb-2 size-12" />
                             <p className="text-muted-foreground">
                               No available staff found for this shift
                             </p>
@@ -4826,7 +4826,7 @@ export default function FacilitySchedulingPage() {
                         sickCallAction === "assign"
                       }
                     >
-                      <CheckCircle2 className="h-5 w-5" />
+                      <CheckCircle2 className="size-5" />
                       <span className="text-sm">Assign Replacement</span>
                     </Button>
                     <Button
@@ -4843,7 +4843,7 @@ export default function FacilitySchedulingPage() {
                         sickCallAction === "split"
                       }
                     >
-                      <Split className="h-5 w-5" />
+                      <Split className="size-5" />
                       <span className="text-sm">Split Shift</span>
                     </Button>
                     <Button
@@ -4857,7 +4857,7 @@ export default function FacilitySchedulingPage() {
                         setSplitShiftStaffIds([]);
                       }}
                     >
-                      <Users2 className="h-5 w-5" />
+                      <Users2 className="size-5" />
                       <span className="text-sm">Request Volunteers</span>
                     </Button>
                   </div>
@@ -5064,7 +5064,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" />
+              <ArrowLeftRight className="size-5" />
               Request Shift Swap
             </DialogTitle>
             <DialogDescription>
@@ -5243,7 +5243,7 @@ export default function FacilitySchedulingPage() {
                               <Card className="border-red-500 bg-red-50 dark:bg-red-950/20">
                                 <CardContent className="pt-4">
                                   <div className="flex items-start gap-2">
-                                    <AlertCircle className="mt-0.5 h-5 w-5 text-red-600" />
+                                    <AlertCircle className="mt-0.5 size-5 text-red-600" />
                                     <div className="space-y-1">
                                       <p className="text-sm font-medium text-red-900 dark:text-red-200">
                                         Validation Errors
@@ -5262,7 +5262,7 @@ export default function FacilitySchedulingPage() {
                               <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
                                 <CardContent className="pt-4">
                                   <div className="flex items-start gap-2">
-                                    <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                                    <AlertTriangle className="mt-0.5 size-5 text-yellow-600" />
                                     <div className="space-y-1">
                                       <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
                                         Warnings
@@ -5284,7 +5284,7 @@ export default function FacilitySchedulingPage() {
                                 <Card className="border-green-500 bg-green-50 dark:bg-green-950/20">
                                   <CardContent className="pt-4">
                                     <div className="flex items-center gap-2">
-                                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                      <CheckCircle2 className="size-5 text-green-600" />
                                       <p className="text-sm font-medium text-green-900 dark:text-green-200">
                                         Swap is valid and ready to submit
                                       </p>
@@ -5327,7 +5327,7 @@ export default function FacilitySchedulingPage() {
                                 <CardContent className="p-3">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                      <Avatar className="h-10 w-10">
+                                      <Avatar className="size-10">
                                         <AvatarFallback>
                                           {staff.name
                                             .split(" ")
@@ -5377,7 +5377,7 @@ export default function FacilitySchedulingPage() {
                         ) : (
                           <Card className="bg-muted/50">
                             <CardContent className="py-8 text-center">
-                              <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                              <UserX className="text-muted-foreground mx-auto mb-2 size-12" />
                               <p className="text-muted-foreground">
                                 No qualified staff found
                               </p>
@@ -5504,10 +5504,10 @@ export default function FacilitySchedulingPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {swapApprovalAction === "approve" && (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="size-5 text-green-600" />
               )}
               {swapApprovalAction === "deny" && (
-                <XCircle className="h-5 w-5 text-red-600" />
+                <XCircle className="size-5 text-red-600" />
               )}
               Review Shift Swap Request
             </DialogTitle>
@@ -5641,7 +5641,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
+              <ClipboardList className="size-5" />
               Add Shift Task
             </DialogTitle>
             <DialogDescription>
@@ -5830,7 +5830,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+              <User className="size-5" />
               Find Coverage
             </DialogTitle>
             {selectedSickCallIn && (
@@ -5908,7 +5908,7 @@ export default function FacilitySchedulingPage() {
                               }
                             >
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
+                                <Avatar className="size-10">
                                   <AvatarFallback>
                                     {staff.name
                                       .split(" ")
@@ -5945,7 +5945,7 @@ export default function FacilitySchedulingPage() {
                   ) : (
                     <Card className="bg-muted/50">
                       <CardContent className="py-8 text-center">
-                        <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                        <UserX className="text-muted-foreground mx-auto mb-2 size-12" />
                         <p className="text-muted-foreground">
                           No available staff found for this shift
                         </p>
@@ -6012,7 +6012,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
+              <ClipboardList className="size-5" />
               Shift Report
             </DialogTitle>
             {selectedShiftForReport && (
@@ -6185,7 +6185,7 @@ export default function FacilitySchedulingPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <Calendar className="size-5" />
               Request Time Off
             </DialogTitle>
             <DialogDescription>
@@ -6313,13 +6313,13 @@ export default function FacilitySchedulingPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {reviewAction === "approve" && (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="size-5 text-green-600" />
               )}
               {reviewAction === "deny" && (
-                <XCircle className="h-5 w-5 text-red-600" />
+                <XCircle className="size-5 text-red-600" />
               )}
               {reviewAction === "request_changes" && (
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <AlertTriangle className="size-5 text-yellow-600" />
               )}
               Review Time Off Request
             </DialogTitle>
@@ -6370,7 +6370,7 @@ export default function FacilitySchedulingPage() {
                 checkCoverageGaps(selectedTimeOffRequest) && (
                   <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                      <AlertTriangle className="mt-0.5 size-5 text-yellow-600" />
                       <div>
                         <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
                           Coverage Gap Detected

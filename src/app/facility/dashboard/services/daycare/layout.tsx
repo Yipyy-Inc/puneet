@@ -124,8 +124,8 @@ export default function DaycareLayout({
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-500">
-                <Sun className="h-5 w-5 text-white" />
+              <div className="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-500">
+                <Sun className="size-5 text-white" />
               </div>
               <div>
                 <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">

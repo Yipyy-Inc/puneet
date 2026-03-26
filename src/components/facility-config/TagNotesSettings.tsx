@@ -242,7 +242,7 @@ function TagBuilder() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Tag Builder</CardTitle>
           <Button size="sm" className="gap-1" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="size-3.5" />
             Create Tag
           </Button>
         </div>
@@ -289,7 +289,7 @@ function TagBuilder() {
                       >
                         {/* Preview */}
                         <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                          className="flex size-9 shrink-0 items-center justify-center rounded-lg"
                           style={{
                             backgroundColor: tag.color,
                             color: getContrastTextColor(tag.color),
@@ -336,18 +336,18 @@ function TagBuilder() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="size-8 p-0"
                             onClick={() => openEdit(tag)}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                            className="text-destructive hover:text-destructive size-8 p-0"
                             onClick={() => setDeleteConfirm(tag)}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -568,7 +568,7 @@ function NotesConfig() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <StickyNote className="h-5 w-5" />
+          <StickyNote className="size-5" />
           Notes Configuration
         </CardTitle>
       </CardHeader>

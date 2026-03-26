@@ -79,9 +79,9 @@ export function ConfirmStep({
           <div className="relative flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
               {ServiceIcon ? (
-                <ServiceIcon className="h-7 w-7 text-white" />
+                <ServiceIcon className="size-7 text-white" />
               ) : (
-                <Receipt className="h-7 w-7 text-white" />
+                <Receipt className="size-7 text-white" />
               )}
             </div>
             <div>
@@ -122,7 +122,7 @@ export function ConfirmStep({
                     variant="secondary"
                     className="gap-1.5 px-2.5 py-1 font-medium"
                   >
-                    <PawPrint className="h-3 w-3" />
+                    <PawPrint className="size-3" />
                     {pet.name}
                   </Badge>
                 ))}

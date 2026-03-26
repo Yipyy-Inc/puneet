@@ -112,7 +112,7 @@ function ResetPasswordForm() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
-              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+              <Loader2 className="text-muted-foreground size-6 animate-spin" />
             </div>
           </CardContent>
         </Card>
@@ -291,7 +291,7 @@ export default function ResetPasswordPage() {
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
               <div className="flex items-center justify-center">
-                <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+                <Loader2 className="text-muted-foreground size-6 animate-spin" />
               </div>
             </CardContent>
           </Card>

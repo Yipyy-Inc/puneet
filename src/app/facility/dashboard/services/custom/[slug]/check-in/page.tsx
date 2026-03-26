@@ -124,8 +124,8 @@ export default function CustomServiceCheckInPage() {
                 <p className="text-muted-foreground text-sm">Currently In</p>
                 <p className="text-2xl font-bold">{checkedIn}</p>
               </div>
-              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
-                <LogIn className="text-primary h-6 w-6" />
+              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
+                <LogIn className="text-primary size-6" />
               </div>
             </div>
           </CardContent>
@@ -137,8 +137,8 @@ export default function CustomServiceCheckInPage() {
                 <p className="text-muted-foreground text-sm">Upcoming</p>
                 <p className="text-2xl font-bold">{scheduled}</p>
               </div>
-              <div className="bg-secondary/50 flex h-12 w-12 items-center justify-center rounded-full">
-                <Clock className="text-muted-foreground h-6 w-6" />
+              <div className="bg-secondary/50 flex size-12 items-center justify-center rounded-full">
+                <Clock className="text-muted-foreground size-6" />
               </div>
             </div>
           </CardContent>
@@ -150,8 +150,8 @@ export default function CustomServiceCheckInPage() {
                 <p className="text-muted-foreground text-sm">Completed</p>
                 <p className="text-2xl font-bold">{checkedOut}</p>
               </div>
-              <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
-                <LogOut className="text-muted-foreground h-6 w-6" />
+              <div className="bg-muted flex size-12 items-center justify-center rounded-full">
+                <LogOut className="text-muted-foreground size-6" />
               </div>
             </div>
           </CardContent>
@@ -162,7 +162,7 @@ export default function CustomServiceCheckInPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Clock className="h-5 w-5" />
+            <Clock className="size-5" />
             Today&apos;s Appointments
           </CardTitle>
         </CardHeader>
@@ -177,8 +177,8 @@ export default function CustomServiceCheckInPage() {
                 >
                   <div className="flex items-center gap-4">
                     {/* Pet photo placeholder */}
-                    <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
-                      <PawPrint className="text-primary h-6 w-6" />
+                    <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-full">
+                      <PawPrint className="text-primary size-6" />
                     </div>
                     <div>
                       <p className="font-semibold">{entry.petName}</p>
@@ -208,7 +208,7 @@ export default function CustomServiceCheckInPage() {
                           onClick={() => handleCheckIn(entry.id)}
                           className="gap-1"
                         >
-                          <LogIn className="h-3.5 w-3.5" />
+                          <LogIn className="size-3.5" />
                           Check In
                         </Button>
                       )}
@@ -219,7 +219,7 @@ export default function CustomServiceCheckInPage() {
                           onClick={() => handleCheckOut(entry.id)}
                           className="gap-1"
                         >
-                          <LogOut className="h-3.5 w-3.5" />
+                          <LogOut className="size-3.5" />
                           Check Out
                         </Button>
                       )}

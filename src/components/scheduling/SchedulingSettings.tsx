@@ -1266,7 +1266,7 @@ export default function SchedulingSettings() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <Users className="size-5" />
                   Roles & Departments (Admin Only)
                 </CardTitle>
                 <CardDescription>
@@ -1320,7 +1320,7 @@ export default function SchedulingSettings() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTriangle className="size-5" />
                   Conflict Detection Rules (Admin Only)
                 </CardTitle>
                 <CardDescription>
@@ -1375,7 +1375,7 @@ export default function SchedulingSettings() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" />
+                  <ClipboardList className="size-5" />
                   Task Templates (Admin Only)
                 </CardTitle>
                 <CardDescription>

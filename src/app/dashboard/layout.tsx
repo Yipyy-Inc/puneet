@@ -35,7 +35,7 @@ export default async function DashboardLayout({
       <SidebarInset className="flex min-h-screen w-full flex-col overflow-x-hidden">
         <header className="border-border/50 bg-background/80 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-6 backdrop-blur-md">
           <div className="flex items-center gap-4">
-            <SidebarTrigger className="hover:bg-muted h-9 w-9 rounded-xl transition-colors" />
+            <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors" />
           </div>
 
           <GlobalSearchNext className="max-w-[520px]" />

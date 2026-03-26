@@ -125,7 +125,7 @@ export function LivePetCamGrid() {
                     <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
                       <Video className="h-16 w-16 text-slate-600" />
                       <div className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-red-600 px-2 py-1 text-xs text-white">
-                        <CircleDot className="h-2 w-2 animate-pulse" />
+                        <CircleDot className="size-2 animate-pulse" />
                         LIVE
                       </div>
                       <div className="absolute top-2 right-2 rounded-sm bg-black/50 px-2 py-1 text-xs text-white">
@@ -140,7 +140,7 @@ export function LivePetCamGrid() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                            className="size-8 p-0 text-white hover:bg-white/20"
                           >
                             <Volume2 className="size-4" />
                           </Button>
@@ -148,7 +148,7 @@ export function LivePetCamGrid() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                              className="size-8 p-0 text-white hover:bg-white/20"
                             >
                               <Move className="size-4" />
                             </Button>
@@ -157,7 +157,7 @@ export function LivePetCamGrid() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                          className="size-8 p-0 text-white hover:bg-white/20"
                         >
                           <Maximize2 className="size-4" />
                         </Button>
@@ -166,7 +166,7 @@ export function LivePetCamGrid() {
                   </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <AlertCircle className="h-12 w-12 text-red-500" />
+                    <AlertCircle className="size-12 text-red-500" />
                     <p className="text-sm text-white">Camera Offline</p>
                   </div>
                 )}
@@ -177,24 +177,24 @@ export function LivePetCamGrid() {
                 <div className="flex flex-wrap items-center gap-2">
                   {camera.hasAudio && (
                     <Badge variant="outline" className="text-xs">
-                      <Volume2 className="mr-1 h-3 w-3" />
+                      <Volume2 className="mr-1 size-3" />
                       Audio
                     </Badge>
                   )}
                   {camera.hasPanTilt && (
                     <Badge variant="outline" className="text-xs">
-                      <Move className="mr-1 h-3 w-3" />
+                      <Move className="mr-1 size-3" />
                       Pan/Tilt
                     </Badge>
                   )}
                   {camera.hasNightVision && (
                     <Badge variant="outline" className="text-xs">
-                      <Moon className="mr-1 h-3 w-3" />
+                      <Moon className="mr-1 size-3" />
                       Night Vision
                     </Badge>
                   )}
                   <Badge variant="outline" className="text-xs">
-                    <Eye className="mr-1 h-3 w-3" />
+                    <Eye className="mr-1 size-3" />
                     {camera.accessLevel.replace(/_/g, " ")}
                   </Badge>
                 </div>

@@ -368,15 +368,15 @@ export default function PetDetailPage({
           size="icon"
           onClick={() => router.push(`/facility/dashboard/clients/${id}`)}
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="size-5" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-lg">
+            <div className="bg-muted flex size-12 items-center justify-center rounded-lg">
               {pet.type === "Dog" ? (
-                <Dog className="text-muted-foreground h-6 w-6" />
+                <Dog className="text-muted-foreground size-6" />
               ) : (
-                <Cat className="text-muted-foreground h-6 w-6" />
+                <Cat className="text-muted-foreground size-6" />
               )}
             </div>
             <div>
@@ -782,11 +782,11 @@ export default function PetDetailPage({
                       className="bg-card hover:bg-muted flex items-center justify-between rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-green-100">
                           {rel.relatedPetType === "Dog" ? (
-                            <Dog className="h-5 w-5 text-green-600" />
+                            <Dog className="size-5 text-green-600" />
                           ) : (
-                            <Cat className="h-5 w-5 text-green-600" />
+                            <Cat className="size-5 text-green-600" />
                           )}
                         </div>
                         <div>
@@ -838,7 +838,7 @@ export default function PetDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Heart className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No friends added yet
                   </p>
@@ -869,11 +869,11 @@ export default function PetDetailPage({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="bg-destructive/10 flex h-10 w-10 items-center justify-center rounded-full">
+                          <div className="bg-destructive/10 flex size-10 items-center justify-center rounded-full">
                             {rel.relatedPetType === "Dog" ? (
-                              <Dog className="text-destructive h-5 w-5" />
+                              <Dog className="text-destructive size-5" />
                             ) : (
-                              <Cat className="text-destructive h-5 w-5" />
+                              <Cat className="text-destructive size-5" />
                             )}
                           </div>
                           <div>
@@ -889,7 +889,7 @@ export default function PetDetailPage({
                       </div>
                       {rel.notes && (
                         <div className="bg-destructive/10 text-destructive mt-3 rounded-sm p-2 text-xs">
-                          <AlertTriangle className="mr-1 inline h-3 w-3" />
+                          <AlertTriangle className="mr-1 inline size-3" />
                           {rel.notes}
                         </div>
                       )}
@@ -898,7 +898,7 @@ export default function PetDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Users className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Users className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No pets to keep apart
                   </p>
@@ -929,7 +929,7 @@ export default function PetDetailPage({
                       className="group relative cursor-pointer"
                     >
                       <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-                        <ImageIcon className="text-muted-foreground h-12 w-12" />
+                        <ImageIcon className="text-muted-foreground size-12" />
                       </div>
                       {photo.isPrimary && (
                         <Badge className="absolute top-2 right-2 text-xs">
@@ -951,7 +951,7 @@ export default function PetDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Camera className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Camera className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">No photos yet</p>
                 </div>
               )}
@@ -1047,7 +1047,7 @@ export default function PetDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Syringe className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Syringe className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No vaccination records
                   </p>
@@ -1114,7 +1114,7 @@ export default function PetDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Calendar className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Calendar className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No booking history
                   </p>
@@ -1280,7 +1280,7 @@ export default function PetDetailPage({
                                 key={idx}
                                 className="flex aspect-square items-center justify-center rounded-lg bg-gray-100"
                               >
-                                <ImageIcon className="text-muted-foreground h-8 w-8" />
+                                <ImageIcon className="text-muted-foreground size-8" />
                               </div>
                             ))}
                           </div>
@@ -1301,7 +1301,7 @@ export default function PetDetailPage({
 
                       {report.sentToOwner && report.sentAt && (
                         <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <CheckCircle className="size-3 text-green-500" />
                           Sent to owner on {formatDateTime(report.sentAt)}
                         </div>
                       )}
@@ -1319,7 +1319,7 @@ export default function PetDetailPage({
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <Award className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                <Award className="text-muted-foreground mx-auto mb-2 size-12" />
                 <p className="text-muted-foreground text-sm">
                   No report cards yet
                 </p>

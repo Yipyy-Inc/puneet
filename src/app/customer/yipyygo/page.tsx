@@ -162,7 +162,7 @@ export default function CustomerYipyyGoPage() {
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <ClipboardCheck className="text-primary h-7 w-7" />
+              <ClipboardCheck className="text-primary size-7" />
               YipyyGo
             </h1>
             <p className="text-muted-foreground mt-1">Pre-check-in forms</p>
@@ -189,7 +189,7 @@ export default function CustomerYipyyGoPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <ClipboardCheck className="text-primary h-7 w-7" />
+              <ClipboardCheck className="text-primary size-7" />
               YipyyGo
             </h1>
             <p className="text-muted-foreground mt-1">

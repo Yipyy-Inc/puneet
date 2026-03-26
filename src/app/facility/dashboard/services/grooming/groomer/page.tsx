@@ -129,7 +129,7 @@ export default function GroomerDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-yellow-500" />
+              <AlertCircle className="mx-auto mb-4 size-12 text-yellow-500" />
               <h2 className="mb-2 text-xl font-semibold">Access Restricted</h2>
               <p className="text-muted-foreground">
                 This page is only accessible to groomers.
@@ -319,7 +319,7 @@ export default function GroomerDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-yellow-500" />
+              <AlertCircle className="mx-auto mb-4 size-12 text-yellow-500" />
               <h2 className="mb-2 text-xl font-semibold">Stylist Not Found</h2>
               <p className="text-muted-foreground">
                 Unable to find your stylist profile. Please contact an
@@ -350,7 +350,7 @@ export default function GroomerDashboardPage() {
         <CardContent>
           {sortedAppointments.length === 0 ? (
             <div className="py-12 text-center">
-              <Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+              <Calendar className="text-muted-foreground mx-auto mb-4 size-12" />
               <p className="text-lg font-medium">No appointments scheduled</p>
               <p className="text-muted-foreground mt-1 text-sm">
                 You have no appointments for today.
@@ -368,7 +368,7 @@ export default function GroomerDashboardPage() {
                       <div className="flex flex-1 items-start gap-4">
                         {/* Time */}
                         <div className="flex min-w-[80px] flex-col items-center">
-                          <Clock className="text-muted-foreground mb-1 h-5 w-5" />
+                          <Clock className="text-muted-foreground mb-1 size-5" />
                           <span className="text-sm font-medium">
                             {formatTime(appointment.startTime)}
                           </span>
@@ -397,11 +397,11 @@ export default function GroomerDashboardPage() {
                             </p>
                             <div className="mt-2 flex items-center gap-4">
                               <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
+                                <User className="size-3" />
                                 <span>{appointment.ownerName}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
+                                <Phone className="size-3" />
                                 <span>{appointment.ownerPhone}</span>
                               </div>
                             </div>
@@ -553,7 +553,7 @@ export default function GroomerDashboardPage() {
                         onClick={() => handleRemovePhoto(idx)}
                         className="bg-destructive text-destructive-foreground absolute top-1 right-1 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="size-3" />
                       </button>
                     </div>
                   ))}

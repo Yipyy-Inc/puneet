@@ -137,7 +137,7 @@ export function IssueGiftCardModal({
       <DialogContent className="min-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5" />
+            <Gift className="size-5" />
             Issue Gift Card
           </DialogTitle>
           <DialogDescription>Create a new gift card</DialogDescription>

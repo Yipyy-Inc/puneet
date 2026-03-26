@@ -603,7 +603,7 @@ export function SupportTicketing() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="size-8 p-0"
                           >
                             <MoreVertical className="size-4" />
                           </Button>
@@ -646,11 +646,11 @@ export function SupportTicketing() {
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <div className="relative">
-                      <div className="from-primary/20 to-primary/5 text-primary flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br text-lg font-semibold">
+                      <div className="from-primary/20 to-primary/5 text-primary flex size-12 items-center justify-center rounded-full bg-linear-to-br text-lg font-semibold">
                         {agent.name.charAt(0)}
                       </div>
                       <span
-                        className={`border-background absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 ${getAgentStatusColor(agent.status)} `}
+                        className={`border-background absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 ${getAgentStatusColor(agent.status)} `}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -774,7 +774,7 @@ export function SupportTicketing() {
           <Card className="mt-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+                <TrendingUp className="size-5" />
                 SLA Performance Overview
               </CardTitle>
               <CardDescription>
@@ -1221,7 +1221,7 @@ export function SupportTicketing() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
+              <UserPlus className="size-5" />
               Assign Agent
             </DialogTitle>
           </DialogHeader>
@@ -1247,7 +1247,7 @@ export function SupportTicketing() {
                     <SelectItem key={agent.id} value={agent.id}>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`h-2 w-2 rounded-full ${getAgentStatusColor(agent.status)} `}
+                          className={`size-2 rounded-full ${getAgentStatusColor(agent.status)} `}
                         />
                         <span>{agent.name}</span>
                         <span className="text-muted-foreground">
@@ -1323,7 +1323,7 @@ export function SupportTicketing() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="text-success h-5 w-5" />
+              <CheckCircle2 className="text-success size-5" />
               Resolve Ticket
             </DialogTitle>
           </DialogHeader>
@@ -1372,7 +1372,7 @@ export function SupportTicketing() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Settings className="size-5" />
               SLA Configuration
             </DialogTitle>
           </DialogHeader>
@@ -1454,7 +1454,7 @@ export function SupportTicketing() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5" />
+              <Ticket className="size-5" />
               Create New Ticket
             </DialogTitle>
           </DialogHeader>

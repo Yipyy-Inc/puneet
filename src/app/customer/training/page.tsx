@@ -474,7 +474,7 @@ export default function CustomerTrainingPage() {
                       variant={isFull ? "destructive" : "default"}
                       className="flex items-center gap-1"
                     >
-                      <Users className="h-3 w-3" />
+                      <Users className="size-3" />
                       {spotsLeft} of {seriesItem.maxCapacity} spots left
                     </Badge>
                   </div>
@@ -568,7 +568,7 @@ export default function CustomerTrainingPage() {
                 <div className="space-y-2 rounded-lg border p-4">
                   {prerequisiteValidation.eligible ? (
                     <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="h-5 w-5" />
+                      <CheckCircle2 className="size-5" />
                       <span className="font-medium">
                         All prerequisites met!
                       </span>
@@ -576,7 +576,7 @@ export default function CustomerTrainingPage() {
                   ) : (
                     <div className="space-y-2">
                       <div className="text-destructive flex items-center gap-2">
-                        <XCircle className="h-5 w-5" />
+                        <XCircle className="size-5" />
                         <span className="font-medium">
                           Prerequisites not met
                         </span>

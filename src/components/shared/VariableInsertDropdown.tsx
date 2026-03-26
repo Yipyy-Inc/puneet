@@ -48,7 +48,7 @@ export function VariableInsertDropdown({
           disabled={disabled}
           className="gap-1.5 text-xs"
         >
-          <Braces className="h-3.5 w-3.5" />
+          <Braces className="size-3.5" />
           Insert Variable
         </Button>
       </PopoverTrigger>

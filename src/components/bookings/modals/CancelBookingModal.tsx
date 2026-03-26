@@ -64,7 +64,7 @@ export function CancelBookingModal({
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-destructive flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
+            <AlertTriangle className="size-5" />
             Cancel Booking #{booking.id}
           </DialogTitle>
           <DialogDescription>

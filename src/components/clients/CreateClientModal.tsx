@@ -234,7 +234,7 @@ export function CreateClientModal({
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
+            <Plus className="size-5" />
             Create New Client - Step {step} of 2
           </DialogTitle>
           <DialogDescription>

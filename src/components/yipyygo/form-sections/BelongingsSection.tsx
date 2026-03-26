@@ -224,7 +224,7 @@ export function BelongingsSection({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0"
+                    className="size-8 shrink-0"
                     onClick={() => handleRemoveItem(item.id)}
                   >
                     <X className="size-4" />
@@ -252,24 +252,24 @@ export function BelongingsSection({
               }}
             />
             {formData.belongingsPhotoUrl && (
-              <div className="relative h-32 w-32 overflow-hidden rounded-lg border">
+              <div className="relative size-32 overflow-hidden rounded-lg border">
                 <Image
                   src={formData.belongingsPhotoUrl}
                   alt="Belongings"
                   width={128}
                   height={128}
-                  className="h-full w-full object-cover"
+                  className="size-full object-cover"
                   unoptimized
                 />
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute top-1 right-1 h-6 w-6"
+                  className="absolute top-1 right-1 size-6"
                   onClick={() =>
                     updateFormData({ belongingsPhotoUrl: undefined })
                   }
                 >
-                  <X className="h-3 w-3" />
+                  <X className="size-3" />
                 </Button>
               </div>
             )}

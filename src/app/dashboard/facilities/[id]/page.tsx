@@ -311,17 +311,17 @@ export default function FacilityDetailPage() {
               size="icon"
               onClick={() => router.push("/dashboard/facilities")}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="size-5" />
             </Button>
             <div className="flex flex-1 items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                className="flex size-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Building className="h-6 w-6 text-white" />
+                <Building className="size-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">
@@ -340,7 +340,7 @@ export default function FacilityDetailPage() {
                             variant="secondary"
                             className="px-2 py-0.5 text-xs capitalize"
                           >
-                            <Icon className="mr-1 h-3 w-3" />
+                            <Icon className="mr-1 size-3" />
                             {service}
                           </Badge>
                         );

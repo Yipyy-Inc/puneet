@@ -32,7 +32,7 @@ export default function CommunicationsPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-100 p-3">
-                <Phone className="h-6 w-6 text-blue-600" />
+                <Phone className="size-6 text-blue-600" />
               </div>
               <div>
                 <CardTitle>Calling</CardTitle>
@@ -57,7 +57,7 @@ export default function CommunicationsPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-green-100 p-3">
-                <MessageSquare className="h-6 w-6 text-green-600" />
+                <MessageSquare className="size-6 text-green-600" />
               </div>
               <div>
                 <CardTitle>Messaging</CardTitle>

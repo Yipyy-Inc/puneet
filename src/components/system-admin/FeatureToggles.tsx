@@ -345,7 +345,7 @@ export function FeatureToggles() {
         const Icon = scopeInfo.icon;
         return (
           <Badge className={` ${scopeInfo.color} gap-1 border-0`}>
-            <Icon className="h-3 w-3" />
+            <Icon className="size-3" />
             {flag.scope}
           </Badge>
         );
@@ -642,13 +642,13 @@ export function FeatureToggles() {
                       } `}
                     >
                       {log.action === "toggled" ? (
-                        <ToggleRight className="text-primary h-5 w-5" />
+                        <ToggleRight className="text-primary size-5" />
                       ) : log.action === "updated" ? (
-                        <Edit className="text-warning h-5 w-5" />
+                        <Edit className="text-warning size-5" />
                       ) : log.action === "created" ? (
-                        <Plus className="text-success h-5 w-5" />
+                        <Plus className="text-success size-5" />
                       ) : (
-                        <RefreshCw className="text-muted-foreground h-5 w-5" />
+                        <RefreshCw className="text-muted-foreground size-5" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -668,7 +668,7 @@ export function FeatureToggles() {
                               ? log.previousValue.substring(0, 50) + "..."
                               : log.previousValue}
                           </span>
-                          <ArrowRight className="text-muted-foreground h-3 w-3" />
+                          <ArrowRight className="text-muted-foreground size-3" />
                           <span className="text-foreground">
                             {log.newValue.length > 50
                               ? log.newValue.substring(0, 50) + "..."
@@ -683,20 +683,20 @@ export function FeatureToggles() {
                       )}
                       <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                         <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
+                          <User className="size-3" />
                           {log.actor}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
+                          <Clock className="size-3" />
                           {new Date(log.timestamp).toLocaleString()}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Building className="h-3 w-3" />
+                          <Building className="size-3" />
                           {log.affectedTenants} tenants affected
                         </span>
                         {log.syncDuration && (
                           <span className="flex items-center gap-1">
-                            <Timer className="h-3 w-3" />
+                            <Timer className="size-3" />
                             {log.syncDuration}ms sync
                           </span>
                         )}
@@ -727,7 +727,7 @@ export function FeatureToggles() {
         <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
+              <Building className="size-5" />
               {selectedTenant?.tenantName} - Module Configuration
             </DialogTitle>
             <DialogDescription>
@@ -799,7 +799,7 @@ export function FeatureToggles() {
                       >
                         <div className="flex items-center gap-3">
                           <Package
-                            className={`h-5 w-5 ${
+                            className={`size-5 ${
                               isEnabled
                                 ? "text-success"
                                 : `text-muted-foreground`
@@ -917,7 +917,7 @@ export function FeatureToggles() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Flag className="h-5 w-5" />
+              <Flag className="size-5" />
               {selectedFlag?.name}
             </DialogTitle>
             <DialogDescription>
@@ -1056,7 +1056,7 @@ export function FeatureToggles() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+              <Plus className="size-5" />
               Create New Config Flag
             </DialogTitle>
           </DialogHeader>

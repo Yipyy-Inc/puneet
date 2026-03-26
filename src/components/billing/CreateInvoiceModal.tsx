@@ -196,7 +196,7 @@ export function CreateInvoiceModal({
       <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileText className="size-5" />
             Create Invoice
           </DialogTitle>
           <DialogDescription>

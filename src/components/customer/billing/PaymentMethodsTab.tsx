@@ -175,7 +175,7 @@ export function PaymentMethodsTab() {
       {customerPaymentMethods.length === 0 ? (
         <Card>
           <CardContent className="space-y-3 py-12 text-center">
-            <CreditCard className="text-muted-foreground mx-auto h-12 w-12 opacity-50" />
+            <CreditCard className="text-muted-foreground mx-auto size-12 opacity-50" />
             <p className="font-semibold">No payment methods</p>
             <p className="text-muted-foreground text-sm">
               Add a payment method to make booking and payments easier
@@ -231,7 +231,7 @@ export function PaymentMethodsTab() {
                     </div>
                     {method.isDefault && (
                       <Badge variant="default" className="gap-1">
-                        <Check className="h-3 w-3" />
+                        <Check className="size-3" />
                         Default
                       </Badge>
                     )}
@@ -317,7 +317,7 @@ export function PaymentMethodsTab() {
               />
               {errors.cardNumber && (
                 <p className="text-destructive flex items-center gap-1 text-sm">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="size-3" />
                   {errors.cardNumber}
                 </p>
               )}
@@ -355,7 +355,7 @@ export function PaymentMethodsTab() {
             </div>
             {errors.expiry && (
               <p className="text-destructive flex items-center gap-1 text-sm">
-                <AlertCircle className="h-3 w-3" />
+                <AlertCircle className="size-3" />
                 {errors.expiry}
               </p>
             )}
@@ -376,7 +376,7 @@ export function PaymentMethodsTab() {
               />
               {errors.cvc && (
                 <p className="text-destructive flex items-center gap-1 text-sm">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="size-3" />
                   {errors.cvc}
                 </p>
               )}
@@ -397,7 +397,7 @@ export function PaymentMethodsTab() {
               />
               {errors.cardholderName && (
                 <p className="text-destructive flex items-center gap-1 text-sm">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="size-3" />
                   {errors.cardholderName}
                 </p>
               )}

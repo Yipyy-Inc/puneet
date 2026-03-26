@@ -99,13 +99,13 @@ const statusColors: Record<
 };
 
 const statusIcons: Record<GroomingStatus, React.ReactNode> = {
-  scheduled: <Clock className="h-3 w-3" />,
-  "checked-in": <LogIn className="h-3 w-3" />,
-  "in-progress": <Scissors className="h-3 w-3" />,
-  "ready-for-pickup": <Package className="h-3 w-3" />,
-  completed: <CheckCircle2 className="h-3 w-3" />,
-  cancelled: <XCircle className="h-3 w-3" />,
-  "no-show": <AlertCircle className="h-3 w-3" />,
+  scheduled: <Clock className="size-3" />,
+  "checked-in": <LogIn className="size-3" />,
+  "in-progress": <Scissors className="size-3" />,
+  "ready-for-pickup": <Package className="size-3" />,
+  completed: <CheckCircle2 className="size-3" />,
+  cancelled: <XCircle className="size-3" />,
+  "no-show": <AlertCircle className="size-3" />,
 };
 
 export default function GroomingCalendarPage() {
@@ -454,7 +454,7 @@ export default function GroomingCalendarPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Scissors className="h-5 w-5" />
+              <Scissors className="size-5" />
               Appointment Details
             </DialogTitle>
           </DialogHeader>
@@ -462,8 +462,8 @@ export default function GroomingCalendarPage() {
             <div className="grid gap-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-100">
-                    <PawPrint className="h-6 w-6 text-pink-600" />
+                  <div className="flex size-12 items-center justify-center rounded-full bg-pink-100">
+                    <PawPrint className="size-6 text-pink-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold">
@@ -581,7 +581,7 @@ export default function GroomingCalendarPage() {
 
               {selectedAppointment.onlineBooking && (
                 <Badge variant="outline" className="w-fit">
-                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  <CalendarIcon className="mr-1 size-3" />
                   Booked Online
                 </Badge>
               )}

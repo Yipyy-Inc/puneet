@@ -160,10 +160,10 @@ export default function LiveSupportPage() {
       defaultVisible: true,
       render: (ticket) => {
         const categoryIcons: Record<string, React.ReactNode> = {
-          Technical: <Bug className="mr-1 h-3 w-3" />,
-          Billing: <Ticket className="mr-1 h-3 w-3" />,
-          Service: <Headphones className="mr-1 h-3 w-3" />,
-          "Feature Request": <Lightbulb className="mr-1 h-3 w-3" />,
+          Technical: <Bug className="mr-1 size-3" />,
+          Billing: <Ticket className="mr-1 size-3" />,
+          Service: <Headphones className="mr-1 size-3" />,
+          "Feature Request": <Lightbulb className="mr-1 size-3" />,
         };
         return (
           <span className="flex items-center text-sm">
@@ -458,11 +458,11 @@ export default function LiveSupportPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <div className="bg-gradient-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full font-medium">
+                            <div className="bg-gradient-primary text-primary-foreground flex size-10 items-center justify-center rounded-full font-medium">
                               {participantName.charAt(0)}
                             </div>
                             {isActive && (
-                              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2" />
+                              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2" />
                             )}
                           </div>
                           <div>
@@ -692,7 +692,7 @@ export default function LiveSupportPage() {
           <DialogContent className="min-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="text-success h-5 w-5" />
+                <CheckCircle2 className="text-success size-5" />
                 Resolve Ticket
               </DialogTitle>
             </DialogHeader>

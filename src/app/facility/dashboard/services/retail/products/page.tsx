@@ -366,12 +366,12 @@ export default function ProductsPage() {
       render: (item) =>
         item.onlineVisible ? (
           <Badge variant="outline" className="gap-1">
-            <Eye className="h-3 w-3" />
+            <Eye className="size-3" />
             Visible
           </Badge>
         ) : (
           <Badge variant="secondary" className="gap-1">
-            <EyeOff className="h-3 w-3" />
+            <EyeOff className="size-3" />
             Hidden
           </Badge>
         ),
@@ -594,12 +594,12 @@ export default function ProductsPage() {
                   <div className="flex items-center gap-2">
                     {product.onlineVisible ? (
                       <Badge variant="outline" className="gap-1">
-                        <Eye className="h-3 w-3" />
+                        <Eye className="size-3" />
                         Online
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="gap-1">
-                        <EyeOff className="h-3 w-3" />
+                        <EyeOff className="size-3" />
                         Hidden
                       </Badge>
                     )}
@@ -779,10 +779,10 @@ export default function ProductsPage() {
                       type="button"
                       variant="destructive"
                       size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      className="absolute -top-2 -right-2 size-6 rounded-full"
                       onClick={() => setFormData({ ...formData, imageUrl: "" })}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </Button>
                   </div>
                 )}
@@ -1019,7 +1019,7 @@ export default function ProductsPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="size-8"
                             onClick={() => handleEditVariant(variant)}
                           >
                             <Edit className="size-4" />
@@ -1028,7 +1028,7 @@ export default function ProductsPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="text-destructive h-8 w-8"
+                            className="text-destructive size-8"
                             onClick={() => handleDeleteVariant(variant.id)}
                           >
                             <X className="size-4" />
@@ -1347,12 +1347,12 @@ export default function ProductsPage() {
                       type="button"
                       variant="destructive"
                       size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      className="absolute -top-2 -right-2 size-6 rounded-full"
                       onClick={() =>
                         setVariantForm({ ...variantForm, imageUrl: "" })
                       }
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3" />
                     </Button>
                   </div>
                 )}

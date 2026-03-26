@@ -51,7 +51,7 @@ export function SystemPerformanceMetrics() {
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.systemUptime}%
                   </h3>
-                  <CheckCircle2 className="text-success h-5 w-5" />
+                  <CheckCircle2 className="text-success size-5" />
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   This month
@@ -64,7 +64,7 @@ export function SystemPerformanceMetrics() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <Activity className="h-5 w-5 text-white" />
+                <Activity className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -91,7 +91,7 @@ export function SystemPerformanceMetrics() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Clock className="h-5 w-5 text-white" />
+                <Clock className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -123,7 +123,7 @@ export function SystemPerformanceMetrics() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <AlertCircle className="h-5 w-5 text-white" />
+                <AlertCircle className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -152,7 +152,7 @@ export function SystemPerformanceMetrics() {
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Users className="h-5 w-5 text-white" />
+                <Users className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -388,13 +388,13 @@ export function SystemPerformanceMetrics() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                className="flex size-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <Zap className="h-6 w-6 text-white" />
+                <Zap className="size-6 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Page Load Time</p>
@@ -408,13 +408,13 @@ export function SystemPerformanceMetrics() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                className="flex size-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <Activity className="h-6 w-6 text-white" />
+                <Activity className="size-6 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">API Response</p>
@@ -430,13 +430,13 @@ export function SystemPerformanceMetrics() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                className="flex size-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Users className="h-6 w-6 text-white" />
+                <Users className="size-6 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Avg Session</p>
@@ -452,13 +452,13 @@ export function SystemPerformanceMetrics() {
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                className="flex size-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <CheckCircle2 className="h-6 w-6 text-white" />
+                <CheckCircle2 className="size-6 text-white" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Total Sessions</p>
@@ -485,7 +485,7 @@ export function SystemPerformanceMetrics() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success/20 bg-success/10 rounded-xl border p-4">
               <div className="mb-3 flex items-center gap-3">
-                <CheckCircle2 className="text-success h-5 w-5" />
+                <CheckCircle2 className="text-success size-5" />
                 <h4 className="font-semibold">Operational</h4>
               </div>
               <ul className="space-y-2 text-sm">
@@ -518,7 +518,7 @@ export function SystemPerformanceMetrics() {
 
             <div className="bg-muted/50 rounded-xl p-4">
               <div className="mb-3 flex items-center gap-3">
-                <Activity className="text-primary h-5 w-5" />
+                <Activity className="text-primary size-5" />
                 <h4 className="font-semibold">Performance Metrics</h4>
               </div>
               <ul className="space-y-2 text-sm">

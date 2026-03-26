@@ -2271,7 +2271,7 @@ export default function OrdersPage() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="size-7"
                                 onClick={() => {
                                   const updated = returnForm.items.map((ri) =>
                                     ri.transactionItemId ===
@@ -2292,7 +2292,7 @@ export default function OrdersPage() {
                                 }}
                                 disabled={returnItem.quantity <= 1}
                               >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="size-3" />
                               </Button>
                               <span className="w-8 text-center text-sm">
                                 {returnItem.quantity}
@@ -2300,7 +2300,7 @@ export default function OrdersPage() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="size-7"
                                 onClick={() => {
                                   const updated = returnForm.items.map((ri) =>
                                     ri.transactionItemId ===
@@ -2321,7 +2321,7 @@ export default function OrdersPage() {
                                 }}
                                 disabled={returnItem.quantity >= maxQuantity}
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="size-3" />
                               </Button>
                               <Select
                                 value={returnItem.reason}
@@ -2435,13 +2435,13 @@ export default function OrdersPage() {
                       <div className="flex items-center gap-2">
                         {selectedTransaction.yipyyPayTransactionId && (
                           <Badge variant="default" className="gap-1">
-                            <Smartphone className="h-3 w-3" />
+                            <Smartphone className="size-3" />
                             Pay with iPhone
                           </Badge>
                         )}
                         {selectedTransaction.cloverTransactionId && (
                           <Badge variant="default" className="gap-1">
-                            <Printer className="h-3 w-3" />
+                            <Printer className="size-3" />
                             Clover Terminal
                           </Badge>
                         )}
@@ -2449,7 +2449,7 @@ export default function OrdersPage() {
                           !selectedTransaction.yipyyPayTransactionId &&
                           !selectedTransaction.cloverTransactionId && (
                             <Badge variant="default" className="gap-1">
-                              <CreditCard className="h-3 w-3" />
+                              <CreditCard className="size-3" />
                               Card Payment (Fiserv)
                             </Badge>
                           )}
@@ -2458,14 +2458,12 @@ export default function OrdersPage() {
                           !selectedTransaction.fiservTransactionId && (
                             <Badge variant="outline" className="gap-1">
                               {selectedTransaction.paymentMethod === "cash" && (
-                                <Banknote className="h-3 w-3" />
+                                <Banknote className="size-3" />
                               )}
                               {selectedTransaction.paymentMethod ===
-                                "store_credit" && (
-                                <Wallet className="h-3 w-3" />
-                              )}
+                                "store_credit" && <Wallet className="size-3" />}
                               {selectedTransaction.paymentMethod ===
-                                "gift_card" && <Gift className="h-3 w-3" />}
+                                "gift_card" && <Gift className="size-3" />}
                               {selectedTransaction.paymentMethod
                                 .charAt(0)
                                 .toUpperCase() +
@@ -2503,7 +2501,7 @@ export default function OrdersPage() {
                               })
                             }
                           >
-                            <ArrowLeft className="h-5 w-5" />
+                            <ArrowLeft className="size-5" />
                             <div className="text-left">
                               <p className="font-medium">Original Payment</p>
                               <p className="text-muted-foreground text-xs">
@@ -2531,7 +2529,7 @@ export default function OrdersPage() {
                               returnForm.refundMethod === "original_payment"
                             }
                           >
-                            <Wallet className="h-5 w-5" />
+                            <Wallet className="size-5" />
                             <div className="text-left">
                               <p className="font-medium">Store Credit</p>
                               <p className="text-muted-foreground text-xs">
@@ -2566,7 +2564,7 @@ export default function OrdersPage() {
                               returnForm.refundMethod === "original_payment"
                             }
                           >
-                            <Gift className="h-5 w-5" />
+                            <Gift className="size-5" />
                             <div className="text-left">
                               <p className="font-medium">Gift Card</p>
                               <p className="text-muted-foreground text-xs">
@@ -2597,7 +2595,7 @@ export default function OrdersPage() {
                               })
                             }
                           >
-                            <Banknote className="h-5 w-5" />
+                            <Banknote className="size-5" />
                             <div className="text-left">
                               <p className="font-medium">Cash (Override)</p>
                               <p className="text-muted-foreground text-xs">
@@ -2628,7 +2626,7 @@ export default function OrdersPage() {
                                   })
                                 }
                               >
-                                <CreditCard className="h-5 w-5" />
+                                <CreditCard className="size-5" />
                                 <div className="text-left">
                                   <p className="font-medium">{method.name}</p>
                                   <p className="text-muted-foreground text-xs">

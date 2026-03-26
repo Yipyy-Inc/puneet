@@ -112,7 +112,7 @@ export function FormNotificationSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bell className="text-primary h-5 w-5" />
+              <Bell className="text-primary size-5" />
               <CardTitle>Form Notifications</CardTitle>
             </div>
             <Button size="sm" onClick={handleSave}>
@@ -136,7 +136,7 @@ export function FormNotificationSettings() {
                 variant="outline"
                 className="ml-auto h-5 gap-1 text-[10px]"
               >
-                <Bell className="h-3 w-3" />
+                <Bell className="size-3" />
                 In-app
               </Badge>
             </div>
@@ -182,11 +182,11 @@ export function FormNotificationSettings() {
               </Badge>
               <div className="ml-auto flex gap-1">
                 <Badge variant="outline" className="h-5 gap-1 text-[10px]">
-                  <Mail className="h-3 w-3" />
+                  <Mail className="size-3" />
                   Email
                 </Badge>
                 <Badge variant="outline" className="h-5 gap-1 text-[10px]">
-                  <MessageSquare className="h-3 w-3" />
+                  <MessageSquare className="size-3" />
                   SMS
                 </Badge>
               </div>

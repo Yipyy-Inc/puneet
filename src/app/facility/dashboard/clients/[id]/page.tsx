@@ -384,21 +384,21 @@ export default function ClientDetailPage({
           size="icon"
           onClick={() => router.push("/facility/dashboard/clients")}
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="size-5" />
         </Button>
         <div className="flex flex-1 items-center gap-4">
           {/* Client Avatar */}
           <div className="relative">
             <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
-              <User className="text-muted-foreground h-8 w-8" />
+              <User className="text-muted-foreground size-8" />
             </div>
             {isEditing && (
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute -right-1 -bottom-1 h-6 w-6 rounded-full"
+                className="absolute -right-1 -bottom-1 size-6 rounded-full"
               >
-                <Camera className="h-3 w-3" />
+                <Camera className="size-3" />
               </Button>
             )}
           </div>
@@ -410,7 +410,7 @@ export default function ClientDetailPage({
               <StatusBadge type="status" value={client.status} showIcon />
               {clientBanRecord && (
                 <Badge variant="destructive" className="gap-1">
-                  <AlertTriangle className="h-3 w-3" />
+                  <AlertTriangle className="size-3" />
                   Banned
                 </Badge>
               )}
@@ -1166,7 +1166,7 @@ export default function ClientDetailPage({
                 </div>
               ) : (
                 <div className="py-6 text-center">
-                  <ShoppingBag className="text-muted-foreground mx-auto mb-2 h-10 w-10 opacity-50" />
+                  <ShoppingBag className="text-muted-foreground mx-auto mb-2 size-10 opacity-50" />
                   <p className="text-muted-foreground text-sm">
                     No retail purchases yet
                   </p>
@@ -1222,9 +1222,9 @@ export default function ClientDetailPage({
                         <div className="flex items-start gap-4">
                           <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
                             {pet.type === "Dog" ? (
-                              <Dog className="text-muted-foreground h-8 w-8" />
+                              <Dog className="text-muted-foreground size-8" />
                             ) : (
-                              <Cat className="text-muted-foreground h-8 w-8" />
+                              <Cat className="text-muted-foreground size-8" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -1240,7 +1240,7 @@ export default function ClientDetailPage({
                               <Badge variant="outline">{pet.weight} kg</Badge>
                               {petData.banRecord && (
                                 <Badge variant="destructive" className="gap-1">
-                                  <AlertTriangle className="h-3 w-3" />
+                                  <AlertTriangle className="size-3" />
                                   Banned
                                 </Badge>
                               )}
@@ -1256,7 +1256,7 @@ export default function ClientDetailPage({
                         </div>
                         {petData.banRecord && (
                           <div className="bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-sm p-2 text-xs">
-                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                            <AlertTriangle className="mt-0.5 size-3 shrink-0" />
                             <div>
                               <span className="font-medium">
                                 {petData.banRecord.reason}
@@ -1297,7 +1297,7 @@ export default function ClientDetailPage({
                         </div>
                         {petData.expiredVaccinations.length > 0 && (
                           <div className="bg-destructive/10 text-destructive mt-3 flex items-center gap-2 rounded-sm p-2 text-xs">
-                            <AlertCircle className="h-3 w-3" />
+                            <AlertCircle className="size-3" />
                             {petData.expiredVaccinations.length} expired
                             vaccination(s)
                           </div>
@@ -1308,7 +1308,7 @@ export default function ClientDetailPage({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Heart className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No pets registered
                   </p>
@@ -1535,7 +1535,7 @@ export default function ClientDetailPage({
                                       ${invoice.amountDue.toFixed(2)} due
                                     </span>
                                     <Button variant="outline" size="sm">
-                                      <Send className="h-3 w-3" />
+                                      <Send className="size-3" />
                                     </Button>
                                   </div>
                                 )}
@@ -1900,7 +1900,7 @@ export default function ClientDetailPage({
                                             variant="secondary"
                                             className="text-xs"
                                           >
-                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                            <CheckCircle className="mr-1 size-3" />
                                             {term}
                                           </Badge>
                                         ))}
@@ -2076,7 +2076,7 @@ export default function ClientDetailPage({
                             </div>
                             {call.recordingUrl && (
                               <Button variant="outline" size="sm">
-                                <Play className="mr-1 h-3 w-3" />
+                                <Play className="mr-1 size-3" />
                                 Play Recording
                               </Button>
                             )}
@@ -2262,9 +2262,9 @@ function PetDetailContent({
         <div className="flex items-start gap-4">
           <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-lg">
             {pet.type === "Dog" ? (
-              <Dog className="text-muted-foreground h-8 w-8" />
+              <Dog className="text-muted-foreground size-8" />
             ) : (
-              <Cat className="text-muted-foreground h-8 w-8" />
+              <Cat className="text-muted-foreground size-8" />
             )}
           </div>
           <div>
@@ -2443,7 +2443,7 @@ function PetDetailContent({
                       className="group relative cursor-pointer"
                     >
                       <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-                        <ImageIcon className="text-muted-foreground h-12 w-12" />
+                        <ImageIcon className="text-muted-foreground size-12" />
                       </div>
                       {photo.isPrimary && (
                         <Badge className="absolute top-2 right-2 text-xs">
@@ -2465,7 +2465,7 @@ function PetDetailContent({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Camera className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Camera className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">No photos yet</p>
                 </div>
               )}
@@ -2573,7 +2573,7 @@ function PetDetailContent({
                               size="sm"
                               className="mt-2 w-full"
                             >
-                              <Download className="mr-1 h-3 w-3" />
+                              <Download className="mr-1 size-3" />
                               Download Certificate
                             </Button>
                           )}
@@ -2583,7 +2583,7 @@ function PetDetailContent({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Syringe className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <Syringe className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No vaccination records
                   </p>
@@ -2620,10 +2620,10 @@ function PetDetailContent({
                             <h4 className="flex items-center gap-2 text-sm font-semibold capitalize">
                               {booking.service}
                               {booking.status === "completed" && (
-                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                <CheckCircle className="size-3 text-green-500" />
                               )}
                               {booking.status === "pending" && (
-                                <Clock className="h-3 w-3 text-yellow-500" />
+                                <Clock className="size-3 text-yellow-500" />
                               )}
                             </h4>
                             <p className="text-muted-foreground mt-1 text-xs">
@@ -2651,7 +2651,7 @@ function PetDetailContent({
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <History className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <History className="text-muted-foreground mx-auto mb-2 size-12" />
                   <p className="text-muted-foreground text-sm">
                     No stay history
                   </p>
@@ -2772,7 +2772,7 @@ function PetDetailContent({
                               key={idx}
                               className="bg-muted flex aspect-square items-center justify-center rounded-lg"
                             >
-                              <ImageIcon className="text-muted-foreground h-8 w-8" />
+                              <ImageIcon className="text-muted-foreground size-8" />
                             </div>
                           ))}
                         </div>
@@ -2793,7 +2793,7 @@ function PetDetailContent({
 
                     {report.sentToOwner && report.sentAt && (
                       <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
-                        <CheckCircle className="h-3 w-3" />
+                        <CheckCircle className="size-3" />
                         Sent to owner on {formatDateTime(report.sentAt)}
                       </div>
                     )}
@@ -2803,7 +2803,7 @@ function PetDetailContent({
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <Award className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                <Award className="text-muted-foreground mx-auto mb-2 size-12" />
                 <p className="text-muted-foreground text-sm">
                   No report cards yet
                 </p>

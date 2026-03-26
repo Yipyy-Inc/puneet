@@ -246,7 +246,7 @@ export default function MessagingPage() {
                       size="sm"
                       onClick={() => setFilterType("email")}
                     >
-                      <Mail className="mr-1 h-3 w-3" />
+                      <Mail className="mr-1 size-3" />
                       Email
                     </Button>
                     <Button
@@ -254,7 +254,7 @@ export default function MessagingPage() {
                       size="sm"
                       onClick={() => setFilterType("sms")}
                     >
-                      <MessageSquare className="mr-1 h-3 w-3" />
+                      <MessageSquare className="mr-1 size-3" />
                       SMS
                     </Button>
                     <Button
@@ -262,7 +262,7 @@ export default function MessagingPage() {
                       size="sm"
                       onClick={() => setFilterType("in-app")}
                     >
-                      <MessageSquare className="mr-1 h-3 w-3" />
+                      <MessageSquare className="mr-1 size-3" />
                       Chat
                     </Button>
                   </div>
@@ -272,7 +272,7 @@ export default function MessagingPage() {
                 <ScrollArea className="h-[calc(100vh-420px)]">
                   {filteredConversations.length === 0 ? (
                     <div className="text-muted-foreground px-4 py-8 text-center">
-                      <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                      <MessageSquare className="mx-auto mb-4 size-12 opacity-50" />
                       <p>No conversations found</p>
                     </div>
                   ) : (
@@ -381,7 +381,7 @@ export default function MessagingPage() {
                             } `}
                           >
                             {msg.direction === "inbound" && (
-                              <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                              <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center rounded-full">
                                 {getChannelIcon(msg.type)}
                               </div>
                             )}
@@ -432,7 +432,7 @@ export default function MessagingPage() {
                                         key={att.id}
                                         className="bg-background/50 flex items-center gap-2 rounded-sm p-2 text-xs"
                                       >
-                                        <Paperclip className="h-3 w-3" />
+                                        <Paperclip className="size-3" />
                                         <span className="truncate">
                                           {att.name}
                                         </span>
@@ -453,7 +453,7 @@ export default function MessagingPage() {
                               </div>
                             </div>
                             {msg.direction === "outbound" && (
-                              <div className="bg-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                              <div className="bg-primary flex size-8 shrink-0 items-center justify-center rounded-full">
                                 <MessageSquare className="text-primary-foreground size-4" />
                               </div>
                             )}
@@ -541,7 +541,7 @@ export default function MessagingPage() {
           <div className="rounded-lg border-2 border-orange-500/30 bg-orange-50/50 p-4 dark:bg-orange-950/20">
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
-                <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <Users className="size-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="flex-1">
                 <div className="mb-1 flex items-center gap-2">
@@ -569,7 +569,7 @@ export default function MessagingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+                    <Users className="size-5" />
                     Internal Team Communications
                     <Badge variant="secondary" className="ml-2">
                       Internal

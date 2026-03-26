@@ -33,7 +33,7 @@ export function StatCard({
                   className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
+                    className={`mr-0.5 size-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
@@ -47,7 +47,7 @@ export function StatCard({
             className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
-            <Icon className="h-5 w-5 text-white" />
+            <Icon className="size-5 text-white" />
           </div>
         </div>
       </CardContent>

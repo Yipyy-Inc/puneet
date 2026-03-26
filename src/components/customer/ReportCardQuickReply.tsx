@@ -112,7 +112,7 @@ export function ReportCardQuickReply({
               disabled={selectedQuickReply === reply.id}
               className="text-xs"
             >
-              <Icon className="mr-1 h-3 w-3" />
+              <Icon className="mr-1 size-3" />
               {reply.label}
             </Button>
           );
@@ -123,7 +123,7 @@ export function ReportCardQuickReply({
           onClick={() => setIsCustomReplyOpen(true)}
           className="text-xs"
         >
-          <MessageCircle className="mr-1 h-3 w-3" />
+          <MessageCircle className="mr-1 size-3" />
           Custom message
         </Button>
       </div>

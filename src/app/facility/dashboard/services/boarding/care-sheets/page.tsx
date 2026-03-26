@@ -371,7 +371,7 @@ export default function CareSheetsPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <PawPrint className="h-5 w-5" />
+              <PawPrint className="size-5" />
               {selectedGuest.petName} - Daily Care Sheet
             </CardTitle>
           </CardHeader>
@@ -503,14 +503,14 @@ export default function CareSheetsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Utensils className="h-5 w-5" />
+                <Utensils className="size-5" />
                 Feeding Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.feedings.length ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Utensils className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Utensils className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No feedings logged yet</p>
                 </div>
               ) : (
@@ -521,8 +521,8 @@ export default function CareSheetsPage() {
                       className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
-                          <Clock className="text-primary h-5 w-5" />
+                        <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                          <Clock className="text-primary size-5" />
                         </div>
                         <div>
                           <p className="font-medium">{feeding.actualTime}</p>
@@ -544,7 +544,7 @@ export default function CareSheetsPage() {
                           {getAppetiteLabel(feeding.appetiteStatus)}
                         </Badge>
                         <Badge variant="outline">
-                          <User className="mr-1 h-3 w-3" />
+                          <User className="mr-1 size-3" />
                           {feeding.fedByInitials}
                         </Badge>
                       </div>
@@ -561,14 +561,14 @@ export default function CareSheetsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Pill className="h-5 w-5" />
+                <Pill className="size-5" />
                 Medication Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.medications.length ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Pill className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Pill className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No medications logged yet</p>
                 </div>
               ) : (
@@ -579,8 +579,8 @@ export default function CareSheetsPage() {
                       className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                          <CheckCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div className="flex size-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
+                          <CheckCircle className="size-5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
                           <p className="font-medium">{med.medicationName}</p>
@@ -592,12 +592,12 @@ export default function CareSheetsPage() {
                       <div className="flex items-center gap-3">
                         {med.photoProofUrl && (
                           <Badge variant="outline">
-                            <Camera className="mr-1 h-3 w-3" />
+                            <Camera className="mr-1 size-3" />
                             Photo
                           </Badge>
                         )}
                         <Badge variant="outline">
-                          <User className="mr-1 h-3 w-3" />
+                          <User className="mr-1 size-3" />
                           {med.givenByInitials}
                         </Badge>
                       </div>
@@ -614,14 +614,14 @@ export default function CareSheetsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Droplets className="h-5 w-5" />
+                <Droplets className="size-5" />
                 Potty Breaks
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.pottyBreaks.length ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Droplets className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Droplets className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No potty breaks logged yet</p>
                 </div>
               ) : (
@@ -632,8 +632,8 @@ export default function CareSheetsPage() {
                       className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                          <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <div className="flex size-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                          <Clock className="size-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
                           <p className="font-medium">{potty.time}</p>
@@ -647,7 +647,7 @@ export default function CareSheetsPage() {
                           <Badge variant="destructive">Accident</Badge>
                         )}
                         <Badge variant="outline">
-                          <User className="mr-1 h-3 w-3" />
+                          <User className="mr-1 size-3" />
                           {potty.staffInitials}
                         </Badge>
                       </div>
@@ -664,14 +664,14 @@ export default function CareSheetsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Footprints className="h-5 w-5" />
+                <Footprints className="size-5" />
                 Walk Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.walks.length ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <Footprints className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <Footprints className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No walks logged yet</p>
                 </div>
               ) : (
@@ -682,8 +682,8 @@ export default function CareSheetsPage() {
                       className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                          <Footprints className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div className="flex size-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                          <Footprints className="size-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
                           <p className="font-medium">
@@ -696,7 +696,7 @@ export default function CareSheetsPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">
-                          <User className="mr-1 h-3 w-3" />
+                          <User className="mr-1 size-3" />
                           {walk.staffInitials}
                         </Badge>
                       </div>
@@ -713,14 +713,14 @@ export default function CareSheetsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <PlayCircle className="h-5 w-5" />
+                <PlayCircle className="size-5" />
                 Playtime Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.playtime.length ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <PlayCircle className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                  <PlayCircle className="mx-auto mb-3 size-12 opacity-50" />
                   <p>No playtime logged yet</p>
                 </div>
               ) : (
@@ -731,8 +731,8 @@ export default function CareSheetsPage() {
                       className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                          <PlayCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        <div className="flex size-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                          <PlayCircle className="size-5 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
                           <p className="font-medium">
@@ -753,7 +753,7 @@ export default function CareSheetsPage() {
                           {play.type === "group" ? "Group" : "Solo"}
                         </Badge>
                         <Badge variant="outline">
-                          <User className="mr-1 h-3 w-3" />
+                          <User className="mr-1 size-3" />
                           {play.staffInitials}
                         </Badge>
                       </div>
@@ -771,11 +771,11 @@ export default function CareSheetsPage() {
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {logType === "feeding" && <Utensils className="h-5 w-5" />}
-              {logType === "medication" && <Pill className="h-5 w-5" />}
-              {logType === "potty" && <Droplets className="h-5 w-5" />}
-              {logType === "walk" && <Footprints className="h-5 w-5" />}
-              {logType === "playtime" && <PlayCircle className="h-5 w-5" />}
+              {logType === "feeding" && <Utensils className="size-5" />}
+              {logType === "medication" && <Pill className="size-5" />}
+              {logType === "potty" && <Droplets className="size-5" />}
+              {logType === "walk" && <Footprints className="size-5" />}
+              {logType === "playtime" && <PlayCircle className="size-5" />}
               Log {logType.charAt(0).toUpperCase() + logType.slice(1)}
             </DialogTitle>
           </DialogHeader>

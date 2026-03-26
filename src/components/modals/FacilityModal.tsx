@@ -60,7 +60,7 @@ function StatCard({
                   className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
+                    className={`mr-0.5 size-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
@@ -71,7 +71,7 @@ function StatCard({
             )}
           </div>
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex size-9 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
             <Icon className="size-4 text-white" />
@@ -109,12 +109,12 @@ export function FacilityModal({ facility }: FacilityModalProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div
-              className="flex h-12 w-12 items-center justify-center rounded-xl"
+              className="flex size-12 items-center justify-center rounded-xl"
               style={{
                 background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
               }}
             >
-              <Building className="h-6 w-6 text-white" />
+              <Building className="size-6 text-white" />
             </div>
             <div>
               <h2 className="text-xl font-bold">{facility.name}</h2>
@@ -144,7 +144,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                 variant="secondary"
                 className="px-3 py-1.5 capitalize"
               >
-                <Icon className="mr-1.5 h-3.5 w-3.5" />
+                <Icon className="mr-1.5 size-3.5" />
                 {service}
               </Badge>
             );
@@ -249,19 +249,19 @@ export function FacilityModal({ facility }: FacilityModalProps) {
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4">
             <div className="flex items-center gap-2 text-sm">
-              <Mail className="text-muted-foreground h-3.5 w-3.5" />
+              <Mail className="text-muted-foreground size-3.5" />
               <span className="truncate text-xs">
                 {facility.contact?.email || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Phone className="text-muted-foreground h-3.5 w-3.5" />
+              <Phone className="text-muted-foreground size-3.5" />
               <span className="text-xs">
                 {facility.contact?.phone || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Globe className="text-muted-foreground h-3.5 w-3.5" />
+              <Globe className="text-muted-foreground size-3.5" />
               <span className="truncate text-xs">
                 {facility.contact?.website || "Not provided"}
               </span>
@@ -280,7 +280,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
           <CardContent className="space-y-2 px-4 pb-4">
             <div className="flex items-center gap-2">
               <div
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                className="flex size-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -297,13 +297,13 @@ export function FacilityModal({ facility }: FacilityModalProps) {
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Mail className="text-muted-foreground h-3.5 w-3.5" />
+              <Mail className="text-muted-foreground size-3.5" />
               <span className="truncate text-xs">
                 {facility.owner?.email || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Phone className="text-muted-foreground h-3.5 w-3.5" />
+              <Phone className="text-muted-foreground size-3.5" />
               <span className="text-xs">
                 {facility.owner?.phone || "Not provided"}
               </span>
@@ -316,8 +316,8 @@ export function FacilityModal({ facility }: FacilityModalProps) {
       <div className="grid grid-cols-2 gap-3">
         <Card className="shadow-card border-0">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-xl">
-              <Calendar className="text-primary h-5 w-5" />
+            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-xl">
+              <Calendar className="text-primary size-5" />
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Member Since</p>
@@ -327,8 +327,8 @@ export function FacilityModal({ facility }: FacilityModalProps) {
         </Card>
         <Card className="shadow-card border-0">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="bg-warning/10 flex h-10 w-10 items-center justify-center rounded-xl">
-              <Clock className="text-warning h-5 w-5" />
+            <div className="bg-warning/10 flex size-10 items-center justify-center rounded-xl">
+              <Clock className="text-warning size-5" />
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Subscription Ends</p>
@@ -385,18 +385,18 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div
-                      className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
+                      className="flex size-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
                       style={{
                         background:
                           "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                       }}
                     >
-                      <Building className="h-5 w-5 text-white" />
+                      <Building className="size-5 text-white" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold">{location.name}</h4>
                       <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
-                        <MapPin className="h-3.5 w-3.5" />
+                        <MapPin className="size-3.5" />
                         {location.address}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -428,7 +428,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold">
+                      <div className="bg-muted flex size-10 items-center justify-center rounded-full text-sm font-semibold">
                         {client.person.name
                           .split(" ")
                           .map((n) => n[0])
@@ -439,12 +439,12 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                         <h4 className="font-semibold">{client.person.name}</h4>
                         <div className="mt-1 flex items-center gap-4">
                           <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                            <Mail className="h-3 w-3" />
+                            <Mail className="size-3" />
                             {client.person.email}
                           </span>
                           {client.person.phone && (
                             <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                              <Phone className="h-3 w-3" />
+                              <Phone className="size-3" />
                               {client.person.phone}
                             </span>
                           )}
@@ -481,7 +481,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
+                        className="flex size-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                         style={{
                           background:
                             user.role === "Admin"
@@ -500,7 +500,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                       <div>
                         <h4 className="font-semibold">{user.person.name}</h4>
                         <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                          <Mail className="h-3 w-3" />
+                          <Mail className="size-3" />
                           {user.person.email}
                         </span>
                       </div>

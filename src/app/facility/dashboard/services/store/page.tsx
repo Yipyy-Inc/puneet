@@ -163,7 +163,7 @@ export default function StoreServicePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PawPrint className="h-5 w-5" />
+              <PawPrint className="size-5" />
               Service Status
             </CardTitle>
           </CardHeader>
@@ -203,7 +203,7 @@ export default function StoreServicePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+              <Clock className="size-5" />
               Store Hours
             </CardTitle>
           </CardHeader>
@@ -218,7 +218,7 @@ export default function StoreServicePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
+            <MapPin className="size-5" />
             Available Locations
           </CardTitle>
         </CardHeader>
@@ -249,7 +249,7 @@ export default function StoreServicePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+            <Package className="size-5" />
             Inventory Management
           </CardTitle>
           {isEditing && (

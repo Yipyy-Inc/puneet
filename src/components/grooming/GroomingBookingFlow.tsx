@@ -2375,10 +2375,10 @@ export function GroomingBookingFlow({
                                   alt={pet.name}
                                   width={80}
                                   height={80}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               ) : (
-                                <Dog className="text-muted-foreground h-10 w-10" />
+                                <Dog className="text-muted-foreground size-10" />
                               )}
                             </div>
 
@@ -2433,13 +2433,13 @@ export function GroomingBookingFlow({
                                 <div className="mt-2">
                                   {pet.vaccinationStatus.isCompliant ? (
                                     <div className="flex items-center gap-1 text-xs text-green-600">
-                                      <CheckCircle2 className="h-3 w-3" />
+                                      <CheckCircle2 className="size-3" />
                                       <span>Vaccinations up to date</span>
                                     </div>
                                   ) : (
                                     <div className="space-y-1">
                                       <div className="text-destructive flex items-center gap-1 text-xs">
-                                        <AlertCircle className="h-3 w-3" />
+                                        <AlertCircle className="size-3" />
                                         <span>
                                           Vaccination records required
                                         </span>
@@ -2471,7 +2471,7 @@ export function GroomingBookingFlow({
                             {/* Selection Indicator */}
                             {isSelected && (
                               <div className="shrink-0">
-                                <CheckCircle2 className="text-primary h-6 w-6" />
+                                <CheckCircle2 className="text-primary size-6" />
                               </div>
                             )}
                           </div>
@@ -2525,7 +2525,7 @@ export function GroomingBookingFlow({
                   <Card className="border-destructive/50 bg-destructive/5">
                     <CardHeader>
                       <CardTitle className="text-destructive flex items-center gap-2 text-base">
-                        <AlertCircle className="h-5 w-5" />
+                        <AlertCircle className="size-5" />
                         Vaccination Records Required
                       </CardTitle>
                     </CardHeader>
@@ -2606,7 +2606,7 @@ export function GroomingBookingFlow({
               <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                    <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
                     <div className="flex-1">
                       <h4 className="mb-1 font-semibold text-amber-900">
                         Additional De-matting Fees May Apply
@@ -2640,8 +2640,8 @@ export function GroomingBookingFlow({
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         {/* Icon */}
-                        <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
-                          <Icon className="text-primary h-6 w-6" />
+                        <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                          <Icon className="text-primary size-6" />
                         </div>
 
                         {/* Content */}
@@ -2669,7 +2669,7 @@ export function GroomingBookingFlow({
                         {/* Selection Indicator */}
                         {isSelected && (
                           <div className="shrink-0">
-                            <CheckCircle2 className="text-primary h-6 w-6" />
+                            <CheckCircle2 className="text-primary size-6" />
                           </div>
                         )}
                       </div>
@@ -2710,7 +2710,7 @@ export function GroomingBookingFlow({
                       Estimated Duration
                     </p>
                     <p className="flex items-center gap-2 text-2xl font-bold">
-                      <Clock className="h-5 w-5" />
+                      <Clock className="size-5" />
                       {calculatedDuration} mins
                     </p>
                   </div>
@@ -2719,7 +2719,7 @@ export function GroomingBookingFlow({
                       Total Price
                     </p>
                     <p className="flex items-center justify-end gap-2 text-2xl font-bold">
-                      <DollarSign className="h-5 w-5" />${calculatedPrice}
+                      <DollarSign className="size-5" />${calculatedPrice}
                     </p>
                   </div>
                 </div>
@@ -2831,13 +2831,13 @@ export function GroomingBookingFlow({
                                             <Button
                                               variant="destructive"
                                               size="icon"
-                                              className="absolute top-1 right-1 h-6 w-6"
+                                              className="absolute top-1 right-1 size-6"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleRemovePhoto(index);
                                               }}
                                             >
-                                              <X className="h-3 w-3" />
+                                              <X className="size-3" />
                                             </Button>
                                           </div>
                                         ))}
@@ -2859,7 +2859,7 @@ export function GroomingBookingFlow({
                             {/* Selection Indicator */}
                             {isSelected && (
                               <div className="shrink-0">
-                                <CheckCircle2 className="text-primary h-6 w-6" />
+                                <CheckCircle2 className="text-primary size-6" />
                               </div>
                             )}
                           </div>
@@ -2913,7 +2913,7 @@ export function GroomingBookingFlow({
                       Total Duration
                     </p>
                     <p className="flex items-center gap-2 text-2xl font-bold">
-                      <Clock className="h-5 w-5" />
+                      <Clock className="size-5" />
                       {totalDurationWithAddOns} mins
                       {totalDurationWithAddOns > 60 && (
                         <Badge variant="outline" className="ml-2">
@@ -2928,7 +2928,7 @@ export function GroomingBookingFlow({
                       Total Price
                     </p>
                     <p className="flex items-center justify-end gap-2 text-2xl font-bold">
-                      <DollarSign className="h-5 w-5" />${totalPriceWithAddOns}
+                      <DollarSign className="size-5" />${totalPriceWithAddOns}
                     </p>
                   </div>
                 </div>
@@ -2940,7 +2940,7 @@ export function GroomingBookingFlow({
               <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                    <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
                     <div className="flex-1">
                       <h4 className="mb-1 font-semibold text-amber-900">
                         Extended Appointment Required
@@ -2959,7 +2959,7 @@ export function GroomingBookingFlow({
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <Sparkles className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                    <Sparkles className="text-primary mt-0.5 size-5 shrink-0" />
                     <div className="flex-1">
                       <h4 className="mb-1 font-semibold">
                         Recommended for {selectedPet?.name}
@@ -3048,12 +3048,12 @@ export function GroomingBookingFlow({
                             <div className="text-muted-foreground flex items-center gap-4 text-xs">
                               {addon.durationMinutes > 0 && (
                                 <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />+
+                                  <Clock className="size-3" />+
                                   {addon.durationMinutes} mins
                                 </span>
                               )}
                               <span className="text-primary flex items-center gap-1 font-semibold">
-                                <DollarSign className="h-3 w-3" />
+                                <DollarSign className="size-3" />
                                 +${addon.price}
                               </span>
                             </div>
@@ -3143,7 +3143,7 @@ export function GroomingBookingFlow({
                                 </p>
                               )}
                               {isSelected && (
-                                <CheckCircle2 className="text-primary ml-2 h-5 w-5" />
+                                <CheckCircle2 className="text-primary ml-2 size-5" />
                               )}
                             </div>
                           </div>
@@ -3168,7 +3168,7 @@ export function GroomingBookingFlow({
                           </p>
                         </div>
                         {!selectedGroomerTier && (
-                          <CheckCircle2 className="text-primary h-5 w-5" />
+                          <CheckCircle2 className="text-primary size-5" />
                         )}
                       </div>
                     </CardContent>
@@ -3186,7 +3186,7 @@ export function GroomingBookingFlow({
                   <Card className="border-blue-200 bg-blue-50">
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                        <AlertCircle className="mt-0.5 size-5 shrink-0 text-blue-600" />
                         <div className="flex-1">
                           <p className="text-sm text-blue-900">
                             {selectedPet?.name} requires a Fear-Free Certified
@@ -3233,10 +3233,10 @@ export function GroomingBookingFlow({
                                   alt={groomer.name}
                                   width={64}
                                   height={64}
-                                  className="h-full w-full object-cover"
+                                  className="size-full object-cover"
                                 />
                               ) : (
-                                <Scissors className="text-muted-foreground h-8 w-8" />
+                                <Scissors className="text-muted-foreground size-8" />
                               )}
                             </div>
 
@@ -3287,7 +3287,7 @@ export function GroomingBookingFlow({
                               {/* Rating and Experience */}
                               <div className="text-muted-foreground flex items-center gap-4 text-xs">
                                 <span className="flex items-center gap-1">
-                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  <Star className="size-3 fill-yellow-400 text-yellow-400" />
                                   {groomer.rating}
                                 </span>
                                 <span>
@@ -3307,7 +3307,7 @@ export function GroomingBookingFlow({
                             {/* Selection Indicator */}
                             {isSelected && (
                               <div className="shrink-0">
-                                <CheckCircle2 className="text-primary h-6 w-6" />
+                                <CheckCircle2 className="text-primary size-6" />
                               </div>
                             )}
                           </div>
@@ -3336,7 +3336,7 @@ export function GroomingBookingFlow({
                             First available stylist
                           </p>
                           {!selectedGroomerId && !selectedGroomerTier && (
-                            <CheckCircle2 className="text-primary mx-auto mt-2 h-6 w-6" />
+                            <CheckCircle2 className="text-primary mx-auto mt-2 size-6" />
                           )}
                         </div>
                       </div>
@@ -3414,8 +3414,8 @@ export function GroomingBookingFlow({
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
-                          <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
-                            <Building2 className="text-primary h-6 w-6" />
+                          <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                            <Building2 className="text-primary size-6" />
                           </div>
                           <div className="flex-1">
                             <div className="mb-1 flex items-center gap-2">
@@ -3446,8 +3446,8 @@ export function GroomingBookingFlow({
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
-                          <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
-                            <Truck className="text-primary h-6 w-6" />
+                          <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                            <Truck className="text-primary size-6" />
                           </div>
                           <div className="flex-1">
                             <div className="mb-1 flex items-center gap-2">
@@ -3624,7 +3624,7 @@ export function GroomingBookingFlow({
                   <Card>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-3">
-                        <MapPin className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                        <MapPin className="text-muted-foreground mt-0.5 size-5 shrink-0" />
                         <div>
                           <p className="mb-1 font-semibold">
                             Checking in at {availableSalonLocations[0].name}?
@@ -3640,7 +3640,7 @@ export function GroomingBookingFlow({
                   <Card>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-3">
-                        <MapPin className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                        <MapPin className="text-muted-foreground mt-0.5 size-5 shrink-0" />
                         <div>
                           <p className="mb-1 font-semibold">
                             {selectedFacility?.name || "Facility"}
@@ -3791,7 +3791,7 @@ export function GroomingBookingFlow({
               <Card className="border-yellow-500 bg-yellow-50">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                    <AlertTriangle className="mt-0.5 size-5 text-yellow-600" />
                     <div className="flex-1 space-y-3">
                       <p className="text-sm font-medium text-yellow-900">
                         {timeSlotConflict.message}
@@ -3823,7 +3823,7 @@ export function GroomingBookingFlow({
                 <Card className="border-orange-500 bg-orange-50">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-0.5 h-5 w-5 text-orange-600" />
+                      <AlertCircle className="mt-0.5 size-5 text-orange-600" />
                       <div className="flex-1 space-y-3">
                         <p className="text-sm font-medium text-orange-900">
                           {mobileZoneConflict.message}
@@ -4043,7 +4043,7 @@ export function GroomingBookingFlow({
                                 <div className="flex items-center gap-3">
                                   <div
                                     className={cn(
-                                      "h-3 w-3 shrink-0 rounded-full",
+                                      "size-3 shrink-0 rounded-full",
                                       slot.status === "optimal" &&
                                         "bg-green-500",
                                       slot.status === "tight" &&
@@ -4544,7 +4544,7 @@ export function GroomingBookingFlow({
                   <div className="flex items-center justify-between border-t pt-2">
                     <p className="text-base font-semibold">Total</p>
                     <p className="flex items-center gap-2 text-2xl font-bold">
-                      <DollarSign className="h-5 w-5" />
+                      <DollarSign className="size-5" />
                       {useExistingPackage ? (
                         <span className="text-green-600">$0.00</span>
                       ) : (
@@ -4829,7 +4829,7 @@ export function GroomingBookingFlow({
                         htmlFor="coat-photo"
                         className="flex cursor-pointer flex-col items-center gap-2"
                       >
-                        <ImageIcon className="text-muted-foreground h-8 w-8" />
+                        <ImageIcon className="text-muted-foreground size-8" />
                         <span className="text-muted-foreground text-sm">
                           Click to upload or drag and drop
                         </span>
@@ -5053,7 +5053,7 @@ export function GroomingBookingFlow({
                 <div className="flex items-center justify-between border-t pt-4">
                   <p className="text-lg font-semibold">Total</p>
                   <p className="flex items-center gap-2 text-2xl font-bold">
-                    <DollarSign className="h-5 w-5" />
+                    <DollarSign className="size-5" />
                     {useExistingPackage ? (
                       <span className="text-green-600">$0.00</span>
                     ) : (

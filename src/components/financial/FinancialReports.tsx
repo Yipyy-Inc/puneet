@@ -423,7 +423,7 @@ export function FinancialReports() {
                         ${currentMonth.totalRevenue.toLocaleString()}
                       </p>
                     </div>
-                    <TrendingUp className="h-8 w-8 text-green-600" />
+                    <TrendingUp className="size-8 text-green-600" />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>

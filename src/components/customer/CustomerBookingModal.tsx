@@ -1072,7 +1072,7 @@ export function CustomerBookingModal({
             onClick={handleBack}
             disabled={currentStep === 0}
           >
-            <ChevronLeft className="h-5 w-5 shrink-0" />
+            <ChevronLeft className="size-5 shrink-0" />
             <span className="text-xs">Back</span>
           </Button>
         </div>
@@ -1085,7 +1085,7 @@ export function CustomerBookingModal({
               disabled={!canProceed}
             >
               <span className="text-xs">Next</span>
-              <ChevronRight className="h-5 w-5 shrink-0" />
+              <ChevronRight className="size-5 shrink-0" />
             </Button>
           ) : (
             <Button
@@ -1095,7 +1095,7 @@ export function CustomerBookingModal({
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="size-5 animate-spin" />
               ) : (
                 "OK"
               )}
@@ -1231,7 +1231,7 @@ export function CustomerBookingModal({
                                         variant="destructive"
                                         className="flex items-center gap-1 text-xs"
                                       >
-                                        <Syringe className="h-3 w-3" />
+                                        <Syringe className="size-3" />
                                         {petVaxStatus.missing.length > 0
                                           ? "Missing Vax"
                                           : "Expired Vax"}
@@ -1424,13 +1424,13 @@ export function CustomerBookingModal({
                               />
                             ) : (
                               <div
-                                className={`flex h-full w-full items-center justify-center ${
+                                className={`flex size-full items-center justify-center ${
                                   selectedService === service.id && !isDisabled
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted"
                                 } `}
                               >
-                                <Icon className="h-10 w-10" />
+                                <Icon className="size-10" />
                               </div>
                             )}
                           </div>
@@ -1454,7 +1454,7 @@ export function CustomerBookingModal({
                                     key={i}
                                     className="flex items-center gap-1"
                                   >
-                                    <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                    <CheckCircle className="text-primary size-3 shrink-0" />
                                     {item}
                                   </li>
                                 ))}
@@ -1756,7 +1756,7 @@ export function CustomerBookingModal({
                                               key={i}
                                               className="flex items-center gap-1"
                                             >
-                                              <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                              <CheckCircle className="text-primary size-3 shrink-0" />
                                               {item}
                                             </li>
                                           ))}
@@ -1830,7 +1830,7 @@ export function CustomerBookingModal({
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          className="h-7 w-7 p-0 text-xs"
+                                          className="size-7 p-0 text-xs"
                                           disabled={currentQty === 0}
                                           onClick={() => {
                                             if (currentQty <= 0) return;
@@ -1866,7 +1866,7 @@ export function CustomerBookingModal({
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          className="h-7 w-7 p-0 text-xs"
+                                          className="size-7 p-0 text-xs"
                                           onClick={() => {
                                             const newQty = currentQty + 1;
                                             setExtraServices((prev) => {
@@ -1934,7 +1934,7 @@ export function CustomerBookingModal({
                                       >
                                         {currentQty > 0 ? (
                                           <>
-                                            <CheckCircle className="mr-1 h-3 w-3" />{" "}
+                                            <CheckCircle className="mr-1 size-3" />{" "}
                                             Added
                                           </>
                                         ) : (
@@ -2023,8 +2023,8 @@ export function CustomerBookingModal({
                                                   unoptimized
                                                 />
                                               ) : (
-                                                <div className="flex h-full w-full items-center justify-center">
-                                                  <Bed className="text-muted-foreground h-8 w-8" />
+                                                <div className="flex size-full items-center justify-center">
+                                                  <Bed className="text-muted-foreground size-8" />
                                                 </div>
                                               )}
                                               {isSelected && (
@@ -2051,7 +2051,7 @@ export function CustomerBookingModal({
                                                       key={i}
                                                       className="flex items-center gap-1"
                                                     >
-                                                      <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                                      <CheckCircle className="text-primary size-3 shrink-0" />
                                                       {item}
                                                     </li>
                                                   ))}
@@ -2060,12 +2060,12 @@ export function CustomerBookingModal({
                                                 {room.allowedPetTypes.includes(
                                                   "Dog",
                                                 ) && (
-                                                  <Dog className="h-3.5 w-3.5" />
+                                                  <Dog className="size-3.5" />
                                                 )}
                                                 {room.allowedPetTypes.includes(
                                                   "Cat",
                                                 ) && (
-                                                  <Cat className="h-3.5 w-3.5" />
+                                                  <Cat className="size-3.5" />
                                                 )}
                                                 {(room.minWeightLbs != null ||
                                                   room.maxWeightLbs !=
@@ -2098,7 +2098,7 @@ export function CustomerBookingModal({
                                                   });
                                                 }}
                                               >
-                                                <Info className="mr-1 h-3.5 w-3.5" />
+                                                <Info className="mr-1 size-3.5" />
                                                 View details
                                               </Button>
                                             </div>
@@ -2156,13 +2156,13 @@ export function CustomerBookingModal({
                                         unoptimized
                                       />
                                     ) : (
-                                      <div className="bg-muted flex h-full w-full items-center justify-center">
-                                        <Bed className="text-muted-foreground h-10 w-10" />
+                                      <div className="bg-muted flex size-full items-center justify-center">
+                                        <Bed className="text-muted-foreground size-10" />
                                       </div>
                                     )}
                                     {isSelected && (
                                       <div className="bg-primary text-primary-foreground absolute top-2 right-2 rounded-full p-1">
-                                        <CheckCircle className="h-5 w-5" />
+                                        <CheckCircle className="size-5" />
                                       </div>
                                     )}
                                   </div>
@@ -2184,17 +2184,17 @@ export function CustomerBookingModal({
                                             key={i}
                                             className="flex items-center gap-1"
                                           >
-                                            <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                            <CheckCircle className="text-primary size-3 shrink-0" />
                                             {item}
                                           </li>
                                         ))}
                                     </ul>
                                     <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
                                       {room.allowedPetTypes.includes("Dog") && (
-                                        <Dog className="h-3.5 w-3.5" />
+                                        <Dog className="size-3.5" />
                                       )}
                                       {room.allowedPetTypes.includes("Cat") && (
-                                        <Cat className="h-3.5 w-3.5" />
+                                        <Cat className="size-3.5" />
                                       )}
                                       {(room.minWeightLbs != null ||
                                         room.maxWeightLbs != null) && (
@@ -2224,7 +2224,7 @@ export function CustomerBookingModal({
                                         });
                                       }}
                                     >
-                                      <Info className="mr-1 h-3.5 w-3.5" />
+                                      <Info className="mr-1 size-3.5" />
                                       View details
                                     </Button>
                                   </div>
@@ -2300,7 +2300,7 @@ export function CustomerBookingModal({
                                               key={i}
                                               className="flex items-center gap-1"
                                             >
-                                              <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                              <CheckCircle className="text-primary size-3 shrink-0" />
                                               {item}
                                             </li>
                                           ))}
@@ -2374,7 +2374,7 @@ export function CustomerBookingModal({
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          className="h-7 w-7 p-0 text-xs"
+                                          className="size-7 p-0 text-xs"
                                           disabled={currentQty === 0}
                                           onClick={() => {
                                             if (currentQty <= 0) return;
@@ -2410,7 +2410,7 @@ export function CustomerBookingModal({
                                           type="button"
                                           variant="outline"
                                           size="sm"
-                                          className="h-7 w-7 p-0 text-xs"
+                                          className="size-7 p-0 text-xs"
                                           onClick={() => {
                                             const newQty = currentQty + 1;
                                             setExtraServices((prev) => {
@@ -2477,7 +2477,7 @@ export function CustomerBookingModal({
                                       >
                                         {currentQty > 0 ? (
                                           <>
-                                            <CheckCircle className="mr-1 h-3 w-3" />{" "}
+                                            <CheckCircle className="mr-1 size-3" />{" "}
                                             Added
                                           </>
                                         ) : (
@@ -2531,13 +2531,13 @@ export function CustomerBookingModal({
                                       unoptimized
                                     />
                                   ) : (
-                                    <div className="bg-muted flex h-full w-full items-center justify-center">
-                                      <Scissors className="text-muted-foreground h-8 w-8" />
+                                    <div className="bg-muted flex size-full items-center justify-center">
+                                      <Scissors className="text-muted-foreground size-8" />
                                     </div>
                                   )}
                                   {isSelected && (
                                     <div className="bg-primary text-primary-foreground absolute top-2 right-2 rounded-full p-1">
-                                      <CheckCircle className="h-5 w-5" />
+                                      <CheckCircle className="size-5" />
                                     </div>
                                   )}
                                 </div>
@@ -2562,7 +2562,7 @@ export function CustomerBookingModal({
                                         key={i}
                                         className="flex items-center gap-1"
                                       >
-                                        <CheckCircle className="text-primary h-3 w-3 shrink-0" />
+                                        <CheckCircle className="text-primary size-3 shrink-0" />
                                         {item}
                                       </li>
                                     ))}
@@ -2580,7 +2580,7 @@ export function CustomerBookingModal({
                                       });
                                     }}
                                   >
-                                    <Info className="mr-1 h-3.5 w-3.5" />
+                                    <Info className="mr-1 size-3.5" />
                                     View details
                                   </Button>
                                 </div>
@@ -2637,13 +2637,13 @@ export function CustomerBookingModal({
                                       unoptimized
                                     />
                                   ) : (
-                                    <div className="flex h-full w-full items-center justify-center">
-                                      <Scissors className="text-muted-foreground h-6 w-6" />
+                                    <div className="flex size-full items-center justify-center">
+                                      <Scissors className="text-muted-foreground size-6" />
                                     </div>
                                   )}
                                   {isSelected && (
                                     <div className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 rounded-full p-0.5">
-                                      <CheckCircle className="h-3.5 w-3.5" />
+                                      <CheckCircle className="size-3.5" />
                                     </div>
                                   )}
                                 </div>
@@ -2750,7 +2750,7 @@ export function CustomerBookingModal({
                   )}
                   {requiredFormsStatus.allComplete && (
                     <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="h-5 w-5" />
+                      <CheckCircle className="size-5" />
                       <span className="font-medium">
                         All set! Proceed to confirm your booking.
                       </span>
@@ -2887,7 +2887,7 @@ export function CustomerBookingModal({
                               allServices.find((s) => s.id === selectedService)
                                 ?.icon ?? Receipt;
                             return (
-                              <ServiceIcon className="h-7 w-7 text-white" />
+                              <ServiceIcon className="size-7 text-white" />
                             );
                           })()}
                         </div>
@@ -2930,7 +2930,7 @@ export function CustomerBookingModal({
                                 variant="secondary"
                                 className="gap-1.5 px-2.5 py-1 font-medium"
                               >
-                                <PawPrint className="h-3 w-3" />
+                                <PawPrint className="size-3" />
                                 {pet.name}
                               </Badge>
                             ))}

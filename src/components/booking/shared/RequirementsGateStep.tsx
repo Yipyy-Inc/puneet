@@ -111,7 +111,7 @@ export function RequirementsGateStep({
       )}
       {allComplete && (
         <div className="flex items-center gap-2 text-green-600">
-          <CheckCircle className="h-5 w-5" />
+          <CheckCircle className="size-5" />
           <span className="font-medium">
             All set! Proceed to confirm your booking.
           </span>

@@ -149,7 +149,7 @@ export default function CreateUserPage() {
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-6">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="size-8 text-green-600" />
             </div>
             <h3 className="mb-2 text-xl font-semibold">
               User Created Successfully
@@ -172,7 +172,7 @@ export default function CreateUserPage() {
       <div className="flex items-center gap-4">
         <Link href="/dashboard/user-management">
           <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="size-5" />
           </Button>
         </Link>
         <div>
@@ -191,7 +191,7 @@ export default function CreateUserPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
+                <UserPlus className="size-5" />
                 Basic Information
               </CardTitle>
               <CardDescription>
@@ -274,7 +274,7 @@ export default function CreateUserPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="size-5" />
                 Role & Access
               </CardTitle>
               <CardDescription>
@@ -370,7 +370,7 @@ export default function CreateUserPage() {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="size-5" />
                 {"Responsibility Areas"}
               </CardTitle>
               <CardDescription>

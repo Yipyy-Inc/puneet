@@ -269,7 +269,7 @@ export default function GroomingBookingRulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <GripVertical className="h-5 w-5" />
+            <GripVertical className="size-5" />
             Service Catalog
           </CardTitle>
           <CardDescription>
@@ -453,7 +453,7 @@ export default function GroomingBookingRulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <Calendar className="size-5" />
             Scheduling Rules
           </CardTitle>
           <CardDescription>
@@ -577,7 +577,7 @@ export default function GroomingBookingRulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <Clock className="size-5" />
             Buffer Times (Per Groomer)
           </CardTitle>
           <CardDescription>
@@ -689,7 +689,7 @@ export default function GroomingBookingRulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+            <Users className="size-5" />
             Capacity Guards
           </CardTitle>
           <CardDescription>
@@ -778,7 +778,7 @@ export default function GroomingBookingRulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
+            <AlertTriangle className="size-5" />
             Blackout Dates
           </CardTitle>
           <CardDescription>

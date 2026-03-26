@@ -10,7 +10,7 @@ export default function FacilityNotificationsPage() {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bell className="text-muted-foreground h-5 w-5" />
+          <Bell className="text-muted-foreground size-5" />
           <h1 className="text-lg font-semibold">Notifications</h1>
         </div>
         <Button

@@ -328,7 +328,7 @@ export default function PaymentSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="size-5" />
             Fiserv API Configuration
           </CardTitle>
           <CardDescription>
@@ -1613,7 +1613,7 @@ export default function PaymentSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Printer className="h-5 w-5" />
+            <Printer className="size-5" />
             Clover Terminal Configuration
           </CardTitle>
           <CardDescription>
@@ -1860,7 +1860,7 @@ export default function PaymentSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
+            <Smartphone className="size-5" />
             Yipyy Pay / Tap to Pay Configuration
           </CardTitle>
           <CardDescription>
@@ -1905,7 +1905,7 @@ export default function PaymentSettingsPage() {
                         className="flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="flex items-center gap-3">
-                          <Smartphone className="text-muted-foreground h-5 w-5" />
+                          <Smartphone className="text-muted-foreground size-5" />
                           <div>
                             <p className="font-medium">{device.deviceName}</p>
                             <p className="text-muted-foreground text-xs">
@@ -1934,7 +1934,7 @@ export default function PaymentSettingsPage() {
                   </div>
                 ) : (
                   <div className="text-muted-foreground rounded-lg border p-4 text-center text-sm">
-                    <Smartphone className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                    <Smartphone className="mx-auto mb-2 size-8 opacity-50" />
                     <p>No authorized iPhone devices</p>
                     <p className="mt-1 text-xs">
                       Authorize an iPhone device to enable Tap to Pay

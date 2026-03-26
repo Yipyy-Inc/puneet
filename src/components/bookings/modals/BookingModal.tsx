@@ -1235,7 +1235,7 @@ export function BookingModal({
             {/* Title in Sidebar */}
             <div className="bg-background border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Plus className="h-5 w-5" />
+                <Plus className="size-5" />
                 {(() => {
                   const preSelectedClient = clients.find(
                     (c) => c.id === preSelectedClientId,
@@ -1310,7 +1310,7 @@ export function BookingModal({
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                            className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                               isActive
                                 ? "bg-primary-foreground text-primary"
                                 : isCompleted
@@ -1319,7 +1319,7 @@ export function BookingModal({
                             } `}
                           >
                             {isCompleted ? (
-                              <Check className="h-3 w-3" />
+                              <Check className="size-3" />
                             ) : (
                               idx + 1
                             )}

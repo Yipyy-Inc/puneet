@@ -83,7 +83,7 @@ export function CategorySelector({
           >
             <div
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg",
+                "flex size-9 items-center justify-center rounded-lg",
                 isSelected ? colors.bg : "bg-muted",
               )}
             >

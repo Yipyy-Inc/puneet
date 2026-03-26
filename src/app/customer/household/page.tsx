@@ -189,7 +189,7 @@ export default function CustomerHouseholdPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserCircle className="h-5 w-5" />
+              <UserCircle className="size-5" />
               Household & Contacts
             </CardTitle>
             <CardDescription>
@@ -288,7 +288,7 @@ export default function CustomerHouseholdPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:text-destructive h-8 w-8"
+                          className="text-destructive hover:text-destructive size-8"
                           onClick={() => handleRemoveContact(contact.id)}
                         >
                           <Trash2 className="size-4" />

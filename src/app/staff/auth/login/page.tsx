@@ -61,8 +61,8 @@ export default function StaffLoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4 flex items-center justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500">
-              <Calendar className="h-6 w-6 text-white" />
+            <div className="flex size-12 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500">
+              <Calendar className="size-6 text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Staff Portal</CardTitle>

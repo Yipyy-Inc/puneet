@@ -75,9 +75,9 @@ export function FacilityPerformanceMetrics() {
       render: (item) => (
         <div className="flex items-center gap-1">
           {item.revenueGrowth > 0 ? (
-            <TrendingUp className="text-success h-3 w-3" />
+            <TrendingUp className="text-success size-3" />
           ) : (
-            <TrendingDown className="text-destructive h-3 w-3" />
+            <TrendingDown className="text-destructive size-3" />
           )}
           <span
             className={
@@ -95,7 +95,7 @@ export function FacilityPerformanceMetrics() {
       label: "Staff Efficiency",
       render: (item) => (
         <div className="flex items-center gap-2">
-          <div className="bg-muted h-2 w-20 rounded-full">
+          <div className="bg-muted size-20 rounded-full">
             <div
               className="bg-primary h-2 rounded-full"
               style={{ width: `${item.staffEfficiency}%` }}
@@ -147,7 +147,7 @@ export function FacilityPerformanceMetrics() {
                     ${(totalRevenue / 1000).toFixed(0)}K
                   </h3>
                   <span className="text-success inline-flex items-center text-xs font-medium">
-                    <TrendingUp className="mr-0.5 h-3 w-3" />+
+                    <TrendingUp className="mr-0.5 size-3" />+
                     {avgGrowth.toFixed(1)}%
                   </span>
                 </div>
@@ -162,7 +162,7 @@ export function FacilityPerformanceMetrics() {
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                 }}
               >
-                <DollarSign className="h-5 w-5 text-white" />
+                <DollarSign className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -191,7 +191,7 @@ export function FacilityPerformanceMetrics() {
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                <TrendingUp className="h-5 w-5 text-white" />
+                <TrendingUp className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -208,7 +208,7 @@ export function FacilityPerformanceMetrics() {
                   <h3 className="text-2xl font-bold tracking-tight">
                     {avgSatisfaction.toFixed(1)}
                   </h3>
-                  <Star className="fill-warning text-warning h-5 w-5" />
+                  <Star className="fill-warning text-warning size-5" />
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   Out of 5.0
@@ -221,7 +221,7 @@ export function FacilityPerformanceMetrics() {
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
                 }}
               >
-                <Star className="h-5 w-5 text-white" />
+                <Star className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -250,7 +250,7 @@ export function FacilityPerformanceMetrics() {
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                 }}
               >
-                <Users className="h-5 w-5 text-white" />
+                <Users className="size-5 text-white" />
               </div>
             </div>
           </CardContent>
@@ -500,7 +500,7 @@ export function FacilityPerformanceMetrics() {
                     ${(facility.totalRevenue / 1000).toFixed(0)}K
                   </p>
                   <div className="text-success mt-0.5 flex items-center gap-1 text-xs">
-                    <TrendingUp className="h-3 w-3" />+{facility.revenueGrowth}%
+                    <TrendingUp className="size-3" />+{facility.revenueGrowth}%
                   </div>
                 </div>
 

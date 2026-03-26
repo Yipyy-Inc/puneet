@@ -325,7 +325,7 @@ export default function StaffAvailabilityPage() {
               {pendingRequests.length > 0 && (
                 <Badge
                   variant="destructive"
-                  className="ml-2 h-5 w-5 p-0 text-xs"
+                  className="ml-2 size-5 p-0 text-xs"
                 >
                   {pendingRequests.length}
                 </Badge>

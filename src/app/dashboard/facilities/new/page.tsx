@@ -654,7 +654,7 @@ export default function NewFacilityPage() {
                               : "bg-muted"
                           } `}
                         >
-                          <type.icon className="h-5 w-5" />
+                          <type.icon className="size-5" />
                         </div>
                         <div>
                           <h4 className="font-medium">{type.label}</h4>
@@ -790,7 +790,7 @@ export default function NewFacilityPage() {
             {formData.locations.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center">
-                  <MapPin className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                  <MapPin className="text-muted-foreground mx-auto mb-2 size-8" />
                   <p className="text-muted-foreground">
                     No locations added yet
                   </p>
@@ -1269,7 +1269,7 @@ export default function NewFacilityPage() {
             {formData.staffMembers.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center">
-                  <Users className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                  <Users className="text-muted-foreground mx-auto mb-4 size-12" />
                   <h3 className="mb-1 font-medium">No staff members added</h3>
                   <p className="text-muted-foreground mb-4 text-sm">
                     You can add staff members now or later from the facility
@@ -1495,7 +1495,7 @@ export default function NewFacilityPage() {
                                 : "bg-muted"
                             } `}
                           >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="size-5" />
                           </div>
                           <div>
                             <h4 className="font-medium">{module.name}</h4>
@@ -1585,7 +1585,7 @@ export default function NewFacilityPage() {
                                 : "bg-muted"
                             } `}
                           >
-                            <CreditCard className="h-5 w-5" />
+                            <CreditCard className="size-5" />
                           </div>
                           <div>
                             <h3 className="font-semibold">{plan.name}</h3>
@@ -1610,23 +1610,23 @@ export default function NewFacilityPage() {
                       {/* Plan Limits */}
                       <div className="grid grid-cols-4 gap-2 border-t pt-3">
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                          <Building2 className="h-3.5 w-3.5" />
+                          <Building2 className="size-3.5" />
                           <span>
                             {formatLimit(plan.limits.locations)} locations
                           </span>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                          <Users className="h-3.5 w-3.5" />
+                          <Users className="size-3.5" />
                           <span>{formatLimit(plan.limits.staff)} staff</span>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                          <UserCheck className="h-3.5 w-3.5" />
+                          <UserCheck className="size-3.5" />
                           <span>
                             {formatLimit(plan.limits.clients)} clients
                           </span>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                          <PawPrint className="h-3.5 w-3.5" />
+                          <PawPrint className="size-3.5" />
                           <span>{formatLimit(plan.limits.pets)} pets</span>
                         </div>
                       </div>
@@ -1646,7 +1646,7 @@ export default function NewFacilityPage() {
           <div className="space-y-6">
             <div className="border-success/20 bg-success/10 rounded-lg border p-4">
               <div className="text-success mb-2 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
+                <CheckCircle className="size-5" />
                 <span className="font-medium">Ready to Create</span>
               </div>
               <p className="text-muted-foreground text-sm">
@@ -1910,7 +1910,7 @@ export default function NewFacilityPage() {
           size="icon"
           onClick={() => router.push("/dashboard/facilities")}
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="size-5" />
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -1951,7 +1951,7 @@ export default function NewFacilityPage() {
                     } `}
                   >
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      className={`flex size-8 items-center justify-center rounded-full ${
                         isActive
                           ? "bg-primary-foreground/20"
                           : isCompleted

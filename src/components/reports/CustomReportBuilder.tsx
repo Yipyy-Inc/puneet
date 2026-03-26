@@ -150,7 +150,7 @@ export function CustomReportBuilder({
             <div key={s.num} className="flex flex-1 items-center">
               <div className="flex flex-1 flex-col items-center">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                  className={`flex size-8 items-center justify-center rounded-full text-sm font-medium ${
                     step >= s.num
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
@@ -551,10 +551,10 @@ export function CustomReportBuilder({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="ml-2 h-5 w-5 p-0"
+                            className="ml-2 size-5 p-0"
                             onClick={() => handleRemoveRecipient(email)}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="size-3" />
                           </Button>
                         </Badge>
                       ))}

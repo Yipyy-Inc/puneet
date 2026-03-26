@@ -99,7 +99,7 @@ export function ModulesTab({
     <Card className="shadow-card border-0">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <Puzzle className="h-5 w-5" />
+          <Puzzle className="size-5" />
           Enabled Modules
         </CardTitle>
         <Button variant="outline" size="sm" onClick={handleOpenDialog}>
@@ -122,13 +122,13 @@ export function ModulesTab({
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className="flex h-10 w-10 items-center justify-center rounded-xl"
+                        className="flex size-10 items-center justify-center rounded-xl"
                         style={{
                           background:
                             "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                         }}
                       >
-                        <Icon className="h-5 w-5 text-white" />
+                        <Icon className="size-5 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ export function ModulesTab({
           </div>
         ) : (
           <div className="py-8 text-center">
-            <Puzzle className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
+            <Puzzle className="text-muted-foreground mx-auto mb-3 size-12" />
             <p className="text-muted-foreground">No modules enabled</p>
             <Button
               variant="outline"
@@ -231,10 +231,10 @@ export function ModulesTab({
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl ${isEnabled ? "bg-primary/10" : "bg-muted"} `}
+                        className={`flex size-10 items-center justify-center rounded-xl ${isEnabled ? "bg-primary/10" : "bg-muted"} `}
                       >
                         <Icon
-                          className={`h-5 w-5 ${
+                          className={`size-5 ${
                             isEnabled ? "text-primary" : "text-muted-foreground"
                           } `}
                         />

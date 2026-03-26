@@ -70,13 +70,13 @@ export function RoomCard({
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Bed className="text-muted-foreground h-8 w-8" />
+          <div className="flex size-full items-center justify-center">
+            <Bed className="text-muted-foreground size-8" />
           </div>
         )}
         {selected && (
           <div className="bg-primary text-primary-foreground absolute top-2 right-2 rounded-full p-1">
-            <CheckCircle className={compact ? "size-4" : "h-5 w-5"} />
+            <CheckCircle className={compact ? "size-4" : "size-5"} />
           </div>
         )}
       </div>
@@ -104,7 +104,7 @@ export function RoomCard({
           {(compact ? room.included.slice(0, 3) : room.included).map(
             (item, i) => (
               <li key={i} className="flex items-center gap-1.5">
-                <CheckCircle className="text-primary h-3.5 w-3.5 shrink-0" />
+                <CheckCircle className="text-primary size-3.5 shrink-0" />
                 {item}
               </li>
             ),
@@ -113,10 +113,10 @@ export function RoomCard({
         {room.allowedPetTypes && room.allowedPetTypes.length > 0 && (
           <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs">
             {room.allowedPetTypes.includes("Dog") && (
-              <Dog className="h-3.5 w-3.5" />
+              <Dog className="size-3.5" />
             )}
             {room.allowedPetTypes.includes("Cat") && (
-              <Cat className="h-3.5 w-3.5" />
+              <Cat className="size-3.5" />
             )}
             {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
               <span>
@@ -138,7 +138,7 @@ export function RoomCard({
               onViewDetails();
             }}
           >
-            <Info className="mr-1 h-3.5 w-3.5" />
+            <Info className="mr-1 size-3.5" />
             View details
           </Button>
         )}

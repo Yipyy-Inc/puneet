@@ -295,11 +295,11 @@ export function StaffConflictDetector({
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "critical":
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+        return <AlertTriangle className="size-5 text-red-500" />;
       case "warning":
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+        return <AlertCircle className="size-5 text-yellow-500" />;
       case "info":
-        return <Info className="h-5 w-5 text-blue-500" />;
+        return <Info className="size-5 text-blue-500" />;
       default:
         return null;
     }
@@ -391,7 +391,7 @@ export function StaffConflictDetector({
                 </p>
                 <p className="text-2xl font-bold">{activeConflicts.length}</p>
               </div>
-              <AlertTriangle className="text-muted-foreground h-8 w-8" />
+              <AlertTriangle className="text-muted-foreground size-8" />
             </div>
           </CardContent>
         </Card>
@@ -407,7 +407,7 @@ export function StaffConflictDetector({
                   {criticalCount}
                 </p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="size-8 text-red-500" />
             </div>
           </CardContent>
         </Card>
@@ -423,7 +423,7 @@ export function StaffConflictDetector({
                   {warningCount}
                 </p>
               </div>
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
+              <AlertCircle className="size-8 text-yellow-500" />
             </div>
           </CardContent>
         </Card>
@@ -434,7 +434,7 @@ export function StaffConflictDetector({
         {activeConflicts.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500" />
+              <CheckCircle className="mx-auto mb-4 size-12 text-green-500" />
               <h3 className="mb-2 text-lg font-semibold">
                 No Conflicts Detected
               </h3>
@@ -566,7 +566,7 @@ export function StaffConflictDetector({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ArrowRightLeft className="h-5 w-5" />
+              <ArrowRightLeft className="size-5" />
               Reassign Shift
             </DialogTitle>
             <DialogDescription>
@@ -658,7 +658,7 @@ export function StaffConflictDetector({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ban className="h-5 w-5" />
+              <Ban className="size-5" />
               Ignore Conflict
             </DialogTitle>
             <DialogDescription>

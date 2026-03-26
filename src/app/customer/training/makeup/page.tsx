@@ -330,7 +330,7 @@ export default function TrainingMakeupPage() {
       {missedSessions.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center">
-            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-600" />
+            <CheckCircle2 className="mx-auto mb-4 size-12 text-green-600" />
             <p className="text-lg font-medium">No missed sessions</p>
             <p className="mt-2 text-sm">
               All your training sessions have been attended!
