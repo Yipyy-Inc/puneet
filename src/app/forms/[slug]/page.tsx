@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Mail, KeyRound, Shield, Edit2, Dog, Cat } from "lucide-react";
+import { CheckCircle, Mail, KeyRound, Shield, Edit2, Dog, Cat, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 const DRAFT_PREFIX = "formDraft_";
 const AUTH_PREFIX = "formAuth_";
@@ -439,14 +440,25 @@ export default function PublicFormPage() {
               </p>
             )}
             {/* Feature 2: Review & Edit button */}
-            <Button
-              variant="outline"
-              onClick={handleReviewEdit}
-              className="mt-4 min-h-12 text-base"
-            >
-              <Edit2 className="h-4 w-4 mr-2" />
-              Review &amp; Edit
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full">
+              <Button
+                variant="outline"
+                onClick={handleReviewEdit}
+                className="min-h-12 text-base flex-1"
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Review &amp; Edit
+              </Button>
+              <Button
+                asChild
+                className="min-h-12 text-base flex-1"
+              >
+                <Link href="/customer/documents">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Documents
+                </Link>
+              </Button>
+            </div>
             {previousSubmissionId && (
               <p className="text-xs text-muted-foreground mt-2">
                 Submission ID: {previousSubmissionId}
