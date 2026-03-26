@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Mail, KeyRound, Shield, Edit2, Dog, Cat, ArrowLeft } from "lucide-react";
+import { CheckCircle, Mail, KeyRound, Shield, Edit2, Dog, Cat, ArrowLeft, Languages } from "lucide-react";
 import Link from "next/link";
+import type { SupportedFormLocale } from "@/data/forms-phase2-types";
 
 const DRAFT_PREFIX = "formDraft_";
 const AUTH_PREFIX = "formAuth_";
@@ -60,6 +61,9 @@ export default function PublicFormPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [previousSubmissionId, setPreviousSubmissionId] = useState<string | null>(null);
   const [lastSubmittedAnswers, setLastSubmittedAnswers] = useState<Record<string, unknown> | null>(null);
+
+  // Phase 2: Multi-language locale state
+  const [locale, setLocale] = useState<SupportedFormLocale>("en");
 
   // Feature 3: Multi-Pet Support state
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>([]);
@@ -470,6 +474,11 @@ export default function PublicFormPage() {
     );
   }
 
+  // Phase 2: Detect if form has any French translations
+  const hasI18n = form?.questions.some(
+    (q) => q.labelI18n?.fr
+  ) ?? false;
+
   const isAnonymous = !customerId && !petIds?.length;
   const total = visibleQuestions.length;
   const answered = visibleQuestions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== "").length;
@@ -499,6 +508,37 @@ export default function PublicFormPage() {
           <CardTitle className="text-xl sm:text-2xl">{form.name}</CardTitle>
           {form.settings?.welcomeMessage && (
             <p className="text-sm text-muted-foreground mt-1">{form.settings.welcomeMessage}</p>
+          )}
+
+          {/* Phase 2: Language switcher (EN/FR) */}
+          {hasI18n && (
+            <div className="mt-2 flex items-center gap-2">
+              <Languages className="h-4 w-4 text-muted-foreground" />
+              <div className="inline-flex rounded-lg border overflow-hidden text-xs">
+                <button
+                  type="button"
+                  className={`px-3 py-1.5 font-medium transition-colors ${
+                    locale === "en"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted/50"
+                  }`}
+                  onClick={() => setLocale("en")}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  className={`px-3 py-1.5 font-medium transition-colors ${
+                    locale === "fr"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted/50"
+                  }`}
+                  onClick={() => setLocale("fr")}
+                >
+                  FR
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Feature 2: Editing banner */}
@@ -640,6 +680,7 @@ export default function PublicFormPage() {
                     value={answers[q.id]}
                     onChange={(v) => setAnswer(q.id, v)}
                     hasError={showFieldError}
+                    locale={locale}
                   />
                 );
               })}
@@ -658,11 +699,12 @@ export default function PublicFormPage() {
   );
 }
 
-function QuestionLabel({ label, required, helpText }: { label: string; required: boolean; helpText?: string }) {
+function QuestionLabel({ label, required, helpText, frLabel, locale }: { label: string; required: boolean; helpText?: string; frLabel?: string; locale?: SupportedFormLocale }) {
+  const displayLabel = locale === "fr" && frLabel ? frLabel : label;
   return (
     <>
       <Label>
-        {label}
+        {displayLabel}
         {required && " *"}
       </Label>
       {helpText && <p className="text-xs text-muted-foreground -mt-1">{helpText}</p>}
@@ -675,15 +717,18 @@ function QuestionInput({
   value,
   onChange,
   hasError,
+  locale,
 }: {
   question: FormQuestion;
   value: unknown;
   onChange: (v: unknown) => void;
   hasError?: boolean;
+  locale?: SupportedFormLocale;
 }) {
   const id = `q-${question.id}`;
   const opts = question.options ?? [];
   const help = question.helpText;
+  const frLabel = question.labelI18n?.fr;
   // Wrap in inline validation highlight
   const wrap = (node: React.ReactNode) =>
     hasError ? (
@@ -700,7 +745,7 @@ function QuestionInput({
       const yesNoOpts = opts.length ? opts : [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="flex gap-3">
             {yesNoOpts.map((o) => (
               <button
@@ -723,7 +768,7 @@ function QuestionInput({
     case "radio":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="space-y-2">
             {opts.map((o) => (
               <label key={o.value} className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer touch-manipulation hover:bg-muted/50 transition-colors">
@@ -744,7 +789,7 @@ function QuestionInput({
     case "textarea":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <textarea
             id={id}
             className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
@@ -758,7 +803,7 @@ function QuestionInput({
     case "select":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <select
             id={id}
             className="flex min-h-12 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
@@ -785,7 +830,7 @@ function QuestionInput({
       };
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="flex flex-wrap gap-2">
             {opts.map((o) => (
               <label key={o.value} className="flex items-center gap-2 text-base min-h-12 cursor-pointer touch-manipulation">
@@ -813,7 +858,7 @@ function QuestionInput({
             onChange={(e) => onChange(e.target.checked)}
           />
           <Label htmlFor={id}>
-            {question.label}
+            {locale === "fr" && frLabel ? frLabel : question.label}
             {question.required && " *"}
           </Label>
           {help && <span className="text-xs text-muted-foreground">{help}</span>}
@@ -822,7 +867,7 @@ function QuestionInput({
     case "date":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <Input
             id={id}
             type="date"
@@ -836,7 +881,7 @@ function QuestionInput({
     case "number":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <Input
             id={id}
             type="number"
@@ -851,7 +896,7 @@ function QuestionInput({
     case "file":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="rounded-lg border-2 border-dashed border-input p-6 text-center">
             <input
               id={id}
@@ -880,35 +925,55 @@ function QuestionInput({
           </div>
         </div>
       );
-    case "signature":
+    case "signature": {
+      const sigVal = value as string | { name: string } | undefined;
+      const sigName = typeof sigVal === "object" && sigVal !== null ? sigVal.name : (typeof sigVal === "string" ? sigVal : "");
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="rounded-lg border border-input p-4 space-y-3">
             <div className="h-24 bg-muted/30 rounded flex items-center justify-center text-sm text-muted-foreground">
-              {value ? (
-                <p className="font-medium text-foreground italic text-lg">{String(value)}</p>
+              {sigName ? (
+                <p className="font-medium text-foreground italic text-lg">{sigName}</p>
               ) : (
                 "Signature area"
               )}
             </div>
             <Input
               placeholder="Type your full name as signature"
-              value={(value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value)}
+              value={sigName}
+              onChange={(e) => {
+                const name = e.target.value;
+                // Capture e-sign metadata alongside the signature value
+                onChange({
+                  name,
+                  signedAt: new Date().toISOString(),
+                  ipAddress: "captured-on-submit",
+                  userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  agreementText: "By typing your name above, you agree this serves as your electronic signature.",
+                });
+              }}
               required={question.required}
               className="text-base min-h-12"
             />
             <p className="text-xs text-muted-foreground">
               By typing your name above, you agree this serves as your electronic signature.
             </p>
+            {sigName && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/30 rounded px-2 py-1">
+                <Shield className="h-3 w-3" />
+                <span>E-signed · {Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+              </div>
+            )}
           </div>
         </div>
       );
+    }
     case "phone":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <Input
             id={id}
             type="tel"
@@ -923,7 +988,7 @@ function QuestionInput({
     case "email":
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <Input
             id={id}
             type="email"
@@ -940,7 +1005,7 @@ function QuestionInput({
       const update = (field: string, v: string) => onChange({ ...addr, [field]: v });
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <div className="space-y-2">
             <Input
               placeholder="Street address"
@@ -977,7 +1042,7 @@ function QuestionInput({
     default:
       return wrap(
         <div className="space-y-2">
-          <QuestionLabel label={question.label} required={question.required} helpText={help} />
+          <QuestionLabel label={question.label} required={question.required} helpText={help} frLabel={frLabel} locale={locale} />
           <Input
             id={id}
             type="text"

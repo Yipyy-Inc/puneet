@@ -25,6 +25,7 @@ import {
   type MappingResult,
 } from "@/data/form-submissions";
 import { getFormAuditLog } from "@/lib/form-audit";
+import { getOutcomeDisplay } from "@/lib/form-scoring";
 import { notifyCustomerSubmissionConfirmed } from "@/lib/form-customer-notifications";
 import { getFormById, type FormQuestion } from "@/data/forms";
 import { clients } from "@/data/clients";
@@ -49,6 +50,7 @@ import {
   Tag,
   Syringe,
   Paperclip,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -125,18 +127,29 @@ function AnswerBlock({ question, value }: { question: FormQuestion; value: unkno
     );
   }
 
-  // Signature-type answers
+  // Signature-type answers (with e-sign metadata support)
   if (question.type === "signature") {
+    const isEsignObj = typeof value === "object" && value !== null && "name" in (value as Record<string, unknown>);
+    const sigName = isEsignObj ? String((value as Record<string, unknown>).name) : formatValue(value);
+    const sigMeta = isEsignObj ? (value as Record<string, unknown>) : null;
     return (
       <div className="space-y-1">
         <Label className="text-muted-foreground font-normal text-xs">{question.label}</Label>
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium italic">{formatValue(value)}</p>
+          <p className="text-sm font-medium italic">{sigName}</p>
           <Badge variant="outline" className="text-[10px] h-5 gap-1 font-normal bg-violet-50 text-violet-700 border-violet-200">
             <PenLine className="h-2.5 w-2.5" />
             e-signed
           </Badge>
         </div>
+        {Boolean(sigMeta?.signedAt) && (
+          <div className="mt-1.5 rounded-md bg-violet-50/50 border border-violet-100 px-2.5 py-2 text-[11px] text-muted-foreground space-y-0.5">
+            <p>Signed: {String(sigMeta!.signedAt).slice(0, 19).replace("T", " ")} UTC</p>
+            {Boolean(sigMeta!.timezone) && <p>Timezone: {String(sigMeta!.timezone)}</p>}
+            {Boolean(sigMeta!.userAgent) && <p className="truncate">Device: {String(sigMeta!.userAgent).slice(0, 80)}{String(sigMeta!.userAgent).length > 80 ? "..." : ""}</p>}
+            {Boolean(sigMeta!.agreementText) && <p className="italic">"{String(sigMeta!.agreementText)}"</p>}
+          </div>
+        )}
       </div>
     );
   }
@@ -444,6 +457,55 @@ export default function SubmissionDetailPage({
           {record.status}
         </Badge>
       </div>
+
+      {/* Scoring Outcome (Phase 2) */}
+      {record.scoreOutcome && (
+        (() => {
+          const outcome = getOutcomeDisplay(record.scoreOutcome!);
+          const rules = record.scoreDetails ?? [];
+          const totalPoints = record.score ?? 0;
+          return (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-indigo-600" />
+                  Intake Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <div className={`rounded-xl px-4 py-2.5 ${outcome.bg}`}>
+                    <p className="text-2xl font-bold tabular-nums">{totalPoints}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">points</p>
+                  </div>
+                  <div>
+                    <Badge className={`${outcome.bg} ${outcome.color} border-0 text-xs font-semibold`}>
+                      {outcome.label}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      {rules.length} rule{rules.length !== 1 ? "s" : ""} evaluated
+                    </p>
+                  </div>
+                  {rules.length > 0 && (
+                    <div className="ml-auto flex gap-1.5">
+                      {rules.map((r, i) => (
+                        <div
+                          key={i}
+                          className={`rounded-md px-2.5 py-1.5 text-center text-xs border ${
+                            r.points > 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-muted/50 border-muted text-muted-foreground"
+                          }`}
+                        >
+                          <span className="font-semibold">{r.points > 0 ? "+" : ""}{r.points}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: Answers in form layout */}

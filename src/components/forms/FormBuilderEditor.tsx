@@ -62,6 +62,8 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
+import type { FormScoringConfig, SupportedFormLocale } from "@/data/forms-phase2-types";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
   { value: "intake", label: "Intake (new clients)" },
@@ -310,6 +312,13 @@ export function FormBuilderEditor({
   const [formLogicRules, setFormLogicRules] = useState<FormLogicRule[]>(existing?.logicRules ?? []);
   const [previewMode, setPreviewMode] = useState<"none" | "desktop" | "mobile">("none");
   const [previewAudience, setPreviewAudience] = useState<"customer" | "staff">("customer");
+  // Phase 2 state
+  const [scoringConfig, setScoringConfig] = useState<FormScoringConfig>(
+    existing?.settings?.scoring ?? { enabled: false, thresholds: { approveAbove: 80, needsReviewAbove: 50 }, rules: [] }
+  );
+  const [i18nEnabled, setI18nEnabled] = useState(false);
+  const [esignEnabled, setEsignEnabled] = useState(false);
+  const [paymentBlockEnabled, setPaymentBlockEnabled] = useState(false);
   const versionHistory = existing ? getFormVersionHistory(existing.id) : [];
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
@@ -1128,6 +1137,28 @@ export function FormBuilderEditor({
         </Card>
 
         {/* Version History */}
+        {/* Phase 2: Advanced Settings */}
+        <FormPhase2Settings
+          questions={questions}
+          scoring={scoringConfig}
+          onScoringChange={setScoringConfig}
+          i18nEnabled={i18nEnabled}
+          onI18nEnabledChange={setI18nEnabled}
+          onQuestionI18nChange={(qId, locale, label) => {
+            setQuestions((prev) =>
+              prev.map((q) =>
+                q.id === qId
+                  ? { ...q, labelI18n: { ...q.labelI18n, [locale]: label } }
+                  : q
+              )
+            );
+          }}
+          esignEnabled={esignEnabled}
+          onEsignEnabledChange={setEsignEnabled}
+          paymentBlockEnabled={paymentBlockEnabled}
+          onPaymentBlockEnabledChange={setPaymentBlockEnabled}
+        />
+
         {versionHistory.length > 0 && (
           <Card>
             <CardHeader>

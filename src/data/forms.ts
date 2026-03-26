@@ -345,6 +345,7 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
       validation: f.validation,
       visibility: f.visibility,
       sectionId: f.sectionId,
+      labelI18n: f.labelI18n,
     };
   });
   const fieldMapping: FieldMappingItem[] = fields
@@ -395,18 +396,60 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
   };
 }
 
+/** Phase 2 extended context for conditions (pet attributes, tags, etc.) */
+export interface ConditionContext {
+  petType?: string;
+  serviceType?: string;
+  evaluationStatus?: string;
+  petAttributes?: {
+    breed?: string;
+    type?: string;
+    age?: number;
+    weight?: number;
+    gender?: string;
+    tags?: string[];
+  };
+  customerTags?: string[];
+}
+
+/** Resolve source value from a condition, supporting Phase 2 sourceType/petAttribute/tag. */
+function resolveConditionSource(
+  c: FormCondition,
+  answers: Record<string, unknown>,
+  context?: ConditionContext,
+): unknown {
+  // Phase 2: explicit sourceType
+  if (c.sourceType === "petAttribute" && c.petAttribute && context?.petAttributes) {
+    const attr = c.petAttribute;
+    if (attr === "pet.breed") return context.petAttributes.breed;
+    if (attr === "pet.type") return context.petAttributes.type;
+    if (attr === "pet.age") return context.petAttributes.age;
+    if (attr === "pet.weight") return context.petAttributes.weight;
+    if (attr === "pet.gender") return context.petAttributes.gender;
+    if (attr === "pet.hasTag") return context.petAttributes.tags?.includes(String(c.value)) ? "true" : "false";
+  }
+  if (c.sourceType === "tag" && c.tagId) {
+    const allTags = [...(context?.petAttributes?.tags ?? []), ...(context?.customerTags ?? [])];
+    return allTags.includes(c.tagId) ? "true" : "false";
+  }
+  if (c.sourceType === "serviceType" && context?.serviceType) return context.serviceType;
+  if (c.sourceType === "evaluationStatus" && context?.evaluationStatus) return context.evaluationStatus;
+  // Legacy: contextField or questionId
+  if (c.contextField && context) return context[c.contextField];
+  if (c.questionId) return answers[c.questionId];
+  return undefined;
+}
+
 /** Evaluate whether a question should be shown (legacy condition or LogicRule) */
 export function shouldShowQuestion(
   question: FormQuestion,
   answers: Record<string, unknown>,
-  context?: { petType?: string; serviceType?: string; evaluationStatus?: string }
+  context?: ConditionContext
 ): boolean {
   if (!question.condition) return true;
   const c = question.condition;
-  let sourceValue: unknown;
-  if (c.contextField && context) sourceValue = context[c.contextField];
-  else if (c.questionId) sourceValue = answers[c.questionId];
-  else return true;
+  const sourceValue = resolveConditionSource(c, answers, context);
+  if (sourceValue === undefined) return true;
   const target = c.value;
   const op = c.operator;
   switch (op) {
@@ -449,6 +492,7 @@ export interface LogicRuleEffects {
 export function evaluateLogicRules(
   rules: FormLogicRule[],
   answers: Record<string, unknown>,
+  context?: ConditionContext,
 ): LogicRuleEffects {
   const effects: LogicRuleEffects = {
     hiddenQuestionIds: new Set(),
@@ -457,7 +501,28 @@ export function evaluateLogicRules(
     alertFlag: false,
   };
   for (const rule of rules) {
-    const sourceValue = answers[rule.triggerQuestionId];
+    // Phase 2: resolve from context if triggerSource is set
+    let sourceValue: unknown;
+    const ts = (rule as unknown as Record<string, unknown>).triggerSource as string | undefined;
+    if (ts === "petAttribute" && context?.petAttributes) {
+      const attr = (rule as unknown as Record<string, unknown>).petAttribute as string | undefined;
+      if (attr === "pet.breed") sourceValue = context.petAttributes.breed;
+      else if (attr === "pet.type") sourceValue = context.petAttributes.type;
+      else if (attr === "pet.age") sourceValue = context.petAttributes.age;
+      else if (attr === "pet.weight") sourceValue = context.petAttributes.weight;
+      else if (attr === "pet.gender") sourceValue = context.petAttributes.gender;
+      else if (attr === "pet.hasTag") sourceValue = context.petAttributes.tags?.includes(String(rule.value)) ? "true" : "false";
+    } else if (ts === "tag") {
+      const tagId = (rule as unknown as Record<string, unknown>).tagId as string | undefined;
+      const allTags = [...(context?.petAttributes?.tags ?? []), ...(context?.customerTags ?? [])];
+      sourceValue = tagId && allTags.includes(tagId) ? "true" : "false";
+    } else if (ts === "serviceType") {
+      sourceValue = context?.serviceType;
+    } else if (ts === "evaluationStatus") {
+      sourceValue = context?.evaluationStatus;
+    } else {
+      sourceValue = answers[rule.triggerQuestionId];
+    }
     const target = rule.value;
     let matches = false;
     switch (rule.operator) {
@@ -905,9 +970,9 @@ formRecords = [
 formVersions = [{ id: seedVerId, formId: seedFormId, versionNumber: 1, publishedAt: now, createdAt: now }];
 formSections = [{ id: seedSecId, formVersionId: seedVerId, title: "Default", order: 0 }];
 formFields = [
-  { id: "q1", sectionId: seedSecId, label: "Full name", fieldType: "short_text", required: true, order: 0, mappingTarget: "customer.name" },
-  { id: "q2", sectionId: seedSecId, label: "Email", fieldType: "email", required: true, order: 1, mappingTarget: "customer.email" },
-  { id: "q3", sectionId: seedSecId, label: "How did you hear about us?", fieldType: "long_text", required: false, order: 2 },
+  { id: "q1", sectionId: seedSecId, label: "Full name", fieldType: "short_text", required: true, order: 0, mappingTarget: "customer.name", labelI18n: { fr: "Nom complet" } },
+  { id: "q2", sectionId: seedSecId, label: "Email", fieldType: "email", required: true, order: 1, mappingTarget: "customer.email", labelI18n: { fr: "Courriel" } },
+  { id: "q3", sectionId: seedSecId, label: "How did you hear about us?", fieldType: "long_text", required: false, order: 2, labelI18n: { fr: "Comment avez-vous entendu parler de nous?" } },
 ];
 formOptions = [];
 logicRules = [];
