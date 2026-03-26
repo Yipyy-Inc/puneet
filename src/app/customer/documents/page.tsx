@@ -214,8 +214,13 @@ export default function CustomerDocumentsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {(() => {
-                  const facilityId = selectedFacility?.id ?? 11;
-                  const forms = getFormsByFacility(facilityId).filter(
+                  // Try selected facility first, fall back to facility 11 (demo forms)
+                  const primaryId = selectedFacility?.id ?? 1;
+                  const allForms = [
+                    ...getFormsByFacility(primaryId),
+                    ...(primaryId !== 11 ? getFormsByFacility(11) : []),
+                  ];
+                  const forms = allForms.filter(
                     (f) => f.status === "published" && f.audience !== "staff"
                   );
                   if (forms.length === 0) {
