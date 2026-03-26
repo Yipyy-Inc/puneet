@@ -2,12 +2,9 @@ import { PawPrint, Receipt } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type {
-  Pet,
-  Client,
-  FeedingScheduleItem,
-  MedicationItem,
-} from "@/lib/types";
+import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type { Pet } from "@/types/pet";
+import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
 
 interface ConfirmStepProps {

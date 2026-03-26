@@ -1,261 +1,38 @@
 // Grooming Module Mock Data
+// Types are defined in @/types/grooming — re-exported here for backward compatibility
 
-export type GroomingStatus =
-  | "scheduled"
-  | "checked-in"
-  | "in-progress"
-  | "ready-for-pickup"
-  | "completed"
-  | "cancelled"
-  | "no-show";
-export type PetSize = "small" | "medium" | "large" | "giant";
-export type CoatType =
-  | "short"
-  | "medium"
-  | "long"
-  | "wire"
-  | "curly"
-  | "double";
-export type ProductCategory =
-  | "shampoo"
-  | "conditioner"
-  | "styling"
-  | "tools"
-  | "accessories"
-  | "health"
-  | "cleaning";
+export type { PetSize } from "@/types/base";
+export type {
+  GroomingStatus,
+  CoatType,
+  ProductCategory,
+  StylistSkillLevel,
+  StylistCapacity,
+  Stylist,
+  StylistAvailability,
+  StylistTimeOff,
+  GroomingIntake,
+  PriceAdjustmentReason,
+  PriceAdjustment,
+  GroomingAppointment,
+  ProductUsage,
+  GroomingPackage,
+  GroomingAddOn,
+  GroomingPhoto,
+  PhotoAlbum,
+  GroomingProduct,
+  ProductUsageLog,
+  InventoryOrder,
+} from "@/types/grooming";
 
-export type StylistSkillLevel = "junior" | "intermediate" | "senior" | "master";
-
-export interface StylistCapacity {
-  maxDailyAppointments: number; // Maximum appointments per day
-  maxConcurrentAppointments: number; // Maximum simultaneous appointments (usually 1)
-  preferredPetSizes: PetSize[]; // Pet sizes this stylist prefers/handles best
-  skillLevel: StylistSkillLevel; // Experience/skill level
-  canHandleMatted: boolean; // Can handle matted coats
-  canHandleAnxious: boolean; // Can handle anxious pets
-  canHandleAggressive: boolean; // Can handle aggressive pets
-}
-
-export interface Stylist {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  photoUrl?: string;
-  specializations: string[];
-  certifications: string[];
-  yearsExperience: number;
-  status: "active" | "inactive" | "on-leave";
-  bio: string;
-  rating: number;
-  totalAppointments: number;
-  hireDate: string;
-  capacity: StylistCapacity; // Capacity and skill configuration
-}
-
-export interface StylistAvailability {
-  id: string;
-  stylistId: string;
-  stylistName: string;
-  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-}
-
-export interface StylistTimeOff {
-  id: string;
-  stylistId: string;
-  stylistName: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: "pending" | "approved" | "denied";
-}
-
-export interface GroomingIntake {
-  coatCondition: "normal" | "matted" | "severely-matted";
-  behaviorNotes: string;
-  allergies: string[];
-  specialInstructions: string;
-  beforePhotos: string[]; // URLs
-  mattingFeeWarning: boolean;
-  mattingFeeAmount?: number;
-  completedBy?: string; // Groomer name
-  completedAt?: string; // ISO timestamp
-}
-
-export type PriceAdjustmentReason =
-  | "matting-fee"
-  | "de-shedding-upgrade"
-  | "extra-brushing-time"
-  | "behavioral-handling"
-  | "extra-time-required"
-  | "product-upgrade"
-  | "special-treatment"
-  | "other";
-
-export interface PriceAdjustment {
-  id: string;
-  amount: number;
-  reason: PriceAdjustmentReason;
-  customReason?: string; // For "other" reason
-  description: string;
-  addedBy: string; // Groomer name
-  addedAt: string; // ISO timestamp
-  customerNotified: boolean;
-  notifiedAt?: string; // ISO timestamp
-}
-
-export interface GroomingAppointment {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  petSize: PetSize;
-  petWeight: number;
-  coatType: CoatType;
-  petPhotoUrl?: string;
-  ownerId: number;
-  ownerName: string;
-  ownerPhone: string;
-  ownerEmail: string;
-  stylistId: string;
-  stylistName: string;
-  packageId: string;
-  packageName: string;
-  addOns: string[];
-  basePrice: number; // Original price before adjustments
-  priceAdjustments: PriceAdjustment[]; // Dynamic price adjustments
-  totalPrice: number; // basePrice + sum of adjustments
-  status: GroomingStatus;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  notes: string;
-  specialInstructions: string;
-  allergies: string[];
-  intake?: GroomingIntake; // Intake form data
-  afterPhotos?: GroomingPhoto[]; // After photos from groomer
-  lastGroomDate?: string;
-  createdAt: string;
-  onlineBooking: boolean;
-}
-
-export interface ProductUsage {
-  productId: string;
-  productName: string;
-  quantity: number; // Amount used per service (e.g., 10ml, 0.1 bottles)
-  unit: string; // Unit of measurement (e.g., "ml", "bottle", "oz")
-  isOptional?: boolean; // If true, product may not always be used
-}
-
-export interface GroomingPackage {
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  duration: number; // in minutes - automatically used in scheduling
-  sizePricing: {
-    small: number;
-    medium: number;
-    large: number;
-    giant: number;
-  };
-  includes: string[];
-  isActive: boolean;
-  isPopular?: boolean;
-  purchaseCount: number;
-  createdAt: string;
-  assignedStylistIds?: string[]; // Optional: restrict package to specific stylists
-  requiresEvaluation?: boolean; // If true, pet must have valid evaluation before booking
-  productUsage?: ProductUsage[]; // Products used for this package and their quantities
-}
-
-export interface GroomingAddOn {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  duration: number; // in minutes
-  isActive: boolean;
-}
-
-export interface GroomingPhoto {
-  id: string;
-  url: string;
-  type: "before" | "after";
-  caption?: string;
-  takenAt: string;
-  takenBy: string;
-}
-
-export interface PhotoAlbum {
-  id: string;
-  appointmentId: string;
-  petId: number;
-  petName: string;
-  date: string;
-  stylistId: string;
-  stylistName: string;
-  beforePhotos: GroomingPhoto[];
-  afterPhotos: GroomingPhoto[];
-  notes?: string;
-  sharedWithOwner: boolean;
-  sharedAt?: string;
-  createdAt: string;
-}
-
-export interface GroomingProduct {
-  id: string;
-  name: string;
-  brand: string;
-  category: ProductCategory;
-  description: string;
-  sku: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unitPrice: number;
-  costPrice: number;
-  unit: string;
-  usagePerGroom: number;
-  supplier: string;
-  lastRestocked: string;
-  expiryDate?: string;
-  isActive: boolean;
-  notes?: string;
-}
-
-export interface ProductUsageLog {
-  id: string;
-  productId: string;
-  productName: string;
-  appointmentId?: string;
-  quantity: number;
-  usedBy: string;
-  usedAt: string;
-  reason: "grooming" | "waste" | "expired" | "damaged" | "other";
-  notes?: string;
-}
-
-export interface InventoryOrder {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  supplier: string;
-  status: "pending" | "ordered" | "shipped" | "received" | "cancelled";
-  orderedAt: string;
-  expectedDelivery?: string;
-  receivedAt?: string;
-  orderedBy: string;
-}
+import type {
+  Stylist,
+  StylistAvailability,
+  GroomingPackage,
+  GroomingAppointment,
+  GroomingProduct,
+  InventoryOrder,
+} from "@/types/grooming";
 
 // Mock Stylists
 export const stylists: Stylist[] = [

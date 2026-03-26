@@ -33,28 +33,15 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { YipyyGoFormData, MedicationItem } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { MedicationItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
 import type {
   MedForm,
   MedFrequency,
   MedAdminInstruction,
   MissedDoseAction,
-} from "@/lib/types";
+} from "@/types/booking";
 
-interface MedicationSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type MedicationSectionProps = YipyyGoFormSectionProps;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 

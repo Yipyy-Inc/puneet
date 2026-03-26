@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,8 +60,8 @@ export default function LoginPage() {
       await login(formData.email, formData.password);
       toast.success("Welcome back!");
       router.push("/customer/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Invalid email or password");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -86,8 +87,8 @@ export default function LoginPage() {
       }
 
       router.push("/customer/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in with Google");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Failed to sign in with Google");
     } finally {
       setIsLoading(false);
     }
@@ -111,12 +112,12 @@ export default function LoginPage() {
     return false; // Mock: no existing customer
   };
 
-  const linkGoogleAccount = async (_googleUser: any) => {
+  const linkGoogleAccount = async (_googleUser: unknown) => {
     // TODO: API call to link Google account
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
-  const createAccountWithGoogle = async (_googleUser: any) => {
+  const createAccountWithGoogle = async (_googleUser: unknown) => {
     // TODO: API call to create account with Google
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };

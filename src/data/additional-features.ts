@@ -535,29 +535,8 @@ export const waiverSignatures: WaiverSignature[] = [
 ];
 
 // Staff Conflict Detection
-export interface StaffConflict {
-  id: string;
-  staffId: string;
-  staffName: string;
-  conflictType:
-    | "double_booking"
-    | "overtime"
-    | "insufficient_break"
-    | "skill_mismatch"
-    | "time_off_overlap";
-  severity: "critical" | "warning" | "info";
-  date: string;
-  timeSlot: string;
-  conflictingBookings?: {
-    bookingId: string;
-    serviceName: string;
-    startTime: string;
-    endTime: string;
-  }[];
-  description: string;
-  recommendation: string;
-  canAutoResolve: boolean;
-}
+import type { StaffConflict } from "@/types/staff";
+export type { StaffConflict, ConflictingBooking } from "@/types/staff";
 
 export const staffConflicts: StaffConflict[] = [
   {

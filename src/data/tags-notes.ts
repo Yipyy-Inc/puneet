@@ -1,126 +1,40 @@
 // ========================================
-// TAG & NOTES SYSTEM — Types, Mock Data, Helpers
+// TAG & NOTES SYSTEM — Types re-exported from @/types/tags, Mock Data, Helpers
 // ========================================
 
 import { ALL_FACILITY_ROLES, type FacilityRole } from "@/lib/role-utils";
 
-// ========================================
-// TAG TYPES
-// ========================================
-
-export type TagType = "pet" | "customer" | "booking";
-export type TagPriority = "informational" | "warning" | "critical";
-export type TagVisibility = "internal" | "client_visible";
-export type TagScope = "global" | "location_specific";
-
-export interface Tag {
-  id: string;
-  type: TagType;
-  name: string;
-  color: string; // hex color e.g. "#ef4444"
-  icon: string; // lucide-react icon name from ICON_MAP
-  description?: string;
-  priority: TagPriority;
-  visibility: TagVisibility;
-  scope: TagScope;
-  locationIds?: string[]; // relevant when scope = "location_specific"
-  facilityId?: string;
-  isActive: boolean;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-  updatedAt?: string;
-}
-
-export interface TagAssignment {
-  id: string;
-  tagId: string;
-  entityType: TagType;
-  entityId: number;
-  assignedAt: string;
-  assignedBy: string;
-  assignedById: number;
-  expiresAt?: string;
-  notes?: string;
-}
-
-// ========================================
-// NOTE TYPES
-// ========================================
-
-export type NoteCategory =
-  | "pet"
-  | "customer"
-  | "booking"
-  | "incident"
-  | "internal_staff";
-export type PetNoteSubType = "general" | "behavior" | "medical" | "feeding";
-export type NoteVisibility = "internal" | "shared_with_customer";
-
-export interface NoteEdit {
-  id: string;
-  noteId: string;
-  previousContent: string;
-  newContent: string;
-  editedAt: string;
-  editedBy: string;
-  editedById: number;
-}
-
-export interface Note {
-  id: string;
-  category: NoteCategory;
-  subType?: PetNoteSubType;
-  entityId: number;
-  facilityId: number;
-  content: string;
-  visibility: NoteVisibility;
-  isPinned: boolean;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-  updatedAt?: string;
-  updatedBy?: string;
-  updatedById?: number;
-  editHistory: NoteEdit[];
-}
-
-// ========================================
-// SETTINGS TYPES
-// ========================================
-
-export interface NoteRolePermissions {
-  view: FacilityRole[];
-  create: FacilityRole[];
-  edit: FacilityRole[];
-  delete: FacilityRole[];
-}
-
-export interface TagNoteSettings {
-  facilityId: number;
-  tagSettings: {
-    petTagsEnabled: boolean;
-    customerTagsEnabled: boolean;
-    bookingTagsEnabled: boolean;
-    defaultVisibility: TagVisibility;
-    defaultScope: TagScope;
-  };
-  noteSettings: {
-    rolePermissions: Record<NoteCategory, NoteRolePermissions>;
-    defaultVisibility: NoteVisibility;
-  };
-  automationRules: AutomationRule[];
-}
-
-// Phase 2 placeholder
-export interface AutomationRule {
-  id: string;
-  tagId: string;
-  triggerType: "on_assign" | "on_remove";
-  actionType: "add_task" | "send_notification" | "add_note";
-  actionConfig: Record<string, unknown>;
-  isActive: boolean;
-}
+// Types re-exported from @/types/tags (single source of truth)
+export type {
+  TagType,
+  TagPriority,
+  TagVisibility,
+  TagScope,
+  Tag,
+  TagAssignment,
+  NoteCategory,
+  PetNoteSubType,
+  NoteVisibility,
+  NoteEdit,
+  Note,
+  NoteRolePermissions,
+  TagNoteSettings,
+  AutomationRule,
+  LegacyPetTag,
+  LegacyPetTagAssignment,
+} from "@/types/tags";
+import type {
+  TagType,
+  TagPriority,
+  Tag,
+  TagAssignment,
+  NoteCategory,
+  PetNoteSubType,
+  Note,
+  TagNoteSettings,
+  LegacyPetTag,
+  LegacyPetTagAssignment,
+} from "@/types/tags";
 
 // ========================================
 // TAILWIND → HEX MIGRATION MAP
@@ -1157,25 +1071,7 @@ export function getNoteCount(category: NoteCategory, entityId: number): number {
     .length;
 }
 
-// ========================================
-// BACKWARD COMPATIBILITY — Legacy PetTag shape
-// ========================================
-
-export interface LegacyPetTag {
-  id: string;
-  name: string;
-  color: string; // tailwind color class e.g. "bg-blue-500"
-  description?: string;
-}
-
-export interface LegacyPetTagAssignment {
-  id: string;
-  petId: number;
-  tagId: string;
-  assignedAt: string;
-  assignedBy: string;
-  assignedById: number;
-}
+// Legacy types re-exported from @/types/tags
 
 const HEX_TO_TAILWIND: Record<string, string> = Object.fromEntries(
   Object.entries(TAILWIND_TO_HEX).map(([tw, hex]) => [hex, tw]),

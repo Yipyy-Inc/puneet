@@ -7,7 +7,10 @@ import { Separator } from "@/components/ui/separator";
 import { IconPicker } from "../IconPicker";
 import { CategorySelector } from "../CategorySelector";
 import { generateSlug } from "@/lib/service-registry";
-import type { CustomServiceModule, CustomServiceCategory } from "@/lib/types";
+import type {
+  CustomServiceModule,
+  CustomServiceCategory,
+} from "@/types/facility";
 
 interface BasicInfoStepProps {
   data: CustomServiceModule;

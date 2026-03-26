@@ -1,207 +1,30 @@
 // Boarding module mock data
+import type {
+  BoardingGuest,
+  BoardingRate,
+  MultiNightDiscount,
+  PeakSurcharge,
+  DailyCareSheet,
+} from "@/types/boarding";
 
-export type PetSize = "small" | "medium" | "large" | "giant";
-export type AppetiteStatus = "ate-all" | "left-some" | "refused";
-export type BoardingStatus =
-  | "checked-in"
-  | "checked-out"
-  | "scheduled"
-  | "cancelled";
-
-export interface BoardingGuest {
-  [key: string]: unknown;
-  id: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  petSize: PetSize;
-  petWeight: number;
-  petColor: string;
-  petPhotoUrl?: string;
-  ownerId: number;
-  ownerName: string;
-  ownerPhone: string;
-  emergencyVetContact: string;
-  checkInDate: string;
-  checkOutDate: string;
-  actualCheckIn?: string;
-  actualCheckOut?: string;
-  kennelId: string;
-  kennelName: string;
-  status: BoardingStatus;
-  packageType: string;
-  totalNights: number;
-  nightlyRate: number;
-  discountApplied: number;
-  peakSurcharge: number;
-  totalPrice: number;
-  allergies: string[];
-  feedingInstructions: string;
-  foodBrand: string;
-  feedingTimes: string[];
-  feedingAmount: string;
-  medications: MedicationSchedule[];
-  notes: string;
-  createdAt: string;
-}
-
-export interface BoardingRate {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  isActive: boolean;
-  sizePricing: {
-    small: number;
-    medium: number;
-    large: number;
-    giant: number;
-  };
-}
-
-export interface MultiNightDiscount {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  minNights: number;
-  maxNights: number | null;
-  discountPercent: number;
-  isActive: boolean;
-}
-
-export interface PeakSurcharge {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  surchargePercent: number;
-  isActive: boolean;
-}
-
-export interface MedicationSchedule {
-  id: string;
-  medicationName: string;
-  dosage: string;
-  frequency: string;
-  times: string[];
-  instructions: string;
-  requiresPhotoProof: boolean;
-}
-
-export interface MedicationLog {
-  id: string;
-  guestId: string;
-  medicationId: string;
-  medicationName: string;
-  scheduledTime: string;
-  givenTime: string;
-  givenBy: string;
-  givenByInitials: string;
-  dosage: string;
-  photoProofUrl?: string;
-  notes: string;
-}
-
-export interface FeedingLog {
-  id: string;
-  guestId: string;
-  scheduledTime: string;
-  actualTime: string;
-  foodType: string;
-  amount: string;
-  appetiteStatus: AppetiteStatus;
-  fedBy: string;
-  fedByInitials: string;
-  notes: string;
-}
-
-export interface PottyLog {
-  id: string;
-  guestId: string;
-  time: string;
-  type: "pee" | "poop" | "both";
-  location: "outdoor" | "indoor";
-  hadAccident: boolean;
-  notes: string;
-  staffInitials: string;
-}
-
-export interface WalkLog {
-  id: string;
-  guestId: string;
-  startTime: string;
-  endTime: string;
-  duration: number; // in minutes
-  staffInitials: string;
-  notes: string;
-}
-
-export interface PlaytimeLog {
-  id: string;
-  guestId: string;
-  startTime: string;
-  endTime: string;
-  type: "group" | "solo";
-  notes: string;
-  staffInitials: string;
-}
-
-export interface KennelCleanLog {
-  id: string;
-  kennelId: string;
-  guestId: string;
-  cleanedAt: string;
-  cleanedBy: string;
-  cleanedByInitials: string;
-  deepClean: boolean;
-  blocked: boolean;
-  blockReason?: string;
-  notes: string;
-}
-
-export interface DailyCareSheet {
-  id: string;
-  guestId: string;
-  petName: string;
-  date: string;
-  feedings: FeedingLog[];
-  medications: MedicationLog[];
-  pottyBreaks: PottyLog[];
-  walks: WalkLog[];
-  playtime: PlaytimeLog[];
-  kennelCleans: KennelCleanLog[];
-  generalNotes: string;
-  staffOnDuty: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface KennelCardData {
-  id: string;
-  guestId: string;
-  petName: string;
-  petBreed: string;
-  petSex: string;
-  petWeight: number;
-  petColor: string;
-  petPhotoUrl?: string;
-  ownerNames: string;
-  primaryPhone: string;
-  checkInDate: string;
-  checkOutDate: string;
-  allergies: string[];
-  medications: { name: string; schedule: string }[];
-  feedingInstructions: string;
-  foodBrand: string;
-  feedingAmount: string;
-  feedingTimes: string[];
-  emergencyVetContact: string;
-  qrCodeUrl: string;
-  generatedAt: string;
-  printedAt?: string;
-}
+export type {
+  BoardingGuest,
+  BoardingRate,
+  MultiNightDiscount,
+  PeakSurcharge,
+  MedicationSchedule,
+  MedicationLog,
+  FeedingLog,
+  PottyLog,
+  WalkLog,
+  PlaytimeLog,
+  KennelCleanLog,
+  DailyCareSheet,
+  KennelCardData,
+  PetSize,
+  AppetiteStatus,
+  BoardingStatus,
+} from "@/types/boarding";
 
 // Mock boarding rates
 export const boardingRates: BoardingRate[] = [

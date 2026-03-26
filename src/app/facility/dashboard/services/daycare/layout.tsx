@@ -14,8 +14,8 @@ import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useSettings } from "@/hooks/use-settings";
 import { facilities } from "@/data/facilities";
 import { clients as initialClients } from "@/data/clients";
-import { NewBooking as BookingData } from "@/lib/types";
-import { Client } from "@/lib/types";
+import type { NewBooking as BookingData } from "@/types/booking";
+import type { Client } from "@/types/client";
 import {
   Sun,
   LogIn,

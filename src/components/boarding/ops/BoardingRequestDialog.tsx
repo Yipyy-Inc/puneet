@@ -29,7 +29,7 @@ import { PetEligibilityList, EligibilityRow } from "./PetEligibilityList";
 import { RoomAssignmentBoard, RoomAssignments } from "./RoomAssignmentBoard";
 import { PreCheckReviewPanel } from "./PreCheckReviewPanel";
 import { Check, X, DollarSign, Calendar, AlertTriangle } from "lucide-react";
-import type { Evaluation, Pet } from "@/lib/types";
+import type { Evaluation, Pet } from "@/types/pet";
 
 function getLatestEvaluation(pet?: Pet): Evaluation | null {
   const evals = pet?.evaluations ?? [];

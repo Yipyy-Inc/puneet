@@ -4,8 +4,8 @@ import {
   EvaluationDetails,
   CustomServiceDetails,
 } from "../service-details";
-import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
-import { Pet } from "@/lib/types";
+import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 
 interface DetailsStepProps {
   selectedService: string;

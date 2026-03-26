@@ -634,8 +634,12 @@ export default function TrainingMakeupPage() {
                   toast.success(
                     `Week ${selectedMissedSession.attendance.sessionNumber} skipped. Continuing with Week ${selectedMissedSession.enrollment.currentSessionNumber}.`,
                   );
-                } catch (error: any) {
-                  toast.error(error.message || "Failed to skip session");
+                } catch (error: unknown) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to skip session",
+                  );
                 }
                 setSelectedMissedSession(null);
               }}

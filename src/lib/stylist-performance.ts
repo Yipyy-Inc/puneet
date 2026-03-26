@@ -8,19 +8,14 @@
  * - Cancellation rate
  */
 
-import type { GroomingAppointment, Stylist } from "@/data/grooming";
+import type {
+  GroomingAppointment,
+  Stylist,
+  StylistPerformanceMetrics,
+} from "@/types/grooming";
 import { groomingAppointments } from "@/data/grooming";
 
-export interface StylistPerformanceMetrics {
-  stylistId: string;
-  todayAppointments: number;
-  totalRevenue: number; // Total revenue from completed appointments
-  averageGroomTime: number; // Average duration in minutes
-  cancellationRate: number; // Percentage of cancelled appointments
-  completedCount: number;
-  cancelledCount: number;
-  totalAppointments: number;
-}
+export type { StylistPerformanceMetrics };
 
 /**
  * Calculate time difference in minutes between two time strings (HH:MM format)

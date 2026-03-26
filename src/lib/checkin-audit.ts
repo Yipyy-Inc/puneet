@@ -3,30 +3,9 @@
  * Stores timestamps + user IDs for compliance and traceability.
  */
 
-export type CheckInAuditAction =
-  | "customer_submission" // Customer submitted YipyyGo form
-  | "staff_edit" // Staff edited/approved/requested changes
-  | "staff_manual_complete" // Staff marked form complete without customer
-  | "staff_override" // Staff checked in without pre-check; reason logged
-  | "check_in_completed"; // Stay check-in completed (QR or manual)
+import type { CheckInAuditAction, CheckInAuditEntry } from "@/types/yipyygo";
 
-export interface CheckInAuditEntry {
-  id: string;
-  timestamp: string; // ISO
-  action: CheckInAuditAction;
-  facilityId: number;
-  bookingId: number;
-  petId?: number;
-  /** User ID (customer or staff) */
-  userId: number | string;
-  userName?: string;
-  /** "customer" | "staff" | "system" */
-  actorType: "customer" | "staff" | "system";
-  /** For staff_edit: what changed (e.g. "approved", "request_changes", "internal_edit") */
-  details?: string;
-  /** Snapshot ref or diff (e.g. form version, change summary) */
-  metadata?: Record<string, unknown>;
-}
+export type { CheckInAuditAction, CheckInAuditEntry };
 
 const auditLog: CheckInAuditEntry[] = [];
 

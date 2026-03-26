@@ -6,151 +6,28 @@
 
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { bookings } from "@/data/bookings";
+import type {
+  BelongingItem,
+  FeedingInstruction,
+  MedicationItem,
+  BehaviorNotes,
+  YipyyGoAddOn,
+  TipSelection,
+  YipyyGoFormData,
+  YipyyGoVerificationCode,
+  YipyyGoDisplayStatus,
+} from "@/types/yipyygo";
 
-// ============================================================================
-// Form Data Types
-// ============================================================================
-
-export interface BelongingItem {
-  id: string;
-  type:
-    | "food"
-    | "treats"
-    | "bedding"
-    | "toys"
-    | "crate"
-    | "leash_collar"
-    | "medication_bag"
-    | "other";
-  quantity?: number;
-  notes?: string;
-  photoUrl?: string;
-}
-
-export interface FeedingInstruction {
-  foodType: string;
-  portionSize: string;
-  portionUnit: "cups" | "grams" | "other";
-  feedingSchedule: Array<{
-    time: string; // HH:MM format
-    amount: string;
-  }>;
-  prePortionedBagCount?: number;
-  notes?: string;
-  /** V2 — structured feeding data from the new Meal Builder */
-  occasions?: import("@/lib/types").FeedingOccasion[];
-  source?: import("@/lib/types").FoodSource;
-  prepInstructions?: import("@/lib/types").PrepInstruction[];
-  prepNotes?: string;
-  ifRefuses?: import("@/lib/types").RefusalAction[];
-  refusalNotes?: string;
-  allergies?: string[];
-}
-
-export interface MedicationItem {
-  id: string;
-  name: string;
-  dosage: string;
-  frequency: string;
-  frequencyNotes?: string;
-  times: string[];
-  method: "pill_pocket" | "with_food" | "syringe" | "topical" | "other";
-  methodNotes?: string;
-  photoUrl?: string;
-  /** V2 — structured medication data from the new Med Card Builder */
-  purpose?: string;
-  strength?: string;
-  form?: import("@/lib/types").MedForm;
-  adminInstructions?: import("@/lib/types").MedAdminInstruction[];
-  adminNotes?: string;
-  ifMissed?: import("@/lib/types").MissedDoseAction;
-  isHighRisk?: boolean;
-  parentConfirmed?: boolean;
-  prnMaxPerDay?: number;
-  prnTrigger?: string;
-}
-
-export interface BehaviorNotes {
-  energyLevel: "low" | "medium" | "high" | "very_high";
-  socialization: {
-    withDogs: "friendly" | "selective" | "not_friendly" | "unknown";
-    withHumans: "friendly" | "shy" | "fearful" | "unknown";
-  };
-  anxietyTriggers?: string[];
-  specialNotes?: string;
-}
-
-export interface YipyyGoAddOn {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  selected: boolean;
-  quantity?: number;
-}
-
-export interface TipSelection {
-  type: "percentage" | "custom";
-  percentage?: number; // 10, 15, 20, etc.
-  customAmount?: number;
-  appliesTo: "stay_total" | "selected_services";
-}
-
-export interface YipyyGoFormData {
-  bookingId: number | string;
-  clientId: number;
-  petId: number;
-  petName: string;
-  facilityId: number;
-
-  // Form sections
-  belongings: BelongingItem[];
-  belongingsPhotoUrl?: string;
-
-  feedingInstructions?: FeedingInstruction;
-
-  medications: MedicationItem[];
-  noMedications: boolean;
-
-  behaviorNotes?: BehaviorNotes;
-
-  addOns: YipyyGoAddOn[];
-
-  tip?: TipSelection;
-
-  // Metadata
-  submittedAt?: string;
-  submittedBy?: number; // Client ID
-  isLocked: boolean; // Locked after deadline
-  deadline: string; // ISO date string
-  canEdit: boolean; // Based on deadline
-
-  // Staff review (facility side)
-  staffStatus?: "approved" | "needs_review" | "corrections_requested";
-  reviewedAt?: string;
-  reviewedBy?: number; // Staff user ID
-  requestChangesMessage?: string; // Message sent to customer when requesting changes
-  internalEditReason?: string; // Required when staff edits internally
-  manuallyCompletedAt?: string; // When staff marked complete without customer submission
-  manuallyCompletedBy?: number;
-
-  /** QR Code Fast-Track Check-In: secure token (booking_id + pet_id + token, no PII) */
-  qrCheckInToken?: string;
-}
-
-// ============================================================================
-// Verification Code Types
-// ============================================================================
-
-export interface YipyyGoVerificationCode {
-  code: string;
-  bookingId: number | string;
-  email?: string;
-  phone?: string;
-  expiresAt: string; // ISO date string
-  attempts: number;
-  maxAttempts: number;
-}
+export type {
+  BelongingItem,
+  FeedingInstruction,
+  MedicationItem,
+  BehaviorNotes,
+  YipyyGoAddOn,
+  TipSelection,
+  YipyyGoFormData,
+  YipyyGoVerificationCode,
+};
 
 // ============================================================================
 // Mock Data – example pre-check forms for facility dashboard demo
@@ -350,15 +227,7 @@ const mockVerificationCodes: YipyyGoVerificationCode[] = [];
 // Utility Functions
 // ============================================================================
 
-/** Display status for staff UI: Not Sent / Sent / Incomplete / Submitted / Approved / Needs Review / PreCheck Missing */
-export type YipyyGoDisplayStatus =
-  | "not_sent"
-  | "sent"
-  | "incomplete"
-  | "submitted"
-  | "approved"
-  | "needs_review"
-  | "precheck_missing";
+export type { YipyyGoDisplayStatus };
 
 export function getYipyyGoForm(
   bookingId: number | string,

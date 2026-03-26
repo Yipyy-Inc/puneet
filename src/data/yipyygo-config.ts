@@ -6,161 +6,37 @@
  * timing, reminders, and form templates.
  */
 
-// ============================================================================
-// Core Types
-// ============================================================================
+import type {
+  YipyyGoServiceType as ServiceType,
+  YipyyGoRequirement,
+  DeliveryChannel,
+  CustomQuestionType,
+  MultiPetBehavior,
+  ServiceYipyyGoConfig,
+  ReminderRule,
+  TimingConfig,
+  CustomQuestion,
+  FormSection,
+  FormTemplateConfig,
+  YipyyGoAddOnsApproval,
+  YipyyGoConfig,
+} from "@/types/yipyygo";
 
-export type ServiceType =
-  | "daycare"
-  | "boarding"
-  | "grooming"
-  | "training"
-  | "custom";
-
-export type YipyyGoRequirement = "mandatory" | "optional";
-
-export type DeliveryChannel = "email" | "sms" | "push";
-
-export type CustomQuestionType =
-  | "short_text"
-  | "dropdown"
-  | "checkbox"
-  | "number"
-  | "date"
-  | "file_upload";
-
-export type MultiPetBehavior =
-  | "one_form_per_pet"
-  | "combined_form_with_sections";
-
-// ============================================================================
-// Service Configuration
-// ============================================================================
-
-export interface ServiceYipyyGoConfig {
-  serviceType: ServiceType;
-  customServiceName?: string; // For custom services
-  enabled: boolean;
-  requirement: YipyyGoRequirement;
-}
-
-// ============================================================================
-// Timing & Reminders Configuration
-// ============================================================================
-
-export interface ReminderRule {
-  id: string;
-  sendTime: number; // Hours before check-in (e.g., 48 = 48 hours before)
-  channel: DeliveryChannel;
-  template?: string; // Optional custom message template
-}
-
-export interface TimingConfig {
-  initialSendTime: number; // Hours before check-in to send initial form
-  deadline: number; // Hours before check-in that form must be completed
-  reminderRules: ReminderRule[];
-  deliveryChannels: DeliveryChannel[];
-}
-
-// ============================================================================
-// Form Template Configuration
-// ============================================================================
-
-export interface CustomQuestion {
-  id: string;
-  type: CustomQuestionType;
-  label: string;
-  required: boolean;
-  placeholder?: string;
-  helpText?: string;
-
-  // For dropdown type
-  options?: { value: string; label: string }[];
-
-  // For checkbox type
-  defaultChecked?: boolean;
-
-  // For number type
-  min?: number;
-  max?: number;
-
-  // For date type
-  minDate?: string;
-  maxDate?: string;
-
-  // Display order
-  order: number;
-}
-
-export interface FormSection {
-  id: string;
-  label: string;
-  enabled: boolean;
-  required: boolean;
-  order: number;
-  customQuestions?: CustomQuestion[];
-}
-
-export interface FormTemplateConfig {
-  // Section toggles
-  sections: {
-    petInfo: FormSection;
-    careInstructions: FormSection;
-    medications: FormSection;
-    feedingSchedule: FormSection;
-    emergencyContact: FormSection;
-    specialRequests: FormSection;
-    customSections: FormSection[]; // Additional custom sections
-  };
-
-  // Feature toggles
-  features: {
-    photoUploads: boolean;
-    addOnsSection: boolean;
-    tipSection: boolean;
-  };
-
-  // Multi-pet behavior
-  multiPetBehavior: MultiPetBehavior;
-
-  /** Shared add-ons: apply to whole booking vs per-pet (when multi-pet) */
-  addOnsScope: "booking" | "per_pet";
-
-  // Custom questions (global, not section-specific)
-  globalCustomQuestions: CustomQuestion[];
-}
-
-// ============================================================================
-// Complete YipyyGo Configuration
-// ============================================================================
-
-/** Add-ons approval: auto adds to invoice; staff_approval adds as pending until staff approves */
-export type YipyyGoAddOnsApproval = "auto" | "staff_approval";
-
-export interface YipyyGoConfig {
-  facilityId: number;
-  enabled: boolean;
-
-  // Service scope
-  serviceConfigs: ServiceYipyyGoConfig[];
-
-  // Timing & reminders
-  timing: TimingConfig;
-
-  // Form template
-  formTemplate: FormTemplateConfig;
-
-  /** Add-ons from YipyyGo form: auto-approve (add to invoice) or require staff approval (pending add-on) */
-  addOnsApproval: YipyyGoAddOnsApproval;
-
-  /** Notify staff via email when customer submits form (in-app notification always sent) */
-  notifyStaffEmailOnSubmit: boolean;
-
-  // Metadata
-  createdAt: string;
-  updatedAt: string;
-  updatedBy: number; // User ID
-}
+export type {
+  ServiceType,
+  YipyyGoRequirement,
+  DeliveryChannel,
+  CustomQuestionType,
+  MultiPetBehavior,
+  ServiceYipyyGoConfig,
+  ReminderRule,
+  TimingConfig,
+  CustomQuestion,
+  FormSection,
+  FormTemplateConfig,
+  YipyyGoAddOnsApproval,
+  YipyyGoConfig,
+};
 
 // ============================================================================
 // Default Configurations

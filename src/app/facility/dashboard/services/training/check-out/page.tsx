@@ -228,8 +228,10 @@ export default function TrainingCheckOutPage() {
       setSelectedSession(null);
       setAttendanceStatus("present");
       setTrainerNotes("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to check out");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to check out",
+      );
     }
   };
 

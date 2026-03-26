@@ -5,7 +5,7 @@
  */
 
 import { type TrainingCourseType } from "./training-config";
-import { type Pet } from "@/lib/types";
+import type { Pet } from "@/types/pet";
 import { vaccinationRecords } from "@/data/pet-data";
 
 export interface PrerequisiteCheckResult {

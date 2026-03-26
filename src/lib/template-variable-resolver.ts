@@ -4,7 +4,9 @@
 // Resolves {{variable}} placeholders in templates using
 // provided data context. Supports fallback syntax: {{key|fallback}}.
 
-import type { Client, Pet, Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
+import type { Client } from "@/types/client";
+import type { Pet } from "@/types/pet";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 

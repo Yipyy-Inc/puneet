@@ -7,49 +7,14 @@
 
 import type {
   YipyyGoConfig,
-  ServiceType,
-  DeliveryChannel,
-} from "@/data/yipyygo-config";
+  YipyyGoServiceType as ServiceType,
+  YipyyGoTriggerResult,
+  YipyyGoMessage,
+  BookingForYipyyGo,
+} from "@/types/yipyygo";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface YipyyGoTriggerResult {
-  shouldTrigger: boolean;
-  reason?: string;
-  sendImmediately: boolean;
-  scheduledSendTime?: Date;
-  message?: YipyyGoMessage;
-}
-
-export interface YipyyGoMessage {
-  subject: string;
-  body: string;
-  ctaText: string;
-  ctaLink: string;
-  summary: {
-    petName: string;
-    serviceType: string;
-    date: string;
-    time: string;
-  };
-  channels: DeliveryChannel[];
-}
-
-export interface BookingForYipyyGo {
-  id: number | string;
-  clientId: number;
-  petId: number;
-  petName: string;
-  facilityId: number;
-  service: string; // "daycare" | "boarding" | "grooming" | "training" | etc.
-  startDate: string | Date;
-  checkInTime?: string;
-  status: string;
-  createdAt?: string | Date;
-}
+export type { YipyyGoTriggerResult, YipyyGoMessage, BookingForYipyyGo };
 
 // ============================================================================
 // Main Trigger Function

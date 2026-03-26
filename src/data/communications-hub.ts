@@ -2,26 +2,25 @@
 // MESSAGING HUB DATA
 // ========================================
 
-export interface Message {
-  id: string;
-  type: "email" | "sms" | "in-app";
-  direction: "inbound" | "outbound";
-  from: string;
-  to: string;
-  subject?: string; // for emails
-  body: string;
-  status: "sent" | "delivered" | "read" | "failed";
-  timestamp: string;
-  clientId?: number;
-  threadId?: string;
-  attachments?: {
-    id: string;
-    name: string;
-    size: number;
-    url: string;
-  }[];
-  hasRead: boolean;
-}
+import type {
+  Message,
+  MessageTemplate,
+  AutomationRule,
+  PetUpdate,
+  CallLog,
+  RoutingRule,
+  InternalMessage,
+} from "@/types/communications";
+
+export type {
+  Message,
+  MessageTemplate,
+  AutomationRule,
+  PetUpdate,
+  CallLog,
+  RoutingRule,
+  InternalMessage,
+};
 
 export const messages: Message[] = [
   {
@@ -92,16 +91,6 @@ export const messages: Message[] = [
     hasRead: true,
   },
 ];
-
-export interface MessageTemplate {
-  id: string;
-  name: string;
-  type: "email" | "sms";
-  subject?: string;
-  body: string;
-  category: "reminder" | "confirmation" | "update" | "general";
-  variables: string[];
-}
 
 export const messageTemplates: MessageTemplate[] = [
   {
@@ -227,39 +216,6 @@ export const messageTemplates: MessageTemplate[] = [
 // ========================================
 // AUTOMATIONS DATA
 // ========================================
-
-export interface AutomationRule {
-  id: string;
-  name: string;
-  trigger:
-    | "booking_created"
-    | "24h_before"
-    | "check_in"
-    | "check_out"
-    | "payment_received"
-    | "vaccination_expiry"
-    | "appointment_reminder"
-    | "form_link_sent"
-    | "form_started"
-    | "form_submitted"
-    | "form_incomplete_by_deadline"
-    | "form_red_flag_answer";
-  enabled: boolean;
-  messageType: "email" | "sms" | "both";
-  templateId: string;
-  conditions?: {
-    serviceTypes?: string[];
-    minAmount?: number;
-  };
-  schedule?: {
-    hoursBefore?: number;
-    daysBeforeExpiry?: number;
-  };
-  stats: {
-    totalSent: number;
-    lastTriggered?: string;
-  };
-}
 
 export const automationRules: AutomationRule[] = [
   {
@@ -430,26 +386,6 @@ export const automationRules: AutomationRule[] = [
 // PET UPDATES DATA
 // ========================================
 
-export interface PetUpdate {
-  id: string;
-  petId: number;
-  petName: string;
-  clientId: number;
-  updateType:
-    | "eating"
-    | "potty"
-    | "playtime"
-    | "naptime"
-    | "medication"
-    | "grooming"
-    | "custom";
-  message: string;
-  photo?: string;
-  timestamp: string;
-  staffName: string;
-  notificationSent: boolean;
-}
-
 export const petUpdates: PetUpdate[] = [
   {
     id: "update-001",
@@ -501,27 +437,6 @@ export const petUpdates: PetUpdate[] = [
 // ========================================
 // AI RECEPTIONIST / CALLING DATA
 // ========================================
-
-export interface CallLog {
-  id: string;
-  type: "inbound" | "outbound";
-  from: string;
-  to: string;
-  clientId?: number;
-  clientName?: string;
-  duration: number; // in seconds
-  status: "completed" | "missed" | "voicemail" | "failed";
-  timestamp: string;
-  recordingUrl?: string;
-  transcription?: string;
-  aiHandled: boolean;
-  outcome?:
-    | "booking_created"
-    | "question_answered"
-    | "transferred_to_staff"
-    | "voicemail_left";
-  notes?: string;
-}
 
 export const callLogs: CallLog[] = [
   {
@@ -588,25 +503,6 @@ export const callLogs: CallLog[] = [
   },
 ];
 
-export interface RoutingRule {
-  id: string;
-  name: string;
-  enabled: boolean;
-  priority: number;
-  conditions: {
-    callerType?: "new" | "existing" | "vip";
-    timeOfDay?: { start: string; end: string };
-    dayOfWeek?: string[];
-    keywords?: string[];
-  };
-  action:
-    | "ai_handles"
-    | "transfer_to_staff"
-    | "voicemail"
-    | "specific_extension";
-  destination?: string;
-}
-
 export const routingRules: RoutingRule[] = [
   {
     id: "route-001",
@@ -655,16 +551,6 @@ export const routingRules: RoutingRule[] = [
 // ========================================
 // INTERNAL COMMUNICATIONS DATA
 // ========================================
-
-export interface InternalMessage {
-  id: string;
-  from: string;
-  message: string;
-  mentions: string[]; // user IDs or names mentioned with @
-  timestamp: string;
-  channel: "general" | "shifts" | "urgent";
-  hasRead: string[]; // user IDs who have read
-}
 
 export const internalMessages: InternalMessage[] = [
   {

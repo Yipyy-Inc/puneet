@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Mail, Loader2, ArrowLeft } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -51,9 +52,10 @@ export default function ForgotPasswordPage() {
       await sendPasswordResetEmail(email);
       setIsSubmitted(true);
       toast.success("Password reset email sent!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
-        error.message || "Failed to send reset email. Please try again.",
+        getErrorMessage(error) ||
+          "Failed to send reset email. Please try again.",
       );
     } finally {
       setIsLoading(false);

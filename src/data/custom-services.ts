@@ -3,7 +3,7 @@ import type {
   CustomServiceCategory,
   FacilityResource,
   PricingModelType,
-} from "@/lib/types";
+} from "@/types/facility";
 
 // ========================================
 // SHARED CONSTANTS (used across wizard, cards, pages)

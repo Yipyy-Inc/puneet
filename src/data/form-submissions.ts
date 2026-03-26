@@ -10,73 +10,29 @@
  */
 
 import { logSubmissionReceived, logMergeDecision } from "@/lib/form-audit";
+import type {
+  FormSubmission,
+  SubmissionRecord,
+  AnswerRecord,
+  SubmissionStatus,
+  MergeOverride,
+  MappingResult,
+  SubmissionListFilters,
+  SubmissionWithRecord,
+} from "@/types/forms";
 
-export type FormSubmissionStatus = "new" | "processed" | "merged";
-
-/** New spec status */
-export type SubmissionStatus = "unread" | "read" | "processed" | "archived";
-
-export interface FormSubmissionContext {
-  petType?: string;
-  serviceType?: string;
-  evaluationStatus?: string;
-}
-
-/** Legacy shape: still returned by getSubmission for existing UI */
-export interface FormSubmission {
-  id: string;
-  formId: string;
-  facilityId: number;
-  status: FormSubmissionStatus;
-  context?: FormSubmissionContext;
-  answers: Record<string, unknown>;
-  petIds?: number[];
-  customerId?: number;
-  submitterEmail?: string;
-  submitterName?: string;
-  createdAt: string;
-  processedAt?: string;
-  processedBy?: string;
-  /** 8) Staff-assisted intake: true when a staff member fills the form on behalf of a customer */
-  staffAssisted?: boolean;
-  staffAssistantId?: string | number;
-  staffAssistantName?: string;
-}
-
-/** New spec: Submission record */
-export interface SubmissionRecord {
-  id: string;
-  formVersionId: string;
-  formId: string;
-  facilityId: number;
-  locationId?: string;
-  status: SubmissionStatus;
-  submittedBy?: string;
-  relatedCustomerId?: number;
-  relatedPetId?: number;
-  relatedBookingId?: number;
-  createdAt: string;
-  submittedAt?: string;
-  mergeDecision?: Record<string, unknown>;
-  /** 8) Staff-assisted intake tracking */
-  staffAssisted?: boolean;
-  staffAssistantId?: string | number;
-  staffAssistantName?: string;
-  /** Phase 2: scoring outcome (approve/deny/needs review). See forms-phase2-types. */
-  score?: number;
-  scoreOutcome?: import("./forms-phase2-types").ScoreOutcome;
-  scoreDetails?: import("./forms-phase2-types").SubmissionScore["details"];
-}
-
-/** New spec: Answer record */
-export interface AnswerRecord {
-  submissionId: string;
-  fieldId: string;
-  value: unknown;
-  attachments?: string[];
-  /** Phase 2: e-sign metadata when field is signature/agreement. See SignatureMetadata in forms-phase2-types. */
-  signatureMetadata?: import("./forms-phase2-types").SignatureMetadata;
-}
+export type {
+  FormSubmissionStatus,
+  SubmissionStatus,
+  FormSubmissionContext,
+  FormSubmission,
+  SubmissionRecord,
+  AnswerRecord,
+  SubmissionListFilters,
+  SubmissionWithRecord,
+  MergeOverride,
+  MappingResult,
+} from "@/types/forms";
 
 const submissionRecords: SubmissionRecord[] = [];
 const answerRecords: AnswerRecord[] = [];
@@ -137,19 +93,6 @@ export function getSubmissionsByFacility(facilityId: number): FormSubmission[] {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-}
-
-export interface SubmissionListFilters {
-  status?: SubmissionStatus | "all";
-  formId?: string;
-  dateFrom?: string; // ISO date
-  dateTo?: string;
-  locationId?: string;
-}
-
-export interface SubmissionWithRecord {
-  submission: FormSubmission;
-  record: SubmissionRecord;
 }
 
 /** List submissions with their records for inbox; supports filters */
@@ -284,12 +227,6 @@ export function updateSubmissionRecordStatus(
   return rec;
 }
 
-export interface MergeOverride {
-  field: string;
-  submittedValue: string;
-  existingValue: string;
-}
-
 export function linkSubmissionToCustomer(
   id: string,
   customerId: number,
@@ -340,14 +277,6 @@ export function linkSubmissionToCustomer(
  * Returns a structured summary of where each answer goes (customer, pet, medical, notes, tags).
  * In production, this would write to the database; here it returns the plan for UI display.
  */
-export interface MappingResult {
-  target: string;
-  group: "customer" | "pet" | "medical" | "notes" | "tags";
-  label: string;
-  questionLabel: string;
-  value: unknown;
-  hasAttachment: boolean;
-}
 
 export function applyFieldMappings(
   submissionId: string,

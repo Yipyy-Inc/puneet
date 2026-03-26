@@ -1174,7 +1174,7 @@ export default function FacilitySchedulingPage() {
     conflictingShiftId?: number;
     conflictingShift?: (typeof schedules)[number];
     timeOffRequestId?: number;
-    details?: any;
+    details?: Record<string, unknown>;
   }> => {
     const conflicts: Array<{
       type:
@@ -1189,7 +1189,7 @@ export default function FacilitySchedulingPage() {
       conflictingShiftId?: number;
       conflictingShift?: (typeof schedules)[number];
       timeOffRequestId?: number;
-      details?: any;
+      details?: Record<string, unknown>;
     }> = [];
 
     // Get staff member
@@ -1423,7 +1423,7 @@ export default function FacilitySchedulingPage() {
     conflictingShiftId?: number;
     conflictingShift?: (typeof schedules)[number];
     timeOffRequestId?: number;
-    details?: any;
+    details?: Record<string, unknown>;
   }> => {
     const allConflicts: Array<{
       id: string;
@@ -1444,7 +1444,7 @@ export default function FacilitySchedulingPage() {
       conflictingShiftId?: number;
       conflictingShift?: (typeof schedules)[number];
       timeOffRequestId?: number;
-      details?: any;
+      details?: Record<string, unknown>;
     }> = [];
 
     // Scan all scheduled shifts

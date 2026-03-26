@@ -1,87 +1,19 @@
 // Daycare mock data
+import type {
+  DaycareCheckIn,
+  DaycareRate,
+  DaycarePackage,
+  DaycareReportCard,
+} from "@/types/daycare";
 
-export interface DaycareCheckIn {
-  [key: string]: unknown;
-  id: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  petSize: "small" | "medium" | "large" | "giant";
-  ownerId: number;
-  ownerName: string;
-  ownerPhone: string;
-  checkInTime: string;
-  checkOutTime: string | null;
-  scheduledCheckOut: string;
-  rateType: "hourly" | "half-day" | "full-day";
-  status: "checked-in" | "checked-out" | "scheduled";
-  notes: string;
-  playGroup: string | null;
-  photoUrl?: string;
-}
-
-export interface DaycareRate {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  type: "hourly" | "half-day" | "full-day";
-  basePrice: number;
-  description: string;
-  durationHours: number;
-  isActive: boolean;
-  sizePricing: {
-    small: number;
-    medium: number;
-    large: number;
-    giant: number;
-  };
-}
-
-export interface DaycarePackage {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  description: string;
-  rateType: "hourly" | "half-day" | "full-day";
-  quantity: number;
-  price: number;
-  savings: number;
-  validityDays: number;
-  isActive: boolean;
-  popular?: boolean;
-}
-
-export interface ReportCardActivity {
-  time: string;
-  activity: string;
-  notes?: string;
-}
-
-export interface ReportCardMeal {
-  time: string;
-  type: "breakfast" | "lunch" | "dinner" | "snack";
-  foodType: string;
-  amount: string;
-  eaten: "all" | "most" | "some" | "none";
-}
-
-export interface DaycareReportCard {
-  [key: string]: unknown;
-  id: string;
-  checkInId: string;
-  petId: number;
-  petName: string;
-  date: string;
-  overallMood: "excellent" | "good" | "fair" | "poor";
-  energyLevel: "high" | "medium" | "low";
-  activities: ReportCardActivity[];
-  meals: ReportCardMeal[];
-  photos: string[];
-  notes: string;
-  staffName: string;
-  sentToOwner: boolean;
-  sentAt: string | null;
-}
+export type {
+  DaycareCheckIn,
+  DaycareRate,
+  DaycarePackage,
+  DaycareReportCard,
+  ReportCardActivity,
+  ReportCardMeal,
+} from "@/types/daycare";
 
 export const daycareCheckIns: DaycareCheckIn[] = [
   {

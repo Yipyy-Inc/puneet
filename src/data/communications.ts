@@ -1,32 +1,7 @@
 // Communication history for clients
-export interface CommunicationRecord {
-  id: string;
-  clientId: number;
-  facilityId: number;
-  type: "email" | "sms" | "call" | "in-app" | "note";
-  subject: string;
-  content: string;
-  direction: "inbound" | "outbound";
-  timestamp: string;
-  staffName?: string;
-  staffId?: number;
-  attachments?: string[];
-  status?: "sent" | "delivered" | "read" | "failed";
-}
+import type { CommunicationRecord, CallRecord } from "@/types/communications";
 
-export interface CallRecord {
-  id: string;
-  clientId: number;
-  facilityId: number;
-  direction: "inbound" | "outbound";
-  duration: number; // in seconds
-  timestamp: string;
-  staffName?: string;
-  staffId?: number;
-  recordingUrl?: string;
-  notes?: string;
-  status: "completed" | "missed" | "voicemail";
-}
+export type { CommunicationRecord, CallRecord };
 
 export const clientCommunications: CommunicationRecord[] = [
   {

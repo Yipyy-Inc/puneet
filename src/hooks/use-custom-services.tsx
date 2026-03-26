@@ -12,7 +12,7 @@ import type {
   CustomServiceModule,
   CustomServiceStatus,
   FacilityResource,
-} from "@/lib/types";
+} from "@/types/facility";
 import {
   defaultCustomServiceModules,
   defaultFacilityResources,

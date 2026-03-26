@@ -31,7 +31,7 @@ import type {
   FoodSource,
   PrepInstruction,
   RefusalAction,
-} from "@/lib/types";
+} from "@/types/booking";
 
 export interface PetOption {
   id: number;

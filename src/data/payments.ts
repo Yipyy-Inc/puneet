@@ -1,164 +1,23 @@
 // Payment and billing data structures
-export interface PaymentMethod {
-  id: string;
-  clientId: number;
-  type: "card" | "bank_account";
-  isDefault: boolean;
-  // Card details
-  cardBrand?: "visa" | "mastercard" | "amex" | "discover";
-  cardLast4?: string;
-  cardExpMonth?: number;
-  cardExpYear?: number;
-  cardholderName?: string;
-  // Bank account details
-  bankName?: string;
-  accountLast4?: string;
-  // Metadata
-  createdAt: string;
-  stripePaymentMethodId?: string;
-}
+import type {
+  PaymentMethod,
+  Payment,
+  Invoice,
+  InvoiceItem,
+  GiftCard,
+  GiftCardTransaction,
+  CustomerCredit,
+} from "@/types/payments";
 
-export interface Payment extends Record<string, unknown> {
-  id: string;
-  facilityId: number;
-  clientId: number;
-  bookingId?: number;
-  invoiceId?: string;
-  amount: number;
-  tipAmount?: number;
-  totalAmount: number;
-  currency: "USD" | "CAD";
-  paymentMethod: "card" | "cash" | "gift_card" | "credit" | "bank_transfer";
-  status:
-    | "pending"
-    | "completed"
-    | "failed"
-    | "refunded"
-    | "partially_refunded";
-  // Card payment details
-  cardBrand?: string;
-  cardLast4?: string;
-  stripeChargeId?: string;
-  stripePaymentIntentId?: string;
-  // Gift card / credit details
-  giftCardId?: string;
-  creditUsed?: number;
-  // Refund details
-  refundAmount?: number;
-  refundReason?: string;
-  refundedAt?: string;
-  // Metadata
-  description: string;
-  receiptUrl?: string;
-  createdAt: string;
-  processedBy: string;
-  processedById: number;
-  notes?: string;
-}
-
-export interface Invoice extends Record<string, unknown> {
-  id: string;
-  invoiceNumber: string;
-  facilityId: number;
-  clientId: number;
-  bookingId?: number;
-  status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
-  dueDate: string;
-  issuedDate: string;
-  paidDate?: string;
-  // Line items
-  items: InvoiceItem[];
-  subtotal: number;
-  tax: number;
-  taxRate: number;
-  discount: number;
-  discountType?: "percentage" | "fixed";
-  discountReason?: string;
-  total: number;
-  amountPaid: number;
-  amountDue: number;
-  // Payment info
-  paymentIds?: string[];
-  // Recurring
-  isRecurring: boolean;
-  recurringFrequency?: "weekly" | "monthly" | "quarterly" | "yearly";
-  nextInvoiceDate?: string;
-  // Metadata
-  notes?: string;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-  sentAt?: string;
-  reminderSentAt?: string;
-  reminderCount: number;
-}
-
-export interface InvoiceItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  taxable: boolean;
-}
-
-export interface GiftCard {
-  id: string;
-  facilityId: number;
-  code: string;
-  type: "online" | "physical";
-  initialAmount: number;
-  currentBalance: number;
-  currency: "USD" | "CAD";
-  status: "active" | "redeemed" | "expired" | "cancelled";
-  // Purchaser info
-  purchasedBy?: string;
-  purchasedByClientId?: number;
-  purchaseDate: string;
-  // Recipient info
-  recipientName?: string;
-  recipientEmail?: string;
-  message?: string;
-  // Expiry
-  expiryDate?: string;
-  neverExpires: boolean;
-  // Metadata
-  createdAt: string;
-  lastUsedAt?: string;
-  transactionHistory: GiftCardTransaction[];
-}
-
-export interface GiftCardTransaction {
-  id: string;
-  giftCardId: string;
-  type: "purchase" | "redemption" | "refund";
-  amount: number;
-  balanceAfter: number;
-  paymentId?: string;
-  timestamp: string;
-  notes?: string;
-}
-
-export interface CustomerCredit {
-  id: string;
-  facilityId: number;
-  clientId: number;
-  amount: number;
-  remainingAmount: number;
-  currency: "USD" | "CAD";
-  reason: "refund" | "promotion" | "compensation" | "prepaid" | "other";
-  status: "active" | "fully_used" | "expired" | "cancelled";
-  // Expiry
-  expiryDate?: string;
-  neverExpires: boolean;
-  // Metadata
-  description: string;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-  lastUsedAt?: string;
-  notes?: string;
-}
+export type {
+  PaymentMethod,
+  Payment,
+  Invoice,
+  InvoiceItem,
+  GiftCard,
+  GiftCardTransaction,
+  CustomerCredit,
+};
 
 // Sample data
 export const paymentMethods: PaymentMethod[] = [

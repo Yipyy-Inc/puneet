@@ -1,117 +1,32 @@
 // Security & Compliance Data Models
+// Types re-exported from @/types/security (single source of truth)
 
-// Access Control Types
-export interface MFASettings {
-  id: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  mfaEnabled: boolean;
-  mfaMethod: "Authenticator App" | "SMS" | "Email" | "Hardware Token";
-  enrolledAt: string;
-  lastUsed: string;
-  backupCodes: number;
-  status: "Active" | "Inactive" | "Pending Setup";
-}
-
-export interface IPWhitelist {
-  id: string;
-  ipAddress: string;
-  description: string;
-  userId?: string;
-  userName?: string;
-  facilityId?: string;
-  facilityName?: string;
-  addedBy: string;
-  addedAt: string;
-  lastUsed: string;
-  accessCount: number;
-  status: "Active" | "Inactive" | "Blocked";
-  expiresAt?: string;
-}
-
-export interface SessionManagement {
-  id: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  sessionToken: string;
-  ipAddress: string;
-  deviceType: "Desktop" | "Mobile" | "Tablet";
-  browser: string;
-  location: string;
-  startedAt: string;
-  lastActivity: string;
-  expiresAt: string;
-  status: "Active" | "Expired" | "Terminated";
-  duration: string;
-}
-
-export interface PasswordPolicy {
-  id: string;
-  policyName: string;
-  description: string;
-  minLength: number;
-  requireUppercase: boolean;
-  requireLowercase: boolean;
-  requireNumbers: boolean;
-  requireSpecialChars: boolean;
-  expirationDays: number;
-  preventReuse: number;
-  maxAttempts: number;
-  lockoutDuration: number;
-  applicableTo: string[];
-  createdBy: string;
-  createdAt: string;
-  lastModified: string;
-  status: "Active" | "Inactive" | "Draft";
-}
-
-// Security Monitoring Types
-export interface FailedLoginAttempt {
-  id: string;
-  userId?: string;
-  userName?: string;
-  email: string;
-  ipAddress: string;
-  location: string;
-  attemptTime: string;
-  failureReason:
-    | "Invalid Password"
-    | "Invalid Username"
-    | "Account Locked"
-    | "MFA Failed"
-    | "IP Blocked";
-  deviceType: string;
-  browser: string;
-  severity: "Low" | "Medium" | "High" | "Critical";
-  isBlocked: boolean;
-  attemptCount: number;
-}
-
-export interface SecurityAlert {
-  id: string;
-  alertType:
-    | "Suspicious Login"
-    | "Multiple Failed Logins"
-    | "Unusual Activity"
-    | "Data Access Violation"
-    | "Permission Escalation"
-    | "Malware Detection";
-  severity: "Low" | "Medium" | "High" | "Critical";
-  title: string;
-  description: string;
-  userId?: string;
-  userName?: string;
-  ipAddress: string;
-  location: string;
-  detectedAt: string;
-  status: "New" | "Investigating" | "Resolved" | "Dismissed";
-  assignedTo?: string;
-  resolvedAt?: string;
-  actionsTaken?: string;
-  affectedResources: string[];
-}
+export type {
+  MFASettings,
+  IPWhitelist,
+  SessionManagement,
+  PasswordPolicy,
+  FailedLoginAttempt,
+  SecurityAlert,
+  GDPRCompliance,
+  DataProtectionSetting,
+  PrivacyPolicy,
+  UserConsent,
+  ComplianceFramework,
+  ComplianceReport,
+  Certificate,
+  AuditTrail,
+  DataSubjectRequest,
+  DataSubjectRequestStats,
+} from "@/types/security";
+import type {
+  MFASettings,
+  IPWhitelist,
+  SessionManagement,
+  PasswordPolicy,
+  FailedLoginAttempt,
+  SecurityAlert,
+} from "@/types/security";
 
 interface SecurityDashboardStats {
   totalFailedLogins: number;
@@ -128,219 +43,18 @@ interface SecurityDashboardStats {
   topThreats: { threat: string; count: number; severity: string }[];
 }
 
-// Data Privacy Types
-export interface GDPRCompliance {
-  id: string;
-  complianceArea:
-    | "Data Collection"
-    | "Data Storage"
-    | "Data Processing"
-    | "User Rights"
-    | "Data Breach"
-    | "Consent Management";
-  requirement: string;
-  description: string;
-  status: "Compliant" | "Partially Compliant" | "Non-Compliant" | "In Progress";
-  lastAudited: string;
-  nextAuditDue: string;
-  responsiblePerson: string;
-  documentationUrl?: string;
-  findings?: string;
-  remediationPlan?: string;
-  priority: "Low" | "Medium" | "High" | "Critical";
-}
-
-export interface DataProtectionSetting {
-  id: string;
-  category:
-    | "Encryption"
-    | "Access Control"
-    | "Data Retention"
-    | "Backup"
-    | "Anonymization"
-    | "Right to Erasure";
-  settingName: string;
-  description: string;
-  currentValue: string | boolean;
-  recommendedValue: string | boolean;
-  isCompliant: boolean;
-  dataTypes: string[];
-  lastUpdated: string;
-  updatedBy: string;
-  impact: "Low" | "Medium" | "High";
-  requiresApproval: boolean;
-}
-
-export interface PrivacyPolicy {
-  id: string;
-  policyName: string;
-  version: string;
-  effectiveDate: string;
-  expiryDate?: string;
-  status: "Draft" | "Active" | "Archived" | "Under Review";
-  language: string;
-  jurisdiction: string[];
-  lastUpdated: string;
-  updatedBy: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  acceptanceRequired: boolean;
-  acceptanceCount: number;
-  documentUrl: string;
-  changes?: string;
-}
-
-export interface UserConsent {
-  id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  consentType:
-    | "Marketing"
-    | "Data Processing"
-    | "Cookies"
-    | "Third Party Sharing"
-    | "Analytics"
-    | "Terms of Service";
-  consentGiven: boolean;
-  consentedAt?: string;
-  revokedAt?: string;
-  ipAddress: string;
-  consentVersion: string;
-  expiresAt?: string;
-  status: "Active" | "Revoked" | "Expired";
-  communicationChannel: "Email" | "SMS" | "Push Notification" | "In-App";
-}
-
-// Regulatory Compliance Types
-export interface ComplianceFramework {
-  id: string;
-  frameworkName:
-    | "GDPR"
-    | "HIPAA"
-    | "SOC 2"
-    | "ISO 27001"
-    | "PCI DSS"
-    | "CCPA"
-    | "SOX"
-    | "Other";
-  industry: string;
-  description: string;
-  applicableTo: string[];
-  requirements: number;
-  completedRequirements: number;
-  complianceScore: number;
-  status: "Compliant" | "Partially Compliant" | "Non-Compliant" | "In Progress";
-  certificationDate?: string;
-  expiryDate?: string;
-  nextAuditDate: string;
-  auditor?: string;
-  documentationUrl?: string;
-}
-
-export interface ComplianceReport {
-  id: string;
-  reportName: string;
-  reportType:
-    | "Audit Report"
-    | "Compliance Assessment"
-    | "Risk Assessment"
-    | "Incident Report"
-    | "Quarterly Review"
-    | "Annual Review";
-  framework: string[];
-  generatedAt: string;
-  generatedBy: string;
-  period: string;
-  status: "Draft" | "Final" | "Submitted" | "Under Review";
-  findings: number;
-  criticalFindings: number;
-  complianceScore: number;
-  recommendations: string[];
-  documentUrl?: string;
-  submittedTo?: string;
-  submittedAt?: string;
-}
-
-export interface Certificate {
-  id: string;
-  certificateName: string;
-  certificateType:
-    | "SSL/TLS"
-    | "Code Signing"
-    | "Email"
-    | "Client Authentication"
-    | "Compliance"
-    | "API";
-  issuer: string;
-  issuedTo: string;
-  issuedAt: string;
-  expiresAt: string;
-  status: "Valid" | "Expiring Soon" | "Expired" | "Revoked";
-  serialNumber: string;
-  fingerprint: string;
-  keySize: number;
-  algorithm: string;
-  usedBy: string[];
-  autoRenew: boolean;
-  lastRenewed?: string;
-  daysUntilExpiry: number;
-}
-
-export interface AuditTrail {
-  id: string;
-  eventType:
-    | "Access"
-    | "Modification"
-    | "Deletion"
-    | "Export"
-    | "Configuration Change"
-    | "User Action";
-  description: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  timestamp: string;
-  ipAddress: string;
-  resource: string;
-  action: string;
-  result: "Success" | "Failed" | "Denied";
-  complianceRelevant: boolean;
-  retentionPeriod: number;
-  dataClassification: "Public" | "Internal" | "Confidential" | "Restricted";
-}
-
-// GDPR Data Subject Request Types
-export interface DataSubjectRequest {
-  id: string;
-  requestType:
-    | "Export"
-    | "Deletion"
-    | "Rectification"
-    | "Restriction"
-    | "Objection";
-  requesterId: string;
-  requesterName: string;
-  requesterEmail: string;
-  facilityId?: string;
-  facilityName?: string;
-  submittedAt: string;
-  deadline: string; // GDPR requires response within 30 days
-  status: "Pending" | "In Progress" | "Completed" | "Rejected" | "Extended";
-  assignedTo?: string;
-  assignedAt?: string;
-  completedAt?: string;
-  dataCategories: string[];
-  verificationStatus: "Pending" | "Verified" | "Failed";
-  verificationMethod?: string;
-  verifiedAt?: string;
-  notes?: string;
-  rejectionReason?: string;
-  extensionReason?: string;
-  exportFileUrl?: string;
-  deletionConfirmation?: boolean;
-  auditLogId?: string;
-}
+import type {
+  GDPRCompliance,
+  DataProtectionSetting,
+  PrivacyPolicy,
+  UserConsent,
+  ComplianceFramework,
+  ComplianceReport,
+  Certificate,
+  AuditTrail,
+  DataSubjectRequest,
+  DataSubjectRequestStats,
+} from "@/types/security";
 
 // Mock Data
 export const mfaSettings: MFASettings[] = [
@@ -1344,23 +1058,6 @@ export const dataSubjectRequests: DataSubjectRequest[] = [
     notes: "User has data across 3 facilities requiring coordinated deletion",
   },
 ];
-
-// Data Subject Request Statistics
-export interface DataSubjectRequestStats {
-  totalRequests: number;
-  pendingRequests: number;
-  inProgressRequests: number;
-  completedRequests: number;
-  rejectedRequests: number;
-  avgCompletionDays: number;
-  exportRequests: number;
-  deletionRequests: number;
-  rectificationRequests: number;
-  complianceRate: number;
-  overdueRequests: number;
-  thisMonthRequests: number;
-  lastMonthRequests: number;
-}
 
 export const dataSubjectRequestStats: DataSubjectRequestStats = {
   totalRequests: 156,

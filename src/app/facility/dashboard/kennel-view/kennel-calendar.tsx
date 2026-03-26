@@ -13,8 +13,7 @@ import { ChevronLeft, ChevronRight, Plus, PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TagList } from "@/components/shared/TagList";
 import { getTagsForEntity } from "@/data/tags-notes";
-
-type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
+import type { KennelStatus } from "@/types/base";
 
 interface Kennel {
   id: string;

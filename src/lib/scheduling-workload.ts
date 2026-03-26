@@ -11,50 +11,25 @@ import { daycareCheckIns } from "@/data/daycare";
 import { boardingGuests } from "@/data/boarding";
 import { groomingAppointments, GroomingAppointment } from "@/data/grooming";
 
+import type { TimeBlockWorkload } from "@/types/staff";
+export type { TimeBlockWorkload } from "@/types/staff";
+
 export interface WorkloadMetrics {
   date: string;
-  timeBlock?: string; // Optional: specific time block (e.g., "08:00-10:00")
-
-  // Check-ins
+  timeBlock?: string;
   checkInsCount: number;
-  checkInTimes: string[]; // Array of check-in times for this date
-
-  // Check-outs
+  checkInTimes: string[];
   checkOutsCount: number;
-  checkOutTimes: string[]; // Array of check-out times for this date
-
-  // Daycare
-  daycareAttendance: number; // Current checked-in count
-  daycareForecast: number; // Scheduled/confirmed for this date
-
-  // Boarding
-  boardingOccupancy: number; // Current guests
-  boardingArrivals: number; // Arriving this date
-  boardingDepartures: number; // Departing this date
-
-  // Grooming
+  checkOutTimes: string[];
+  daycareAttendance: number;
+  daycareForecast: number;
+  boardingOccupancy: number;
+  boardingArrivals: number;
+  boardingDepartures: number;
   groomingAppointmentsCount: number;
   groomingAppointments: GroomingAppointment[];
-
-  // Evaluations
   evaluationsCount: number;
-
-  // Training sessions
   trainingSessionsCount: number;
-
-  // Busy meter (0-100, calculated based on all metrics)
-  busyMeter: number;
-}
-
-export interface TimeBlockWorkload {
-  timeBlock: string; // e.g., "08:00-10:00"
-  checkIns: number;
-  checkOuts: number;
-  daycareCount: number;
-  boardingCount: number;
-  groomingCount: number;
-  evaluations: number;
-  trainingCount: number;
   busyMeter: number;
 }
 

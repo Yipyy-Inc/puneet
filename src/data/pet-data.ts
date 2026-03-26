@@ -1,145 +1,31 @@
 // Extended pet data - photos, vaccinations, report cards, relationships
-export interface PetPhoto {
-  id: string;
-  petId: number;
-  url: string;
-  thumbnail: string;
-  caption?: string;
-  uploadedBy: string;
-  uploadedById: number;
-  uploadedAt: string;
-  isPrimary: boolean;
-}
+import type {
+  PetPhoto,
+  VaccinationRecord,
+  CareInstructions,
+  ReportCard,
+  PetRelationship,
+  PetTag,
+  PetTagAssignment,
+  BanRecord,
+} from "@/types/pet";
 
-export interface VaccinationRecord {
-  id: string;
-  petId: number;
-  vaccineName: string;
-  administeredDate: string;
-  expiryDate: string;
-  veterinarianName?: string;
-  veterinaryClinic?: string;
-  documentUrl?: string;
-  nextDueDate?: string;
-  reminderSent?: boolean;
-  notes?: string;
-  // Upload status for facility review
-  status?: "pending_review" | "approved" | "rejected";
-  reviewedBy?: string;
-  reviewedById?: number;
-  reviewedAt?: string;
-  rejectionReason?: string;
-}
-
-export interface CareInstructions {
-  petId: number;
-  feedingSchedule?: string; // e.g., "8:00 AM, 12:00 PM, 6:00 PM"
-  feedingAmount?: string; // e.g., "1 cup per meal"
-  medicationList?: Array<{
-    name: string;
-    dosage: string;
-    frequency: string;
-    notes?: string;
-  }>;
-  groomingSensitivities?: string; // e.g., "Sensitive to loud noises during grooming"
-  behaviorNotes?: string; // Owner-provided behavior notes
-  lastUpdated?: string;
-  lastUpdatedBy?: string;
-  lastUpdatedById?: number;
-}
-
-export interface ReportCard {
-  id: string;
-  petId: number;
-  bookingId: number;
-  date: string;
-  serviceType: "daycare" | "boarding" | "grooming" | "training";
-  activities: string[];
-  meals: {
-    time: string;
-    food: string;
-    amount: string;
-    consumed: "all" | "most" | "some" | "none";
-  }[];
-  pottyBreaks: {
-    time: string;
-    type: "success" | "accident";
-    notes?: string;
-  }[];
-  mood: "happy" | "calm" | "energetic" | "anxious" | "tired";
-  photos: string[];
-  staffNotes: string;
-  createdBy: string;
-  createdById: number;
-  sentToOwner: boolean;
-  sentAt?: string;
-  theme?:
-    | "everyday"
-    | "halloween"
-    | "christmas"
-    | "valentines"
-    | "easter"
-    | "summer"
-    | "winter";
-  replyMessage?: string;
-  repliedAt?: string;
-  overallFeedback?: string;
-  customAnswers?: Record<string, string>;
-  petConditions?: Record<string, string>;
-}
-
-export interface PetRelationship {
-  id: string;
-  facilityId: string;
-  petId: number;
-  relatedPetId: number;
-  relatedPetName: string;
-  relatedPetType: string;
-  relatedPetBreed: string;
-  relationshipType: "friend" | "best_friend" | "keep_apart";
-  allowAlerts: boolean;
-  notes?: string;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-}
-
-export interface PetTag {
-  id: string;
-  name: string;
-  color: string; // tailwind color class e.g. "bg-blue-500"
-  description?: string;
-}
-
-export interface PetTagAssignment {
-  id: string;
-  petId: number;
-  tagId: string;
-  assignedAt: string;
-  assignedBy: string;
-  assignedById: number;
-}
+export type {
+  PetPhoto,
+  VaccinationRecord,
+  CareInstructions,
+  ReportCard,
+  PetRelationship,
+  PetTag,
+  PetTagAssignment,
+  BanRecord,
+};
 
 // Re-export from new tag system for backward compatibility
 export {
   getLegacyPetTags,
   getLegacyPetTagAssignments,
 } from "@/data/tags-notes";
-
-export interface BanRecord {
-  id: string;
-  entityType: "client" | "pet";
-  entityId: number;
-  isBanned: boolean;
-  reason: string;
-  notes?: string;
-  bannedAt: string;
-  bannedBy: string;
-  bannedById: number;
-  unbannedAt?: string;
-  unbannedBy?: string;
-  unbannedById?: number;
-}
 
 export const petRelationships: PetRelationship[] = [
   {

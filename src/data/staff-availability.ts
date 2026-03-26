@@ -1,32 +1,27 @@
 // Shift Tasks - Tasks assigned to a shift (can be assigned to personnel or just to the shift itself)
-export interface ShiftTask {
-  id: number;
-  shiftId?: number; // Optional - if assigned to a specific shift
-  scheduleDate: string; // The date of the shift
-  shiftStartTime?: string; // Optional shift time slot
-  shiftEndTime?: string;
-  taskName: string;
-  description: string;
-  category:
-    | "feeding"
-    | "cleaning"
-    | "medication"
-    | "exercise"
-    | "grooming"
-    | "admin"
-    | "other";
-  priority: "low" | "medium" | "high" | "urgent";
-  assignedToStaffId?: number | null; // null = unassigned (anyone on shift can do it)
-  assignedToStaffName?: string | null;
-  status: "pending" | "in_progress" | "completed" | "skipped";
-  completedAt?: string;
-  completedByStaffId?: number;
-  completedByStaffName?: string;
-  notes?: string;
-  requiresPhoto: boolean;
-  photoUrl?: string;
-  facility: string;
-}
+import type {
+  ShiftTask,
+  ShiftSwapRequest,
+  SickCallIn,
+  StaffAvailability,
+  TimeOffReason,
+  TimeOffRequest,
+  ShiftTemplate,
+} from "@/types/staff";
+
+export type {
+  ShiftTask,
+  ShiftSwapRequest,
+  SickCallIn,
+  StaffAvailability,
+  TimeOffReason,
+  TimeOffRequest,
+  ShiftTemplate,
+  ShiftTaskCategory,
+  SwapRequestStatus,
+  SickCoverageStatus,
+  TimeOffRequestStatus,
+} from "@/types/staff";
 
 export const shiftTasks: ShiftTask[] = [
   {
@@ -150,27 +145,6 @@ export const shiftTasks: ShiftTask[] = [
 ];
 
 // Shift Swap Requests
-export interface ShiftSwapRequest {
-  id: number;
-  requestingStaffId: number;
-  requestingStaffName: string;
-  requestingShiftId: number;
-  requestingShiftDate: string;
-  requestingShiftTime: string; // e.g., "08:00 - 16:00"
-  targetStaffId?: number; // Optional - if requesting swap with specific person
-  targetStaffName?: string;
-  targetShiftId?: number;
-  targetShiftDate?: string;
-  targetShiftTime?: string;
-  reason: string;
-  status: "pending" | "approved" | "denied" | "cancelled";
-  requestedAt: string;
-  reviewedByStaffId?: number;
-  reviewedByStaffName?: string;
-  reviewedAt?: string;
-  reviewNotes?: string;
-  facility: string;
-}
 
 export const shiftSwapRequests: ShiftSwapRequest[] = [
   {
@@ -236,24 +210,6 @@ export const shiftSwapRequests: ShiftSwapRequest[] = [
 ];
 
 // Sick Call-ins
-export interface SickCallIn {
-  id: number;
-  staffId: number;
-  staffName: string;
-  shiftId: number;
-  shiftDate: string;
-  shiftTime: string;
-  calledInAt: string;
-  reason: string;
-  expectedReturnDate?: string;
-  coverageStatus: "needs_coverage" | "covered" | "cancelled_shift";
-  coveredByStaffId?: number;
-  coveredByStaffName?: string;
-  approvedByStaffId?: number;
-  approvedByStaffName?: string;
-  notes?: string;
-  facility: string;
-}
 
 export const sickCallIns: SickCallIn[] = [
   {
@@ -292,16 +248,6 @@ export const sickCallIns: SickCallIn[] = [
 ];
 
 // Staff Availability
-export interface StaffAvailability {
-  id: number;
-  staffId: number;
-  staffName: string;
-  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-  facility: string;
-}
 
 export const staffAvailability: StaffAvailability[] = [
   // Admin User - Full availability weekdays
@@ -670,14 +616,6 @@ export const staffAvailability: StaffAvailability[] = [
 ];
 
 // Time-off Request Types (customizable by facility)
-export interface TimeOffReason {
-  id: string;
-  name: string;
-  isDefault: boolean; // Default reasons cannot be deleted
-  isActive: boolean;
-  requiresApproval: boolean;
-  facility: string;
-}
 
 // Default time off reasons
 export const defaultTimeOffReasons: Omit<TimeOffReason, "facility">[] = [
@@ -712,25 +650,6 @@ export const defaultTimeOffReasons: Omit<TimeOffReason, "facility">[] = [
 ];
 
 // Time-off Requests
-export interface TimeOffRequest {
-  id: number;
-  staffId: number;
-  staffName: string;
-  type: string; // Now supports custom types from TimeOffReason
-  customTypeName?: string; // For custom reasons
-  startDate: string;
-  endDate: string;
-  reason: string; // Additional details/notes
-  status: "pending" | "approved" | "denied" | "changes_requested";
-  requestedAt: string;
-  reviewedBy?: number;
-  reviewedByName?: string;
-  reviewedAt?: string;
-  reviewNotes?: string;
-  requestedChanges?: string; // Manager's requested changes
-  coverageAlertTriggered?: boolean; // Whether coverage alert was triggered
-  facility: string;
-}
 
 const today = new Date();
 const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -870,15 +789,6 @@ export const timeOffRequests: TimeOffRequest[] = [
 ];
 
 // Shift Templates for quick scheduling
-export interface ShiftTemplate {
-  id: number;
-  name: string;
-  startTime: string;
-  endTime: string;
-  roles: string[];
-  color: string;
-  facility: string;
-}
 
 export const shiftTemplates: ShiftTemplate[] = [
   {

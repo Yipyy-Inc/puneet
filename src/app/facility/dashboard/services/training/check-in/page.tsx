@@ -225,8 +225,10 @@ export default function TrainingCheckInPage() {
       setIsCheckInModalOpen(false);
       setSelectedArrival(null);
       setHandlerName("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to check in");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to check in",
+      );
     }
   };
 

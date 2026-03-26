@@ -9,8 +9,8 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { PawPrint, Check } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
-import type { FeedingScheduleItem, MedicationItem } from "@/lib/types";
-import { Pet } from "@/lib/types";
+import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 import { FeedingScheduleForm } from "@/components/booking/shared/FeedingScheduleForm";
 import { MedicationForm } from "@/components/booking/shared/MedicationForm";
 

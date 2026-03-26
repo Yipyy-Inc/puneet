@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertTriangle, CreditCard, Wallet } from "lucide-react";
-import { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 import { clients } from "@/data/clients";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 

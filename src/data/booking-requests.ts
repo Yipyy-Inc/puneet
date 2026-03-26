@@ -1,29 +1,10 @@
-export type BookingRequestStatus =
-  | "pending"
-  | "declined"
-  | "waitlisted"
-  | "scheduled";
+import type {
+  BookingRequest,
+  BookingRequestStatus,
+  BookingRequestService,
+} from "@/types/booking";
 
-export type BookingRequestService =
-  | "daycare"
-  | "boarding"
-  | "grooming"
-  | "training";
-
-export interface BookingRequest {
-  id: string;
-  facilityId: number;
-  createdAt: string; // ISO
-  appointmentAt: string; // ISO
-  clientId: number;
-  clientName: string;
-  clientContact: string; // phone or email
-  petId: number;
-  petName: string;
-  services: BookingRequestService[];
-  status: BookingRequestStatus; // Pending by default
-  notes?: string;
-}
+export type { BookingRequest, BookingRequestStatus, BookingRequestService };
 
 export const BOOKING_REQUESTS: BookingRequest[] = [
   {

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 interface OnlineBookingStepProps {

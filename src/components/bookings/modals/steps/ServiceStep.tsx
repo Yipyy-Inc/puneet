@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
-import type { FacilityBookingFlowConfig, ModuleConfig, Pet } from "@/lib/types";
+import type { ModuleConfig } from "@/types/facility";
+import type { FacilityBookingFlowConfig } from "@/types/booking";
+import type { Pet, Evaluation } from "@/types/pet";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { getAllServiceCategories } from "@/lib/service-registry";
 
@@ -35,7 +37,7 @@ export function ServiceStep({
   );
 
   const getLatestEvaluation = (pet: Pet) => {
-    const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
+    const evals = pet.evaluations ?? [];
     if (evals.length === 0) return null;
     return [...evals].sort((a, b) => {
       const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
@@ -44,12 +46,12 @@ export function ServiceStep({
     })[0];
   };
 
-  const isExpiredEvaluation = (ev: any) => {
+  const isExpiredEvaluation = (ev: Evaluation | null) => {
     return ev?.isExpired === true || ev?.status === "outdated";
   };
 
-  const isPassedEvaluation = (ev: any) => ev?.status === "passed";
-  const isFailedEvaluation = (ev: any) => ev?.status === "failed";
+  const isPassedEvaluation = (ev: Evaluation | null) => ev?.status === "passed";
+  const isFailedEvaluation = (ev: Evaluation | null) => ev?.status === "failed";
   const hasValidEvaluation = (pet: Pet) => {
     const latest = getLatestEvaluation(pet);
     if (!latest) return false;
@@ -59,23 +61,32 @@ export function ServiceStep({
     return true;
   };
 
-  const isServiceApprovedByEvaluation = (ev: any, serviceId: string) => {
+  const isServiceApprovedByEvaluation = (
+    ev: Evaluation | null,
+    serviceId: string,
+  ) => {
     if (!ev || !isPassedEvaluation(ev) || isExpiredEvaluation(ev)) return false;
+    // Backward-compat: check multiple possible approval property names
+    const evRecord = ev as Record<string, unknown>;
     const approvals =
-      ev.approvedServices ?? ev.serviceApprovals ?? ev.approvals ?? null;
+      ev.approvedServices ??
+      evRecord.serviceApprovals ??
+      evRecord.approvals ??
+      null;
     // Backwards-compat: if API doesn't provide approvals, treat PASS as approved.
     if (!approvals) return true;
 
     // boolean map: { daycare: true, boarding: false, customApproved: [...] }
     if (typeof approvals === "object" && !Array.isArray(approvals)) {
-      if (serviceId === "daycare" && "daycare" in approvals)
-        return Boolean((approvals as any).daycare);
-      if (serviceId === "boarding" && "boarding" in approvals)
-        return Boolean((approvals as any).boarding);
-      const customApproved: unknown = (approvals as any).customApproved;
+      const approvalsMap = approvals as Record<string, unknown>;
+      if (serviceId === "daycare" && "daycare" in approvalsMap)
+        return Boolean(approvalsMap.daycare);
+      if (serviceId === "boarding" && "boarding" in approvalsMap)
+        return Boolean(approvalsMap.boarding);
+      const customApproved: unknown = approvalsMap.customApproved;
       if (Array.isArray(customApproved))
         return customApproved.includes(serviceId);
-      const custom: unknown = (approvals as any).custom;
+      const custom: unknown = approvalsMap.custom;
       if (Array.isArray(custom)) return custom.includes(serviceId);
     }
 

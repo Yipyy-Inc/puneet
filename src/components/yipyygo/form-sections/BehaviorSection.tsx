@@ -14,22 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import type { YipyyGoFormData, BehaviorNotes } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { BehaviorNotes, YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-interface BehaviorSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type BehaviorSectionProps = YipyyGoFormSectionProps;
 
 const ENERGY_LEVELS = [
   { value: "low", label: "Low" },

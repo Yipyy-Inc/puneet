@@ -10,7 +10,7 @@ import {
   getGradientStyle,
   PRICING_MODEL_LABELS,
 } from "@/data/custom-services";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 
 function BooleanIcon({ value }: { value: boolean }) {
   return value ? (

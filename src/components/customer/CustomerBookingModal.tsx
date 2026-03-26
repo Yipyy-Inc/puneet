@@ -63,7 +63,8 @@ import {
   DateSelectionCalendar,
   type DateTimeInfo,
 } from "@/components/ui/date-selection-calendar";
-import { Booking, Pet } from "@/lib/types";
+import type { Booking } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { facilityConfig } from "@/data/facility-config";
@@ -244,7 +245,7 @@ export function CustomerBookingModal({
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
-    const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
+    const evals = pet.evaluations ?? [];
     if (evals.length === 0) return null;
     return [...evals].sort((a, b) => {
       const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
@@ -856,8 +857,10 @@ export function CustomerBookingModal({
       setTipAmount(0);
       setCustomTipAmount("");
       setTipPercentage(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create booking");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create booking",
+      );
     } finally {
       setIsSubmitting(false);
     }

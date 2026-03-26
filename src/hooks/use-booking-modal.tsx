@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import { NewBooking as BookingData } from "@/lib/types";
-import { Client } from "@/lib/types";
+import type { NewBooking as BookingData } from "@/types/booking";
+import type { Client } from "@/types/client";
 
 interface BookingModalConfig {
   clients: Client[];

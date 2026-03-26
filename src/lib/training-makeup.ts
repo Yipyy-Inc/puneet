@@ -85,7 +85,8 @@ export function canScheduleMakeup(
 export function calculateMakeupPrice(
   series: TrainingSeries,
   sessionNumber: number,
-  facilityConfig?: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  facilityConfig?: Record<string, any>,
 ): number {
   // Get makeup pricing rules from facility config
   const makeupConfig = facilityConfig?.training?.makeupSessions;

@@ -42,7 +42,7 @@ import type {
   CustomServiceModule,
   CustomServiceStatus,
   CustomServiceCategory,
-} from "@/lib/types";
+} from "@/types/facility";
 
 type ViewMode = "grid" | "list";
 

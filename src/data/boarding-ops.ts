@@ -1,99 +1,25 @@
 "use client";
 
-export type PetType = "dog" | "cat";
+import type {
+  BoardingRoomType,
+  BoardingRoom,
+  BoardingBookingRequest,
+} from "@/types/boarding";
 
-export type BoardingRoomTypeId = "standard" | "deluxe" | "vip" | "cat-suite";
+export type {
+  PetType,
+  BoardingRoomTypeId,
+  BoardingRoomType,
+  BoardingRoom,
+  YipyyGoPreCheckStatus,
+  PreCheckAuditEvent,
+  YipyyGoPreCheckForm,
+  BoardingBookingRequest,
+  BoardingOpsRequestStatus as BookingRequestStatus,
+} from "@/types/boarding";
 
-export interface BoardingRoomType {
-  id: BoardingRoomTypeId;
-  name: string;
-  description: string;
-  defaultCapacity: number;
-  allowsShared: boolean;
-  allowedPetTypes: PetType[];
-}
-
-export interface BoardingRoom {
-  id: string;
-  name: string;
-  typeId: BoardingRoomTypeId;
-  capacity: number;
-  allowsShared: boolean;
-  allowedPetTypes: PetType[];
-  restrictions: string[];
-}
-
-export type YipyyGoPreCheckStatus =
-  | "not-submitted"
-  | "submitted"
-  | "approved"
-  | "corrections-requested";
-
-export type PaymentStatus = "unpaid" | "deposit" | "partial" | "paid";
-
-export type BookingRequestStatus =
-  | "new"
-  | "in-review"
-  | "accepted"
-  | "declined";
-
-export interface PreCheckAuditEvent {
-  id: string;
-  at: string;
-  actorType: "customer" | "staff" | "system";
-  actorName: string;
-  action: string;
-  details?: string;
-}
-
-export interface YipyyGoPreCheckForm {
-  id: string;
-  status: YipyyGoPreCheckStatus;
-  submittedAt?: string;
-  approvedAt?: string;
-  belongings: string[];
-  feedingInstructions: string;
-  medicationInstructions: string;
-  behaviorNotes: string;
-  staffNotes: string;
-  photoUrls: string[];
-  qrCodeToken: string;
-  audit: PreCheckAuditEvent[];
-}
-
-export interface BookingPetLine {
-  petId: number;
-  petName: string;
-  petType: PetType;
-  breed: string;
-  evaluationRequired: boolean;
-  behaviorTags: string[];
-}
-
-export interface BookingAddOnLine {
-  id: string;
-  name: string;
-  unit: "flat" | "day";
-  unitPrice: number;
-  quantity: number;
-}
-
-export interface BoardingBookingRequest {
-  id: string;
-  createdAt: string;
-  status: BookingRequestStatus;
-  clientId: number;
-  clientName: string;
-  checkInDate: string;
-  checkOutDate: string;
-  requestedRoomTypeId: BoardingRoomTypeId;
-  pets: BookingPetLine[];
-  addOnsByPetId: Record<number, BookingAddOnLine[]>;
-  paymentStatus: PaymentStatus;
-  tipAmount: number;
-  totalEstimate: number;
-  preCheck: YipyyGoPreCheckForm;
-}
+export type { BookingPaymentStatus as PaymentStatus } from "@/types/base";
+export type { BookingPetLine, BookingAddOnLine } from "@/types/booking";
 
 export const BOARDING_ROOM_TYPES: BoardingRoomType[] = [
   {

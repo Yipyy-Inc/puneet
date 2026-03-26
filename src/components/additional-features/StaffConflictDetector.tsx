@@ -63,7 +63,7 @@ interface Conflict {
   conflictingShiftId?: number;
   conflictingShift?: Schedule;
   timeOffRequestId?: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export function StaffConflictDetector({

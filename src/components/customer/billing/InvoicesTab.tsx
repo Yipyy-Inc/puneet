@@ -636,12 +636,20 @@ export function InvoicesTab() {
                             : undefined
                         }
                         loyaltyPointsRedeemed={
-                          (invoice as any).loyaltyPointsRedeemed
+                          invoice.loyaltyPointsRedeemed as number | undefined
                         }
-                        rewardRedemptionId={(invoice as any).rewardRedemptionId}
-                        discountCode={(invoice as any).discountCode}
-                        creditApplied={(invoice as any).creditApplied}
-                        tierDiscount={(invoice as any).tierDiscount}
+                        rewardRedemptionId={
+                          invoice.rewardRedemptionId as string | undefined
+                        }
+                        discountCode={
+                          invoice.discountCode as string | undefined
+                        }
+                        creditApplied={
+                          invoice.creditApplied as number | undefined
+                        }
+                        tierDiscount={
+                          invoice.tierDiscount as number | undefined
+                        }
                       />
                     </div>
                   </div>

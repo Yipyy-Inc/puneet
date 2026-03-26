@@ -3,7 +3,7 @@
 import { Bed, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 import { getCategoryMeta } from "@/data/custom-services";
 import { cn } from "@/lib/utils";
 

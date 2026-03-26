@@ -2,13 +2,12 @@
 // QUICK REPLY TEMPLATES
 // ========================================
 
-export type QuickReplyCategory = "general" | "booking" | "payment" | "support";
+import type {
+  QuickReplyCategory,
+  QuickReplyTemplate,
+} from "@/types/communications";
 
-export interface QuickReplyTemplate {
-  name: string;
-  body: string;
-  category: QuickReplyCategory;
-}
+export type { QuickReplyCategory, QuickReplyTemplate };
 
 export const quickReplyTemplates: QuickReplyTemplate[] = [
   {

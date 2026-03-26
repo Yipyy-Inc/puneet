@@ -25,7 +25,7 @@ import { StaffAssignmentStep } from "./steps/StaffAssignmentStep";
 import { WizardReviewPanel } from "./WizardReviewPanel";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { createDefaultCustomServiceModule } from "@/data/custom-services";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 
 // ========================================
 // WIZARD STEPS CONFIG

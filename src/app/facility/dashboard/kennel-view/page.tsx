@@ -71,8 +71,7 @@ import {
 import { TagList } from "@/components/shared/TagList";
 import { hasCriticalTags, getNoteCount } from "@/data/tags-notes";
 import { MessageSquare } from "lucide-react";
-
-type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
+import type { KennelStatus } from "@/types/base";
 
 interface Kennel {
   id: string;

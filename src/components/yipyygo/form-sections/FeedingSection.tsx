@@ -30,8 +30,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { YipyyGoFormData, FeedingInstruction } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type {
+  FeedingInstruction,
+  YipyyGoFormSectionProps,
+} from "@/types/yipyygo";
 import type {
   FeedingOccasion,
   MealComponent,
@@ -40,20 +42,9 @@ import type {
   FoodSource,
   PrepInstruction,
   RefusalAction,
-} from "@/lib/types";
+} from "@/types/booking";
 
-interface FeedingSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isLastSection: boolean;
-}
+type FeedingSectionProps = Omit<YipyyGoFormSectionProps, "isSubmitting">;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 

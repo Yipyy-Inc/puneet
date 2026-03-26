@@ -12,33 +12,17 @@ import {
   type FormRequirementGate,
 } from "@/data/settings";
 import { getSubmissionsByFacility } from "@/data/form-submissions";
+import type {
+  RequirementStage,
+  MissingFormResult,
+  FormRequirementsCheck,
+} from "@/types/forms";
 
-export type RequirementStage =
-  | "before_booking"
-  | "before_approval"
-  | "before_checkin";
-
-export interface MissingFormResult {
-  formId: string;
-  formName: string;
-  enforcement: "block" | "warn";
-  stage: RequirementStage;
-}
-
-export interface FormRequirementsCheck {
-  /** All requirements met */
-  complete: boolean;
-  /** Forms that are missing */
-  missing: MissingFormResult[];
-  /** True if any missing form has enforcement = "block" */
-  hasBlocker: boolean;
-  /** True if any missing form has enforcement = "warn" (but not block) */
-  hasWarning: boolean;
-  /** Total required at this stage */
-  totalRequired: number;
-  /** Total completed */
-  totalCompleted: number;
-}
+export type {
+  RequirementStage,
+  MissingFormResult,
+  FormRequirementsCheck,
+} from "@/types/forms";
 
 /** Get the form requirements config for a given service type */
 export function getServiceFormRequirements(

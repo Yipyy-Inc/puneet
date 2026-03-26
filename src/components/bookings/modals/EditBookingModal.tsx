@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 import { clients } from "@/data/clients";
 
 const TIME_STEP_MINUTES = 30;

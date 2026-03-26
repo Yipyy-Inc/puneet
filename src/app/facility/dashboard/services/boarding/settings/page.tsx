@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
-import type { ModuleConfig } from "@/lib/types";
+import type { ModuleConfig } from "@/types/facility";
 
 export default function BoardingSettingsPage() {
   const { boarding, updateBoarding } = useSettings();

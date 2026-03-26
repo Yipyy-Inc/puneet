@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 
 interface CancelBookingDialogProps {
   open: boolean;

@@ -1,16 +1,18 @@
 "use client";
 
-// Platform-level roles
-export type UserRole = "super_admin" | "facility_admin";
+import type {
+  UserRole,
+  FacilityRole,
+  Permission,
+  UserPermissionOverride,
+} from "@/types/staff";
 
-// Facility-specific roles for granular access control
-export type FacilityRole =
-  | "owner"
-  | "manager"
-  | "front_desk"
-  | "groomer"
-  | "trainer"
-  | "kennel_tech";
+export type {
+  UserRole,
+  FacilityRole,
+  Permission,
+  UserPermissionOverride,
+} from "@/types/staff";
 
 // All facility roles as an array (derived from the type)
 export const ALL_FACILITY_ROLES: FacilityRole[] = [
@@ -41,73 +43,6 @@ export const FACILITY_ROLE_DESCRIPTIONS: Record<FacilityRole, string> = {
   trainer: "Training sessions and progress notes for assigned pets",
   kennel_tech: "Daily pet care: kennel view, feeding schedules, report cards",
 };
-
-// Permission categories
-export type Permission =
-  // Navigation/Page Access
-  | "view_dashboard"
-  | "view_kennel"
-  | "view_clients"
-  | "view_bookings"
-  | "view_staff"
-  | "view_scheduling"
-  | "view_services"
-  | "view_petcams"
-  | "view_daycare"
-  | "view_boarding"
-  | "view_grooming"
-  | "view_training"
-  | "view_retail"
-  | "view_billing"
-  | "view_inventory"
-  | "view_reports"
-  | "view_insights"
-  | "view_marketing"
-  | "view_communications"
-  | "view_incidents"
-  | "view_waivers"
-  | "view_settings"
-  // Actions
-  | "create_booking"
-  | "edit_booking"
-  | "cancel_booking"
-  | "check_in_out"
-  | "take_payment"
-  | "process_refund"
-  | "apply_discount"
-  | "manual_card_entry"
-  | "override_refund_method"
-  | "manage_staff"
-  | "manage_services"
-  | "manage_pricing"
-  | "manage_settings"
-  | "add_pet_notes"
-  | "add_grooming_notes"
-  | "add_training_notes"
-  | "view_financials"
-  | "view_revenue"
-  | "view_wages"
-  | "view_client_lifetime_value"
-  | "export_reports"
-  | "send_marketing"
-  | "manage_incidents"
-  | "delete_records"
-  | "manage_permissions"
-  // Tags & Notes
-  | "manage_tags"
-  | "assign_tags"
-  | "manage_notes"
-  | "view_internal_notes"
-  | "delete_notes"
-  // Forms (Section 8)
-  | "forms_create"
-  | "forms_edit"
-  | "forms_publish"
-  | "forms_configure_mapping"
-  | "forms_configure_logic"
-  | "forms_view_submissions"
-  | "forms_process_submissions"
-  | "forms_staff_assisted_intake";
 
 // Permission display labels
 export const PERMISSION_LABELS: Record<Permission, string> = {
@@ -454,15 +389,6 @@ const FACILITY_ROLE_COOKIE_NAME = "facility_role";
 const CUSTOM_ROLE_PERMISSIONS_KEY = "facility_custom_role_permissions";
 const USER_PERMISSION_OVERRIDES_KEY = "facility_user_permission_overrides";
 const CURRENT_USER_ID_KEY = "facility_current_user_id";
-
-// Types for custom permissions
-export interface UserPermissionOverride {
-  userId: string;
-  userName: string;
-  role: FacilityRole;
-  addedPermissions: Permission[];
-  removedPermissions: Permission[];
-}
 
 // Get custom role permissions from localStorage
 export function getCustomRolePermissions(): Record<

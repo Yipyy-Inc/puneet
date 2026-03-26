@@ -13,7 +13,8 @@ export function isIPhone(): boolean {
   const userAgent =
     window.navigator.userAgent ||
     window.navigator.vendor ||
-    (window as any).opera;
+    (window as unknown as { opera?: string }).opera ||
+    "";
   return /iPhone|iPod/.test(userAgent);
 }
 

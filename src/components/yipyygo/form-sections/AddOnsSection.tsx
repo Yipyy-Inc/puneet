@@ -12,22 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { DollarSign } from "lucide-react";
-import type { YipyyGoFormData, YipyyGoAddOn } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { YipyyGoAddOn, YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-interface AddOnsSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type AddOnsSectionProps = YipyyGoFormSectionProps;
 
 // Mock add-ons - in production, these would come from facility config
 const AVAILABLE_ADD_ONS: YipyyGoAddOn[] = [

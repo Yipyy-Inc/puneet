@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

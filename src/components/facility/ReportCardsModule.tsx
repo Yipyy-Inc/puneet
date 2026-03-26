@@ -50,7 +50,7 @@ import { boardingGuests } from "@/data/boarding";
 import { groomingAppointments } from "@/data/grooming";
 import { enrollments as trainingEnrollments } from "@/data/training";
 import { useSettings } from "@/hooks/use-settings";
-import type { ReportCardTheme, ReportCardSectionId } from "@/lib/types";
+import type { ReportCardTheme, ReportCardSectionId } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 type ServiceType = "daycare" | "hotel" | "grooming" | "training";

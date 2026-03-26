@@ -1,14 +1,24 @@
 // Task Templates
-export interface TaskTemplate {
-  id: number;
-  name: string;
-  category: string;
-  description: string;
-  estimatedMinutes: number;
-  requiresPhoto: boolean;
-  priority: "low" | "medium" | "high" | "urgent";
-  isActive: boolean;
-}
+import type {
+  TaskTemplate,
+  StaffTask,
+  StaffPerformance,
+  StaffDocument,
+  StaffCertification,
+} from "@/types/staff";
+
+export type {
+  TaskTemplate,
+  StaffTask,
+  StaffPerformance,
+  StaffDocument,
+  StaffCertification,
+  TaskPriority,
+  TaskStatus,
+  RepeatPattern,
+  StaffDocumentType,
+  CertificationStatus,
+} from "@/types/staff";
 
 const BUILTIN_CATEGORY_LABELS: Record<string, string> = {
   boarding: "Boarding",
@@ -151,32 +161,6 @@ export const taskTemplates: TaskTemplate[] = [
 ];
 
 // Assigned Tasks
-export interface StaffTask {
-  id: number;
-  templateId: number;
-  templateName: string;
-  category: TaskTemplate["category"];
-  description: string;
-  assignedTo: number; // staff ID
-  assignedToName: string;
-  shiftId?: number;
-  petId?: number;
-  petName?: string;
-  priority: TaskTemplate["priority"];
-  requiresPhoto: boolean;
-  status: "pending" | "in_progress" | "completed" | "skipped";
-  dueDate: string;
-  dueTime?: string;
-  repeatPattern?: "none" | "daily" | "weekly" | "weekdays" | "custom";
-  customRepeatDays?: number[]; // 0-6 for Sunday-Saturday
-  completedAt?: string;
-  completedBy?: number;
-  completedByName?: string;
-  completedByInitials?: string;
-  photoUrl?: string;
-  notes?: string;
-  facility: string;
-}
 
 const today = new Date().toISOString().split("T")[0];
 const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -466,20 +450,6 @@ export const staffTasks: StaffTask[] = [
 ];
 
 // Staff Performance Metrics
-export interface StaffPerformance {
-  staffId: number;
-  staffName: string;
-  role: string;
-  totalTasksAssigned: number;
-  tasksCompleted: number;
-  tasksSkipped: number;
-  tasksPending: number;
-  completionRate: number;
-  avgCompletionTimeMinutes: number;
-  onTimeCompletions: number;
-  lateCompletions: number;
-  photoProofCompliance: number; // percentage
-}
 
 export const staffPerformance: StaffPerformance[] = [
   {
@@ -569,18 +539,6 @@ export const staffPerformance: StaffPerformance[] = [
 ];
 
 // Staff Documents
-export interface StaffDocument {
-  id: number;
-  staffId: number;
-  staffName: string;
-  name: string;
-  type: "certification" | "license" | "training" | "contract" | "id" | "other";
-  fileUrl: string;
-  uploadedAt: string;
-  expiresAt?: string;
-  isExpired?: boolean;
-  facility: string;
-}
 
 export const staffDocuments: StaffDocument[] = [
   {
@@ -698,15 +656,6 @@ export const staffDocuments: StaffDocument[] = [
 ];
 
 // Staff Certifications (simplified view)
-export interface StaffCertification {
-  id: number;
-  staffId: number;
-  name: string;
-  issuedBy: string;
-  issuedAt: string;
-  expiresAt?: string;
-  status: "valid" | "expiring_soon" | "expired";
-}
 
 export const staffCertifications: StaffCertification[] = [
   {

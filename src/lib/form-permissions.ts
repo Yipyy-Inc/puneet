@@ -13,17 +13,9 @@ import {
   PERMISSION_LABELS,
 } from "@/lib/role-utils";
 
-// ---- Form permission helpers ----
+import type { FormPermission } from "@/types/forms";
 
-export type FormPermission =
-  | "forms_create"
-  | "forms_edit"
-  | "forms_publish"
-  | "forms_configure_mapping"
-  | "forms_configure_logic"
-  | "forms_view_submissions"
-  | "forms_process_submissions"
-  | "forms_staff_assisted_intake";
+export type { FormPermission } from "@/types/forms";
 
 /** All form permissions grouped by access tier */
 export const FORM_PERMISSION_TIERS = {
