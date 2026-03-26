@@ -51,6 +51,8 @@ import {
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
+import { TagList } from "@/components/shared/TagList";
+import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -368,25 +370,76 @@ export default function FacilityBookingsPage() {
       ),
     },
     {
+      key: "tags",
+      label: "Tags",
+      icon: Calendar,
+      defaultVisible: true,
+      render: (booking) => (
+        <TagList
+          entityType="booking"
+          entityId={booking.id}
+          compact
+          maxVisible={2}
+        />
+      ),
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      icon: FileText,
+      defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => getNoteCount("booking", booking.id),
+      render: (booking) => {
+        const count = getNoteCount("booking", booking.id);
+        return count > 0 ? (
+          <Badge variant="outline" className="text-xs gap-1">
+            {count} {count === 1 ? "note" : "notes"}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        );
+      },
+    },
+    {
       key: "yipyygo",
       label: "YipyyGo",
       icon: FileText,
       defaultVisible: true,
       sortValue: (booking) => {
         const config = getYipyyGoConfig(booking.facilityId);
-        const st = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
-        const enabled = config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
+        const st = booking.service?.toLowerCase() as
+          | "daycare"
+          | "boarding"
+          | "grooming"
+          | "training";
+        const enabled = config?.serviceConfigs?.find(
+          (s) => s.serviceType === st,
+        )?.enabled;
         if (!enabled) return "—";
-        return getYipyyGoDisplayStatusForBooking(booking.id, { facilityId: booking.facilityId, service: booking.service });
+        return getYipyyGoDisplayStatusForBooking(booking.id, {
+          facilityId: booking.facilityId,
+          service: booking.service,
+        });
       },
       render: (booking) => {
         const config = getYipyyGoConfig(booking.facilityId);
-        const st = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
-        const enabled = config?.enabled && config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
-        if (!enabled) return <span className="text-muted-foreground text-xs">—</span>;
+        const st = booking.service?.toLowerCase() as
+          | "daycare"
+          | "boarding"
+          | "grooming"
+          | "training";
+        const enabled =
+          config?.enabled &&
+          config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
+        if (!enabled)
+          return <span className="text-muted-foreground text-xs">—</span>;
         return (
           <YipyyGoStatusBadge
-            status={getYipyyGoDisplayStatusForBooking(booking.id, { facilityId: booking.facilityId, service: booking.service })}
+            status={getYipyyGoDisplayStatusForBooking(booking.id, {
+              facilityId: booking.facilityId,
+              service: booking.service,
+            })}
             showIcon
           />
         );
@@ -457,6 +510,17 @@ export default function FacilityBookingsPage() {
         { value: "paid", label: "Paid" },
         { value: "pending", label: "Pending" },
         { value: "refunded", label: "Refunded" },
+      ],
+    },
+    {
+      key: "tag",
+      label: "Tag",
+      options: [
+        { value: "all", label: "All Tags" },
+        ...getTagsByType("booking").map((t) => ({
+          value: t.id,
+          label: t.name,
+        })),
       ],
     },
   ];
@@ -537,17 +601,20 @@ export default function FacilityBookingsPage() {
 
     // Trigger YipyyGo if applicable
     try {
-      const { processBookingConfirmationForYipyyGo } = await import("@/lib/yipyygo-trigger");
+      const { processBookingConfirmationForYipyyGo } =
+        await import("@/lib/yipyygo-trigger");
       const { clients } = await import("@/data/clients");
       const client = clients.find((c) => c.id === booking.clientId);
-      
+
       // Handle single pet or multiple pets
-      const petIds = Array.isArray(booking.petId) ? booking.petId : [booking.petId];
-      
+      const petIds = Array.isArray(booking.petId)
+        ? booking.petId
+        : [booking.petId];
+
       // Process YipyyGo for each pet in the booking
       for (const petId of petIds) {
         const pet = client?.pets?.find((p) => p.id === petId);
-        
+
         if (pet) {
           await processBookingConfirmationForYipyyGo({
             id: booking.id,
@@ -613,13 +680,16 @@ export default function FacilityBookingsPage() {
     setEditingBooking(null);
     // If this booking originated from a booking request, mark that request as scheduled.
     const special = updatedBooking.specialRequests ?? "";
-    const match = typeof special === "string"
-      ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
-      : null;
+    const match =
+      typeof special === "string"
+        ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
+        : null;
     const requestId = match?.[1];
     if (requestId) {
       setBookingRequests((prev) =>
-        prev.map((r) => (r.id === requestId ? { ...r, status: "scheduled" } : r)),
+        prev.map((r) =>
+          r.id === requestId ? { ...r, status: "scheduled" } : r,
+        ),
       );
     }
     alert(`Booking #${updatedBooking.id} has been updated.`);

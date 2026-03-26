@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { NotesList } from "@/components/shared/NotesList";
 
 interface IncidentPhoto {
   id: string;
@@ -424,6 +425,17 @@ export function IncidentDetailsModal({
                 <p className="text-xs text-muted-foreground">
                   This version is shared with clients when they&apos;re notified
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Structured Notes */}
+            <Card>
+              <CardContent className="pt-6 space-y-3">
+                <Label className="text-base">Structured Notes</Label>
+                <NotesList
+                  category="incident"
+                  entityId={Number(incident.id.replace(/\D/g, "")) || 1}
+                />
               </CardContent>
             </Card>
           </TabsContent>

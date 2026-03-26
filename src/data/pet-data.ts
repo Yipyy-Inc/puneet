@@ -73,7 +73,14 @@ export interface ReportCard {
   createdById: number;
   sentToOwner: boolean;
   sentAt?: string;
-  theme?: "everyday" | "halloween" | "christmas" | "valentines" | "easter" | "summer" | "winter";
+  theme?:
+    | "everyday"
+    | "halloween"
+    | "christmas"
+    | "valentines"
+    | "easter"
+    | "summer"
+    | "winter";
   replyMessage?: string;
   repliedAt?: string;
   overallFeedback?: string;
@@ -112,6 +119,12 @@ export interface PetTagAssignment {
   assignedBy: string;
   assignedById: number;
 }
+
+// Re-export from new tag system for backward compatibility
+export {
+  getLegacyPetTags,
+  getLegacyPetTagAssignments,
+} from "@/data/tags-notes";
 
 export interface BanRecord {
   id: string;
@@ -154,7 +167,8 @@ export const petRelationships: PetRelationship[] = [
     relatedPetBreed: "German Shepherd",
     relationshipType: "keep_apart",
     allowAlerts: false,
-    notes: "Keep separated - had a scuffle on 2024-01-15. Buddy gets anxious around Rocky.",
+    notes:
+      "Keep separated - had a scuffle on 2024-01-15. Buddy gets anxious around Rocky.",
     createdAt: "2024-01-16T10:30:00Z",
     createdBy: "Mike Davis",
     createdById: 2,
@@ -451,7 +465,12 @@ export const reportCards: ReportCard[] = [
     sentAt: "2024-01-15T17:00:00Z",
     theme: "everyday",
     overallFeedback: "Excellent",
-    petConditions: { coat: "Normal", skin: "Normal", ears: "Normal", eyes: "Normal" },
+    petConditions: {
+      coat: "Normal",
+      skin: "Normal",
+      ears: "Normal",
+      eyes: "Normal",
+    },
   },
   {
     id: "report-002",
@@ -488,7 +507,12 @@ export const reportCards: ReportCard[] = [
     sentAt: "2024-03-01T17:30:00Z",
     theme: "summer",
     overallFeedback: "Good",
-    petConditions: { coat: "Normal", skin: "Dry", ears: "Normal", eyes: "Tearing" },
+    petConditions: {
+      coat: "Normal",
+      skin: "Dry",
+      ears: "Normal",
+      eyes: "Tearing",
+    },
   },
   {
     id: "report-003",

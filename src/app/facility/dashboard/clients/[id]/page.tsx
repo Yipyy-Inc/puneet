@@ -8,15 +8,20 @@ import { facilities } from "@/data/facilities";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { clientDocuments } from "@/data/documents";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
-import { playdateAlertLogs, getAlertStatusVariant, formatAlertChannel } from "@/data/marketing";
+import {
+  playdateAlertLogs,
+  getAlertStatusVariant,
+  formatAlertChannel,
+} from "@/data/marketing";
 import {
   petPhotos,
   vaccinationRecords,
   reportCards,
-  petTags,
-  petTagAssignments,
   banRecords,
 } from "@/data/pet-data";
+import { getTagsForEntity } from "@/data/tags-notes";
+import { TagList } from "@/components/shared/TagList";
+import { NotesList } from "@/components/shared/NotesList";
 import {
   payments,
   invoices,
@@ -168,7 +173,9 @@ export default function ClientDetailPage({
     (c) => c.clientId === client.id,
   );
   const clientCalls = clientCallHistory.filter((c) => c.clientId === client.id);
-  const clientPlaydateAlerts = playdateAlertLogs.filter((a) => a.recipientCustomerId === client.id);
+  const clientPlaydateAlerts = playdateAlertLogs.filter(
+    (a) => a.recipientCustomerId === client.id,
+  );
 
   // Client billing data
   const clientPayments = payments.filter((p) => p.clientId === client.id);
@@ -271,11 +278,8 @@ export default function ClientDetailPage({
         new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     );
 
-    // Get pet tags
-    const tagAssignments = petTagAssignments.filter((a) => a.petId === pet.id);
-    const tags = tagAssignments
-      .map((a) => petTags.find((t) => t.id === a.tagId))
-      .filter(Boolean);
+    // Get pet tags (via new tag system)
+    const tags = getTagsForEntity("pet", pet.id);
 
     // Get ban record
     const banRecord = banRecords.find(
@@ -481,6 +485,11 @@ export default function ClientDetailPage({
             </>
           )}
         </div>
+      </div>
+
+      {/* Customer Tags */}
+      <div className="flex items-center gap-2">
+        <TagList entityType="customer" entityId={client.id} editable />
       </div>
 
       {/* Quick Stats */}
@@ -878,23 +887,37 @@ export default function ClientDetailPage({
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
                     <div className="text-sm font-medium">Marketing Emails</div>
-                    <div className="text-xs text-muted-foreground">Campaigns, promos, newsletters</div>
+                    <div className="text-xs text-muted-foreground">
+                      Campaigns, promos, newsletters
+                    </div>
                   </div>
-                  <Badge variant="default" className="text-xs">Opted In</Badge>
+                  <Badge variant="default" className="text-xs">
+                    Opted In
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
                     <div className="text-sm font-medium">Playdate Alerts</div>
-                    <div className="text-xs text-muted-foreground">Friend booking notifications</div>
+                    <div className="text-xs text-muted-foreground">
+                      Friend booking notifications
+                    </div>
                   </div>
-                  <Badge variant="default" className="text-xs">Opted In</Badge>
+                  <Badge variant="default" className="text-xs">
+                    Opted In
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
-                    <div className="text-sm font-medium">Channel Preference</div>
-                    <div className="text-xs text-muted-foreground">How to reach this customer</div>
+                    <div className="text-sm font-medium">
+                      Channel Preference
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      How to reach this customer
+                    </div>
                   </div>
-                  <Badge variant="outline" className="text-xs">Email + SMS</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Email + SMS
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -959,24 +982,14 @@ export default function ClientDetailPage({
                           </div>
                           <Badge variant="secondary">{pet.type}</Badge>
                         </div>
-                        {petData.tags && petData.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {petData.tags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag!.id}
-                                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white ${tag!.color}`}
-                                title={tag!.description}
-                              >
-                                {tag!.name}
-                              </span>
-                            ))}
-                            {petData.tags.length > 3 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                +{petData.tags.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <div className="mt-2">
+                          <TagList
+                            entityType="pet"
+                            entityId={pet.id}
+                            compact
+                            maxVisible={3}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -1164,6 +1177,19 @@ export default function ClientDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Customer Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Customer Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NotesList category="customer" entityId={client.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Pets Tab */}
@@ -1219,19 +1245,13 @@ export default function ClientDetailPage({
                                 </Badge>
                               )}
                             </div>
-                            {petData.tags && petData.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {petData.tags.map((tag) => (
-                                  <span
-                                    key={tag!.id}
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${tag!.color}`}
-                                    title={tag!.description}
-                                  >
-                                    {tag!.name}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            <div className="mt-2">
+                              <TagList
+                                entityType="pet"
+                                entityId={pet.id}
+                                editable
+                              />
+                            </div>
                           </div>
                         </div>
                         {petData.banRecord && (
@@ -1934,15 +1954,25 @@ export default function ClientDetailPage({
               <CardContent>
                 <div className="space-y-3">
                   {clientPlaydateAlerts
-                    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.sentAt).getTime() -
+                        new Date(a.sentAt).getTime(),
+                    )
                     .slice(0, 5)
                     .map((alert) => (
-                      <div key={alert.id} className="p-4 rounded-lg border bg-card space-y-2">
+                      <div
+                        key={alert.id}
+                        className="p-4 rounded-lg border bg-card space-y-2"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             <Heart className="h-4 w-4 text-pink-500" />
                             <div>
-                              <Badge variant="outline" className="text-xs capitalize">
+                              <Badge
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
                                 {formatAlertChannel(alert.channel)}
                               </Badge>
                               <Badge
@@ -1962,7 +1992,8 @@ export default function ClientDetailPage({
                             Playdate alert: {alert.triggerPetName} booked
                           </h4>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {alert.triggerPetName} is coming — alert sent for {alert.recipientPetName}
+                            {alert.triggerPetName} is coming — alert sent for{" "}
+                            {alert.recipientPetName}
                           </p>
                         </div>
                         {alert.reasonSuppressed && (
@@ -2313,10 +2344,11 @@ function PetDetailContent({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="history">Stay History</TabsTrigger>
           <TabsTrigger value="reports">Report Cards</TabsTrigger>
         </TabsList>
@@ -2437,6 +2469,18 @@ function PetDetailContent({
                   <p className="text-sm text-muted-foreground">No photos yet</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value="notes" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">Pet Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NotesList category="pet" entityId={pet.id} />
             </CardContent>
           </Card>
         </TabsContent>

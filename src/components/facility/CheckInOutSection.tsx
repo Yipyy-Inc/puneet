@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -40,8 +46,14 @@ import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { getYipyyGoDisplayStatusForBooking, type YipyyGoDisplayStatus } from "@/data/yipyygo-forms";
+import {
+  getYipyyGoDisplayStatusForBooking,
+  type YipyyGoDisplayStatus,
+} from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
+import { TagList } from "@/components/shared/TagList";
+import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
+import { cn } from "@/lib/utils";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -139,7 +151,14 @@ interface CheckInOutSectionProps {
 }
 
 export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(
+    (cb) => {
+      cb();
+      return () => {};
+    },
+    () => true,
+    () => false,
+  );
   const [checkedInQuery, setCheckedInQuery] = useState("");
   const [scheduledQuery, setScheduledQuery] = useState("");
   const [checkedOutQuery, setCheckedOutQuery] = useState("");
@@ -157,10 +176,6 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Helper function to find client for a pet
   const findClientForPet = (petId: number) => {
@@ -230,37 +245,59 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
   );
 
   const filteredScheduled = useMemo(
-    () => scheduledArrivals.filter((item) => matchesSearch(item, scheduledQuery)),
+    () =>
+      scheduledArrivals.filter((item) => matchesSearch(item, scheduledQuery)),
     [scheduledArrivals, scheduledQuery],
   );
 
   // Resolve YipyyGo status for today's arrivals (by matching petId + date + service to booking)
   const scheduledYipyyGoByItemId = useMemo(() => {
-    if (!facilityId || !isMounted) return new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
+    if (!facilityId || !isMounted)
+      return new Map<
+        string,
+        { bookingId: number; status: YipyyGoDisplayStatus }
+      >();
     const today = new Date().toISOString().split("T")[0];
     const config = getYipyyGoConfig(facilityId);
-    if (!config?.enabled) return new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
-    const facilityBookings = bookings.filter((b) => b.facilityId === facilityId && b.startDate === today);
-    const map = new Map<string, { bookingId: number; status: YipyyGoDisplayStatus }>();
+    if (!config?.enabled)
+      return new Map<
+        string,
+        { bookingId: number; status: YipyyGoDisplayStatus }
+      >();
+    const facilityBookings = bookings.filter(
+      (b) => b.facilityId === facilityId && b.startDate === today,
+    );
+    const map = new Map<
+      string,
+      { bookingId: number; status: YipyyGoDisplayStatus }
+    >();
     for (const item of scheduledArrivals) {
       const b = facilityBookings.find(
         (booking) =>
-          (Array.isArray(booking.petId) ? booking.petId.includes(item.petId) : booking.petId === item.petId) &&
-          booking.service?.toLowerCase() === item.serviceType
+          (Array.isArray(booking.petId)
+            ? booking.petId.includes(item.petId)
+            : booking.petId === item.petId) &&
+          booking.service?.toLowerCase() === item.serviceType,
       );
       if (!b) continue;
-      const enabled = config.serviceConfigs?.find((s) => s.serviceType === item.serviceType)?.enabled;
+      const enabled = config.serviceConfigs?.find(
+        (s) => s.serviceType === item.serviceType,
+      )?.enabled;
       if (!enabled) continue;
       map.set(item.id, {
         bookingId: b.id,
-        status: getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service ?? item.serviceType }),
+        status: getYipyyGoDisplayStatusForBooking(b.id, {
+          facilityId,
+          service: b.service ?? item.serviceType,
+        }),
       });
     }
     return map;
   }, [facilityId, isMounted, scheduledArrivals]);
 
   const filteredCheckedOut = useMemo(
-    () => checkedOutToday.filter((item) => matchesSearch(item, checkedOutQuery)),
+    () =>
+      checkedOutToday.filter((item) => matchesSearch(item, checkedOutQuery)),
     [checkedOutToday, checkedOutQuery],
   );
 
@@ -647,10 +684,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     });
   };
 
-  const formatExpectedDeparture = (
-    dateStr: string,
-    serviceType: string,
-  ) => {
+  const formatExpectedDeparture = (dateStr: string, serviceType: string) => {
     const date = new Date(dateStr);
     if (serviceType === "daycare") {
       return date.toLocaleTimeString("en-US", {
@@ -686,7 +720,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     return (
       <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
         <PawPrint className="h-3 w-3 mr-1" />
-        {serviceType.charAt(0).toUpperCase() + serviceType.slice(1).replace(/-/g, " ")}
+        {serviceType.charAt(0).toUpperCase() +
+          serviceType.slice(1).replace(/-/g, " ")}
       </Badge>
     );
   };
@@ -776,7 +811,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     Scheduled Arrivals
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{filteredScheduled.length}</Badge>
+                    <Badge variant="secondary">
+                      {filteredScheduled.length}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">
                       {
                         filteredScheduled.filter(
@@ -813,12 +850,25 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 ) : (
                   filteredScheduled.map((item) => {
                     const client = findClientForPet(item.petId);
+                    const isCritical = hasCriticalTags("pet", item.petId);
+                    const isWarning =
+                      !isCritical && hasWarningTags("pet", item.petId);
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors cursor-pointer"
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors cursor-pointer",
+                          isCritical &&
+                            "border-l-4 border-l-red-500 dark:border-l-red-400",
+                          isWarning &&
+                            "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                        )}
                         onClick={() => handleViewDetails(item)}
                       >
+                        {isCritical && (
+                          <span className="sr-only">Critical alert</span>
+                        )}
+                        {isWarning && <span className="sr-only">Warning</span>}
                         <div className="flex items-center gap-3 min-w-0">
                           {getPetImage(item.petId) ? (
                             <Link
@@ -867,6 +917,12 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                               {getServiceBadge(item.serviceType)}
                             </div>
+                            <TagList
+                              entityType="pet"
+                              entityId={item.petId}
+                              compact
+                              maxVisible={2}
+                            />
                             <p className="text-sm text-muted-foreground truncate">
                               {item.ownerName} • {item.petBreed}
                             </p>
@@ -882,7 +938,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                         <div className="flex items-center gap-2 shrink-0">
                           {scheduledYipyyGoByItemId.get(item.id) && (
                             <YipyyGoStatusBadge
-                              status={scheduledYipyyGoByItemId.get(item.id)!.status}
+                              status={
+                                scheduledYipyyGoByItemId.get(item.id)!.status
+                              }
                               showIcon={false}
                             />
                           )}
@@ -916,7 +974,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     Currently Checked In
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{filteredCheckedIn.length}</Badge>
+                    <Badge variant="secondary">
+                      {filteredCheckedIn.length}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">
                       {
                         filteredCheckedIn.filter(
@@ -953,12 +1013,25 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 ) : (
                   filteredCheckedIn.map((item) => {
                     const client = findClientForPet(item.petId);
+                    const isCritical = hasCriticalTags("pet", item.petId);
+                    const isWarning =
+                      !isCritical && hasWarningTags("pet", item.petId);
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer",
+                          isCritical &&
+                            "border-l-4 border-l-red-500 dark:border-l-red-400",
+                          isWarning &&
+                            "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                        )}
                         onClick={() => handleViewDetails(item)}
                       >
+                        {isCritical && (
+                          <span className="sr-only">Critical alert</span>
+                        )}
+                        {isWarning && <span className="sr-only">Warning</span>}
                         <div className="flex items-center gap-3 min-w-0">
                           {getPetImage(item.petId) ? (
                             <Link
@@ -1007,6 +1080,12 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                               {getServiceBadge(item.serviceType)}
                             </div>
+                            <TagList
+                              entityType="pet"
+                              entityId={item.petId}
+                              compact
+                              maxVisible={2}
+                            />
                             <p className="text-sm text-muted-foreground truncate">
                               {item.ownerName} • {item.petBreed}
                             </p>
@@ -1327,9 +1406,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     <div>
                       <p className="text-muted-foreground">Check-in Date</p>
                       <p className="font-medium">
-                        {new Date(
-                          selectedItem.checkInTime,
-                        ).toLocaleDateString("en-US")}
+                        {new Date(selectedItem.checkInTime).toLocaleDateString(
+                          "en-US",
+                        )}
                       </p>
                     </div>
                     <div>
@@ -1515,9 +1594,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     <div>
                       <p className="text-muted-foreground">Check-in Date</p>
                       <p className="font-medium">
-                        {new Date(
-                          selectedItem.checkInTime,
-                        ).toLocaleDateString("en-US")}
+                        {new Date(selectedItem.checkInTime).toLocaleDateString(
+                          "en-US",
+                        )}
                       </p>
                     </div>
                     <div>

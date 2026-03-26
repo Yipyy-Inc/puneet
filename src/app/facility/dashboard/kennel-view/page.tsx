@@ -68,6 +68,9 @@ import {
   DaycareSpot,
   DaycareReservation,
 } from "./daycare-calendar";
+import { TagList } from "@/components/shared/TagList";
+import { hasCriticalTags, getNoteCount } from "@/data/tags-notes";
+import { MessageSquare } from "lucide-react";
 
 type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
 
@@ -77,6 +80,7 @@ interface Kennel {
   type: "standard" | "large" | "suite" | "luxury";
   status: KennelStatus;
   bookingId?: number;
+  petId?: number;
   petName?: string;
   clientName?: string;
   clientPhone?: string;
@@ -94,6 +98,7 @@ const initialKennels: Kennel[] = [
     type: "standard",
     status: "occupied",
     bookingId: 13,
+    petId: 1,
     petName: "Buddy",
     clientName: "Alice Johnson",
     clientPhone: "123-456-7890",
@@ -114,6 +119,7 @@ const initialKennels: Kennel[] = [
     type: "large",
     status: "reserved",
     bookingId: 18,
+    petId: 5,
     petName: "Rex",
     clientName: "John Doe",
     clientPhone: "123-456-7890",
@@ -127,6 +133,7 @@ const initialKennels: Kennel[] = [
     type: "large",
     status: "occupied",
     bookingId: 2,
+    petId: 3,
     petName: "Max",
     clientName: "Bob Smith",
     clientPhone: "098-765-4321",
@@ -154,6 +161,7 @@ const initialKennels: Kennel[] = [
     type: "luxury",
     status: "occupied",
     bookingId: 5,
+    petId: 4,
     petName: "Luna",
     clientName: "Diana Prince",
     clientPhone: "111-222-3333",
@@ -174,6 +182,7 @@ const initialKennels: Kennel[] = [
     type: "standard",
     status: "occupied",
     bookingId: 8,
+    petId: 6,
     petName: "Charlie",
     clientName: "Eve Adams",
     clientPhone: "555-666-7777",
@@ -975,9 +984,20 @@ export default function KennelViewPage() {
                     {filteredKennels.map((kennel) => (
                       <TableRow
                         key={kennel.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/50",
+                          kennel.petId &&
+                            hasCriticalTags("pet", kennel.petId) &&
+                            "bg-red-50/50 dark:bg-red-950/20 border-l-4 border-l-red-500 dark:border-l-red-400",
+                        )}
                         onClick={() => openKennelDialog(kennel)}
                       >
+                        {kennel.petId &&
+                          hasCriticalTags("pet", kennel.petId) && (
+                            <span className="sr-only">
+                              Critical alert for {kennel.petName}
+                            </span>
+                          )}
                         <TableCell className="font-medium">
                           {kennel.name}
                         </TableCell>
@@ -989,9 +1009,31 @@ export default function KennelViewPage() {
                         </TableCell>
                         <TableCell>
                           {kennel.petName ? (
-                            <div className="flex items-center gap-2">
-                              <PawPrint className="h-4 w-4 text-muted-foreground" />
-                              {kennel.petName}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <PawPrint className="h-4 w-4 text-muted-foreground" />
+                                {kennel.petName}
+                              </div>
+                              {kennel.petId && (
+                                <TagList
+                                  entityType="pet"
+                                  entityId={kennel.petId}
+                                  compact
+                                  maxVisible={3}
+                                />
+                              )}
+                              {(() => {
+                                const noteCount = kennel.petId
+                                  ? getNoteCount("pet", kennel.petId)
+                                  : 0;
+                                return noteCount > 0 ? (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {noteCount}{" "}
+                                    {noteCount === 1 ? "note" : "notes"}
+                                  </div>
+                                ) : null;
+                              })()}
                             </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>

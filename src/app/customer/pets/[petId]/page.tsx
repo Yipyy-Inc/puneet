@@ -2,31 +2,29 @@
 
 import { useState, use, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { getFormsByFacility } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
+import { petPhotos, vaccinationRecords, reportCards } from "@/data/pet-data";
+import { TagList } from "@/components/shared/TagList";
+import { NotesList } from "@/components/shared/NotesList";
 import {
-  petPhotos,
-  vaccinationRecords,
-  reportCards,
-} from "@/data/pet-data";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   ArrowLeft,
   Dog,
@@ -44,13 +42,10 @@ import {
   Image as ImageIcon,
   Plus,
   Loader2,
-  ExternalLink,
 } from "lucide-react";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
-import { vaccinationRules } from "@/data/settings";
 import { facilityConfig } from "@/data/facility-config";
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
@@ -84,7 +79,7 @@ export default function CustomerPetDetailPage({
   const { selectedFacility } = useCustomerFacility();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState(() =>
-    searchParams?.get("tab") === "forms" ? "forms" : "overview"
+    searchParams?.get("tab") === "forms" ? "forms" : "overview",
   );
   useEffect(() => {
     if (searchParams?.get("tab") === "forms") setActiveTab("forms");
@@ -94,84 +89,52 @@ export default function CustomerPetDetailPage({
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
   const pet = customer?.pets.find((p) => p.id === parseInt(petId));
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
 
-  if (!customer || !pet) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Pet not found</h2>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => router.push("/customer/pets")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Pets
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   const facilityId = selectedFacility?.id ?? 11;
   const allFacilityForms = useMemo(
-    () => getFormsByFacility(facilityId).filter((f) => !f.internal && f.status !== "archived"),
-    [facilityId]
-  );
-  const facilityForms = allFacilityForms.filter(
-    (f) => f.type === "intake" || f.type === "pet"
-  );
-  const optionalForms = allFacilityForms.filter(
-    (f) => f.type === "service" || f.type === "owner"
+    () =>
+      getFormsByFacility(facilityId).filter(
+        (f) => !f.internal && f.status !== "archived",
+      ),
+    [facilityId],
   );
   const petSubmissions = useMemo(
-    () => getSubmissionsForPet(facilityId, pet.id),
-    [facilityId, pet.id]
+    () => (pet ? getSubmissionsForPet(facilityId, pet.id) : []),
+    [facilityId, pet],
   );
   const completedFormIds = useMemo(
     () => new Set(petSubmissions.map((s) => s.formId)),
-    [petSubmissions]
+    [petSubmissions],
   );
-  const requiredForms = facilityForms.filter((f) => !completedFormIds.has(f.id));
-  const completedForms = facilityForms.filter((f) => completedFormIds.has(f.id));
-  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
-
-  const photos = petPhotos.filter((p) => p.petId === pet.id);
-  const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
-  const petBookings = bookings.filter(
-    (b) => b.petId === pet.id && b.facilityId === selectedFacility?.id
-  );
-  const reports = reportCards.filter((r) => r.petId === pet.id);
-
-  const expiredVaccinations = vaccinations.filter(
-    (v) => new Date(v.expiryDate) < new Date()
-  );
-  const now = new Date();
-  const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-  const upcomingVaccinations = vaccinations.filter(
-    (v) =>
-      new Date(v.expiryDate) <= sixtyDaysFromNow &&
-      new Date(v.expiryDate) > now
+  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(
+    null,
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  // Get facility vaccination requirements (must be before early return to avoid conditional hook)
+  const facilityRequirements = useMemo(() => {
+    return facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
+      (v) => v.required,
+    );
+  }, []);
 
-  const getVaccinationStatus = (vaccination: typeof vaccinationRecords[0]) => {
+  // Compute vaccinations before early return so getVaccinationCompliance hook is unconditional
+  const vaccinations = useMemo(
+    () => (pet ? vaccinationRecords.filter((v) => v.petId === pet.id) : []),
+    [pet],
+  );
+
+  const getVaccinationStatus = (
+    vaccination: (typeof vaccinationRecords)[0],
+  ) => {
     const expiryDate = new Date(vaccination.expiryDate);
-    const now = new Date();
+    const nowDate = new Date();
     const daysUntilExpiry = Math.floor(
-      (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (expiryDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     if (daysUntilExpiry < 0) {
@@ -195,40 +158,6 @@ export default function CustomerPetDetailPage({
     }
   };
 
-  const handleSave = async () => {
-    if (!editedPet) return;
-
-    setIsSaving(true);
-    try {
-      // TODO: Replace with actual API call
-      await updatePetProfile(editedPet);
-      setIsEditing(false);
-      toast.success("Pet profile updated successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update pet profile");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedPet(pet);
-    setIsEditing(false);
-  };
-
-  // Placeholder function - replace with actual API call
-  const updatePetProfile = async (petData: Pet) => {
-    // TODO: API call to update pet profile
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  // Get facility vaccination requirements
-  const facilityRequirements = useMemo(() => {
-    return facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
-      (v) => v.required
-    );
-  }, []);
-
   // Check vaccination status against facility requirements
   const getVaccinationCompliance = useMemo(() => {
     const compliance: {
@@ -248,8 +177,9 @@ export default function CustomerPetDetailPage({
     facilityRequirements.forEach((req) => {
       compliance.required.push(req.name);
       const petVaccination = vaccinations.find(
-        (v) => v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
-              req.name.toLowerCase().includes(v.vaccineName.toLowerCase())
+        (v) =>
+          v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
+          req.name.toLowerCase().includes(v.vaccineName.toLowerCase()),
       );
 
       if (!petVaccination) {
@@ -269,11 +199,99 @@ export default function CustomerPetDetailPage({
     return compliance;
   }, [facilityRequirements, vaccinations]);
 
-  const handleAddVaccination = async (vaccination: Omit<typeof vaccinationRecords[0], "id">) => {
+  if (!customer || !pet) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Pet not found</h2>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => router.push("/customer/pets")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Pets
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const facilityForms = allFacilityForms.filter(
+    (f) => f.type === "intake" || f.type === "pet",
+  );
+  const optionalForms = allFacilityForms.filter(
+    (f) => f.type === "service" || f.type === "owner",
+  );
+  const requiredForms = facilityForms.filter(
+    (f) => !completedFormIds.has(f.id),
+  );
+  const completedForms = facilityForms.filter((f) =>
+    completedFormIds.has(f.id),
+  );
+
+  const photos = petPhotos.filter((p) => p.petId === pet.id);
+  const petBookings = bookings.filter(
+    (b) => b.petId === pet.id && b.facilityId === selectedFacility?.id,
+  );
+  const reports = reportCards.filter((r) => r.petId === pet.id);
+
+  const expiredVaccinations = vaccinations.filter(
+    (v) => new Date(v.expiryDate) < new Date(),
+  );
+  const now = new Date();
+  const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+  const upcomingVaccinations = vaccinations.filter(
+    (v) =>
+      new Date(v.expiryDate) <= sixtyDaysFromNow &&
+      new Date(v.expiryDate) > now,
+  );
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!editedPet) return;
+
+    setIsSaving(true);
+    try {
+      // TODO: Replace with actual API call
+      await updatePetProfile(editedPet);
+      setIsEditing(false);
+      toast.success("Pet profile updated successfully!");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update pet profile",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedPet(pet);
+    setIsEditing(false);
+  };
+
+  const updatePetProfile = async (petData: Pet) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Vaccination record uploaded! It will be reviewed by the facility.");
-    // Refresh vaccinations list
+    toast.success(`${petData.name}'s profile updated`);
+  };
+
+  const handleAddVaccination = async (
+    vaccination: Omit<(typeof vaccinationRecords)[0], "id">,
+  ) => {
+    // TODO: Replace with actual API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    toast.success(
+      `${vaccination.vaccineName} record uploaded! It will be reviewed by the facility.`,
+    );
     router.refresh();
   };
 
@@ -281,15 +299,19 @@ export default function CustomerPetDetailPage({
   function CareInstructionsSection({ petId }: { petId: number }) {
     const [isEditingCI, setIsEditingCI] = useState(false);
     const [isSavingCI, setIsSavingCI] = useState(false);
-    const petCareInstructions = careInstructions.find((ci) => ci.petId === petId);
-    const [editedInstructions, setEditedInstructions] = useState<CareInstructions>(
-      petCareInstructions || {
-        petId,
-        medicationList: [],
-      }
+    const petCareInstructions = careInstructions.find(
+      (ci) => ci.petId === petId,
     );
+    const [editedInstructions, setEditedInstructions] =
+      useState<CareInstructions>(
+        petCareInstructions || {
+          petId,
+          medicationList: [],
+        },
+      );
 
-    const editableFields = facilityConfig.careInstructions.customerEditableFields;
+    const editableFields =
+      facilityConfig.careInstructions.customerEditableFields;
 
     const handleSaveCI = async () => {
       setIsSavingCI(true);
@@ -298,8 +320,12 @@ export default function CustomerPetDetailPage({
         await new Promise((resolve) => setTimeout(resolve, 1000));
         toast.success("Care instructions updated successfully!");
         setIsEditingCI(false);
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update care instructions");
+      } catch (error: unknown) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update care instructions",
+        );
       } finally {
         setIsSavingCI(false);
       }
@@ -324,7 +350,7 @@ export default function CustomerPetDetailPage({
     const handleMedicationChange = (
       index: number,
       field: "name" | "dosage" | "frequency" | "notes",
-      value: string
+      value: string,
     ) => {
       const newList = [...(editedInstructions.medicationList || [])];
       newList[index] = { ...newList[index], [field]: value };
@@ -336,13 +362,20 @@ export default function CustomerPetDetailPage({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold">Care Instructions</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Care Instructions
+              </CardTitle>
               <CardDescription>
-                Provide care instructions for your pet. These will be shared with facility staff.
+                Provide care instructions for your pet. These will be shared
+                with facility staff.
               </CardDescription>
             </div>
             {!isEditingCI && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditingCI(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingCI(true)}
+              >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -400,7 +433,8 @@ export default function CustomerPetDetailPage({
                       Add Medication
                     </Button>
                   </div>
-                  {editedInstructions.medicationList && editedInstructions.medicationList.length > 0 ? (
+                  {editedInstructions.medicationList &&
+                  editedInstructions.medicationList.length > 0 ? (
                     <div className="space-y-3">
                       {editedInstructions.medicationList.map((med, index) => (
                         <Card key={index} className="p-3">
@@ -410,14 +444,22 @@ export default function CustomerPetDetailPage({
                                 placeholder="Medication name"
                                 value={med.name}
                                 onChange={(e) =>
-                                  handleMedicationChange(index, "name", e.target.value)
+                                  handleMedicationChange(
+                                    index,
+                                    "name",
+                                    e.target.value,
+                                  )
                                 }
                               />
                               <Input
                                 placeholder="Dosage"
                                 value={med.dosage}
                                 onChange={(e) =>
-                                  handleMedicationChange(index, "dosage", e.target.value)
+                                  handleMedicationChange(
+                                    index,
+                                    "dosage",
+                                    e.target.value,
+                                  )
                                 }
                               />
                             </div>
@@ -425,7 +467,11 @@ export default function CustomerPetDetailPage({
                               placeholder="Frequency (e.g., Twice daily)"
                               value={med.frequency}
                               onChange={(e) =>
-                                handleMedicationChange(index, "frequency", e.target.value)
+                                handleMedicationChange(
+                                  index,
+                                  "frequency",
+                                  e.target.value,
+                                )
                               }
                             />
                             <div className="flex items-center gap-2">
@@ -433,7 +479,11 @@ export default function CustomerPetDetailPage({
                                 placeholder="Notes (optional)"
                                 value={med.notes || ""}
                                 onChange={(e) =>
-                                  handleMedicationChange(index, "notes", e.target.value)
+                                  handleMedicationChange(
+                                    index,
+                                    "notes",
+                                    e.target.value,
+                                  )
                                 }
                                 rows={2}
                                 className="flex-1"
@@ -452,14 +502,18 @@ export default function CustomerPetDetailPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No medications added</p>
+                    <p className="text-sm text-muted-foreground">
+                      No medications added
+                    </p>
                   )}
                 </div>
               )}
 
               {editableFields.groomingSensitivities && (
                 <div className="space-y-2">
-                  <Label htmlFor="groomingSensitivities">Grooming Sensitivities</Label>
+                  <Label htmlFor="groomingSensitivities">
+                    Grooming Sensitivities
+                  </Label>
                   <Textarea
                     id="groomingSensitivities"
                     value={editedInstructions.groomingSensitivities || ""}
@@ -512,7 +566,7 @@ export default function CustomerPetDetailPage({
                   onClick={() => {
                     setIsEditingCI(false);
                     setEditedInstructions(
-                      petCareInstructions || { petId, medicationList: [] }
+                      petCareInstructions || { petId, medicationList: [] },
                     );
                   }}
                   disabled={isSavingCI}
@@ -561,14 +615,18 @@ export default function CustomerPetDetailPage({
                               {med.dosage} • {med.frequency}
                             </p>
                             {med.notes && (
-                              <p className="text-xs text-muted-foreground mt-1">{med.notes}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {med.notes}
+                              </p>
                             )}
                           </div>
                         </Card>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No medications listed</p>
+                    <p className="text-sm text-muted-foreground">
+                      No medications listed
+                    </p>
                   )}
                 </div>
               )}
@@ -579,7 +637,8 @@ export default function CustomerPetDetailPage({
                     Grooming Sensitivities
                   </p>
                   <p className="text-sm">
-                    {editedInstructions.groomingSensitivities || "None specified"}
+                    {editedInstructions.groomingSensitivities ||
+                      "None specified"}
                   </p>
                 </div>
               )}
@@ -598,7 +657,11 @@ export default function CustomerPetDetailPage({
               {!petCareInstructions && (
                 <div className="text-center py-8 text-muted-foreground">
                   <p className="text-sm">No care instructions added yet</p>
-                  <Button variant="outline" className="mt-4" onClick={() => setIsEditingCI(true)}>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setIsEditingCI(true)}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Care Instructions
                   </Button>
@@ -614,7 +677,7 @@ export default function CustomerPetDetailPage({
   const PetIcon = pet.type === "Cat" ? Cat : Dog;
 
   // Vaccination columns
-  const vaccinationColumns: ColumnDef<typeof vaccinationRecords[0]>[] = [
+  const vaccinationColumns: ColumnDef<(typeof vaccinationRecords)[0]>[] = [
     {
       key: "vaccineName",
       label: "Vaccine",
@@ -635,7 +698,16 @@ export default function CustomerPetDetailPage({
         return (
           <div className="flex items-center gap-2">
             <span>{formatDate(vaccination.expiryDate)}</span>
-            <Badge variant={status.color as any} className="text-xs">
+            <Badge
+              variant={
+                status.color as
+                  | "destructive"
+                  | "secondary"
+                  | "default"
+                  | "outline"
+              }
+              className="text-xs"
+            >
               {status.status === "expired"
                 ? `Expired ${status.days}d ago`
                 : status.status === "expiring-soon"
@@ -666,7 +738,10 @@ export default function CustomerPetDetailPage({
             <div className="flex items-center gap-2">
               <Badge variant="destructive">Rejected</Badge>
               {vaccination.rejectionReason && (
-                <span className="text-xs text-muted-foreground" title={vaccination.rejectionReason}>
+                <span
+                  className="text-xs text-muted-foreground"
+                  title={vaccination.rejectionReason}
+                >
                   <AlertTriangle className="h-3 w-3" />
                 </span>
               )}
@@ -682,7 +757,11 @@ export default function CustomerPetDetailPage({
       render: (vaccination) =>
         vaccination.documentUrl ? (
           <Button variant="ghost" size="sm" asChild>
-            <a href={vaccination.documentUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              href={vaccination.documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FileText className="h-4 w-4 mr-1" />
               View
             </a>
@@ -694,7 +773,7 @@ export default function CustomerPetDetailPage({
   ];
 
   // Booking history columns
-  const bookingColumns: ColumnDef<typeof bookings[0]>[] = [
+  const bookingColumns: ColumnDef<(typeof bookings)[0]>[] = [
     {
       key: "service",
       label: "Service",
@@ -753,6 +832,15 @@ export default function CustomerPetDetailPage({
               <p className="text-muted-foreground">
                 {pet.breed} • {pet.age} {pet.age === 1 ? "year" : "years"} old
               </p>
+              <div className="mt-1">
+                <TagList
+                  entityType="pet"
+                  entityId={pet.id}
+                  compact
+                  maxVisible={4}
+                  isCustomerView
+                />
+              </div>
             </div>
           </div>
           {!isEditing ? (
@@ -762,7 +850,11 @@ export default function CustomerPetDetailPage({
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
@@ -788,9 +880,11 @@ export default function CustomerPetDetailPage({
             <div className="flex items-start gap-6">
               <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                 {pet.imageUrl ? (
-                  <img
+                  <Image
                     src={pet.imageUrl}
                     alt={pet.name}
+                    width={128}
+                    height={128}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -822,7 +916,11 @@ export default function CustomerPetDetailPage({
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4"
+        >
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vaccinations">
@@ -844,9 +942,12 @@ export default function CustomerPetDetailPage({
               )}
             </TabsTrigger>
             {facilityConfig.careInstructions.enabled && (
-              <TabsTrigger value="care-instructions">Care Instructions</TabsTrigger>
+              <TabsTrigger value="care-instructions">
+                Care Instructions
+              </TabsTrigger>
             )}
             <TabsTrigger value="photos">Photos</TabsTrigger>
+            <TabsTrigger value="staff-notes">Notes from Staff</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -854,7 +955,9 @@ export default function CustomerPetDetailPage({
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
+                  <CardTitle className="text-sm font-semibold">
+                    Basic Information
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isEditing && editedPet ? (
@@ -875,7 +978,10 @@ export default function CustomerPetDetailPage({
                           id="breed"
                           value={editedPet.breed}
                           onChange={(e) =>
-                            setEditedPet({ ...editedPet, breed: e.target.value })
+                            setEditedPet({
+                              ...editedPet,
+                              breed: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -915,7 +1021,10 @@ export default function CustomerPetDetailPage({
                           id="color"
                           value={editedPet.color}
                           onChange={(e) =>
-                            setEditedPet({ ...editedPet, color: e.target.value })
+                            setEditedPet({
+                              ...editedPet,
+                              color: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -925,7 +1034,10 @@ export default function CustomerPetDetailPage({
                           id="microchip"
                           value={editedPet.microchip}
                           onChange={(e) =>
-                            setEditedPet({ ...editedPet, microchip: e.target.value })
+                            setEditedPet({
+                              ...editedPet,
+                              microchip: e.target.value,
+                            })
                           }
                           className="font-mono"
                         />
@@ -949,7 +1061,9 @@ export default function CustomerPetDetailPage({
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Weight</p>
+                          <p className="text-sm text-muted-foreground">
+                            Weight
+                          </p>
                           <p className="font-medium">{pet.weight} lbs</p>
                         </div>
                       </div>
@@ -958,8 +1072,12 @@ export default function CustomerPetDetailPage({
                         <p className="font-medium">{pet.color}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Microchip</p>
-                        <p className="font-medium font-mono text-sm">{pet.microchip}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Microchip
+                        </p>
+                        <p className="font-medium font-mono text-sm">
+                          {pet.microchip}
+                        </p>
                       </div>
                     </>
                   )}
@@ -981,7 +1099,10 @@ export default function CustomerPetDetailPage({
                           id="allergies"
                           value={editedPet.allergies}
                           onChange={(e) =>
-                            setEditedPet({ ...editedPet, allergies: e.target.value })
+                            setEditedPet({
+                              ...editedPet,
+                              allergies: e.target.value,
+                            })
                           }
                           placeholder="List any allergies or leave as 'None'"
                         />
@@ -992,7 +1113,10 @@ export default function CustomerPetDetailPage({
                           id="specialNeeds"
                           value={editedPet.specialNeeds}
                           onChange={(e) =>
-                            setEditedPet({ ...editedPet, specialNeeds: e.target.value })
+                            setEditedPet({
+                              ...editedPet,
+                              specialNeeds: e.target.value,
+                            })
                           }
                           placeholder="Any special medical or care needs"
                         />
@@ -1001,15 +1125,23 @@ export default function CustomerPetDetailPage({
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Allergies</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Allergies
+                        </p>
                         <Badge
-                          variant={pet.allergies !== "None" ? "destructive" : "secondary"}
+                          variant={
+                            pet.allergies !== "None"
+                              ? "destructive"
+                              : "secondary"
+                          }
                         >
                           {pet.allergies}
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Special Needs</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Special Needs
+                        </p>
                         <p className="text-sm">{pet.specialNeeds || "None"}</p>
                       </div>
                     </>
@@ -1022,7 +1154,9 @@ export default function CustomerPetDetailPage({
             {selectedFacility && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Booking Eligibility</CardTitle>
+                  <CardTitle className="text-sm font-semibold">
+                    Booking Eligibility
+                  </CardTitle>
                   <CardDescription>
                     Check if your pet is eligible to book services
                   </CardDescription>
@@ -1048,7 +1182,8 @@ export default function CustomerPetDetailPage({
                   Forms for {pet.name}
                 </CardTitle>
                 <CardDescription>
-                  Complete required forms, view submissions, and fill optional forms.
+                  Complete required forms, view submissions, and fill optional
+                  forms.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1069,11 +1204,18 @@ export default function CustomerPetDetailPage({
                             <div>
                               <span className="font-medium">{form.name}</span>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {form.questions.length} question{form.questions.length !== 1 ? "s" : ""}
-                                {form.settings?.welcomeMessage && ` · ${form.settings.welcomeMessage.slice(0, 60)}...`}
+                                {form.questions.length} question
+                                {form.questions.length !== 1 ? "s" : ""}
+                                {form.settings?.welcomeMessage &&
+                                  ` · ${form.settings.welcomeMessage.slice(0, 60)}...`}
                               </p>
                             </div>
-                            <Badge variant="destructive" className="text-xs shrink-0">Fill now</Badge>
+                            <Badge
+                              variant="destructive"
+                              className="text-xs shrink-0"
+                            >
+                              Fill now
+                            </Badge>
                           </Link>
                         </li>
                       ))}
@@ -1090,40 +1232,65 @@ export default function CustomerPetDetailPage({
                     </h4>
                     <ul className="space-y-2">
                       {completedForms.map((form) => {
-                        const sub = petSubmissions.find((s) => s.formId === form.id);
+                        const sub = petSubmissions.find(
+                          (s) => s.formId === form.id,
+                        );
                         const isExpanded = expandedSubmission === form.id;
                         return (
                           <li key={form.id}>
                             <button
                               type="button"
                               className="w-full text-left rounded-lg border p-3 bg-green-50/50 hover:bg-green-50 transition-colors"
-                              onClick={() => setExpandedSubmission(isExpanded ? null : form.id)}
+                              onClick={() =>
+                                setExpandedSubmission(
+                                  isExpanded ? null : form.id,
+                                )
+                              }
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-medium">{form.name}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {sub?.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ""}
+                                  {sub?.createdAt
+                                    ? new Date(
+                                        sub.createdAt,
+                                      ).toLocaleDateString()
+                                    : ""}
                                 </span>
                               </div>
                             </button>
                             {isExpanded && sub && (
                               <div className="mt-1 rounded-lg border bg-muted/30 p-3 space-y-2">
                                 {form.questions
-                                  .filter((q) => sub.answers[q.id] !== undefined && sub.answers[q.id] !== "")
+                                  .filter(
+                                    (q) =>
+                                      sub.answers[q.id] !== undefined &&
+                                      sub.answers[q.id] !== "",
+                                  )
                                   .map((q) => (
                                     <div key={q.id} className="text-sm">
-                                      <span className="text-muted-foreground text-xs">{q.label}</span>
+                                      <span className="text-muted-foreground text-xs">
+                                        {q.label}
+                                      </span>
                                       <p className="font-medium">
                                         {Array.isArray(sub.answers[q.id])
-                                          ? (sub.answers[q.id] as string[]).join(", ")
-                                          : typeof sub.answers[q.id] === "object"
+                                          ? (
+                                              sub.answers[q.id] as string[]
+                                            ).join(", ")
+                                          : typeof sub.answers[q.id] ===
+                                              "object"
                                             ? JSON.stringify(sub.answers[q.id])
                                             : String(sub.answers[q.id])}
                                       </p>
                                     </div>
                                   ))}
-                                {form.questions.filter((q) => sub.answers[q.id] !== undefined && sub.answers[q.id] !== "").length === 0 && (
-                                  <p className="text-xs text-muted-foreground">No answers recorded.</p>
+                                {form.questions.filter(
+                                  (q) =>
+                                    sub.answers[q.id] !== undefined &&
+                                    sub.answers[q.id] !== "",
+                                ).length === 0 && (
+                                  <p className="text-xs text-muted-foreground">
+                                    No answers recorded.
+                                  </p>
                                 )}
                               </div>
                             )}
@@ -1137,7 +1304,9 @@ export default function CustomerPetDetailPage({
                 {/* Optional forms (service / owner forms) */}
                 {optionalForms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Optional forms</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                      Optional forms
+                    </h4>
                     <ul className="space-y-2">
                       {optionalForms.map((form) => {
                         const isDone = completedFormIds.has(form.id);
@@ -1149,7 +1318,9 @@ export default function CustomerPetDetailPage({
                                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                                   <span className="text-sm">{form.name}</span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">Done</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Done
+                                </span>
                               </div>
                             ) : (
                               <Link
@@ -1157,7 +1328,9 @@ export default function CustomerPetDetailPage({
                                 className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                               >
                                 <span className="text-sm">{form.name}</span>
-                                <Badge variant="secondary" className="text-xs">Optional</Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  Optional
+                                </Badge>
                               </Link>
                             )}
                           </li>
@@ -1189,10 +1362,14 @@ export default function CustomerPetDetailPage({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {getVaccinationCompliance.required.map((vaccine) => {
-                    const isMissing = getVaccinationCompliance.missing.includes(vaccine);
-                    const isExpired = getVaccinationCompliance.expired.includes(vaccine);
-                    const isExpiringSoon = getVaccinationCompliance.expiringSoon.includes(vaccine);
-                    const isUpToDate = getVaccinationCompliance.upToDate.includes(vaccine);
+                    const isMissing =
+                      getVaccinationCompliance.missing.includes(vaccine);
+                    const isExpired =
+                      getVaccinationCompliance.expired.includes(vaccine);
+                    const isExpiringSoon =
+                      getVaccinationCompliance.expiringSoon.includes(vaccine);
+                    const isUpToDate =
+                      getVaccinationCompliance.upToDate.includes(vaccine);
 
                     return (
                       <div
@@ -1247,7 +1424,9 @@ export default function CustomerPetDetailPage({
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold">Vaccination Records</CardTitle>
+                  <CardTitle className="text-sm font-semibold">
+                    Vaccination Records
+                  </CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1285,7 +1464,8 @@ export default function CustomerPetDetailPage({
                           </p>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Please update expired vaccinations to continue booking services.
+                          Please update expired vaccinations to continue booking
+                          services.
                         </p>
                       </div>
                     )}
@@ -1295,7 +1475,8 @@ export default function CustomerPetDetailPage({
                           <AlertTriangle className="h-5 w-5 text-warning" />
                           <p className="font-semibold text-warning">
                             {upcomingVaccinations.length} Vaccination
-                            {upcomingVaccinations.length > 1 ? "s" : ""} Expiring Soon
+                            {upcomingVaccinations.length > 1 ? "s" : ""}{" "}
+                            Expiring Soon
                           </p>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -1303,7 +1484,10 @@ export default function CustomerPetDetailPage({
                         </p>
                       </div>
                     )}
-                    <DataTable data={vaccinations} columns={vaccinationColumns} />
+                    <DataTable
+                      data={vaccinations}
+                      columns={vaccinationColumns}
+                    />
                   </>
                 )}
               </CardContent>
@@ -1314,7 +1498,9 @@ export default function CustomerPetDetailPage({
           <TabsContent value="bookings" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">Booking History</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Booking History
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {petBookings.length === 0 ? (
@@ -1322,7 +1508,7 @@ export default function CustomerPetDetailPage({
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No bookings yet</p>
                     <Button variant="outline" className="mt-4" asChild>
-                      <a href="/customer/bookings">Book a Service</a>
+                      <Link href="/customer/bookings">Book a Service</Link>
                     </Button>
                   </div>
                 ) : (
@@ -1336,7 +1522,9 @@ export default function CustomerPetDetailPage({
           <TabsContent value="reports" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">Report Cards</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Report Cards
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {reports.length === 0 ? (
@@ -1344,7 +1532,7 @@ export default function CustomerPetDetailPage({
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No report cards yet</p>
                     <p className="text-sm mt-2">
-                      Report cards will appear here after your pet's visits
+                      Report cards will appear here after your pet&apos;s visits
                     </p>
                   </div>
                 ) : (
@@ -1357,7 +1545,9 @@ export default function CustomerPetDetailPage({
                               <CardTitle className="text-base">
                                 {report.serviceType} Report Card
                               </CardTitle>
-                              <CardDescription>{formatDate(report.date)}</CardDescription>
+                              <CardDescription>
+                                {formatDate(report.date)}
+                              </CardDescription>
                             </div>
                             <Badge variant="outline" className="capitalize">
                               {report.mood}
@@ -1374,9 +1564,11 @@ export default function CustomerPetDetailPage({
                                     key={idx}
                                     className="aspect-square rounded-lg bg-muted overflow-hidden"
                                   >
-                                    <img
+                                    <Image
                                       src={photo}
                                       alt={`Photo ${idx + 1}`}
+                                      width={200}
+                                      height={200}
                                       className="w-full h-full object-cover"
                                     />
                                   </div>
@@ -1387,7 +1579,9 @@ export default function CustomerPetDetailPage({
 
                           {report.activities.length > 0 && (
                             <div>
-                              <p className="text-sm font-medium mb-2">Activities</p>
+                              <p className="text-sm font-medium mb-2">
+                                Activities
+                              </p>
                               <div className="flex flex-wrap gap-2">
                                 {report.activities.map((activity, idx) => (
                                   <Badge key={idx} variant="secondary">
@@ -1419,9 +1613,11 @@ export default function CustomerPetDetailPage({
           <TabsContent value="photos" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">Photo Gallery</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Photo Gallery
+                </CardTitle>
                 <CardDescription>
-                  Photos from your pet's stays, organized by date
+                  Photos from your pet&apos;s stays, organized by date
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1430,7 +1626,7 @@ export default function CustomerPetDetailPage({
                     <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No photos yet</p>
                     <p className="text-sm mt-2">
-                      Photos from your pet's stays will appear here
+                      Photos from your pet&apos;s stays will appear here
                     </p>
                   </div>
                 ) : (
@@ -1441,6 +1637,21 @@ export default function CustomerPetDetailPage({
                     formatDate={formatDate}
                   />
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Staff Notes Tab (customer-visible only) */}
+          <TabsContent value="staff-notes" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Notes from Staff</CardTitle>
+                <CardDescription>
+                  Notes shared by the facility staff about your pet
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <NotesList category="pet" entityId={pet.id} readOnly />
               </CardContent>
             </Card>
           </TabsContent>

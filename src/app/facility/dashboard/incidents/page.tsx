@@ -25,6 +25,7 @@ import {
 } from "@/data/incidents";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
+import { TagList } from "@/components/shared/TagList";
 import {
   Select,
   SelectContent,
@@ -127,6 +128,17 @@ export default function IncidentsPage() {
           <div className="font-medium">{row.original.title}</div>
           <div className="text-sm text-muted-foreground">
             Pets: {row.original.petNames.join(", ")}
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {row.original.petIds.map((petId: number) => (
+              <TagList
+                key={petId}
+                entityType="pet"
+                entityId={petId}
+                compact
+                maxVisible={2}
+              />
+            ))}
           </div>
         </div>
       ),

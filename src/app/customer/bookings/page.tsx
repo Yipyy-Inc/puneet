@@ -1,17 +1,22 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import {
   Calendar,
   Clock,
@@ -19,7 +24,6 @@ import {
   X,
   Edit,
   CheckCircle,
-  AlertCircle,
   Plus,
   MapPin,
   MessageSquare,
@@ -30,16 +34,19 @@ import {
   Scissors,
   Home,
   GraduationCap,
-  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { toast } from "sonner";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TagList } from "@/components/shared/TagList";
+import { AddNoteModal } from "@/components/shared/AddNoteModal";
+import { getNotesForEntity } from "@/data/tags-notes";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -47,26 +54,33 @@ const MOCK_CUSTOMER_ID = 15;
 export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
-  const { bookingFlow, grooming } = useSettings();
-  const [selectedBooking, setSelectedBooking] = useState<typeof bookings[0] | null>(null);
+  const router = useRouter();
+  useSettings();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [bookingToCancel, setBookingToCancel] = useState<typeof bookings[0] | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<
+    (typeof bookings)[0] | null
+  >(null);
+  const isMounted = useSyncExternalStore(
+    (cb) => {
+      cb();
+      return () => {};
+    },
+    () => true,
+    () => false,
+  );
   const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
-  const [bookingForNote, setBookingForNote] = useState<typeof bookings[0] | null>(null);
-  
-  // Check if grooming is enabled (status.disabled !== true means enabled)
-  const isGroomingEnabled = grooming?.status?.disabled !== true;
-  
+  const [bookingForNote, setBookingForNote] = useState<
+    (typeof bookings)[0] | null
+  >(null);
+
   // Get customer data
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
 
   // Check for service query parameter to redirect to new booking page
   useEffect(() => {
-    setIsMounted(true);
     const service = searchParams?.get("service");
     if (service && typeof window !== "undefined") {
       window.location.href = `/customer/bookings/new${service ? `?service=${encodeURIComponent(service)}` : ""}`;
@@ -77,7 +91,8 @@ export default function CustomerBookingsPage() {
   const customerBookings = useMemo(() => {
     if (!selectedFacility) return [];
     return bookings.filter(
-      (b) => b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id
+      (b) =>
+        b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id,
     );
   }, [selectedFacility]);
 
@@ -94,33 +109,38 @@ export default function CustomerBookingsPage() {
     });
     const past = customerBookings.filter((b) => {
       const bookingDate = new Date(b.startDate);
-      return bookingDate < now || b.status === "completed" || b.status === "cancelled";
+      return (
+        bookingDate < now ||
+        b.status === "completed" ||
+        b.status === "cancelled"
+      );
     });
     return { upcomingBookings: upcoming, pastBookings: past };
   }, [customerBookings, isMounted]);
 
-  const handleCancelBooking = (booking: typeof bookings[0]) => {
+  const handleCancelBooking = (booking: (typeof bookings)[0]) => {
     setBookingToCancel(booking);
     setCancelDialogOpen(true);
   };
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
-    
+
     try {
       // TODO: Replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success("Booking cancelled successfully");
       setCancelDialogOpen(false);
       setBookingToCancel(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to cancel booking");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cancel booking",
+      );
     }
   };
 
-  const handleRescheduleBooking = (booking: typeof bookings[0]) => {
-    setSelectedBooking(booking);
-    window.location.href = "/customer/bookings/new";
+  const handleRescheduleBooking = () => {
+    router.push("/customer/bookings/new");
   };
 
   const formatDate = (dateString: string) => {
@@ -130,16 +150,6 @@ export default function CustomerBookingsPage() {
       day: "numeric",
       year: "numeric",
     });
-  };
-
-  const formatDateTime = (dateString: string, timeString?: string) => {
-    if (!isMounted) return dateString; // Return raw string during SSR
-    const date = new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    return timeString ? `${date} at ${timeString}` : date;
   };
 
   const getStatusBadge = (status: string) => {
@@ -162,9 +172,11 @@ export default function CustomerBookingsPage() {
   };
 
   // Get pet for a booking
-  const getPetForBooking = (booking: typeof bookings[0]) => {
+  const getPetForBooking = (booking: (typeof bookings)[0]) => {
     if (!customer) return null;
-    const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+    const petId = Array.isArray(booking.petId)
+      ? booking.petId[0]
+      : booking.petId;
     return customer.pets.find((p) => p.id === petId);
   };
 
@@ -184,30 +196,17 @@ export default function CustomerBookingsPage() {
     }
   };
 
-  // Calculate duration
-  const getDuration = (booking: typeof bookings[0]) => {
-    if (booking.checkInTime && booking.checkOutTime) {
-      const start = new Date(`2000-01-01T${booking.checkInTime}`);
-      const end = new Date(`2000-01-01T${booking.checkOutTime}`);
-      const diffMs = end.getTime() - start.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      if (diffHours > 0) {
-        return `${diffHours}h ${diffMinutes > 0 ? `${diffMinutes}m` : ""}`;
-      }
-      return `${diffMinutes}m`;
-    }
-    return "—";
-  };
-
   // Generate calendar file (.ics)
-  const handleAddToCalendar = (booking: typeof bookings[0]) => {
+  const handleAddToCalendar = (booking: (typeof bookings)[0]) => {
     const pet = getPetForBooking(booking);
     const petName = pet?.name || "Pet";
-    const startDateTime = new Date(`${booking.startDate}T${booking.checkInTime || "09:00"}`);
-    const endDateTime = booking.endDate && booking.checkOutTime
-      ? new Date(`${booking.endDate}T${booking.checkOutTime}`)
-      : new Date(startDateTime.getTime() + 60 * 60 * 1000); // Default 1 hour
+    const startDateTime = new Date(
+      `${booking.startDate}T${booking.checkInTime || "09:00"}`,
+    );
+    const endDateTime =
+      booking.endDate && booking.checkOutTime
+        ? new Date(`${booking.endDate}T${booking.checkOutTime}`)
+        : new Date(startDateTime.getTime() + 60 * 60 * 1000); // Default 1 hour
 
     const formatICSDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -228,7 +227,9 @@ export default function CustomerBookingsPage() {
       "END:VCALENDAR",
     ].join("\r\n");
 
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const blob = new Blob([icsContent], {
+      type: "text/calendar;charset=utf-8",
+    });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `booking-${booking.id}.ics`;
@@ -238,102 +239,10 @@ export default function CustomerBookingsPage() {
     toast.success("Calendar event downloaded");
   };
 
-  const handleAddNote = (booking: typeof bookings[0]) => {
+  const handleAddNote = (booking: (typeof bookings)[0]) => {
     setBookingForNote(booking);
     setAddNoteDialogOpen(true);
   };
-
-  const columns: ColumnDef<typeof bookings[0]>[] = [
-    {
-      key: "service",
-      label: "Service",
-      render: (booking) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium capitalize">{booking.service}</span>
-          {booking.serviceType && (
-            <Badge variant="outline" className="text-xs">
-              {booking.serviceType.replace("_", " ")}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "date",
-      label: "Date",
-      render: (booking) => (
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span>{formatDateTime(booking.startDate, booking.checkInTime)}</span>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (booking) => getStatusBadge(booking.status),
-    },
-    {
-      key: "total",
-      label: "Total",
-      render: (booking) => (
-        <div className="flex items-center gap-1">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">${booking.totalCost.toFixed(2)}</span>
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (booking) => {
-        // Check if YipyyGo is enabled for this booking
-        const yipyyGoConfig = getYipyyGoConfig(booking.facilityId);
-        const isYipyyGoEnabled = yipyyGoConfig?.enabled && yipyyGoConfig.serviceConfigs.some(
-          (sc) => sc.serviceType === booking.service.toLowerCase() && sc.enabled
-        );
-        const isUpcoming = new Date(booking.startDate) >= new Date();
-
-        return (
-          <div className="flex items-center gap-2">
-            {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
-              <Button
-                variant="default"
-                size="sm"
-                asChild
-              >
-                <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
-                  <FileText className="h-4 w-4 mr-1" />
-                  YipyyGo
-                </Link>
-              </Button>
-            )}
-            {booking.status === "confirmed" || booking.status === "pending" ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRescheduleBooking(booking)}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Reschedule
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCancelBooking(booking)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-              </>
-            ) : null}
-          </div>
-        );
-      },
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
@@ -362,7 +271,9 @@ export default function CustomerBookingsPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{upcomingBookings.length}</div>
+              <div className="text-2xl font-bold">
+                {upcomingBookings.length}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Confirmed bookings
               </p>
@@ -408,18 +319,24 @@ export default function CustomerBookingsPage() {
                       const pet = getPetForBooking(booking);
                       const ServiceIcon = getServiceIcon(booking.service);
                       const PetIcon = pet?.type === "Cat" ? Cat : Dog;
-                      
+
                       return (
-                        <Link key={booking.id} href={`/customer/bookings/${booking.id}`} className="block">
+                        <Link
+                          key={booking.id}
+                          href={`/customer/bookings/${booking.id}`}
+                          className="block"
+                        >
                           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                             <CardContent className="p-6">
                               <div className="flex items-start gap-4">
                                 {/* Pet Photo */}
                                 <div className="flex-shrink-0">
                                   {pet?.imageUrl ? (
-                                    <img
+                                    <Image
                                       src={pet.imageUrl}
                                       alt={pet.name}
+                                      width={64}
+                                      height={64}
                                       className="w-16 h-16 rounded-lg object-cover"
                                     />
                                   ) : (
@@ -439,7 +356,11 @@ export default function CustomerBookingsPage() {
                                           {booking.service}
                                           {booking.serviceType && (
                                             <span className="text-muted-foreground font-normal ml-2">
-                                              • {booking.serviceType.replace(/_/g, " ")}
+                                              •{" "}
+                                              {booking.serviceType.replace(
+                                                /_/g,
+                                                " ",
+                                              )}
                                             </span>
                                           )}
                                         </h3>
@@ -450,59 +371,117 @@ export default function CustomerBookingsPage() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                       {getStatusBadge(booking.status)}
-                                      {booking.status === "request_submitted" && (
-                                        <Badge variant="outline" className="text-xs">
+                                      {booking.status ===
+                                        "request_submitted" && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
                                           <Clock className="h-3 w-3 mr-1" />
                                           Response in ~24h
                                         </Badge>
                                       )}
                                     </div>
                                   </div>
+                                  <TagList
+                                    entityType="booking"
+                                    entityId={booking.id}
+                                    compact
+                                    maxVisible={3}
+                                    isCustomerView
+                                  />
+
+                                  {/* Shared booking notes */}
+                                  {(() => {
+                                    const sharedNotes = getNotesForEntity(
+                                      "booking",
+                                      booking.id,
+                                    ).filter(
+                                      (n) =>
+                                        n.visibility === "shared_with_customer",
+                                    );
+                                    if (sharedNotes.length === 0) return null;
+                                    return (
+                                      <div className="space-y-1">
+                                        {sharedNotes.map((note) => (
+                                          <blockquote
+                                            key={note.id}
+                                            className="text-xs bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded p-2"
+                                            aria-label={`Staff note from ${note.createdBy}`}
+                                          >
+                                            <span className="font-medium">
+                                              {note.createdBy}:
+                                            </span>{" "}
+                                            {note.content}
+                                          </blockquote>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
 
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                     <div className="flex items-center gap-2">
                                       <Calendar className="h-4 w-4 text-muted-foreground" />
                                       <div>
-                                        <p className="text-muted-foreground">Date</p>
-                                        <p className="font-medium">{formatDate(booking.startDate)}</p>
+                                        <p className="text-muted-foreground">
+                                          Date
+                                        </p>
+                                        <p className="font-medium">
+                                          {formatDate(booking.startDate)}
+                                        </p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Clock className="h-4 w-4 text-muted-foreground" />
                                       <div>
-                                        <p className="text-muted-foreground">Time</p>
+                                        <p className="text-muted-foreground">
+                                          Time
+                                        </p>
                                         <p className="font-medium">
                                           {booking.checkInTime || "—"}
-                                          {booking.checkOutTime && ` - ${booking.checkOutTime}`}
+                                          {booking.checkOutTime &&
+                                            ` - ${booking.checkOutTime}`}
                                         </p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <MapPin className="h-4 w-4 text-muted-foreground" />
                                       <div>
-                                        <p className="text-muted-foreground">Location</p>
-                                        <p className="font-medium">{selectedFacility?.name || "—"}</p>
+                                        <p className="text-muted-foreground">
+                                          Location
+                                        </p>
+                                        <p className="font-medium">
+                                          {selectedFacility?.name || "—"}
+                                        </p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                                       <div>
-                                        <p className="text-muted-foreground">Total</p>
-                                        <p className="font-medium">${booking.totalCost.toFixed(2)}</p>
+                                        <p className="text-muted-foreground">
+                                          Total
+                                        </p>
+                                        <p className="font-medium">
+                                          ${booking.totalCost.toFixed(2)}
+                                        </p>
                                       </div>
                                     </div>
                                   </div>
 
                                   {/* Actions - stop propagation so clicking buttons doesn't navigate */}
-                                  <div className="flex items-center gap-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
-                                    {(booking.status === "confirmed" || booking.status === "pending") && (
+                                  <div
+                                    className="flex items-center gap-2 pt-2 border-t"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {(booking.status === "confirmed" ||
+                                      booking.status === "pending") && (
                                       <>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => {
                                             e.preventDefault();
-                                            handleRescheduleBooking(booking);
+                                            handleRescheduleBooking();
                                           }}
                                         >
                                           <Edit className="h-4 w-4 mr-2" />
@@ -528,7 +507,8 @@ export default function CustomerBookingsPage() {
                                         size="sm"
                                         onClick={(e) => {
                                           e.preventDefault();
-                                          window.location.href = "/customer/messages";
+                                          window.location.href =
+                                            "/customer/messages";
                                         }}
                                       >
                                         <MessageSquare className="h-4 w-4 mr-2" />
@@ -543,11 +523,17 @@ export default function CustomerBookingsPage() {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleAddNote(booking)}>
+                                        <DropdownMenuItem
+                                          onClick={() => handleAddNote(booking)}
+                                        >
                                           <MessageSquare className="h-4 w-4 mr-2" />
                                           Add Note/Message
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleAddToCalendar(booking)}>
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleAddToCalendar(booking)
+                                          }
+                                        >
                                           <CalendarIcon className="h-4 w-4 mr-2" />
                                           Add to Calendar
                                         </DropdownMenuItem>
@@ -565,7 +551,9 @@ export default function CustomerBookingsPage() {
                 ) : (
                   <div className="text-center py-12">
                     <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No upcoming bookings</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No upcoming bookings
+                    </h3>
                     <p className="text-muted-foreground mb-4">
                       Book your first service to get started
                     </p>
@@ -585,17 +573,23 @@ export default function CustomerBookingsPage() {
                       const pet = getPetForBooking(booking);
                       const ServiceIcon = getServiceIcon(booking.service);
                       const PetIcon = pet?.type === "Cat" ? Cat : Dog;
-                      
+
                       return (
-                        <Link key={booking.id} href={`/customer/bookings/${booking.id}`} className="block">
+                        <Link
+                          key={booking.id}
+                          href={`/customer/bookings/${booking.id}`}
+                          className="block"
+                        >
                           <Card className="opacity-75 hover:opacity-90 transition-opacity cursor-pointer">
                             <CardContent className="p-6">
                               <div className="flex items-start gap-4">
                                 <div className="flex-shrink-0">
                                   {pet?.imageUrl ? (
-                                    <img
+                                    <Image
                                       src={pet.imageUrl}
                                       alt={pet.name}
+                                      width={64}
+                                      height={64}
                                       className="w-16 h-16 rounded-lg object-cover"
                                     />
                                   ) : (
@@ -614,7 +608,8 @@ export default function CustomerBookingsPage() {
                                         </h3>
                                       </div>
                                       <p className="text-sm text-muted-foreground">
-                                        {pet?.name || "Pet"} • {formatDate(booking.startDate)}
+                                        {pet?.name || "Pet"} •{" "}
+                                        {formatDate(booking.startDate)}
                                       </p>
                                     </div>
                                     {getStatusBadge(booking.status)}
@@ -636,7 +631,9 @@ export default function CustomerBookingsPage() {
                 ) : (
                   <div className="text-center py-12">
                     <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No past bookings</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No past bookings
+                    </h3>
                     <p className="text-muted-foreground">
                       Your completed bookings will appear here
                     </p>
@@ -657,48 +654,21 @@ export default function CustomerBookingsPage() {
       />
 
       {/* Add Note Dialog */}
-      <Dialog open={addNoteDialogOpen} onOpenChange={setAddNoteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Note or Message</DialogTitle>
-            <DialogDescription>
-              Send a message or add a note to your booking
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {bookingForNote && (
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium mb-1">Booking Details:</p>
-                <p>
-                  {getPetForBooking(bookingForNote)?.name} • {bookingForNote.service} • {formatDate(bookingForNote.startDate)}
-                </p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="note">Message</Label>
-              <Textarea
-                id="note"
-                placeholder="Add any notes or questions about this booking..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddNoteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              // TODO: Send message/note
-              toast.success("Message sent to facility");
-              setAddNoteDialogOpen(false);
-              setBookingForNote(null);
-            }}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Send Message
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {bookingForNote && (
+        <AddNoteModal
+          open={addNoteDialogOpen}
+          onOpenChange={(open) => {
+            setAddNoteDialogOpen(open);
+            if (!open) setBookingForNote(null);
+          }}
+          title={`Add Note — ${getPetForBooking(bookingForNote)?.name ?? "Booking"}`}
+          onSave={() => {
+            toast.success("Note added to booking");
+            setAddNoteDialogOpen(false);
+            setBookingForNote(null);
+          }}
+        />
+      )}
     </div>
   );
 }

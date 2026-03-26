@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Plus, PawPrint } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TagList } from "@/components/shared/TagList";
+import { getTagsForEntity } from "@/data/tags-notes";
 
 type KennelStatus = "vacant" | "occupied" | "reserved" | "maintenance";
 
@@ -32,6 +34,7 @@ interface Kennel {
 interface KennelBooking {
   kennelId: string;
   petName: string;
+  petId?: number;
   petType?: "dog" | "cat";
   clientName?: string;
   checkIn: string;
@@ -105,6 +108,7 @@ export function KennelCalendarView({
         result.push({
           kennelId: k.id,
           petName: k.petName,
+          petId: (k as unknown as { petId?: number }).petId,
           petType: k.petType,
           clientName: k.clientName,
           checkIn: k.checkIn,
@@ -503,15 +507,26 @@ export function KennelCalendarView({
                       const isReserved = booking.status === "reserved";
                       const isDragging =
                         dragging?.kennelId === booking.kennelId;
+                      const petTags = booking.petId
+                        ? getTagsForEntity("pet", booking.petId)
+                        : [];
+                      const isCritical = petTags.some(
+                        (t) => t.priority === "critical",
+                      );
+                      const tagTooltip = petTags.map((t) => t.name).join(", ");
 
                       return (
                         <div
                           key={`${booking.kennelId}-${bIndex}`}
+                          title={tagTooltip || undefined}
+                          aria-label={`${booking.petName}${isCritical ? " - Critical alert" : ""}`}
                           className={cn(
                             "absolute top-2 h-10 rounded flex items-center gap-2 px-2 cursor-pointer transition-shadow hover:shadow-md group",
-                            isReserved
-                              ? "bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-l-yellow-500"
-                              : "bg-blue-100 dark:bg-blue-900/30",
+                            isCritical
+                              ? "bg-red-100 dark:bg-red-900/30 ring-2 ring-red-400/50 dark:ring-red-500/50"
+                              : isReserved
+                                ? "bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-l-yellow-500 dark:border-l-yellow-400"
+                                : "bg-blue-100 dark:bg-blue-900/30",
                             isDragging && "shadow-lg ring-2 ring-primary/50",
                           )}
                           style={{
@@ -553,6 +568,14 @@ export function KennelCalendarView({
                           >
                             {booking.petName}
                           </span>
+                          {booking.petId && (
+                            <TagList
+                              entityType="pet"
+                              entityId={booking.petId}
+                              compact
+                              maxVisible={2}
+                            />
+                          )}
 
                           {/* Right drag handle */}
                           <div
